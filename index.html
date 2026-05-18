@@ -73,56 +73,23 @@ const db = firebase.database();
 const fM = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
 async function init(){
-    // Puxa dados da Empresa e Promoções
-    db.ref('settings/empresa').on('value', snap => {
-        const emp = snap.val() || {};
-        document.getElementById("nome").innerText = emp.nome || "Abella Joias";
-        document.getElementById("slogan").innerText = emp.slogan || "Atacado de Joias no Bruto";
-        if(emp.parcelas) document.getElementById("parcelamento").innerText = `Até ${emp.parcelas}x no cartão`;
-        if(emp.pix) document.getElementById("pix").innerText = `${emp.pix}% OFF no PIX`;
-        if(emp.whatsapp) document.getElementById("whats").href = `https://wa.me/${emp.whatsapp}`;
+    // 1. Teste de conexão simples
+    console.log("Tentando ler o Firebase...");
+
+    // Teste da gaveta 'categories'
+    db.ref('categories').once('value', snap => {
+        console.log("Conteúdo de 'categories':", snap.val());
     });
 
-    db.ref('settings/promocao').on('value', snap => {
-        const promo = snap.val() || {};
-        const banner = document.getElementById("banner");
-        if(promo.ativa && promo.texto){
-            banner.classList.remove('hidden');
-            document.getElementById("bannerTexto").innerText = promo.texto;
-        } else {
-            banner.classList.add('hidden');
-        }
+    // Teste da gaveta 'categorias' (em português)
+    db.ref('categorias').once('value', snap => {
+        console.log("Conteúdo de 'categorias':", snap.val());
     });
 
-    // Puxa as Categorias filtrando Luary Shop
-    db.ref('categories').on('value', snap => {
-        const grid = document.getElementById('grid');
-        grid.innerHTML = '';
-        if(!snap.exists()) return;
-
-        snap.forEach(child => {
-            const id = child.key;
-            const cat = child.val() || {};
-
-            // Segurança: Ignora dados da outra loja
-            if(cat.loja === "luary" || id.toLowerCase().includes("luary") || cat.projeto === "luary") return;
-            if(cat.paused) return;
-
-            const promoTag = cat.promoAtiva ? `<span class="badge" style="background:${cat.promoColor || '#caa85c'}">${cat.promoTag || 'OFERTA'}</span>` : '';
-            
-            grid.innerHTML += `
-                <div class="card relative cursor-pointer" onclick="location.href='produtos.html?id=${id}'">
-                    ${promoTag}
-                    <img src="${cat.image || 'https://via.placeholder.com/400'}" class="w-full aspect-square object-cover bg-zinc-900">
-                    <div class="p-4">
-                        <h3 class="font-bold text-xs truncate text-white uppercase">${cat.name || 'Coleção'}</h3>
-                        <p class="text-[10px] text-gray-500 mt-1">Ver modelos ➔</p>
-                    </div>
-                </div>
-            `;
-        });
+    // Teste da gaveta 'settings'
+    db.ref('settings').once('value', snap => {
+        console.log("Conteúdo de 'settings':", snap.val());
     });
-    atualizarCarrinho();
 }
 
 function atualizarCarrinho(){

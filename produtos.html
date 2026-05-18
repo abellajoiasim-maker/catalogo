@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Produtos • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background:#0b0b0b; color:#eee; margin:0; }
+        .serif { font-family:'Cinzel', serif; }
+        .gold-text { color:#caa85c; }
+        .card-produto { transition:.3s; border:1px solid #222; position:relative; }
+        .card-produto:hover { transform:translateY(-5px); border-color:#caa85c; }
+    </style>
+</head>
+<body>
+    <header class="sticky top-0 z-50 py-4 bg-black/90 border-b border-[#222]">
+        <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
+            <a href="index.html" class="serif text-xl gold-text">Abella Joias</a>
+            <a href="carrinho.html" class="flex items-center gap-2 bg-[#111] border border-[#caa85c]/30 px-4 py-2 rounded-xl">
+                <span class="gold-text">🛒</span>
+                <span id="valCarrinho" class="text-xs font-bold">R$ 0,00</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6">
+        <div class="flex items-center gap-4 mb-8">
+            <a href="index.html" class="text-[#caa85c] text-[10px] font-bold border border-[#caa85c]/30 px-3 py-1 rounded-full">❮ VOLTAR</a>
+            <h2 id="tituloCategoria" class="serif text-2xl uppercase">Coleção</h2>
+        </div>
+        <div id="gridProdutos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="col-span-full text-center py-20 text-gray-600">Carregando modelos...</div>
+        </div>
+    </main>
+
+    <div id="modalVariacao" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-50">
+        <div class="bg-[#111] border border-zinc-800 w-full max-w-lg rounded-2xl p-6">
+            <h3 id="modalTitle" class="serif text-[#caa85c] mb-2 font-bold text-lg">Escolher opções</h3>
+            <p class="text-[10px] text-gray-400 mb-4 uppercase tracking-wider">Informe as quantidades desejadas:</p>
+            <div id="listaVariacoes" class="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto mb-6"></div>
+            <div class="flex gap-2">
+                <button onclick="fecharModal()" class="flex-1 bg-zinc-900 text-gray-400 py-3 rounded-xl border border-zinc-800 text-xs font-bold">CANCELAR</button>
+                <button onclick="confirmarVariacoes()" class="flex-1 bg-[#caa85c] text-black py-3 rounded-xl text-xs font-bold">CONFIRMAR E ADICIONAR</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const firebaseConfig = { 
+    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY", 
+    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com" 
+};
+if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const fMoeda = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);
+
+let settings = { pixDesconto:5, parcelas:6 };
+let produtoTemp = null;
+
+db.ref('settings/empresa').on('value', snap=>{
+    const s = snap.val() || {};
+    settings.pixDesconto = s.pix || 5;
+    settings.parcelas = s.parcelas || 6;
+});
+
+function carregarPagina(){
+    const params = new URLSearchParams(window.location.search);
+    const categoriaId = params.get('id');
+
+    if(!categoriaId) {
+        location.href = 'index.html';
+        return;
+    }
+
+    // Busca o título da categoria ativa
+    db.ref('categories/' + categoriaId).once('value', s => {
+        if(s.exists()) document.getElementById('tituloCategoria').innerText = s.val().name;
+    });
+
+    // Puxa produtos vinculados à categoria selecionada
+    db.ref('products').orderByChild('category').equalTo(categoriaId).on('value', snap=>{
+        const grid = document.getElementById('gridProdutos');
+        grid.innerHTML='';
+        
+        if(!snap.exists()){
+            grid.innerHTML = '<div class="col-span-full text-center py-20 text-gray-500 text-xs">Nenhum produto cadastrado nesta coleção.</div>';
+            return;
+        }
+
+        snap.forEach(child=>{
+            const p = child.val() || {};
+            if(p.paused) return;
+            const id = child.key;
+
+            const precoBase = parseFloat(p.price || p.precoFinal || 0);
+            const precoFinal = p.promoPrice > 0 ? parseFloat(p.promoPrice) : precoBase;
+            const peso = parseFloat(p.peso || p.weight || 0);
+            const pesoFormatado = peso > 0 ? peso.toFixed(2) + 'g' : '--';
+
+            grid.innerHTML += `
+                <div class="card-produto bg-[#111] rounded-2xl overflow-hidden flex flex-col shadow-lg">
+                    <div class="absolute top-2 left-2 flex flex-col gap-1 z-10">
+                        ${p.promoPrice ? `<span class="bg-red-600 text-white text-[9px] px-2 py-1 rounded font-bold">PROMO</span>` : ''}
+                        ${p.destaque ? `<span class="bg-[#caa85c] text-black text-[9px] px-2 py-1 rounded font-bold">DESTAQUE</span>` : ''}
+                    </div>
+                    <img src="${p.image || 'https://via.placeholder.com/400'}" class="w-full aspect-square object-contain bg-[#111] p-2">
+                    <div class="p-4 flex flex-col flex-grow">
+                        <div class="flex justify-between text-[10px] text-gray-500 font-bold mb-1">
+                            <span>SKU: ${p.sku || '---'}</span>
+                            <span>${pesoFormatado}</span>
+                        </div>
+                        <h3 class="text-white text-xs font-semibold mb-2 line-clamp-2">${p.name || ''}</h3>
+                        <div class="mb-2">
+                            ${p.promoPrice ? `
+                                <p class="text-gray-500 line-through text-[10px]">${fMoeda(precoBase)}</p>
+                                <p class="text-red-500 text-base font-black">${fMoeda(precoFinal)}</p>
+                            ` : `
+                                <p class="text-[#caa85c] text-base font-black">${fMoeda(precoBase)}</p>
+                            `}
+                        </div>
+                        <p class="text-green-400 text-[10px] font-bold">
+                            ${fMoeda(precoFinal * (1 - (settings.pixDesconto/100)))} no PIX
+                        </p>
+                        <button onclick="abrirCheckVariacao('${id}','${p.name || ''}',${precoFinal},'${p.variacaoTipo || ''}',\`${p.opcoesPersonalizadas || ''}\`)" class="w-full mt-4 bg-white text-black text-[11px] font-extrabold py-2.5 rounded-xl hover:bg-[#caa85c] transition">
+                            ${p.variacaoTipo ? 'ESCOLHER OPÇÕES' : 'ADICIONAR'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+    });
+    atualizarResumo();
+}
+
+function abrirCheckVariacao(id,nome,preco,tipo,opcoes){
+    produtoTemp = {id,nome,preco};
+    if((tipo==="Lista" || tipo==="Várias") && opcoes){
+        const lista = opcoes.split(',').map(v=>v.trim()).filter(v=>v);
+        montarModal(lista,nome);
+        return;
+    }
+    if(tipo==="Aro"){
+        montarModal(["12","14","16","18","20","22","24"], "Escolha os Aros");
+        return;
+    }
+    adicionarSimples(id,nome,preco);
+}
+
+function montarModal(lista,titulo){
+    document.getElementById('modalTitle').innerText = titulo;
+    const container = document.getElementById('listaVariacoes');
+    container.innerHTML='';
+    lista.forEach(item=>{
+        container.innerHTML+=`
+            <div class="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl">
+                <span class="text-xs font-medium text-gray-300">${item}</span>
+                <input type="number" min="0" data-item="${item}" value="0" class="input-qtd w-14 text-center bg-black border border-zinc-800 rounded-lg py-1 text-white font-bold text-xs">
+            </div>`;
+    });
+    document.getElementById('modalVariacao').classList.remove('hidden');
+}
+
+function fecharModal(){
+    document.getElementById('modalVariacao').classList.add('hidden');
+    produtoTemp=null;
+}
+
+function confirmarVariacoes(){
+    const inputs = document.querySelectorAll('.input-qtd');
+    let total=0;
+    let resumo=[];
+    inputs.forEach(i=>{
+        const qtd=parseInt(i.value);
+        if(qtd>0){
+            total+=qtd;
+            resumo.push(`${qtd}x ${i.dataset.item}`);
+        }
+    });
+    if(total===0){
+        alert("Por favor, selecione a quantidade em pelo menos um item.");
+        return;
+    }
+    processarAdicao(produtoTemp.id, `${produtoTemp.nome} (${resumo.join(", ")})`, produtoTemp.preco, total);
+    fecharModal();
+}
+
+function adicionarSimples(id,nome,preco){
+    processarAdicao(id,nome,preco,1);
+}
+
+function processarAdicao(id,nome,preco,qtd){
+    let cart = JSON.parse(localStorage.getItem('carrinho')||'[]');
+    const index = cart.findIndex(i=>i.id===id && i.name === nome);
+    if(index>-1){
+        cart[index].quantidade+=qtd;
+    }else{
+        cart.push({id,nome,precoFinal:preco,quantidade:qtd});
+    }
+    localStorage.setItem('carrinho',JSON.stringify(cart));
+    atualizarResumo();
+    alert("✅ Item adicionado ao carrinho!");
+}
+
+function atualizarResumo(){
+    const cart = JSON.parse(localStorage.getItem('carrinho')||'[]');
+    const total = cart.reduce((a,i)=>a+(i.precoFinal*i.quantidade),0);
+    document.getElementById('valCarrinho').innerText = fMoeda(total);
+}
+window.onload = carregarPagina;
+</script>
+</body>
+</html>

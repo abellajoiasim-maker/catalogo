@@ -15,8 +15,8 @@
         .tab-btn.active { background: #caa85c; color: #000; }
         .tab-btn:not(.active):hover { background: #1a1a1a; color: #caa85c; }
         .card { background: #141414; border: 1px solid #222; border-radius: 12px; }
-        .input-adm { background: #0b0b0b; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; width: 100%; outline: none; font-size: 13px; }
-        .input-adm:focus { border-color: #caa85c; }
+        .input-adm { background: #0b0b0b; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; width: 100%; outline: none; font-size: 13px; transition: 0.2s; }
+        .input-adm:focus { border-color: #caa85c; background: #111; }
         .frame-container { width: 100%; height: 82vh; border: none; border-radius: 12px; background: #141414; }
     </style>
 </head>
@@ -32,13 +32,14 @@
                 <button onclick="mudarAba('pedidos')" id="btn-pedidos" class="tab-btn active">📦 Pedidos Recebidos</button>
                 <button onclick="mudarAba('editor')" id="btn-editor" class="tab-btn">⚡ Editor Full Master</button>
                 <button onclick="mudarAba('ofertas')" id="btn-ofertas" class="tab-btn">🏷️ Painel de Ofertas</button>
-                <button onclick="mudarAba('produtos')" id="btn-produtos" class="tab-btn">💍 Produtos / Modelos</button>
+                <button onclick="mudarAba('galvanicas')" id="btn-galvanicas" class="tab-btn">🚚 Galvânicas Parceiras</button>
+                <button onclick="mudarAba('produtos')" id="btn-produtos" class="tab-btn">💍 Produtos (Visão Rápida)</button>
                 <button onclick="mudarAba('categorias')" id="btn-categorias" class="tab-btn">📁 Coleções / Categorias</button>
                 <button onclick="mudarAba('config')" id="btn-config" class="tab-btn">⚙️ Configurações</button>
             </nav>
         </div>
         <div class="px-2 pt-4 border-t border-zinc-900 text-center text-[10px] text-gray-600">
-            Abella Joias v2.5
+            Abella Joias v3.0
         </div>
     </aside>
 
@@ -62,12 +63,61 @@
             <iframe src="ofertas.html" class="frame-container"></iframe>
         </section>
 
+        <section id="aba-galvanicas" class="hidden space-y-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start gap-6">
+                <div class="card p-6 w-full lg:w-96 space-y-4 shrink-0">
+                    <h3 class="text-sm font-bold text-[#caa85c] uppercase tracking-wider">Novo Parceiro Galvânico</h3>
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Nome da Empresa</label>
+                        <input id="galv-nome" class="input-adm" placeholder="Ex: Galvânica Limeira">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Selo / Destaque</label>
+                        <input id="galv-selo" class="input-adm" placeholder="Ex: Parceiro Ouro, Frete Grátis">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Endereço Completo</label>
+                        <input id="galv-endereco" class="input-adm" placeholder="Rua, Número, Bairro - Cidade">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[10px] text-gray-400 font-bold block mb-1">Telefone Fixo</label>
+                            <input id="galv-telefone" class="input-adm" placeholder="(19) 3333-3333">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 font-bold block mb-1">WhatsApp (Só números)</label>
+                            <input id="galv-whatsapp" class="input-adm" placeholder="5519999999999">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block mb-1">URL do Logotipo/Imagem</label>
+                        <input id="galv-imagem" class="input-adm" placeholder="https://...">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Descrição/Slogan</label>
+                        <textarea id="galv-descricao" class="input-adm h-16 resize-none" placeholder="Breve resumo dos serviços..."></textarea>
+                    </div>
+                    <button onclick="salvarGalvanica()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase">💾 Cadastrar Parceiro</button>
+                </div>
+
+                <div class="flex-1 w-full space-y-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Parceiros Homologados</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="lista-galvanicas-adm">
+                        <p class="text-xs text-gray-500 italic">Carregando galvânicas...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section id="aba-produtos" class="hidden space-y-6">
             <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold tracking-wide">Visualização Rápida de Produtos</h2>
-                <button onclick="mudarAba('editor')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold">Acessar Editor Completo ➔</button>
+                <h2 class="text-xl font-bold tracking-wide">Produtos Cadastrados (Últimos 50)</h2>
+                <div class="flex gap-2">
+                    <button onclick="abrirModalProduto()" class="bg-zinc-800 border border-zinc-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-zinc-700">+ RÁPIDO</button>
+                    <button onclick="mudarAba('editor')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold hover:brightness-110">Acessar Editor Completo ➔</button>
+                </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="lista-produtos"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="lista-produtos"></div>
         </section>
 
         <section id="aba-categorias" class="hidden space-y-6">
@@ -75,7 +125,7 @@
                 <h2 class="text-xl font-bold tracking-wide">Coleções / Categorias</h2>
                 <button onclick="abrirModalCategoria()" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold">+ NOVA CATEGORIA</button>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="lista-categorias"></div>
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" id="lista-categorias"></div>
         </section>
 
         <section id="aba-config" class="hidden space-y-6">
@@ -103,7 +153,7 @@
                     <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">WhatsApp de Recebimento (com DDD)</label>
                     <input id="cfg-whatsapp" class="input-adm" placeholder="Ex: 19999999999">
                 </div>
-                <button onclick="salvarConfig()" class="w-full bg-[#caa85c] text-black font-bold py-3 rounded-xl text-xs tracking-wider mt-4">SALVAR CONFIGURAÇÕES</button>
+                <button onclick="salvarConfig()" class="w-full bg-[#caa85c] text-black font-bold py-3 rounded-xl text-xs tracking-wider mt-4 hover:brightness-110">SALVAR CONFIGURAÇÕES</button>
             </div>
         </section>
     </main>

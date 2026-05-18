@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Galvânicas Parceiras | Abella Joias</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --gold: #caa85c; --dark-bg: #0b0b0b; --card-bg: #141414; --border: #2a2a2a; }
+        body { font-family: 'Inter', sans-serif; margin: 0; background: var(--dark-bg); color: #eee; }
+        .serif { font-family: 'Cinzel', serif; }
+        .gold-text { color: var(--gold); }
+        header { background: rgba(0,0,0,0.95); border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100; }
+        .container { max-width: 1300px; margin: 0 auto; padding: 40px 20px; }
+        .galvanicas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 30px; }
+        .card { background: var(--card-bg); border-radius: 24px; border: 1px solid var(--border); padding: 25px; text-align: center; position: relative; transition: all .4s ease; display: flex; flex-direction: column; justify-content: space-between; }
+        .card:hover { border-color: var(--gold); transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .selo-parceiro { position: absolute; top: -12px; right: 20px; background: var(--gold); color: #000; font-weight: 900; font-size: 9px; padding: 5px 15px; border-radius: 50px; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(202, 168, 92, 0.4); text-transform: uppercase; }
+        .card-logo { height: 120px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: #000; border-radius: 15px; padding: 10px; border: 1px solid #222; }
+        .card-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .info-row { font-size: 13px; color: #aaa; margin-bottom: 8px; text-align: left; line-height: 1.5; }
+        .info-row b { color: var(--gold); text-transform: uppercase; font-size: 10px; margin-right: 5px; }
+        .whatsapp-link { display: block; background: linear-gradient(135deg, #caa85c 0%, #947a42 100%); color: #000; padding: 14px; border-radius: 14px; font-weight: 800; text-decoration: none; margin-top: 20px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        .slogan { margin-top: 20px; font-size: 11px; color: #777; font-style: italic; border-top: 1px solid #222; padding-top: 15px; }
+    </style>
+</head>
+<body>
+
+<header class="py-5">
+    <div class="max-w-7xl mx-auto px-6 flex justify-between items-center">
+        <div>
+            <h1 class="serif text-xl gold-text tracking-widest uppercase leading-none">Abella Joias</h1>
+            <p class="text-[8px] tracking-[3px] text-gray-500 font-bold uppercase mt-1">Galvânicas Parceiras</p>
+        </div>
+        <div class="flex gap-4">
+            <a href="index.html" class="text-[10px] font-bold border border-[#333] px-4 py-2 rounded-lg hover:border-[#caa85c] transition-all">LOJA</a>
+        </div>
+    </div>
+</header>
+
+<div class="container">
+    <h2 class="text-center font-bold tracking-widest text-2xl serif gold-text uppercase mb-10">Parceiros Homologados</h2>
+
+    <div id="gridGalvanicas" class="galvanicas-grid">
+        <p class="text-center col-span-full opacity-50">Sincronizando com a rede de parceiros...</p>
+    </div>
+</div>
+
+<script>
+firebase.initializeApp({
+    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
+    projectId: "catalogo-abella-joias"
+});
+const db = firebase.database();
+
+db.ref('galvanicas').once('value', snap => {
+    const grid = document.getElementById('gridGalvanicas');
+    if(!snap.exists()) {
+        grid.innerHTML = "<p class='text-center col-span-full'>Nenhuma empresa homologada no momento.</p>";
+        return;
+    }
+
+    let stack = [];
+    snap.forEach(child => {
+        const g = child.val() || {};
+        stack.push(`
+            <div class="card">
+                <div>
+                    ${g.selo ? `<div class="selo-parceiro">${g.selo}</div>` : ''}
+                    <div class="card-logo">
+                        <img src="${g.imagem || 'https://via.placeholder.com/300x150?text=Logo+Indisponível'}" alt="${g.nome}">
+                    </div>
+                    <h2 class="serif text-center font-bold text-sm mb-3 text-[#caa85c] uppercase">${g.nome}</h2>
+                    <div class="info-row"><b>Endereço:</b> ${g.endereco || 'Consultar endereço'}</div>
+                    ${g.telefone ? `<div class="info-row"><b>Fixo:</b> ${g.telefone}</div>` : ''}
+                </div>
+                <div>
+                    <a href="https://wa.me/${g.whatsapp}?text=Olá%20${g.nome}.%20Sou%20cliente%20da%20Abella%20Joias..." target="_blank" class="whatsapp-link">
+                        WhatsApp 📲
+                    </a>
+                    <div class="slogan">${g.descricao || 'Parceiro homologado Abella Joias.'}</div>
+                </div>
+            </div>
+        `);
+    });
+    grid.innerHTML = stack.join('');
+});
+</script>
+</body>
+</html>

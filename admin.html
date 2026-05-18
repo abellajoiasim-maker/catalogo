@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo | Abella Joias</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #0a0a0a; color: #fff; margin:0; display: flex;}
+        .sidebar { width: 240px; background: #111; padding: 20px; height: 100vh; border-right: 1px solid #222;}
+        .logo { font-weight: bold; color: #caa85c; margin-bottom: 30px; letter-spacing: 2px;}
+        .tab-btn { display: block; width: 100%; padding: 12px; background: transparent; color: #ccc; border: none; text-align: left; cursor: pointer; border-radius: 6px; font-weight: bold; margin-bottom: 5px;}
+        .tab-btn:hover, .tab-btn.active { background: #caa85c; color: #000; }
+        .content { flex: 1; padding: 40px; overflow-y: auto;}
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .grid-container { display: grid; grid-template-cols: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;}
+        .item-card { background: #141414; padding: 15px; border-radius: 8px; border: 1px solid #222;}
+        .btn-new { background: #caa85c; color: #000; border: none; padding: 10px 20px; font-weight: bold; border-radius: 6px; cursor: pointer;}
+        .header-row { display: flex; justify-content: space-between; items-center; border-bottom: 1px solid #222; padding-bottom: 15px;}
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; }
+        .modal-content { background: #141414; width: 400px; margin: 100px auto; padding: 30px; border-radius: 12px; border: 1px solid #333; position: relative;}
+        .close { position: absolute; top: 15px; right: 15px; cursor: pointer; font-size: 20px;}
+        input, select { width: 100%; padding: 10px; margin-bottom: 10px; background: #000; border: 1px solid #333; color: #fff; border-radius: 6px;}
+        .btn-del { background: #b91c1c; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-top: 10px;}
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">ABELLA ADMIN</div>
+        <button onclick="showTab('dashboard')" class="tab-btn active">📊 Dashboard</button>
+        <button onclick="showTab('empresa')" class="tab-btn">🏢 Empresa</button>
+        <button onclick="showTab('categorias')" class="tab-btn">📁 Categorias</button>
+        <button onclick="showTab('produtos')" class="tab-btn">💍 Produtos</button>
+        <button onclick="showTab('pedidos')" class="tab-btn">📦 Pedidos</button>
+    </nav>
+
+    <main class="content">
+        <section id="dashboard" class="tab-content active">
+            <h2>📊 Painel Inicial</h2>
+            <p>Seja bem-vindo ao sistema de controle Abella Joias.</p>
+        </section>
+
+        <section id="empresa" class="tab-content">
+            <h2>Dados da Empresa</h2>
+            <div class="card-form">
+                <input type="text" id="emp-nome" placeholder="Nome da Marca" value="Abella Joias">
+                <input type="text" id="emp-whats" placeholder="WhatsApp de Vendas">
+                <button onclick="salvarEmpresa()" class="btn-new">Atualizar Dados</button>
+            </div>
+        </section>
+
+        <section id="categorias" class="tab-content">
+            <div class="header-row">
+                <h2>Categorias</h2>
+                <button onclick="abrirModal('categoria')" class="btn-new">+ Nova Categoria</button>
+            </div>
+            <div id="lista-categorias" class="grid-container"></div>
+        </section>
+
+        <section id="produtos" class="tab-content">
+            <div class="header-row">
+                <h2>Produtos no Estoque</h2>
+                <button onclick="abrirModal('produto')" class="btn-new">+ Novo Produto</button>
+            </div>
+            <div id="lista-produtos" class="grid-container"></div>
+        </section>
+
+        <section id="pedidos" class="tab-content">
+            <h2>Pedidos Recentes</h2>
+            <div id="lista-pedidos" class="grid-container"></div>
+        </section>
+    </main>
+
+    <div id="modal-admin" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModal()">&times;</span>
+            <div id="modal-form-body"></div>
+        </div>
+    </div>
+
+    <script src="admin-logic.js"></script>
+</body>
+</html>

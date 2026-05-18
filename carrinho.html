@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Checkout • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <style>
+        body { background: #0b0b0b; color: #fff; font-family: Arial, sans-serif; }
+        .card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 16px; }
+        .input { width: 100%; padding: 10px; background: #0b0b0b; border: 1px solid #333; border-radius: 8px; color: #fff; outline: none; }
+        .input:focus { border-color: #caa85c; }
+        .btn { background: #caa85c; color: #000; padding: 14px; font-weight: bold; border-radius: 8px; width: 100%; cursor: pointer; transition: background 0.2s; }
+        .btn:hover { background: #e5c98d; }
+    </style>
+</head>
+<body class="p-4 max-w-xl mx-auto min-h-screen flex flex-col justify-between pb-10">
+    
+    <div>
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-xl text-[#caa85c] font-bold tracking-wide uppercase">Finalizar Pedido</h1>
+            <a href="amazon.html" class="text-xs text-gray-400 hover:text-white uppercase tracking-wider">← Voltar</a>
+        </div>
+
+        <div class="card mb-4 shadow-xl">
+            <h3 class="text-xs text-[#caa85c] font-bold uppercase mb-3 tracking-wider">Dados de Entrega</h3>
+            <input id="nome" class="input mb-2" placeholder="Seu nome completo">
+            <input id="telefone" class="input mb-2" placeholder="WhatsApp (com DDD)">
+            <input id="endereco" class="input" placeholder="Endereço completo de entrega">
+        </div>
+
+        <div class="card mb-6 shadow-xl">
+            <h2 class="text-xs text-gray-400 font-bold uppercase mb-3 tracking-wider">Itens Selecionados</h2>
+            <div id="resumo" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+            <div class="mt-4 pt-3 border-t border-[#2a2a2a] flex justify-between items-center">
+                <span class="text-sm text-gray-400 uppercase font-bold">Total do Pedido:</span>
+                <div class="text-xl font-bold text-[#caa85c]" id="total">R$ 0,00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full pt-2">
+        <button onclick="finalizarPedido()" class="btn uppercase tracking-widest text-xs">FINALIZAR PEDIDO</button>
+    </div>
+
+<script>
+// Configuração de Conexão com o Banco do seu catálogo
+const firebaseConfig = {
+    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
+};
+if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const money = v => Math.max(0, parseFloat(v) || 0);
+const safe = id => document.getElementById(id);
+const round = v => Math.round(v * 100) / 100;
+let carrinho = [];
+
+function carregarCarrinho(){
+    try {
+        const data = JSON.parse(localStorage.getItem("carrinho")) || [];
+        carrinho = Array.isArray(data) ? data : [];
+        render();
+    } catch(e) {
+        carrinho = [];
+        render();
+    }
+}
+
+function render(){
+    const el = safe("resumo");
+    let total = 0; 
+    let html = '';
+    
+    if (carrinho.length === 0) {
+        el.innerHTML = '<p class="text-xs text-gray-500 italic py-2">Nenhum produto no carrinho...</p>';
+        safe("total").innerText = "R$ 0,00";
+        return;
+    }
+
+    carrinho.forEach(item => {
+        // Fallback inteligente para capturar preços tanto da estrutura antiga (price) quanto da nova (precoFinal)
+        const preco = money(item.precoFinal ?? item.price ?? item.preco ?? 0);
+        const qtd = Math.max(1, parseInt(item.quantidade ?? item.qtd ?? 1));
+        const subtotal = round(preco * qtd);
+        total += subtotal;
+        
+        html += `
+        <div class="flex justify-between items-center text-xs bg-black/40 p-2 rounded border border-zinc-900">
+            <div class="pr-2 truncate">
+                <span class="font-bold text-white">${item.name || "Produto"}</span>
+                <span class="block text-[10px] text-gray-500 font-mono">Qtd: ${qtd} × R$ ${preco.toFixed(2)}</span>
+            </div>
+            <span class="font-bold text-[#caa85c] shrink-0">R$ ${subtotal.toFixed(2)}</span>
+        </div>`;
+    });
+    
+    total = round(total);
+    el.innerHTML = html;
+    safe("total").innerText = "R$ " + total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function finalizarPedido(){
+    if(!carrinho.length) return alert("Seu carrinho está vazio!");
+    
+    const nomeInput = safe("nome").value.trim();
+    const tlfInput = safe("telefone").value.trim();
+    const endInput = safe("endereco").value.trim();
+
+    if(!nomeInput) return alert("Por favor, informe seu nome para conclusão.");
+    if(!tlfInput) return alert("Por favor, informe seu número de WhatsApp.");
+    
+    // Calcula o valor total final exato para persistência
+    let totalCalculado = carrinho.reduce((acc, item) => {
+        const p = money(item.precoFinal ?? item.price ?? item.preco ?? 0);
+        const q = Math.max(1, parseInt(item.quantidade ?? item.qtd ?? 1));
+        return acc + (p * q);
+    }, 0);
+
+    const pedido = {
+        cliente: nomeInput,
+        telefone: tlfInput,
+        endereco: endInput || "Retirada/Não informado",
+        itens: carrinho.map(i => ({
+            nome: i.name || "Produto",
+            sku: i.sku || "N/A",
+            preco: money(i.precoFinal ?? i.price ?? i.preco ?? 0),
+            quantidade: Math.max(1, parseInt(i.quantidade ?? i.qtd ?? 1))
+        })),
+        total: "R$ " + totalCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        metodo: "WhatsApp",
+        status: "novo",
+        criadoEm: Date.now()
+    };
+
+    // FIX DO BUG DE SUMIÇO: Gravando exatamente no nó 'orders' que seu painel administrativo faz a leitura
+    db.ref("orders").push(pedido).then(() => {
+        alert("Pedido enviado com sucesso para a Abella Joias!");
+        localStorage.removeItem("carrinho");
+        location.href = "amazon.html";
+    }).catch(err => {
+        console.error("Erro ao salvar:", err);
+        alert("Erro técnico ao processar seu pedido. Tente novamente.");
+    });
+}
+
+carregarCarrinho();
+</script>
+</body>
+</html>

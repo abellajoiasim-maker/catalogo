@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Editor Full Master v3.2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body class="bg-[#0b0b0b] text-zinc-300 p-4">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-center mb-6 bg-[#141414] p-4 rounded-xl border border-zinc-800">
+            <div>
+                <h1 class="text-lg font-bold text-[#caa85c]">Editor Full Master v3.2</h1>
+                <p class="text-[10px] text-zinc-500 uppercase tracking-widest">Sincronizador e painel rápido de produtos</p>
+            </div>
+            <button onclick="carregarProdutos()" class="bg-[#caa85c] text-black font-bold px-4 py-2 rounded text-xs">Carregar Banco de Dados</button>
+        </header>
+        <div class="bg-[#141414] rounded-xl border border-zinc-800 overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                    <tr class="text-[#caa85c] border-b border-zinc-800 bg-black/40">
+                        <th class="p-3">SKU</th>
+                        <th>Nome</th>
+                        <th>Preço R$</th>
+                        <th>Foto URL</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo">
+                    <tr><td colspan="4" class="p-8 text-center text-zinc-600 italic">Clique em carregar para buscar produtos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY", databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com" };
+        if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function carregarProdutos() {
+            db.ref('products').once('value', snap => {
+                const tbody = document.getElementById('tabelaCorpo'); tbody.innerHTML = '';
+                snap.forEach(c => {
+                    const p = c.val();
+                    tbody.innerHTML += `
+                    <tr class="border-b border-zinc-900 hover:bg-zinc-800/40">
+                        <td class="p-3 font-mono text-zinc-400">${p.sku || '---'}</td>
+                        <td class="text-white">${p.name}</td>
+                        <td class="text-[#caa85c] font-bold">R$ ${\(p.price || p.precoFinal || 0\).toFixed\(2\)}</td>
+                        <td><input value="${p.image || ''}" class="bg-black text-[10px] p-1 border border-zinc-800 rounded w-64 text-zinc-500" disabled></td>
+                    </tr>`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>

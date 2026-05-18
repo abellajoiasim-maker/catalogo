@@ -372,15 +372,28 @@ db.ref('settings').on('value', snap => {
 });
 
 function salvarConfig() {
-    const nomeInput = document.getElementById('cfg-nome').value.trim();
-    const sloganInput = document.getElementById('cfg-slogan').value.trim();
-    const whatsappInput = document.getElementById('cfg-whatsapp').value.trim();
-    const parcelasInput = parseInt(document.getElementById('cfg-parcelas').value) || 6;
-    const pixInput = parseInt(document.getElementById('cfg-pix').value) || 5;
+    // Captura os elementos do DOM com segurança
+    const nomeEl = document.getElementById('cfg-nome');
+    const sloganEl = document.getElementById('cfg-slogan');
+    const whatsappEl = document.getElementById('cfg-whatsapp');
+    const parcelasEl = document.getElementById('cfg-parcelas');
+    const pixEl = document.getElementById('cfg-pix');
 
-    // Criamos uma estrutura espelhada idêntica para salvar tanto na raiz quanto na subchave empresa
-    // Isso garante compatibilidade total com os arquivos index/catálogo antigos e novos
-    const dadosAtualizados = {
+    if (!nomeEl || !sloganEl || !whatsappEl || !parcelasEl || !pixEl) {
+        alert("⚠️ Erro crítico: Alguns campos HTML não foram encontrados na página.");
+        return;
+    }
+
+    const nomeInput = nomeEl.value.trim();
+    const sloganInput = sloganEl.value.trim();
+    const whatsappInput = whatsappEl.value.trim();
+    
+    // Força um fallback seguro caso o usuário deixe o campo de número em branco
+    const parcelasInput = parseInt(parcelasEl.value) || 6;
+    const pixInput = parseInt(pixEl.value) || 5;
+
+    // Montagem da estrutura de dados aceita pelo Firebase
+    const dados = {
         name: nomeInput,
         slogan: sloganInput,
         parcelas: parcelasInput,
@@ -393,17 +406,18 @@ function salvarConfig() {
         }
     };
 
-    // Forçamos a atualização direta no nó master 'settings'
-    db.ref('settings').update(dadosAtualizados)
-        .then(() => {
-            alert("✅ Configurações e Slogan gravados com sucesso no ecossistema!");
-        })
-        .catch(err => {
-            alert("⚠️ Erro ao salvar dados administrativos.");
-            console.error(err);
-        });
-}
+    console.log("Tentando salvar as seguintes configurações:", dados);
 
+    // Executa a atualização diretamente no nó 'settings'
+    db.ref('settings').update(dados)
+    .then(() => {
+        alert("✅ Configurações salvas e aplicadas em tempo real no catálogo!");
+    })
+    .catch(err => {
+        alert("❌ Erro ao salvar dados administrativos. Verifique o console do navegador e as Regras do Firebase.");
+        console.error("Detalhes do erro do Firebase:", err);
+    });
+}
 function abrirModalProduto() {
     const nome = prompt("Nome do Novo Produto:"); if (!nome) return; // [cite: 148, 149]
     const sku = prompt("SKU único:").toUpperCase().trim(); if (!sku) return;

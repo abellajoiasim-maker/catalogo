@@ -26,20 +26,20 @@
         <div>
             <div class="mb-8 px-2">
                 <h1 class="text-[#caa85c] font-bold tracking-wider text-base uppercase">Abella Admin</h1>
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Gestor de Catálogo</p>
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Gestor do Ecossistema</p>
             </div>
             <nav class="space-y-1">
                 <button onclick="mudarAba('pedidos')" id="btn-pedidos" class="tab-btn active">📦 Pedidos Recebidos</button>
                 <button onclick="mudarAba('editor')" id="btn-editor" class="tab-btn">⚡ Editor Full Master</button>
-                <button onclick="mudarAba('ofertas')" id="btn-ofertas" class="tab-btn">🏷️ Painel de Ofertas</button>
+                <button onclick="mudarAba('ofertas')" id="btn-ofertas" class="tab-btn">🏷️ Painel de Ofertas Avançado</button>
                 <button onclick="mudarAba('galvanicas')" id="btn-galvanicas" class="tab-btn">🚚 Galvânicas Parceiras</button>
-                <button onclick="mudarAba('produtos')" id="btn-produtos" class="tab-btn">💍 Produtos (Visão Rápida)</button>
+                <button onclick="mudarAba('produtos')" id="btn-produtos" class="tab-btn">💍 Produtos (Gestão Ativa)</button>
                 <button onclick="mudarAba('categorias')" id="btn-categorias" class="tab-btn">📁 Coleções / Categorias</button>
                 <button onclick="mudarAba('config')" id="btn-config" class="tab-btn">⚙️ Configurações</button>
             </nav>
         </div>
         <div class="px-2 pt-4 border-t border-zinc-900 text-center text-[10px] text-gray-600">
-            Abella Joias v3.0
+            Abella Joias v3.2
         </div>
     </aside>
 
@@ -59,14 +59,52 @@
             <iframe src="editor.html" class="frame-container"></iframe>
         </section>
 
-        <section id="aba-ofertas" class="hidden space-y-4">
-            <iframe src="ofertas.html" class="frame-container"></iframe>
+        <section id="aba-ofertas" class="hidden space-y-6">
+            <div class="flex flex-col lg:flex-row gap-6">
+                <div class="card p-6 w-full lg:w-[400px] space-y-4 shrink-0">
+                    <h3 class="text-sm font-bold text-[#caa85c] uppercase tracking-wider">Criar Nova Ação Promocional</h3>
+                    
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Tipo de Oferta / Campanha</label>
+                        <select id="of-tipo" class="input-adm w-full" onchange="ajustarCamposOferta()">
+                            <option value="relampago">⚡ Oferta Relâmpago (Contagem Decrescente)</option>
+                            <option value="cupom">🎟️ Cupom de Desconto Fixo</option>
+                            <option value="categoria">📁 Desconto em Coleção Específica</option>
+                            <option value="progressivo">💰 Desconto por Valor Mínimo de Compra</option>
+                            <option value="badge">🏷️ Crachás/Tarjas Informativas nos Produtos</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Título/Identificador da Campanha</label>
+                        <input id="of-nome" class="input-adm" placeholder="Ex: PROMOOUTONO, LIQUIDA50">
+                    </div>
+
+                    <div id="campo-of-valor">
+                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Valor da Promoção (R$ ou %)</label>
+                        <input id="of-valor" type="number" class="input-adm" placeholder="Ex: 15">
+                    </div>
+
+                    <div id="campo-of-extra" class="hidden">
+                        </div>
+
+                    <button onclick="salvarOferta()" class="w-full bg-[#caa85c] text-black font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase hover:brightness-110">Lançar Campanha no Catálogo</button>
+                </div>
+
+                <div class="flex-1 space-y-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Ações de Marketing Ativas</h3>
+                    <div id="lista-ofertas-ativas" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <p class="text-xs text-gray-500 italic">Nenhuma promoção ativa...</p>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section id="aba-galvanicas" class="hidden space-y-6">
             <div class="flex flex-col lg:flex-row justify-between items-start gap-6">
                 <div class="card p-6 w-full lg:w-96 space-y-4 shrink-0">
-                    <h3 class="text-sm font-bold text-[#caa85c] uppercase tracking-wider">Novo Parceiro Galvânico</h3>
+                    <h3 class="text-sm font-bold text-[#caa85c] uppercase tracking-wider" id="galv-titulo-form">Novo Parceiro Galvânico</h3>
+                    <input type="hidden" id="galv-edit-id" value="">
                     <div>
                         <label class="text-[10px] text-gray-400 font-bold block mb-1">Nome da Empresa</label>
                         <input id="galv-nome" class="input-adm" placeholder="Ex: Galvânica Limeira">
@@ -97,24 +135,24 @@
                         <label class="text-[10px] text-gray-400 font-bold block mb-1">Descrição/Slogan</label>
                         <textarea id="galv-descricao" class="input-adm h-16 resize-none" placeholder="Breve resumo dos serviços..."></textarea>
                     </div>
-                    <button onclick="salvarGalvanica()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase">💾 Cadastrar Parceiro</button>
+                    <div class="flex gap-2">
+                        <button onclick="salvarGalvanica()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase">💾 Guardar</button>
+                        <button onclick="limparFormGalvanica()" id="btn-cancelar-galv" class="hidden bg-zinc-800 hover:bg-zinc-700 text-gray-300 font-bold px-4 rounded-lg text-xs uppercase">Cancelar</button>
+                    </div>
                 </div>
 
                 <div class="flex-1 w-full space-y-4">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wider">Parceiros Homologados</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="lista-galvanicas-adm">
-                        <p class="text-xs text-gray-500 italic">Carregando galvânicas...</p>
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="lista-galvanicas-adm"></div>
                 </div>
             </div>
         </section>
 
         <section id="aba-produtos" class="hidden space-y-6">
             <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold tracking-wide">Produtos Cadastrados (Últimos 50)</h2>
+                <h2 class="text-xl font-bold tracking-wide">Produtos Ativos (Controlo de Stock Rápido)</h2>
                 <div class="flex gap-2">
-                    <button onclick="abrirModalProduto()" class="bg-zinc-800 border border-zinc-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-zinc-700">+ RÁPIDO</button>
-                    <button onclick="mudarAba('editor')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold hover:brightness-110">Acessar Editor Completo ➔</button>
+                    <button onclick="abrirModalProduto()" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold hover:brightness-110">+ NOVO PRODUTO</button>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="lista-produtos"></div>
@@ -123,7 +161,7 @@
         <section id="aba-categorias" class="hidden space-y-6">
             <div class="flex justify-between items-center">
                 <h2 class="text-xl font-bold tracking-wide">Coleções / Categorias</h2>
-                <button onclick="abrirModalCategoria()" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold">+ NOVA CATEGORIA</button>
+                <button onclick="abrirModalCategoria()" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold">+ NOVA COLECÇÃO</button>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" id="lista-categorias"></div>
         </section>

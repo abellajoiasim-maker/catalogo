@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Marketing • Abella Joias</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<style>
+body { background:#0b0b0b; color:#eee; font-family: Arial; }
+.card { background:#141414; border:1px solid #2a2a2a; border-radius:16px; padding:20px; }
+.input { background:#0b0b0b; border:1px solid #333; padding:10px; border-radius:8px; width:100%; color:#fff; }
+.btn { background:#caa85c; color:#000; font-weight:bold; padding:10px 20px; border-radius:8px; cursor:pointer; }
+</style>
+</head>
+
+<body class="p-4 pb-28">
+
+<a href="admin.html" class="text-[12px] text-[#caa85c]">← Voltar ao Admin</a>
+
+<div class="max-w-4xl mx-auto">
+
+<header class="mb-6">
+    <h1 class="text-xl text-[#caa85c] font-bold uppercase">Painel de Ofertas</h1>
+    <p class="text-xs text-gray-400">Gerencie campanhas e promoções da Abella Joias</p>
+</header>
+
+<div class="card mb-6">
+    <h2 class="text-[#caa85c] font-bold mb-4">Configuração de Oferta</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input id="titulo" class="input" placeholder="Título da campanha">
+        <input id="subtitulo" class="input" placeholder="Subtítulo">
+        <input id="desconto" type="number" class="input" placeholder="Desconto (%)">
+        <input id="cupom" class="input" placeholder="Código do cupom">
+    </div>
+</div>
+
+<div class="card mb-6 flex justify-between items-center">
+    <div>
+        <p class="text-xs text-gray-400 uppercase">Status da Campanha</p>
+        <h3 id="statusCampanha">Carregando...</h3>
+    </div>
+    <button onclick="alternarCampanha()" class="btn">Ativar / Desativar</button>
+</div>
+
+</div>
+
+<div class="fixed bottom-0 left-0 right-0 p-4 bg-black/90 backdrop-blur-lg border-t border-[#caa85c]/20 z-[9999]">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+        <span class="text-xs text-gray-400">Salve suas alterações</span>
+        <button onclick="salvarCampanha()" class="btn">💾 Salvar Oferta</button>
+    </div>
+</div>
+
+<script>
+window.onerror = function(msg, src, line){
+    console.error("Erro:", msg, "Linha:", line);
+    return true;
+};
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+    authDomain: "catalogo-abella-joias.firebaseapp.com",
+    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
+    projectId: "catalogo-abella-joias",
+    storageBucket: "catalogo-abella-joias.firebasestorage.app"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const safe = id => document.getElementById(id);
+const val = (v,d='') => v ?? d;
+
+// 🔥 CARREGAR CAMPANHA (Isolada em marketing/abella)
+function carregarCampanha(){
+    db.ref('marketing/abella').on('value', snap=>{
+        const d = snap.val() || {};
+
+        safe('titulo').value = val(d.titulo);
+        safe('subtitulo').value = val(d.subtitulo);
+        safe('desconto').value = val(d.desconto, 0);
+        safe('cupom').value = val(d.cupom);
+
+        safe('statusCampanha').innerText = d.ativo ? "🟢 Ativa" : "🔴 Inativa";
+    });
+}
+
+// 🔥 SALVAR
+function salvarCampanha(){
+    try{
+        const data = {
+            titulo: safe('titulo').value,
+            subtitulo: safe('subtitulo').value,
+            desconto: parseFloat(safe('desconto').value) || 0,
+            cupom: safe('cupom').value,
+        };
+
+        db.ref('marketing/abella').update(data)
+        .then(()=> alert("Campanha salva com sucesso!"))
+        .catch(()=> alert("Erro ao salvar no banco."));
+
+    }catch(e){
+        console.error(e);
+    }
+}
+
+// 🔥 TOGGLE (Seguro contra interferência)
+function alternarCampanha(){
+    const ref = db.ref('marketing/abella/ativo');
+    ref.transaction(current=>{
+        return !current;
+    })
+    .catch(err=> console.error(err));
+}
+
+carregarCampanha();
+</script>
+</body>
+</html>

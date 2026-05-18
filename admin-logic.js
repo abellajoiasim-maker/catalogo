@@ -14,13 +14,21 @@ const db = firebase.database();
 const fMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
 // CONTROLE DE NAVEGAÇÃO DE ABAS
+// CONTROLE DE NAVEGAÇÃO DE ABAS ATUALIZADO
 function mudarAba(idAba) {
-    ['pedidos', 'produtos', 'categorias', 'config'].forEach(aba => {
-        document.getElementById(`aba-${aba}`).classList.add('hidden');
-        document.getElementById(`btn-${aba}`).classList.remove('active');
+    ['pedidos', 'editor', 'ofertas', 'produtos', 'categorias', 'config'].forEach(aba => {
+        const elementoAba = document.getElementById(`aba-${aba}`);
+        const elementoBtn = document.getElementById(`btn-${aba}`);
+        
+        if(elementoAba) elementoAba.classList.add('hidden');
+        if(elementoBtn) elementoBtn.classList.remove('active');
     });
-    document.getElementById(`aba-${idAba}`).classList.remove('hidden');
-    document.getElementById(`btn-${idAba}`).classList.add('active');
+    
+    const abaAlvo = document.getElementById(`aba-${idAba}`);
+    const btnAlvo = document.getElementById(`btn-${idAba}`);
+    
+    if(abaAlvo) abaAlvo.classList.remove('hidden');
+    if(btnAlvo) btnAlvo.classList.add('active');
 }
 
 // ==========================================

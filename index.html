@@ -2,10 +2,138 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Abella Joias - Catálogo Atacado</title>
-    <script type="module" src="./app.js"></script>
+    <title>Abella Joias • Catálogo Oficial</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <style>
+        body { background: #0b0b0b; color: #fff; font-family: Arial, sans-serif; }
+        .card-categoria { background: #141414; border: 1px solid #222; border-radius: 16px; overflow: hidden; transition: transform 0.2s; cursor: pointer; }
+        .card-categoria:hover { transform: scale(1.02); border-color: #caa85c; }
+        .badge-promo { background: #caa85c; color: #000; font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 4px; position: absolute; top: 12px; left: 12px; }
+    </style>
 </head>
-<body>
-    <p>Redirecionando para a vitrine principal...</p>
+<body class="p-4 max-w-xl mx-auto min-h-screen flex flex-col justify-between pb-20">
+
+    <div>
+        <div class="flex justify-between items-center mb-6 pt-2">
+            <div>
+                <h1 id="nome-loja" class="text-xl font-black text-[#caa85c] tracking-wider uppercase">Abella Joias</h1>
+                <p id="slogan-loja" class="text-[11px] text-gray-400 italic">Carregando coleções...</p>
+            </div>
+            <a href="carrinho.html" class="relative bg-[#141414] p-3 rounded-full border border-zinc-800 hover:border-[#caa85c]">
+                🛒 <span id="badge-carrinho" class="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full hidden">0</span>
+            </a>
+        </div>
+
+        <div id="banner-promocao" class="hidden bg-gradient-to-r from-red-900 to-black p-3 rounded-xl mb-6 border border-red-800/40 text-center">
+            <span class="text-xs font-bold text-white tracking-wide uppercase" id="texto-promocao"></span>
+        </div>
+
+        <h2 class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4">Nossas Coleções</h2>
+        <div id="grid-categorias" class="grid grid-cols-2 gap-3">
+            </div>
+    </div>
+
+    <div class="mt-12 pt-4 border-t border-zinc-900 text-center text-[10px] text-gray-600">
+        <p>© 2026 Abella Joias - Atacado de Joias no Bruto</p>
+        <p class="mt-1">Frete grátis para galvânicas de Limeira nas compras acima de R$100</p>
+    </div>
+
+<script>
+// CONFIGURAÇÃO OFICIAL DO SEU FIREBASE
+const firebaseConfig = {
+    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+    authDomain: "catalogo-abella-joias.firebaseapp.com",
+    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
+    projectId: "catalogo-abella-joias",
+    storageBucket: "catalogo-abella-joias.firebasestorage.app",
+    messagingSenderId: "727568435294",
+    appId: "1:727568435294:web:442c0179ecf0686dff4ccf"
+};
+
+if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Inicialização e Renderização com Filtro de Segurança
+function init(){
+    atualizarBadgeCarrinho();
+    
+    // 1. Puxa dados da Empresa (Abella Joias)
+    db.ref("settings/empresa").on("value", snap => {
+        const emp = snap.val() || {};
+        document.getElementById("nome-loja").innerText = emp.nome || "Abella Joias";
+        document.getElementById("slogan-loja").innerText = emp.slogan || "Atacado de Joias no Bruto";
+    });
+
+    // 2. Verifica se há promoções gerais configuradas nas settings
+    db.ref("settings/promocao").on("value", snap => {
+        const promo = snap.val() || {};
+        const banner = document.getElementById("banner-promocao");
+        const texto = document.getElementById("texto-promocao");
+        if(promo.ativa && promo.texto){
+            banner.classList.remove("hidden");
+            texto.innerText = promo.texto;
+        } else {
+            banner.classList.add("hidden");
+        }
+    });
+
+    // 3. Carrega Categorias ignorando os nós da Luary Shop
+    db.ref("categories").on("value", snap => {
+        const grid = document.getElementById("grid-categorias");
+        grid.innerHTML = "";
+        
+        if(!snap.exists()){
+            grid.innerHTML = "<p class='text-xs text-gray-500 col-span-2 text-center py-4'>Nenhuma coleção encontrada.</p>";
+            return;
+        }
+
+        snap.forEach(child => {
+            const id = child.key;
+            const cat = child.val() || {};
+
+            // FILTRO CRÍTICO: Ignora se a categoria pertencer explicitamente ao projeto Luary
+            if(cat.loja === "luary" || id.toLowerCase().includes("luary") || cat.projeto === "luary") {
+                return; 
+            }
+
+            // Oculta se estiver pausada no admin
+            if(cat.paused) return;
+
+            const tagPromo = cat.promoAtiva ? `<span class="badge-promo">${cat.promoTag || 'OFERTA'}</span>` : '';
+            
+            grid.innerHTML += `
+                <div class="card-categoria relative" onclick="location.href='produtos.html?id=${id}'">
+                    ${tagPromo}
+                    <img src="${cat.image || 'https://via.placeholder.com/300'}" class="w-full aspect-square object-cover bg-zinc-950" alt="${cat.name}">
+                    <div class="p-3">
+                        <h3 class="text-xs font-bold text-white truncate">${cat.name || 'Sem nome'}</h3>
+                        <span class="text-[9px] text-gray-500 block mt-0.5 font-medium uppercase tracking-wider">Ver Modelos →</span>
+                    </div>
+                </div>
+            `;
+        });
+    });
+}
+
+function atualizarBadgeCarrinho(){
+    try {
+        const carrinho = JSON.parse(localStorage.getItem("carrinho")) || [];
+        const badge = document.getElementById("badge-carrinho");
+        if(carrinho.length > 0) {
+            badge.innerText = carrinho.length;
+            badge.classList.remove("hidden");
+        } else {
+            badge.classList.add("hidden");
+        }
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
 </body>
 </html>

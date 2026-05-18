@@ -352,29 +352,39 @@ function excluirItem(caminhoRef) {
 }
 
 // ==========================================
-// 6. CARREGAMENTO & GRAVAÇÃO DAS SETTINGS (FIX SLOGAN)
+// SEÇÃO: CARREGAMENTO & GRAVAÇÃO DAS SETTINGS (CORRIGIDO)
 // ==========================================
 db.ref('settings').on('value', snap => {
-    const settingsGerais = snap.val() || {};
-    const emp = settingsGerais.empresa || settingsGerais;
+    // Se o usuário estiver focando em algum campo, evitamos sobrescrever para não atrapalhar a digitação
+    if (document.activeElement && document.activeElement.classList.contains('input-adm')) {
+        return; 
+    }
 
-    document.getElementById('cfg-nome').value = emp.nome || settingsGerais.name || '';
-    document.getElementById('cfg-slogan').value = emp.slogan || settingsGerais.slogan || ''; // [cite: 143]
-    document.getElementById('cfg-parcelas').value = settingsGerais.parcelas || emp.parcelas || 6;
-    document.getElementById('cfg-pix').value = settingsGerais.pix || emp.pix || 5;
-    document.getElementById('cfg-whatsapp').value = emp.whatsapp || settingsGerais.whatsapp || '';
+    const settingsGerais = snap.val() || {};
+    const emp = settingsGerais.empresa || {};
+
+    // Mapeamento blindado para garantir que pegue o dado onde quer que esteja salvo
+    document.getElementById('cfg-nome').value = settingsGerais.name || emp.nome || '';
+    document.getElementById('cfg-slogan').value = settingsGerais.slogan || emp.slogan || '';
+    document.getElementById('cfg-parcelas').value = settingsGerais.parcelas || 6;
+    document.getElementById('cfg-pix').value = settingsGerais.pix || 5;
+    document.getElementById('cfg-whatsapp').value = settingsGerais.whatsapp || emp.whatsapp || '';
 });
 
 function salvarConfig() {
     const nomeInput = document.getElementById('cfg-nome').value.trim();
     const sloganInput = document.getElementById('cfg-slogan').value.trim();
     const whatsappInput = document.getElementById('cfg-whatsapp').value.trim();
+    const parcelasInput = parseInt(document.getElementById('cfg-parcelas').value) || 6;
+    const pixInput = parseInt(document.getElementById('cfg-pix').value) || 5;
 
-    const dados = {
+    // Criamos uma estrutura espelhada idêntica para salvar tanto na raiz quanto na subchave empresa
+    // Isso garante compatibilidade total com os arquivos index/catálogo antigos e novos
+    const dadosAtualizados = {
         name: nomeInput,
-        slogan: sloganInput, // [cite: 144]
-        parcelas: parseInt(document.getElementById('cfg-parcelas').value) || 6,
-        pix: parseInt(document.getElementById('cfg-pix').value) || 5,
+        slogan: sloganInput,
+        parcelas: parcelasInput,
+        pix: pixInput,
         whatsapp: whatsappInput,
         empresa: {
             nome: nomeInput,
@@ -382,9 +392,16 @@ function salvarConfig() {
             whatsapp: whatsappInput
         }
     };
-    db.ref('settings').update(dados).then(() => {
-        alert("✅ Configurações e Slogan gravados com sucesso!");
-    });
+
+    // Forçamos a atualização direta no nó master 'settings'
+    db.ref('settings').update(dadosAtualizados)
+        .then(() => {
+            alert("✅ Configurações e Slogan gravados com sucesso no ecossistema!");
+        })
+        .catch(err => {
+            alert("⚠️ Erro ao salvar dados administrativos.");
+            console.error(err);
+        });
 }
 
 function abrirModalProduto() {

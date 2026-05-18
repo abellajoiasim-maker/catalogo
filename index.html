@@ -73,23 +73,58 @@ const db = firebase.database();
 const fM = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
 async function init(){
-    // 1. Teste de conexão simples
-    console.log("Tentando ler o Firebase...");
-
-    // Teste da gaveta 'categories'
-    db.ref('categories').once('value', snap => {
-        console.log("Conteúdo de 'categories':", snap.val());
+    // 1. Puxa dados da Empresa e Configurações (Lendo direto do nó retornado)
+    db.ref('settings').on('value', snap => {
+        const settingsGerais = snap.val() || {};
+        // Tenta ler do sub-nó 'empresa' ou direto do nó principal se estiver espalhado
+        const emp = settingsGerais.empresa || settingsGerais;
+        
+        document.getElementById("nome").innerText = emp.nome || settingsGerais.name || "Abella Joias";
+        document.getElementById("slogan").innerText = emp.slogan || "Atacado de Joias no Bruto";
+        
+        const parc = settingsGerais.parcelas || emp.parcelas || 6;
+        document.getElementById("parcelamento").innerText = `Até ${parc}x no cartão`;
+        
+        const pixDesc = settingsGerais.pix || emp.pix || 5;
+        document.getElementById("pix").innerText = `${pixDesc}% OFF no PIX`;
+        
+        if(emp.whatsapp || settingsGerais.whatsapp) {
+            document.getElementById("whats").href = `https://wa.me/${emp.whatsapp || settingsGerais.whatsapp}`;
+        }
     });
 
-    // Teste da gaveta 'categorias' (em português)
-    db.ref('categorias').once('value', snap => {
-        console.log("Conteúdo de 'categorias':", snap.val());
-    });
+    // 2. Puxa as Categorias e monta os cards na tela
+    db.ref('categories').on('value', snap => {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        if(!snap.exists()) {
+            grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-4">Nenhuma coleção encontrada.</p>';
+            return;
+        }
 
-    // Teste da gaveta 'settings'
-    db.ref('settings').once('value', snap => {
-        console.log("Conteúdo de 'settings':", snap.val());
+        snap.forEach(child => {
+            const id = child.key;
+            const cat = child.val() || {};
+
+            // Filtro de Segurança: ignora dados da outra loja (Luary)
+            if(cat.loja === "luary" || id.toLowerCase().includes("luary") || cat.projeto === "luary") return;
+            if(cat.paused) return;
+
+            const promoTag = cat.promoAtiva ? `<span class="badge" style="background:${cat.promoColor || '#caa85c'}">${cat.promoTag || 'OFERTA'}</span>` : '';
+            
+            grid.innerHTML += `
+                <div class="card relative cursor-pointer" onclick="location.href='produtos.html?id=${id}'">
+                    ${promoTag}
+                    <img src="${cat.image || 'https://via.placeholder.com/400'}" class="w-full aspect-square object-cover bg-zinc-900" loading="lazy">
+                    <div class="p-4">
+                        <h3 class="font-bold text-xs truncate text-white uppercase">${cat.name || id.replace(/-/g, ' ')}</h3>
+                        <p class="text-[10px] text-gray-500 mt-1">Ver modelos ➔</p>
+                    </div>
+                </div>
+            `;
+        });
     });
+    atualizarCarrinho();
 }
 
 function atualizarCarrinho(){

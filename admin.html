@@ -7,195 +7,376 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background: #0b0b0b; color: #eee; }
         .sidebar { background: #111; border-right: 1px solid #222; }
         .tab-btn { transition: 0.2s; border-radius: 8px; text-align: left; width: 100%; padding: 12px 16px; font-size: 13px; font-weight: 600; }
         .tab-btn.active { background: #caa85c; color: #000; }
-        .tab-btn:not(.active):hover { background: #1a1a1a; color: #caa85c; }
-        .card { background: #141414; border: 1px solid #222; border-radius: 12px; }
-        .input-adm { background: #0b0b0b; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; width: 100%; outline: none; font-size: 13px; transition: 0.2s; }
-        .input-adm:focus { border-color: #caa85c; background: #111; }
-        .frame-container { width: 100%; height: 82vh; border: none; border-radius: 12px; background: #141414; }
+        .tab-btn:not(.active):hover { background: #222; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .card { background: #141414; border: 1px solid #222; border-radius: 12px; padding: 16px; }
+        .input-field { background: #000; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 8px; width: 100%; outline: none; font-size: 14px; }
+        .input-field:focus { border-color: #caa85c; }
+        .serif { font-family: 'Cinzel', serif; }
+        
+        /* Estilos específicos para a área de impressão de romaneio sem quebrar o layout escuro do painel */
+        @media print {
+            body * { display: none !important; }
+            #print-area, #print-area * { display: block !important; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; color: #000 !important; background: #fff !important; }
+        }
     </style>
 </head>
-<body class="flex min-h-screen">
+<body>
 
-    <aside class="w-64 sidebar p-6 flex flex-col justify-between shrink-0">
-        <div>
-            <div class="mb-8 px-2">
-                <h1 class="text-[#caa85c] font-bold tracking-wider text-base uppercase">Abella Admin</h1>
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Gestor do Ecossistema</p>
+    <div class="flex min-h-screen">
+        <div class="sidebar w-64 p-4 space-y-6 shrink-0">
+            <div class="px-2">
+                <h1 class="text-lg font-bold uppercase tracking-wider text-[#caa85c]">Abella Joias</h1>
+                <p class="text-xs text-gray-500">Painel de Controle</p>
             </div>
             <nav class="space-y-1">
-                <button onclick="mudarAba('pedidos')" id="btn-pedidos" class="tab-btn active">📦 Pedidos Recebidos</button>
-                <button onclick="mudarAba('editor')" id="btn-editor" class="tab-btn">⚡ Editor Full Master</button>
-                <button onclick="mudarAba('ofertas')" id="btn-ofertas" class="tab-btn">🏷️ Painel de Ofertas Avançado</button>
-                <button onclick="mudarAba('galvanicas')" id="btn-galvanicas" class="tab-btn">🚚 Galvânicas Parceiras</button>
-                <button onclick="mudarAba('produtos')" id="btn-produtos" class="tab-btn">💍 Produtos (Gestão Ativa)</button>
-                <button onclick="mudarAba('categorias')" id="btn-categorias" class="tab-btn">📁 Coleções / Categorias</button>
-                <button onclick="mudarAba('config')" id="btn-config" class="tab-btn">⚙️ Configurações</button>
+                <button onclick="switchTab('pedidos')" id="btn-pedidos" class="tab-btn active flex items-center gap-3">📦 Pedidos Recebidos</button>
+                <button onclick="switchTab('produtos')" id="btn-produtos" class="tab-btn flex items-center gap-3">💎 Gerenciar Catálogo</button>
+                <button onclick="switchTab('galvanicas')" id="btn-galvanicas" class="tab-btn flex items-center gap-3">🏭 Galvânicas Parceiras</button>
+                <button onclick="switchTab('config')" id="btn-config" class="tab-btn flex items-center gap-3">⚙️ Configurações Gerais</button>
             </nav>
         </div>
-        <div class="px-2 pt-4 border-t border-zinc-900 text-center text-[10px] text-gray-600">
-            Abella Joias v3.2
+
+        <div class="flex-1 p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+            
+            <div id="section-pedidos" class="content-section active space-y-6">
+                <div class="flex justify-between items-center border-b border-zinc-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Pedidos Recebidos</h2>
+                        <p class="text-sm text-gray-400">Gerenciamento, triagem e emissão de romaneios automatizados</p>
+                    </div>
+                </div>
+
+                <div id="grid-pedidos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <p class="text-gray-500 italic text-sm col-span-full">Carregando fluxo de pedidos...</p>
+                </div>
+            </div>
+
+            <div id="section-produtos" class="content-section space-y-6">
+                <div class="flex justify-between items-center border-b border-zinc-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Gerenciar Catálogo</h2>
+                        <p class="text-sm text-gray-400">Adicione e modifique os itens brutos da vitrine</p>
+                    </div>
+                </div>
+                <div class="card p-6 max-w-xl space-y-4">
+                    <h3 class="text-[#caa85c] font-bold text-sm uppercase">Adicionar Novo Produto no Bruto</h3>
+                    <input id="prod-sku" class="input-field" placeholder="SKU do Produto (Ex: AN-001)">
+                    <input id="prod-nome" class="input-field" placeholder="Nome Descritivo do Produto">
+                    <input id="prod-peso" type="number" step="0.01" class="input-field" placeholder="Peso Médio Estimado (g)">
+                    <input id="prod-preco" type="number" step="0.01" class="input-field" placeholder="Preço do Atacado (R$)">
+                    <input id="prod-imagem" class="input-field" placeholder="URL Absoluta da Imagem do Produto">
+                    <button onclick="salvarProduto()" class="w-full bg-[#caa85c] text-black font-bold p-2.5 rounded-lg text-sm hover:brightness-110 transition-all">Salvar Item no Catálogo</button>
+                </div>
+            </div>
+
+            <div id="section-galvanicas" class="content-section space-y-6">
+                <div class="flex justify-between items-center border-b border-zinc-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Galvânicas Parceiras</h2>
+                        <p class="text-sm text-gray-400">Empresas integradas com logística de frete gratuito em Limeira-SP</p>
+                    </div>
+                </div>
+                <div id="gridGalvanicas" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+            <div id="section-config" class="content-section space-y-6">
+                <div class="flex justify-between items-center border-b border-zinc-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Configurações Gerais</h2>
+                        <p class="text-sm text-gray-400">Ajuste regras de descontos de campanhas e canais de contato</p>
+                    </div>
+                </div>
+                <div class="card p-6 max-w-xl space-y-4">
+                    <input id="cfg-whatsapp" class="input-field" placeholder="WhatsApp Corporativo Responsável">
+                    <input id="cfg-pix" type="number" class="input-field" placeholder="Desconto Padrão PIX à Vista (%)">
+                    <input id="cfg-parcelas" type="number" class="input-field" placeholder="Limite Máximo Parcelas Cartão">
+                    <button onclick="salvarConfig()" class="w-full bg-[#caa85c] text-black font-bold p-2.5 rounded-lg text-sm hover:brightness-110 transition-all">Salvar Parâmetros Operacionais</button>
+                </div>
+            </div>
+
         </div>
-    </aside>
+    </div>
 
-    <main class="flex-1 p-8 overflow-y-auto w-full">
-        
-        <section id="aba-pedidos" class="space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold tracking-wide">Pedidos Recebidos</h2>
-                <span id="qtd-pedidos" class="bg-zinc-800 border border-zinc-700 px-3 py-1 rounded-full text-xs text-gray-400 font-mono">0 pedidos</span>
-            </div>
-            <div id="lista-pedidos" class="space-y-4">
-                <p class="text-xs text-gray-500 italic">Buscando lista de compras no Firebase...</p>
-            </div>
-        </section>
+    <div id="print-area"></div>
 
-        <section id="aba-editor" class="hidden space-y-4">
-            <iframe src="editor.html" class="frame-container"></iframe>
-        </section>
+    <script>
+        // Inicialização do Firebase Realtime Database
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        <section id="aba-ofertas" class="hidden space-y-6">
-            <div class="flex flex-col lg:flex-row gap-6">
-                <div class="card p-6 w-full lg:w-[400px] space-y-4 shrink-0">
-                    <h3 class="text-sm font-bold text-[#caa85c] uppercase tracking-wider">Criar Nova Ação Promocional</h3>
-                    
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Tipo de Oferta / Campanha</label>
-                        <select id="of-tipo" class="input-adm w-full" onchange="ajustarCamposOferta()">
-                            <option value="relampago">⚡ Oferta Relâmpago (Contagem Decrescente)</option>
-                            <option value="cupom">🎟️ Cupom de Desconto Fixo</option>
-                            <option value="categoria">📁 Desconto em Coleção Específica</option>
-                            <option value="progressivo">💰 Desconto por Valor Mínimo de Compra</option>
-                            <option value="badge">🏷️ Crachás/Tarjas Informativas nos Produtos</option>
-                        </select>
-                    </div>
+        let pedidoEditando = null;
+        const fMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Título/Identificador da Campanha</label>
-                        <input id="of-nome" class="input-adm" placeholder="Ex: PROMOOUTONO, LIQUIDA50">
-                    </div>
+        // Chaveador de Abas do Sistema
+        function switchTab(tabName) {
+            document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('section-' + tabName).classList.add('active');
+            document.getElementById('btn-' + tabName).classList.add('active');
+        }
 
-                    <div id="campo-of-valor">
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Valor da Promoção (R$ ou %)</label>
-                        <input id="of-valor" type="number" class="input-adm" placeholder="Ex: 15">
-                    </div>
+        // ============================================================
+        // ESCUTA E MONITORAMENTO DOS PEDIDOS RECEBIDOS (GRID COMPACTO)
+        // ============================================================
+        db.ref('orders').on('value', snapshot => {
+            const gridPedidos = document.getElementById('grid-pedidos');
+            gridPedidos.innerHTML = "";
 
-                    <div id="campo-of-extra" class="hidden">
+            if (!snapshot.exists()) {
+                gridPedidos.innerHTML = `<p class="text-gray-500 italic text-sm col-span-full py-6 text-center">Nenhum pedido recebido até o momento no banco de dados.</p>`;
+                return;
+            }
+
+            snapshot.forEach(childSnapshot => {
+                const idPedido = childSnapshot.key;
+                const p = childSnapshot.val();
+
+                // Tratamento de Formatação e Fallbacks de Segurança
+                const numPedidoExibicao = idPedido.substring(1, 10).toUpperCase();
+                let dataExibicao = "Data não informada";
+                if (p.data) {
+                    dataExibicao = p.data.includes('T') ? new Date(p.data).toLocaleString('pt-BR') : p.data;
+                }
+                const nomeCliente = (p.nome || (p.cliente && p.cliente.nome) || "Cliente Não Identificado").toUpperCase();
+                const whatsCliente = p.whats || (p.cliente && p.cliente.telefone) || "N/A";
+
+                // Montagem da Estrutura Compacta Exata Solicitada
+                gridPedidos.innerHTML += `
+                    <div class="card flex flex-col justify-between space-y-4 border border-zinc-800 hover:border-zinc-700 transition-all">
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-gray-400">Pedido #${numPedidoExibicao}</span>
+                                <span class="text-[11px] font-mono text-zinc-500">${dataExibicao}</span>
+                            </div>
+                            <h3 class="text-sm font-black text-white tracking-wide uppercase truncate">${nomeCliente}</h3>
+                            <p class="text-xs text-gray-400 flex items-center gap-1.5 pt-0.5">
+                                <span>📱 WhatsApp:</span>
+                                <span class="font-mono text-gray-300">${whatsCliente}</span>
+                            </p>
                         </div>
 
-                    <button onclick="salvarOferta()" class="w-full bg-[#caa85c] text-black font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase hover:brightness-110">Lançar Campanha no Catálogo</button>
-                </div>
+                        <div class="space-y-1.5 bg-black/40 p-2 rounded-lg border border-zinc-900">
+                            <label class="text-[10px] uppercase font-bold text-[#caa85c] block tracking-wider">Emitir Romaneio / Checklist:</label>
+                            <div class="flex gap-1">
+                                <select id="select-romaneio-${idPedido}" class="bg-zinc-900 border border-zinc-800 text-xs text-white p-1.5 rounded flex-1 outline-none">
+                                    <option value="1">1. Conferência de Pedido</option>
+                                    <option value="2">2. Romaneio Financeiro</option>
+                                    <option value="3">3. Catálogo do Pedido</option>
+                                    <option value="4">4. Grade de Conferência</option>
+                                    <option value="5">5. Grade Financeira</option>
+                                    <option value="6">6. Romaneio Completo (Foto/Preço)</option>
+                                </select>
+                                <button onclick="dispararImpressao('${idPedido}')" class="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-[11px] px-2.5 py-1 rounded text-white font-bold transition-all uppercase">Imprimir</button>
+                            </div>
+                        </div>
 
-                <div class="flex-1 space-y-4">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Ações de Marketing Ativas</h3>
-                    <div id="lista-ofertas-ativas" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <p class="text-xs text-gray-500 italic">Nenhuma promoção ativa...</p>
+                        <div class="flex gap-2 pt-1 border-t border-zinc-900">
+                            <button onclick="editarPedido('${idPedido}')" class="flex-1 bg-zinc-900 hover:bg-zinc-800 text-gray-300 font-semibold py-1.5 px-3 rounded-lg text-xs border border-zinc-800 transition-all text-center">
+                                ✏️ Editar
+                            </button>
+                            <button onclick="deletarPedido('${idPedido}')" class="bg-red-950/40 hover:bg-red-900/60 border border-red-900/50 text-red-400 font-semibold py-1.5 px-3 rounded-lg text-xs transition-all">
+                                🗑️ Excluir
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </section>
+                `;
+            });
+        });
 
-        <section id="aba-galvanicas" class="hidden space-y-6">
-            <div class="flex flex-col lg:flex-row justify-between items-start gap-6">
-                <div class="card p-6 w-full lg:w-96 space-y-4 shrink-0">
-                    <h3 class="text-sm font-bold text-[#caa85c] uppercase tracking-wider" id="galv-titulo-form">Novo Parceiro Galvânico</h3>
-                    <input type="hidden" id="galv-edit-id" value="">
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Nome da Empresa</label>
-                        <input id="galv-nome" class="input-adm" placeholder="Ex: Galvânica Limeira">
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Selo / Destaque</label>
-                        <input id="galv-selo" class="input-adm" placeholder="Ex: Parceiro Ouro, Frete Grátis">
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Endereço Completo</label>
-                        <input id="galv-endereco" class="input-adm" placeholder="Rua, Número, Bairro - Cidade">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
+        // Gatilho intermediário para capturar a seleção do tipo de romaneio do grid
+        function dispararImpressao(idPedido) {
+            const selectEl = document.getElementById(`select-romaneio-${idPedido}`);
+            if (selectEl) {
+                const tipoSelecionado = parseInt(selectEl.value);
+                imprimirRomaneio(idPedido, tipoSelecionado);
+            }
+        }
+
+        // ============================================================
+        // SISTEMA DE IMPRESSÃO DE ROMANEIOS UNIFICADO E INTEGRADO
+        // ============================================================
+        async function imprimirRomaneio(id, tipo) {
+            if(!id) id = pedidoEditando;
+            db.ref('orders/' + id).once('value', async s => {
+                const p = s.val();
+                if (!p) return;
+
+                const empSnap = await db.ref('settings/empresa').once('value');
+                const emp = empSnap.val() || { nome: "Abella Joias" };
+                
+                const itens = Array.isArray(p.itens) ? p.itens : Object.values(p.itens || {});
+                
+                const isFin = [2, 5, 6].includes(tipo);    
+                const isFoto = [3, 6].includes(tipo);      
+                const isGrade = [4, 5, 6].includes(tipo);  
+
+                const titulos = {
+                    1: "Conferência de Pedido", 2: "Romaneio Financeiro", 3: "Catálogo do Pedido",
+                    4: "Grade de Conferência", 5: "Grade Financeira", 6: "Romaneio Completo (Foto/Preço)"
+                };
+
+                let html = `<div style="padding: 20px; font-family: sans-serif; color: #000; background: #fff;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
                         <div>
-                            <label class="text-[10px] text-gray-400 font-bold block mb-1">Telefone Fixo</label>
-                            <input id="galv-telefone" class="input-adm" placeholder="(19) 3333-3333">
+                            <h1 style="margin: 0; font-size: 22px; text-transform: uppercase;">${emp.nome}</h1>
+                            <p style="margin: 0; font-size: 10px; color: #555;">${titulos[tipo]}</p>
+                        </div>
+                        <div style="text-align: right; font-size: 10px;">
+                            <b>PEDIDO:</b> ${id.substring(1, 10).toUpperCase()}<br>
+                            <b>DATA:</b> ${p.data ? (p.data.includes('T') ? new Date(p.data).toLocaleString('pt-BR') : p.data) : ''}
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 11px; margin-bottom: 20px; background: #f9f9f9; padding: 10px; border-radius: 5px;">
+                        <div>
+                            <b style="color: #caa85c; text-transform: uppercase;">Cliente</b><br>
+                            ${p.nome || p.cliente?.nome || 'Não informado'}<br>
+                            ${p.whats || p.cliente?.telefone || ''}
                         </div>
                         <div>
-                            <label class="text-[10px] text-gray-400 font-bold block mb-1">WhatsApp (Só números)</label>
-                            <input id="galv-whatsapp" class="input-adm" placeholder="5519999999999">
+                            <b style="color: #caa85c; text-transform: uppercase;">Endereço de Entrega</b><br>
+                            ${p.rua || p.entrega?.rua || 'Retirada'} ${p.numero ? `, ${p.numero}` : ''} ${p.bairro ? ` - ${p.bairro}` : ''} ${p.cidade ? ` / ${p.cidade}` : ''}
+                        </div>
+                    </div>`;
+
+                if (isGrade) {
+                    html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">`;
+                    itens.forEach(i => {
+                        html += `
+                        <div style="border: 1px solid #eee; padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 10px; break-inside: avoid;">
+                            ${isFoto ? `<img src="${i.image || i.foto || i.imageUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">` : ''}
+                            <div style="font-size: 10px;">
+                                <b style="font-size: 11px;">${i.sku || 'S/SKU'}</b><br>
+                                <span style="color: #555;">${i.name || i.nome}</span><br>
+                                Qtd: <b>${i.quantidade}</b> | Peso: ${i.peso || 0}g
+                                ${isFin ? `<br><b style="font-size: 11px;">${fMoeda((parseFloat(i.precoFinal || i.price || i.preco || 0)) * parseInt(i.quantidade))}</b>` : ''}
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                } else {
+                    html += `<table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                        <thead>
+                            <tr style="background: #f2f2f2; border-bottom: 1px solid #000;">
+                                <th style="padding: 8px; text-align: left;">PRODUTO</th>
+                                <th style="padding: 8px; text-align: center;">QTD</th>
+                                <th style="padding: 8px; text-align: center;">PESO UN.</th>
+                                ${isFin ? `<th style="padding: 8px; text-align: right;">TOTAL</th>` : ''}
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    itens.forEach(i => {
+                        let prUn = parseFloat(i.precoFinal || i.price || i.preco || 0);
+                        html += `<tr style="border-bottom: 1px solid #eee; break-inside: avoid;">
+                            <td style="padding: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    ${isFoto ? `<img src="${i.image || i.foto || i.imageUrl}" style="width: 40px; height: 40px; object-fit: cover;">` : ''}
+                                    <span><b>${i.sku || ''}</b> - ${i.name || i.nome}</span>
+                                </div>
+                            </td>
+                            <td style="padding: 8px; text-align: center;">${i.quantidade}</td>
+                            <td style="padding: 8px; text-align: center;">${Number(i.peso || 0).toFixed(2)}g</td>
+                            ${isFin ? `<td style="padding: 8px; text-align: right;">${fMoeda(prUn * parseInt(i.quantidade))}</td>` : ''}
+                        </tr>`;
+                    });
+                    html += `</tbody></table>`;
+                }
+
+                const subtotalItens = itens.reduce((acc, i) => acc + ((parseFloat(i.precoFinal || i.price || i.preco || 0)) * parseInt(i.quantidade)), 0);
+                const pTotal = itens.reduce((acc, i) => acc + (Number(i.peso || 0) * parseInt(i.quantidade)), 0);
+                const qTotal = itens.reduce((acc, i) => acc + parseInt(i.quantidade), 0);
+
+                html += `<div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #000; break-inside: avoid;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <div style="font-size: 10px; line-height: 1.6;">
+                            <b style="text-transform: uppercase; color: #caa85c;">Informações Técnicas</b><br>
+                            Total de Modelos: <b>${itens.length}</b><br>
+                            Total de Peças: <b>${qTotal}</b><br>
+                            Peso Total: <b>${pTotal.toFixed(2)}g</b>
+                        </div>
+                        <div style="text-align: right; min-width: 200px;">
+                            <table style="width: 100%; font-size: 11px; border-spacing: 0;">
+                                ${isFin ? `
+                                    <tr><td style="padding: 2px;">Subtotal Itens:</td><td style="padding: 2px;">${fMoeda(subtotalItens)}</td></tr>
+                                    ${p.descontoPromo > 0 ? `<tr style="color: red;"><td style="padding: 2px;">Desconto Campanha:</td><td style="padding: 2px;">- ${fMoeda(p.descontoPromo)}</td></tr>` : ''}
+                                    ${p.descontoPix > 0 ? `<tr style="color: red;"><td style="padding: 2px;">Desconto à Vista:</td><td style="padding: 2px;">- ${fMoeda(p.descontoPix)}</td></tr>` : ''}
+                                    ${p.frete > 0 ? `<tr><td style="padding: 2px;">Frete:</td><td style="padding: 2px;">+ ${fMoeda(p.frete)}</td></tr>` : ''}
+                                    <tr style="font-size: 16px; font-weight: bold; color: #000;">
+                                        <td style="padding-top: 10px; border-top: 1px solid #eee;">TOTAL:</td>
+                                        <td style="padding-top: 10px; border-top: 1px solid #eee;">${fMoeda(p.total)}</td>
+                                    </tr>
+                                ` : `
+                                    <tr style="font-size: 16px; font-weight: bold; color: #caa85c;">
+                                        <td colspan="2">CHECKLIST CONCLUÍDO</td>
+                                    </tr>
+                                `}
+                            </table>
                         </div>
                     </div>
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">URL do Logotipo/Imagem</label>
-                        <input id="galv-imagem" class="input-adm" placeholder="https://...">
+                    <div style="margin-top: 30px; text-align: center; font-size: 9px; color: #999; text-transform: uppercase;">
+                        Obrigado pela preferência! • ${emp.nome}
                     </div>
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Descrição/Slogan</label>
-                        <textarea id="galv-descricao" class="input-adm h-16 resize-none" placeholder="Breve resumo dos serviços..."></textarea>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="salvarGalvanica()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase">💾 Guardar</button>
-                        <button onclick="limparFormGalvanica()" id="btn-cancelar-galv" class="hidden bg-zinc-800 hover:bg-zinc-700 text-gray-300 font-bold px-4 rounded-lg text-xs uppercase">Cancelar</button>
-                    </div>
-                </div>
+                </div></div>`;
 
-                <div class="flex-1 w-full space-y-4">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Parceiros Homologados</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="lista-galvanicas-adm"></div>
-                </div>
-            </div>
-        </section>
+                let printArea = document.getElementById('print-area');
+                if (!printArea) {
+                    printArea = document.createElement('div');
+                    printArea.id = 'print-area';
+                    document.body.appendChild(printArea);
+                }
+                
+                printArea.innerHTML = html;
+                setTimeout(() => { window.print(); }, 800);
+            });
+        }
 
-        <section id="aba-produtos" class="hidden space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold tracking-wide">Produtos Ativos (Controlo de Stock Rápido)</h2>
-                <div class="flex gap-2">
-                    <button onclick="abrirModalProduto()" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold hover:brightness-110">+ NOVO PRODUTO</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="lista-produtos"></div>
-        </section>
+        // Funções Administrativas de Apoio de Escopo Estável
+        function editarPedido(id) {
+            pedidoEditando = id;
+            alert("Modo edição ativado para o Pedido ID: " + id);
+        }
 
-        <section id="aba-categorias" class="hidden space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold tracking-wide">Coleções / Categorias</h2>
-                <button onclick="abrirModalCategoria()" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold">+ NOVA COLECÇÃO</button>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" id="lista-categorias"></div>
-        </section>
+        async function deletarPedido(id) {
+            if (confirm("Deseja realmente excluir este pedido de forma permanente do banco?")) {
+                await db.ref('orders/' + id).remove();
+            }
+        }
 
-        <section id="aba-config" class="hidden space-y-6">
-            <h2 class="text-xl font-bold tracking-wide">Configurações do Catálogo</h2>
-            <div class="card p-6 max-w-xl space-y-4">
-                <div>
-                    <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Nome da Empresa</label>
-                    <input id="cfg-nome" class="input-adm">
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Slogan Comercial</label>
-                    <input id="cfg-slogan" class="input-adm">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Máximo de Parcelas</label>
-                        <input id="cfg-parcelas" type="number" class="input-adm">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Desconto PIX (%)</label>
-                        <input id="cfg-pix" type="number" class="input-adm">
-                    </div>
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">WhatsApp de Recebimento (com DDD)</label>
-                    <input id="cfg-whatsapp" class="input-adm" placeholder="Ex: 19999999999">
-                </div>
-                <button onclick="salvarConfig()" class="w-full bg-[#caa85c] text-black font-bold py-3 rounded-xl text-xs tracking-wider mt-4 hover:brightness-110">SALVAR CONFIGURAÇÕES</button>
-            </div>
-        </section>
-    </main>
+        async function salvarProduto() {
+            const sku = document.getElementById('prod-sku').value.trim();
+            const nome = document.getElementById('prod-nome').value.trim();
+            const peso = parseFloat(document.getElementById('prod-peso').value) || 0;
+            const preco = parseFloat(document.getElementById('prod-preco').value) || 0;
+            const imagem = document.getElementById('prod-imagem').value.trim();
 
-    <script src="admin-logic.js"></script>
+            if (!sku || !nome) return alert("Preencha SKU e Nome obrigatoriamente!");
+
+            await db.ref('products').push({ sku, nome, peso, preco, imagem });
+            alert("Produto cadastrado com sucesso!");
+        }
+
+        async function salvarConfig() {
+            const whatsapp = document.getElementById('cfg-whatsapp').value.trim();
+            const pix = parseFloat(document.getElementById('cfg-pix').value) || 0;
+            const parcelas = parseInt(document.getElementById('cfg-parcelas').value) || 1;
+
+            await db.ref('settings').update({ whatsapp, pix, parcelas });
+            alert("Parâmetros de configuração salvos!");
+        }
+    </script>
 </body>
 </html>

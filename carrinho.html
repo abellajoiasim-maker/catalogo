@@ -8,8 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght=400;600;800&display=swap" rel="stylesheet">
 
     <style>
         body { background:#0a0a0a; color:#fff; font-family:'Inter'; padding-bottom: 240px !important; min-height: 100vh; }
@@ -18,18 +17,19 @@
         .card { background:#111; border:1px solid #222; border-radius:16px; padding:16px; margin-bottom:12px; }
         .input { width:100%; background:#000; border:1px solid #333; border-radius:10px; padding:12px; font-size:14px; color: white; outline: none; }
         .input:focus { border-color:#caa85c; }
-        .btn-pay { flex:1; border:1px solid #333; padding:12px; border-radius:12px; text-align:center; transition: 0.2s; }
+        .btn-pay { flex:1; border:1px solid #333; padding:12px; border-radius:12px; text-align:center; transition: 0.2s; cursor: pointer; }
         .btn-pay.active { border-color:#caa85c; background:rgba(202,168,92,0.1); color:#caa85c; font-weight: bold; }
-        .item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #222; items-center; }
+        .item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #222; align-items: center; }
     </style>
 </head>
 <body class="p-3">
 
     <div class="flex justify-between items-center mb-4 max-w-3xl mx-auto">
-    <button onclick="location.href='index.html'" class="text-sm gold font-bold">← Voltar às compras</button>
-    <h1 class="serif gold text-lg uppercase tracking-wider">Seu Carrinho</h1>
-    <div></div>
-</div>
+        <button onclick="location.href='index.html'" class="text-sm gold font-bold">← Voltar às compras</button>
+        <h1 class="serif gold text-lg uppercase tracking-wider">Seu Carrinho</h1>
+        <div></div>
+    </div>
+
     <div id="areaPDF" class="max-w-3xl mx-auto">
         <div class="card">
             <h2 class="gold text-sm font-bold uppercase tracking-wide mb-3">Resumo dos Itens selecionados</h2>
@@ -55,8 +55,8 @@
         <div class="card">
             <h2 class="gold text-sm font-bold uppercase tracking-wide text-center mb-3">Forma de Liquidação / Pagamento</h2>
             <div class="flex gap-2">
-                <button onclick="setMetodo('pix')" id="pix" class="btn-pay">⚡ PIX À VISTA</button>
-                <button onclick="setMetodo('cartao')" id="cartao" class="btn-pay">💳 CARTÃO DE CRÉDITO</button>
+                <button onclick="setMetodo('pix')" id="btn-pix" class="btn-pay">⚡ PIX À VISTA</button>
+                <button onclick="setMetodo('cartao')" id="btn-cartao" class="btn-pay">💳 CARTÃO DE CRÉDITO</button>
             </div>
         </div>
     </div>
@@ -82,7 +82,7 @@
             </div>
 
             <div class="flex gap-2 mt-3">
-                <button onclick="baixarPDF()" class="bg-zinc-900 text-gray-300 border border-zinc-800 px-4 py-2.5 rounded-xl font-bold text-xs uppercase">PDF</button>
+                <button onclick="gerarPDFLimpoAbella()" class="bg-zinc-900 text-gray-300 border border-zinc-800 px-4 py-2.5 rounded-xl font-bold text-xs uppercase hover:bg-zinc-800 transition-all">PDF</button>
                 <button onclick="finalizar()" class="bg-[#caa85c] text-black flex-1 rounded-xl py-2.5 font-bold uppercase text-xs tracking-wider hover:brightness-110 transition-all">
                     Finalizar e Enviar via WhatsApp
                 </button>
@@ -95,12 +95,12 @@
             apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
             databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
         let metodo = 'pix';
-        let empresa = { pixDesconto: 5, parcelas: 3, whatsapp: '5519988207658' };
+        let empresa = { pixDesconto: 5, parcelas: 6, whatsapp: '5519988207658' };
 
         const f = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
@@ -109,11 +109,16 @@
                 const snap = await db.ref('settings').once('value');
                 if (snap.exists()) {
                     const dadosS = snap.val();
-                    empresa.pixDesconto = parseFloat(dadosS.pix) || 5;
-                    empresa.parcelas = parseInt(dadosS.parcelas) || 3;
-                    empresa.whatsapp = dadosS.whatsapp || (dadosS.empresa ? dadosS.empresa.whatsapp : '5519988207658');
+                    const empSub = dadosS.empresa || {};
+                    
+                    empresa.pixDesconto = parseFloat(dadosS.pix || empSub.pix || 5);
+                    empresa.parcelas = parseInt(dadosS.parcelas || empSub.parcelas || 6);
+                    empresa.whatsapp = dadosS.whatsapp || empSub.whatsapp || '5519988207658';
+                    empresa.whatsapp = empresa.whatsapp.replace(/\D/g, ''); // higieniza o número
                 }
-            } catch (e) { console.error("Erro leitura settings", e); }
+            } catch (e) { 
+                console.error("Erro leitura settings", e); 
+            }
             render();
         }
 
@@ -123,31 +128,38 @@
 
             if (carrinho.length === 0) {
                 document.getElementById('lista').innerHTML = '<p class="text-center py-6 text-gray-500 italic text-sm">Seu carrinho está vazio.</p>';
+                document.getElementById('pecas').innerText = '0';
+                document.getElementById('peso').innerText = '0.00g';
+                document.getElementById('sub').innerText = f(0);
+                document.getElementById('total').innerText = f(0);
+                document.getElementById('pixDesc').innerHTML = '';
+                document.getElementById('parcelas').innerText = '';
                 return;
             }
 
             carrinho.forEach((p, i) => {
                 let precoUnitario = parseFloat(p.precoFinal || p.price || p.preco || 0);
-                let totalItem = precoUnitario * parseInt(p.quantidade || 1);
-                let pesoItem = (parseFloat(p.peso || p.weight || 0)) * parseInt(p.quantidade || 1);
+                let qtd = parseInt(p.quantidade || 1);
+                let totalItem = precoUnitario * qtd;
+                let pesoItem = parseFloat(p.peso || p.weight || 0) * qtd;
 
                 sub += totalItem;
                 peso += pesoItem;
-                pecas += parseInt(p.quantidade || 1);
+                pecas += qtd;
 
                 html += `
                     <div class="item">
                         <img src="${p.image || p.imageUrl || 'https://via.placeholder.com/80'}" class="w-12 h-12 object-contain rounded bg-black p-0.5 shrink-0">
                         <div class="flex-1 min-w-0">
                             <div class="text-xs font-bold text-white truncate">${p.nome || p.name}</div>
-                            <div class="text-[10px] text-gray-500 font-mono">SKU: ${p.sku || 'N/A'} | Peso: ${p.peso || 0}g</div>
+                            <div class="text-[10px] text-gray-500 font-mono">SKU: ${p.sku || 'N/A'} | Peso Un: ${p.peso || 0}g</div>
                             <div class="flex justify-between items-center mt-2">
                                 <div class="flex items-center border border-zinc-800 rounded bg-black overflow-hidden">
-                                    <button onclick="alterarQtdDireto(${i}, -1)" class="px-2 text-gray-400 font-bold bg-zinc-900">-</button>
-                                    <span class="px-3 font-mono text-xs text-white">${p.quantidade}</span>
-                                    <button onclick="alterarQtdDireto(${i}, 1)" class="px-2 text-gray-400 font-bold bg-zinc-900">+</button>
+                                    <button onclick="alterarQtdDireto(${i}, -1)" class="px-2 py-0.5 text-gray-400 font-bold bg-zinc-900 hover:bg-zinc-800">-</button>
+                                    <span class="px-3 font-mono text-xs text-white">${qtd}</span>
+                                    <button onclick="alterarQtdDireto(${i}, 1)" class="px-2 py-0.5 text-gray-400 font-bold bg-zinc-900 hover:bg-zinc-800">+</button>
                                 </div>
-                                <button onclick="rem(${i})" class="text-gray-500 hover:text-red-400 text-sm">✕ Remover</button>
+                                <button onclick="rem(${i})" class="text-gray-500 hover:text-red-400 text-xs">✕ Remover</button>
                             </div>
                         </div>
                         <div class="text-xs font-bold text-[#caa85c] font-mono text-right shrink-0">${f(totalItem)}</div>
@@ -157,7 +169,7 @@
 
             document.getElementById('lista').innerHTML = html;
 
-            let descPix = metodo === 'pix' ? sub * (parseFloat(empresa.pixDesconto) / 100) : 0;
+            let descPix = metodo === 'pix' ? sub * (empresa.pixDesconto / 100) : 0;
             let totalFinal = sub - descPix;
 
             document.getElementById('pecas').innerText = pecas;
@@ -168,8 +180,12 @@
             document.getElementById('pixDesc').innerHTML = descPix ? `<span>Desconto PIX (${empresa.pixDesconto}%):</span> <span>-${f(descPix)}</span>` : '';
             document.getElementById('parcelas').innerText = metodo === 'cartao' ? `Ou parcelado em até ${empresa.parcelas}x de ${f(totalFinal / empresa.parcelas)} sem juros` : '';
 
-            document.querySelectorAll('.btn-pay').forEach(b => b.classList.remove('active'));
-            document.getElementById(metodo).classList.add('active');
+            // Atualiza botões de pagamento de forma segura
+            document.getElementById('btn-pix').classList.remove('active');
+            document.getElementById('btn-cartao').classList.remove('active');
+            if (document.getElementById('btn-' + metodo)) {
+                document.getElementById('btn-' + metodo).classList.add('active');
+            }
         }
 
         function alterarQtdDireto(i, fator) {
@@ -179,172 +195,193 @@
             salvar();
         }
 
-        function rem(i) { carrinho.splice(i, 1); salvar(); }
-        function salvar() { localStorage.setItem('carrinho', JSON.stringify(carrinho)); render(); }
-        function setMetodo(m) { metodo = m; render(); }
-
-       function gerarPDFLimpoAbella() {
-    const carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-    const settings = JSON.parse(localStorage.getItem('settingsAbella')) || { parcelas: 6, pix: 5, whatsapp: "(19) 99123-4567" };
-    
-    if(carrinho.length === 0) {
-        alert("O carrinho está vazio!");
-        return;
-    }
-
-    // Cálculos Financeiros Blindados
-    let subtotal = 0;
-    let linhasProdutosHtml = "";
-    
-    carrinho.forEach((item, index) => {
-        let precoUn = parseFloat(item.precoFinal || item.price || 0);
-        let qtd = parseInt(item.quantidade || 1);
-        let totalItem = precoUn * qtd;
-        subtotal += totalItem;
+        function rem(i) { 
+            carrinho.splice(i, 1); 
+            salvar(); 
+        }
         
-        linhasProdutosHtml += `
-            <tr>
-                <td style="text-align: center; color: #777;">${String(index + 1).padStart(2, '0')}</td>
-                <td>
-                    <strong style="color:#111;">${item.nome || item.name}</strong>
-                    <span style="font-family: monospace; font-size: 8.5pt; color: #666; display: block; margin-top: 1px;">
-                        SKU: ${item.sku || 'N/A'} ${item.peso ? `• Peso: ${item.peso}g` : ''}
-                    </span>
-                </td>
-                <td style="text-align: right; font-weight: bold;">${qtd} un</td>
-                <td style="text-align: right;">R$ ${precoUn.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td style="text-align: right; font-weight: bold;">R$ ${totalItem.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-            </tr>
-        `;
-    });
+        function salvar() { 
+            localStorage.setItem('carrinho', JSON.stringify(carrinho)); 
+            render(); 
+        }
+        
+        function setMetodo(m) { 
+            metodo = m; 
+            render(); 
+        }
 
-    let porcentagemPix = parseFloat(settings.pix || 5);
-    let valorDesconto = subtotal * (porcentagemPix / 100);
-    let totalLiquido = subtotal - valorDesconto;
-    
-    let dataAtual = new Date().toLocaleDateString('pt-BR');
-    let numeroPedidoRandom = Math.floor(10000 + Math.random() * 90000);
+        // =======================================================
+        // RELATÓRIO DO ROMANEIO IMPRESSO (CLEAN DESIGN AUTO-INFORMATIVO)
+        // =======================================================
+        function gerarPDFLimpoAbella() {
+            if(carrinho.length === 0) {
+                alert("O carrinho está vazio!");
+                return;
+            }
 
-    // HTML Estruturado do PDF Limpo
-    let conteudoHtmlPDF = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Pedido Abella Joias</title>
-        <style>
-            @page { size: A4; margin: 12mm 15mm; }
-            body { font-family: Arial, sans-serif; color: #222; background: #fff; margin: 0; padding: 0; font-size: 10pt; line-height: 1.4; }
-            .header { border-bottom: 2px solid #caa85c; padding-bottom: 12px; margin-bottom: 15px; }
-            .brand-title { font-size: 20pt; font-weight: bold; color: #000; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-            .brand-subtitle { font-size: 8.5pt; color: #caa85c; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; margin: 2px 0 0 0; }
-            .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .info-box { background-color: #fcfbf9; border: 1px solid #e2dfd8; border-radius: 8px; padding: 10px 12px; }
-            .info-title { font-size: 8pt; text-transform: uppercase; color: #caa85c; font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #f0ede6; padding-bottom: 2px; }
-            .products-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-            .products-table th { background-color: #111; color: #fff; font-size: 8.5pt; text-transform: uppercase; padding: 7px 10px; text-align: left; }
-            .products-table td { padding: 7px 10px; border-bottom: 1px solid #e8e8e8; font-size: 9.5pt; }
-            .products-table tr:nth-child(even) { background-color: #fbfbfb; }
-            .financial-section { width: 100%; margin-top: 10px; }
-            .financial-table { width: 45%; margin-left: 55%; border-collapse: collapse; }
-            .financial-table td { padding: 5px 8px; font-size: 9.5pt; }
-            .financial-table .total-row td { border-top: 1px solid #111; padding-top: 8px; font-size: 11pt; font-weight: bold; }
-            .footer-notes { margin-top: 25px; background-color: #f9f9f9; border-left: 3px solid #caa85c; padding: 10px 12px; border-radius: 4px; }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <table style="width: 100%;">
-                <tr>
-                    <td>
-                        <h1 class="brand-title">Abella Joias</h1>
-                        <p class="brand-subtitle">Atacado de Joias no Bruto</p>
-                    </td>
-                    <td style="text-align: right; font-size: 9pt; color: #555;">
-                        <span style="font-size: 14pt; font-weight: bold; color: #222; text-transform: uppercase;">Resumo do Pedido</span><br>
-                        <strong>Pedido:</strong> #${numeroPedidoRandom}<br>
-                        <strong>Data:</strong> ${dataAtual}
-                    </td>
-                </tr>
-            </table>
-        </div>
+            let subtotal = 0;
+            let linhasProdutosHtml = "";
+            
+            // Puxa dados do comprador preenchidos em tempo real para o documento fiscal
+            const cNome = document.getElementById('nome').value.trim() || "Não Informado";
+            const cWhats = document.getElementById('whats').value.trim() || "Não Informado";
+            const cLocal = document.getElementById('local').value.trim() || "Entrega Direta / Padrão";
+            const cRua = document.getElementById('rua').value.trim() || "";
+            const cNum = document.getElementById('numero').value.trim() || "";
+            const cBairro = document.getElementById('bairro').value.trim() || "";
+            const cCid = document.getElementById('cidadeEntrega').value.trim() || "";
+            
+            let enderecoCompleto = cRua ? `${cRua}, Nº ${cNum} - ${cBairro} (${cCid})` : "Retirada em Mãos / A Combinar";
 
-        <table class="info-grid">
-            <tr>
-                <td style="width: 50%; padding-right: 6px;">
-                    <div class="info-box">
-                        <div class="info-title">Dados do Comprador</div>
-                        <div style="font-size: 9pt;">
-                            <strong>Cliente:</strong> Conferência via Catálogo Virtual<br>
-                            <strong>Status:</strong> Aguardando Liberação na Carga
-                        </div>
-                    </div>
-                </td>
-                <td style="width: 50%; padding-left: 6px;">
-                    <div class="info-box">
-                        <div class="info-title">Dados do Fornecedor</div>
-                        <div style="font-size: 9pt;">
-                            <strong>Origem:</strong> Abella Joias Corporativo<br>
-                            <strong>Atendimento WhatsApp:</strong> ${settings.whatsapp}
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        </table>
+            carrinho.forEach((item, index) => {
+                let precoUn = parseFloat(item.precoFinal || item.price || 0);
+                let qtd = parseInt(item.quantidade || 1);
+                let totalItem = precoUn * qtd;
+                subtotal += totalItem;
+                
+                linhasProdutosHtml += `
+                    <tr>
+                        <td style="text-align: center; color: #777;">${String(index + 1).padStart(2, '0')}</td>
+                        <td>
+                            <strong style="color:#111;">${item.nome || item.name}</strong>
+                            <span style="font-family: monospace; font-size: 8.5pt; color: #666; display: block; margin-top: 1px;">
+                                SKU: ${item.sku || 'N/A'} ${item.peso ? `• Peso Un: ${item.peso}g` : ''}
+                            </span>
+                        </td>
+                        <td style="text-align: right; font-weight: bold;">${qtd} un</td>
+                        <td style="text-align: right;">R$ ${precoUn.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td style="text-align: right; font-weight: bold;">R$ ${totalItem.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+            });
 
-        <table class="products-table">
-            <thead>
-                <tr>
-                    <th style="width: 8%; text-align: center;">Item</th>
-                    <th style="width: 52%;">Descrição da Peça (No Bruto)</th>
-                    <th style="width: 12%; text-align: right;">Qtd</th>
-                    <th style="width: 14%; text-align: right;">Preço Un.</th>
-                    <th style="width: 14%; text-align: right;">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${linhasProdutosHtml}
-            </tbody>
-        </table>
+            let valorDesconto = metodo === 'pix' ? subtotal * (empresa.pixDesconto / 100) : 0;
+            let totalLiquido = subtotal - valorDesconto;
+            
+            let dataAtual = new Date().toLocaleDateString('pt-BR');
+            let numeroPedidoRandom = Math.floor(10000 + Math.random() * 90000);
 
-        <div class="financial-section">
-            <table class="financial-table">
-                <tr>
-                    <td style="text-align: right; color: #555;">Subtotal Bruto:</td>
-                    <td style="text-align: right; font-weight: bold;">R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                </tr>
-                <tr>
-                    <td style="text-align: right; color: #555;">Desconto (${porcentagemPix}% PIX):</td>
-                    <td style="text-align: right; font-weight: bold; color: #bc3e3e;">- R$ ${valorDesconto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                </tr>
-                <tr class="total-row">
-                    <td style="text-align: right;">Total Líquido:</td>
-                    <td style="text-align: right; color: #caa85c;">R$ ${totalLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                </tr>
-            </table>
-        </div>
+            let conteudoHtmlPDF = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Pedido Abella Joias</title>
+                <style>
+                    @page { size: A4; margin: 12mm 15mm; }
+                    body { font-family: Arial, sans-serif; color: #222; background: #fff; margin: 0; padding: 0; font-size: 10pt; line-height: 1.4; }
+                    .header { border-bottom: 2px solid #caa85c; padding-bottom: 12px; margin-bottom: 15px; }
+                    .brand-title { font-size: 20pt; font-weight: bold; color: #000; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+                    .brand-subtitle { font-size: 8.5pt; color: #caa85c; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; margin: 2px 0 0 0; }
+                    .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    .info-box { background-color: #fcfbf9; border: 1px solid #e2dfd8; border-radius: 8px; padding: 10px 12px; height: 100%; }
+                    .info-title { font-size: 8pt; text-transform: uppercase; color: #caa85c; font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #f0ede6; padding-bottom: 2px; }
+                    .products-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                    .products-table th { background-color: #111; color: #fff; font-size: 8.5pt; text-transform: uppercase; padding: 7px 10px; text-align: left; }
+                    .products-table td { padding: 7px 10px; border-bottom: 1px solid #e8e8e8; font-size: 9.5pt; }
+                    .products-table tr:nth-child(even) { background-color: #fbfbfb; }
+                    .financial-section { width: 100%; margin-top: 10px; page-break-inside: avoid; }
+                    .financial-table { width: 45%; margin-left: 55%; border-collapse: collapse; }
+                    .financial-table td { padding: 5px 8px; font-size: 9.5pt; }
+                    .financial-table .total-row td { border-top: 1px solid #111; padding-top: 8px; font-size: 11pt; font-weight: bold; }
+                    .footer-notes { margin-top: 25px; background-color: #f9f9f9; border-left: 3px solid #caa85c; padding: 10px 12px; border-radius: 4px; page-break-inside: avoid; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td>
+                                <h1 class="brand-title">Abella Joias</h1>
+                                <p class="brand-subtitle">Atacado de Joias no Bruto</p>
+                            </td>
+                            <td style="text-align: right; font-size: 9pt; color: #555;">
+                                <span style="font-size: 14pt; font-weight: bold; color: #222; text-transform: uppercase;">Resumo do Pedido</span><br>
+                                <strong>Pedido:</strong> #${numeroPedidoRandom}<br>
+                                <strong>Data:</strong> ${dataAtual}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
 
-        <div class="footer-notes">
-            <div style="font-size: 8.5pt; font-weight: bold; color: #111; margin-bottom: 3px;">Informações Importantes:</div>
-            <p style="font-size: 8.5pt; color: #555; margin: 0; line-height: 1.4;">
-                • Este documento descreve peças em metal bruto comercializadas em regime de atacado.<br>
-                • <strong>Logística de Limeira:</strong> Frete gratuito para entrega direto nas galvânicas parceiras regulamentadas de Limeira-SP para compras elegíveis.
-            </p>
-        </div>
-    </body>
-    </html>`;
+                <table class="info-grid">
+                    <tr>
+                        <td style="width: 50%; padding-right: 6px; vertical-align: top;">
+                            <div class="info-box">
+                                <div class="info-title">Dados do Comprador</div>
+                                <div style="font-size: 9pt; line-height: 1.5;">
+                                    <strong>Cliente:</strong> ${cNome}<br>
+                                    <strong>WhatsApp:</strong> ${cWhats}<br>
+                                    <strong>Destino:</strong> ${cLocal}<br>
+                                    <strong>Endereço:</strong> ${enderecoCompleto}
+                                </div>
+                            </div>
+                        </td>
+                        <td style="width: 50%; padding-left: 6px; vertical-align: top;">
+                            <div class="info-box">
+                                <div class="info-title">Dados do Fornecedor</div>
+                                <div style="font-size: 9pt; line-height: 1.5;">
+                                    <strong>Fornecedor:</strong> Abella Joias Corporativo<br>
+                                    <strong>Logística Base:</strong> Limeira - SP<br>
+                                    <strong>Meio de Liquidação:</strong> ${metodo.toUpperCase()}<br>
+                                    <strong>Atendimento Atacado:</strong> +${empresa.whatsapp}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
 
-    // Script de Injeção e Impressão Isolada (Não afeta o layout do seu app)
-    const janelaImpressao = window.open('', '_blank');
-    janelaImpressao.document.write(conteudoHtmlPDF);
-    janelaImpressao.document.close();
-    
-    // Aguarda um instante para garantir a renderização e chama o driver do sistema
-    setTimeout(() => {
-        janelaImpressao.print();
-        janelaImpressao.close();
-    }, 450);
-}
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 8%; text-align: center;">Item</th>
+                            <th style="width: 52%;">Descrição da Peça (No Bruto)</th>
+                            <th style="width: 12%; text-align: right;">Qtd</th>
+                            <th style="width: 14%; text-align: right;">Preço Un.</th>
+                            <th style="width: 14%; text-align: right;">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${linhasProdutosHtml}
+                    </tbody>
+                </table>
+
+                <div class="financial-section">
+                    <table class="financial-table">
+                        <tr>
+                            <td style="text-align: right; color: #555;">Subtotal Bruto:</td>
+                            <td style="text-align: right; font-weight: bold;">R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: right; color: #555;">Desconto (${metodo === 'pix' ? empresa.pixDesconto : 0}% PIX):</td>
+                            <td style="text-align: right; font-weight: bold; color: #bc3e3e;">- R$ ${valorDesconto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td style="text-align: right;">Total Líquido:</td>
+                            <td style="text-align: right; color: #caa85c;">R$ ${totalLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="footer-notes">
+                    <div style="font-size: 8.5pt; font-weight: bold; color: #111; margin-bottom: 3px;">Informações Importantes:</div>
+                    <p style="font-size: 8.5pt; color: #555; margin: 0; line-height: 1.4;">
+                        • Este documento descreve peças em metal bruto comercializadas em regime de atacado.<br>
+                        • <strong>Logística de Limeira:</strong> Frete gratuito para entrega direto nas galvânicas parceiras regulamentadas de Limeira-SP para compras elegíveis acima de R$100.
+                    </p>
+                </div>
+            </body>
+            </html>`;
+
+            const janelaImpressao = window.open('', '_blank');
+            janelaImpressao.document.write(conteudoHtmlPDF);
+            janelaImpressao.document.close();
+            
+            setTimeout(() => {
+                janelaImpressao.print();
+                janelaImpressao.close();
+            }, 450);
+        }
 
         async function finalizar() {
             const nome = document.getElementById('nome').value.trim();
@@ -399,7 +436,7 @@
             location.href = 'index.html';
         }
 
-        init();
+        window.onload = init;
     </script>
 </body>
 </html>

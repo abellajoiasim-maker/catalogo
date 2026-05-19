@@ -35,7 +35,7 @@ db.ref('orders').on('value', snap => {
     const badgeCount = document.getElementById('qtd-pedidos');
     
     if (!snap.exists()) {
-        container.innerHTML = '<p class="text-xs text-gray-500 italic">Nenhum pedido ativo recebido...</p>';
+        container.innerHTML = '<p class="text-xs text-gray-500 italic col-span-full">Nenhum pedido ativo recebido...</p>';
         badgeCount.innerText = "0 pedidos";
         return;
     }
@@ -44,54 +44,79 @@ db.ref('orders').on('value', snap => {
     let stackHtml = []; // Otimização extrema de memória
 
     snap.forEach(child => {
-        const id = child.key; // [cite: 124]
-        const o = child.val() || {}; // [cite: 124]
+        const id = child.key;
+        const o = child.val() || {};
         count++;
 
-        let itensHtml = '';
-        if (Array.isArray(o.itens)) {
-            o.itens.forEach(i => {
-                itensHtml += `<li class="text-[11px] text-zinc-400 font-mono">• ${i.quantidade || i.qtd || 1}x ${i.nome || i.name} — <span class="text-[#caa85c]">${fMoeda(i.preco || i.price)}</span></li>`; // [cite: 124, 125]
-            });
-        }
+        // Tratamento flexível e seguro para os dados do cliente
+        const nomeCliente = (o.cliente?.nome || o.cliente || o.nome || 'Cliente Oculto').toUpperCase();
+        const whatsappCliente = o.cliente?.telefone || o.telefone || o.whats || 'Não informado';
+        const enderecoCliente = o.entrega?.rua || o.endereco || 'Retirada / Não informado';
 
         const rawTotal = o.total;
-        const totalExibivel = typeof rawTotal === 'number' ? fMoeda(rawTotal) : (rawTotal || 'R$ 0,00'); // [cite: 131]
-        const dataPedido = o.criadoEm ? new Date(o.criadoEm).toLocaleString('pt-BR') : 'Data Indefinida'; // [cite: 125]
+        const totalExibivel = typeof rawTotal === 'number' ? fMoeda(rawTotal) : (rawTotal || 'R$ 0,00');
+        const dataPedido = o.criadoEm ? new Date(o.criadoEm).toLocaleString('pt-BR') : (o.data || 'Data Indefinida');
+
+        // Número amigável baseado no ID do Firebase
+        const numeroPedido = id.substring(1, 10).toUpperCase();
 
         stackHtml.push(`
-            <div class="card p-5 border-l-4 border-l-[#caa85c] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div class="space-y-1 flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs bg-zinc-900 border border-zinc-800 text-gray-400 font-bold uppercase px-2 py-0.5 rounded">Pedido #${id.slice(-5)}</span>
-                        <span class="text-[10px] text-gray-500 font-medium">${dataPedido}</span>
+            <div class="card p-4 flex flex-col justify-between border border-zinc-800 hover:border-zinc-700 transition-all text-xs space-y-3">
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center text-gray-400 font-mono text-[11px]">
+                        <span class="font-bold text-white">Pedido #${numeroPedido}</span>
+                        <span>${dataPedido}</span>
                     </div>
-                    <p class="text-sm font-bold text-white">${o.cliente || o.nome || 'Cliente Oculto'}</p>
-                    <p class="text-xs text-gray-400">📱 WhatsApp: <a href="https://wa.me/${o.telefone}" target="_blank" class="text-blue-400 underline font-mono">${o.telefone}</a></p>
-                    <p class="text-xs text-gray-400">📍 Endereço: <span class="italic text-zinc-300">${o.endereco || 'Retirada / Não informado'}</span></p>
-                    <ul class="mt-3 pt-2 border-t border-zinc-900 space-y-1">${itensHtml}</ul>
+                    <div class="font-bold text-gray-200 uppercase tracking-wide truncate">${nomeCliente}</div>
+                    <div class="text-zinc-400 flex items-center gap-1">
+                        <span>📱 WhatsApp:</span>
+                        <span class="font-mono text-gray-300">${whatsappCliente}</span>
+                    </div>
+                    <div class="text-zinc-400 truncate">
+                        <span>📍 Endereço:</span>
+                        <span class="italic text-zinc-500">${enderecoCliente}</span>
+                    </div>
+                    <div class="pt-1.5 flex justify-between items-center border-t border-zinc-900/50 mt-1">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total</span>
+                        <span class="text-sm font-black text-[#caa85c] font-mono">${totalExibivel}</span>
+                    </div>
                 </div>
-                <div class="text-left md:text-right shrink-0 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-zinc-900 flex md:flex-col justify-between items-center gap-2">
-                    <div>
-                        <span class="block text-[10px] text-gray-500 uppercase font-bold tracking-widest">Valor Líquido</span>
-                        <span class="text-lg font-black text-[#caa85c] font-mono">${totalExibivel}</span>
+
+                <div class="bg-black/40 p-2 rounded-lg border border-zinc-900 space-y-1.5">
+                    <div class="flex gap-1.5">
+                        <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1 rounded flex-1 outline-none">
+                            <option value="1">1. Conferência de Pedido</option>
+                            <option value="2">2. Romaneio Financeiro</option>
+                            <option value="3">3. Catálogo do Pedido</option>
+                            <option value="4">4. Grade de Conferência</option>
+                            <option value="5">5. Grade Financeira</option>
+                            <option value="6">6. Romaneio Completo (Foto/Preço)</option>
+                        </select>
+                        <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; imprimirRomaneio('${id}', parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-2.5 py-1 rounded hover:brightness-110 uppercase tracking-wider">Imprimir</button>
                     </div>
-                    <button onclick="arquivarPedido('${id}')" class="bg-red-950 text-red-400 text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider hover:bg-red-900">Arquivar</button>
+                </div>
+
+                <div class="flex gap-2 pt-2 border-t border-zinc-900">
+                    <button onclick="editarPedido('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-1 px-2 rounded transition-all text-center">
+                        ✏️ Editar
+                    </button>
+                    <button onclick="arquivarPedido('${id}')" class="bg-red-950/30 hover:bg-red-900/50 text-red-400 border border-red-900/30 font-medium py-1 px-2 rounded transition-all">
+                        🗑️ Excluir
+                    </button>
                 </div>
             </div>
         `);
     });
 
-    container.innerHTML = stackHtml.reverse().join(''); // Mais novos sempre em primeiro [cite: 132]
-    badgeCount.innerText = `${count} pedidos`; // 
+    container.innerHTML = stackHtml.reverse().join(''); // Mais novos sempre em primeiro
+    badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
 });
 
 function arquivarPedido(id) {
     if (confirm("Deseja realmente remover ou arquivar este pedido do painel?")) {
-        db.ref('orders/' + id).remove(); // 
+        db.ref('orders/' + id).remove();
     }
 }
-
 // ==========================================
 // 2. PAINEL DE OFERTAS AVANÇADO (LEQUE DE MARKETING)
 // ==========================================

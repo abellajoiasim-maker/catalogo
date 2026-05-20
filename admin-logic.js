@@ -17,9 +17,9 @@ const db = firebase.database();
 const cacheModulos = {};
 let listenersAtivos = {};
 
-// Cache local de segurança para manipulação dinâmica de pedidos inter-abas
-window.todosPedidosLocal = window.todosPedidosLocal || {};
-window.pedidoEditando = window.pedidoEditando || null;
+// Cache global de segurança e memória de estado do ecossistema
+window.todosPedidosLocal = {};
+window.pedidoEditando = null;
 
 // Utilitário de Formatação de Uso Geral no Ecossistema BR
 window.fMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -43,7 +43,7 @@ async function mudarAbaDinamica(nomeAba) {
         btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
     }
 
-    // Mata conexões globais anteriores do Firebase para evitar concorrência ou lentidão
+    // Mata conexões específicas anteriores do Firebase para evitar concorrência de renderização
     if (listenersAtivos['orders']) {
         db.ref('orders').off();
         delete listenersAtivos['orders'];
@@ -72,6 +72,11 @@ async function mudarAbaDinamica(nomeAba) {
             document.body.appendChild(scriptNovo).parentNode.removeChild(scriptNovo);
         });
 
+        // Se a aba injetada for a de pedidos, ativa o sincronizador central imediatamente
+        if (nomeAba === 'pedidos') {
+            window.forcarCargaFirebase();
+        }
+
     } catch (erro) {
         container.innerHTML = `
             <div class="bg-red-950/20 border border-red-900 text-red-400 p-4 rounded-xl text-xs font-mono">
@@ -83,17 +88,32 @@ async function mudarAbaDinamica(nomeAba) {
 }
 
 // =========================================================================
-// MÓDULO CONTROLADOR COESIVO - GERENCIAMENTO AVANÇADO DE PEDIDOS (SEGURANÇA DE ELEMENTOS)
+// SINCRONIZADOR CENTRAL RESTRITO DO FIREBASE (DRIVE DE DADOS)
+// =========================================================================
+window.forcarCargaFirebase = function() {
+    listenersAtivos['orders'] = true;
+    
+    db.ref('orders').on('value', snapshot => {
+        window.todosPedidosLocal = snapshot.val() || {};
+        
+        // Se a função de renderização visual da tabela existir no escopo atual, executa ela
+        if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
+            window.renderizarTabelaPedidosVisivel();
+        }
+    }, erro => {
+        console.error("🚨 Falha crítica de leitura no Firebase Realtime Database:", erro);
+    });
+};
+
+// =========================================================================
+// MÓDULO CONTROLADOR COESIVO - GERENCIAMENTO AVANÇADO DE PEDIDOS
 // =========================================================================
 window.abrirEditorPedido = function(id) {
     window.pedidoEditando = id;
     const p = window.todosPedidosLocal[id];
-    if (!p) {
-        console.warn("🚨 Pedido não encontrado no mapeamento local do ecossistema.");
-        return;
-    }
+    if (!p) return;
 
-    // Aplicação das diretrizes de segurança contra elementos nulos no DOM principal
+    // Vinculação protegida contra elementos ausentes
     const elId = document.getElementById('idPedidoInterno');
     if (elId) elId.innerText = id;
 
@@ -118,7 +138,7 @@ window.abrirEditorPedido = function(id) {
     const elFrete = document.getElementById('edFrete');
     if (elFrete) elFrete.value = p.frete || 0;
 
-    // AJUSTE SOLICITADO: Ordenação Alfabética por SKU (A-Z) na carga inicial dos itens do Editor
+    // ORDENAÇÃO DE A-Z POR SKU: Carga dos itens no Editor Master
     if (p.itens && Array.isArray(p.itens)) {
         p.itens = p.itens.filter(i => i !== null);
         p.itens.sort((a, b) => {
@@ -128,7 +148,6 @@ window.abrirEditorPedido = function(id) {
         });
     }
 
-    // Renderização segura das linhas dos produtos no editor
     const boxItens = document.getElementById('edItens');
     if (boxItens) {
         boxItens.innerHTML = '';
@@ -141,7 +160,7 @@ window.abrirEditorPedido = function(id) {
                 const itemNome = item.name || item.nome || 'Sem Descrição';
 
                 boxItens.innerHTML += `
-                    <div class="flex items-center gap-2 bg-black/40 p-2 border border-zinc-800 rounded-lg font-mono text-[11px]" data-index="${index}">
+                    <div class="flex items-center gap-2 bg-black/40 p-2 border border-zinc-800 rounded-lg font-mono text-[11px]">
                         <div class="w-16 font-bold text-zinc-400 truncate">${itemSku}</div>
                         <div class="flex-1 text-white truncate uppercase">${itemNome}</div>
                         <div class="w-16 text-zinc-400 text-center">${itemPeso}</div>
@@ -168,11 +187,8 @@ window.atualizarObjetoItem = function(index, campo, valor) {
     const p = window.todosPedidosLocal[window.pedidoEditando];
     if (!p || !p.itens || !p.itens[index]) return;
 
-    if (campo === 'preco') {
-        p.itens[index].precoFinal = parseFloat(valor) || 0;
-    } else if (campo === 'qtd') {
-        p.itens[index].quantidade = parseInt(valor) || 0;
-    }
+    if (campo === 'preco') p.itens[index].precoFinal = parseFloat(valor) || 0;
+    if (campo === 'qtd') p.itens[index].quantidade = parseInt(valor) || 0;
     window.recalcularTotalEd();
 };
 
@@ -182,7 +198,7 @@ window.removerItemEditor = function(index) {
     
     if (confirm("Deseja remover este item da lista de compras do pedido?")) {
         p.itens.splice(index, 1);
-        window.abrirEditorPedido(window.pedidoEditando); // Recarrega e ordena dinamicamente
+        window.abrirEditorPedido(window.pedidoEditando);
     }
 };
 
@@ -190,7 +206,6 @@ window.recalcularTotalEd = function() {
     const p = window.todosPedidosLocal[window.pedidoEditando];
     if (!p) return;
 
-    // AJUSTE SOLICITADO: Garante a ordenação por SKU (A-Z) sempre que houver mutação ou cálculo dos dados
     if (p.itens && Array.isArray(p.itens)) {
         p.itens.sort((a, b) => {
             const skuA = (a.sku || '').toString().toUpperCase().trim();
@@ -199,9 +214,7 @@ window.recalcularTotalEd = function() {
         });
     }
 
-    let subtotal = 0;
-    let totalQtd = 0;
-
+    let subtotal = 0, totalQtd = 0;
     if (p.itens && Array.isArray(p.itens)) {
         p.itens.forEach(i => {
             const qtd = parseInt(i.quantidade || i.qtd || 0);
@@ -233,60 +246,38 @@ window.salvarPedidoEditado = function() {
     const p = window.todosPedidosLocal[id];
     if (!p) return;
 
-    const elNome = document.getElementById('edClienteNome');
-    if (elNome) p.nome = elNome.value.trim();
-
-    const elTel = document.getElementById('edClienteTel');
-    if (elTel) p.whats = elTel.value.trim();
-
-    const elRua = document.getElementById('edRua');
-    if (elRua) p.rua = elRua.value.trim();
-
-    const elCidade = document.getElementById('edCidade');
-    if (elCidade) p.cidade = elCidade.value.trim();
-
-    const elDescPromo = document.getElementById('edDescPromo');
-    if (elDescPromo) p.descontoPromo = parseFloat(elDescPromo.value) || 0;
-
-    const elDescPix = document.getElementById('edDescPix');
-    if (elDescPix) p.descontoPix = parseFloat(elDescPix.value) || 0;
-
-    const elFrete = document.getElementById('edFrete');
-    if (elFrete) p.frete = parseFloat(elFrete.value) || 0;
+    p.nome = document.getElementById('edClienteNome')?.value.trim() || p.nome;
+    p.whats = document.getElementById('edClienteTel')?.value.trim() || p.whats;
+    p.rua = document.getElementById('edRua')?.value.trim() || p.rua;
+    p.cidade = document.getElementById('edCidade')?.value.trim() || p.cidade;
+    p.descontoPromo = parseFloat(document.getElementById('edDescPromo')?.value) || 0;
+    p.descontoPix = parseFloat(document.getElementById('edDescPix')?.value) || 0;
+    p.frete = parseFloat(document.getElementById('edFrete')?.value) || 0;
 
     let subtotal = 0;
     if (p.itens && Array.isArray(p.itens)) {
-        // Salva com a lista higienizada e ordenada de A-Z por SKU
         p.itens.sort((a, b) => {
-            const skuA = (a.sku || '').toString().toUpperCase().trim();
-            const skuB = (b.sku || '').toString().toUpperCase().trim();
-            return skuA.localeCompare(skuB, 'pt-BR', { sensitivity: 'base', numeric: true });
+            return (a.sku || '').toString().toUpperCase().trim().localeCompare((b.sku || '').toString().toUpperCase().trim(), 'pt-BR', {numeric: true});
         });
         p.itens.forEach(i => {
             subtotal += (parseFloat(i.precoFinal || i.price || i.preco || 0) * parseInt(i.quantidade || i.qtd || 0));
         });
     }
-    p.total = subtotal - (p.descontoPromo || 0) - (p.descontoPix || 0) + (p.frete || 0);
+    p.total = subtotal - p.descontoPromo - p.descontoPix + p.frete;
 
     db.ref('orders/' + id).set(p).then(() => {
-        alert("✅ Pedido atualizado e reordenado com sucesso!");
+        alert("✅ Pedido gravado e sincronizado!");
         window.fecharEditorPedido();
-        if (typeof window.carregarPedidos === 'function') {
-            window.carregarPedidos();
-        }
     }).catch(err => {
-        alert("🚨 Erro ao salvar alterações no Firebase: " + err.message);
+        alert("🚨 Erro ao salvar: " + err.message);
     });
 };
 
 window.excluirPedido = function() {
-    if (confirm("🚨 Deseja deletar definitivamente este pedido do Firebase? Esta ação não pode ser desfeita.")) {
+    if (confirm("🚨 Deletar permanentemente este pedido?")) {
         db.ref('orders/' + window.pedidoEditando).remove().then(() => {
             alert("Pedido excluído!");
             window.fecharEditorPedido();
-            if (typeof window.carregarPedidos === 'function') {
-                window.carregarPedidos();
-            }
         });
     }
 };
@@ -297,9 +288,6 @@ window.fecharEditorPedido = function() {
     window.pedidoEditando = null;
 };
 
-// =========================================================================
-// GESTÃO OPERACIONAL DE PRÉ-VISUALIZAÇÃO (PREVIEW INTERNO E EVENTOS FISICOS)
-// =========================================================================
 window.fecharPreviewRomaneio = function() {
     const modalPreview = document.getElementById('previewRomaneio');
     if (modalPreview) modalPreview.classList.add('hidden');
@@ -309,7 +297,7 @@ window.confirmarImpressaoFisica = function() {
     window.print();
 };
 
-// Inicializador Nativo do Ecossistema Operacional
+// Start
 document.addEventListener("DOMContentLoaded", () => {
     mudarAbaDinamica('pedidos');
 });

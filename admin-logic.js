@@ -88,103 +88,115 @@ var pedidoEditando = null;
 function inicializarModuloPedidos() {
     listenersAtivos['orders'] = true;
 
-    // Força o Firebase a escutar em tempo real o nó correto
-    db.ref('orders').on('value', snap => {
+    // Criamos uma pequena função executora interna
+    const escutarFirebase = () => {
         const container = document.getElementById('lista-pedidos');
         const badgeCount = document.getElementById('qtd-pedidos');
-        
-        // Se o usuário já mudou de aba, interrompe para não dar erro
-        if (!container) return; 
 
-        if (!snap.exists()) {
-            container.innerHTML = '<p class="text-xs text-gray-500 italic col-span-full p-4">Nenhum pedido ativo recebido no Firebase...</p>';
-            if (badgeCount) badgeCount.innerText = "0 pedidos";
-            todosPedidos = {};
+        // Se o DOM ainda não renderizou por completo as divs do arquivo separado, tenta novamente em 60ms
+        if (!container) {
+            setTimeout(escutarFirebase, 60);
             return;
         }
 
-        todosPedidos = snap.val();
-        let count = 0;
-        let stackHtml = [];
+        db.ref('orders').on('value', snap => {
+            // Verificação dupla em tempo de execução real
+            const containerAtualizado = document.getElementById('lista-pedidos');
+            if (!containerAtualizado) return; 
 
-        Object.keys(todosPedidos).forEach(id => {
-            const p = todosPedidos[id];
-            count++;
-
-            const nomeCliente = (p.nome || p.cliente || 'Cliente Oculto').toUpperCase();
-            const whatsappCliente = p.whats || p.telefone || 'Não informado';
-            
-            let enderecoCliente = 'Retirada / Não informado';
-            if (p.rua) {
-                enderecoCliente = `${p.rua}${p.numero ? ', ' + p.numero : ''}${p.cidade ? ' - ' + p.cidade : ''}`;
-            } else if (p.endereco) {
-                enderecoCliente = p.endereco;
+            if (!snap.exists()) {
+                containerAtualizado.innerHTML = '<p class="text-xs text-gray-500 italic col-span-full p-4">Nenhum pedido ativo recebido no Firebase...</p>';
+                if (badgeCount) badgeCount.innerText = "0 pedidos";
+                todosPedidos = {};
+                return;
             }
 
-            const rawTotal = p.total;
-            const totalExibivel = typeof rawTotal === 'number' ? fMoeda(rawTotal) : (rawTotal || 'R$ 0,00');
-            const dataPedido = p.data ? new Date(p.data).toLocaleString('pt-BR') : (p.criadoEm ? new Date(p.criadoEm).toLocaleString('pt-BR') : 'Data Indefinida');
+            todosPedidos = snap.val();
+            let count = 0;
+            let stackHtml = [];
 
-            let totalPecas = 0;
-            if (Array.isArray(p.itens)) {
-                p.itens.forEach(i => totalPecas += (parseInt(i.quantidade || i.qtd) || 1));
-            }
+            Object.keys(todosPedidos).forEach(id => {
+                const p = todosPedidos[id];
+                count++;
 
-            const numeroPedido = id.substring(1, 10).toUpperCase();
+                const nomeCliente = (p.nome || p.cliente || 'Cliente Oculto').toUpperCase();
+                const whatsappCliente = p.whats || p.telefone || 'Não informado';
+                
+                let enderecoCliente = 'Retirada / Não informado';
+                if (p.rua) {
+                    enderecoCliente = `${p.rua}${p.numero ? ', ' + p.numero : ''}${p.cidade ? ' - ' + p.cidade : ''}`;
+                } else if (p.endereco) {
+                    enderecoCliente = p.endereco;
+                }
 
-            stackHtml.push(`
-                <div class="card p-4 flex flex-col justify-between border border-zinc-800 bg-[#121212] rounded-xl hover:border-zinc-700 transition-all text-xs space-y-3">
-                    <div class="space-y-1">
-                        <div class="flex justify-between items-center text-gray-400 font-mono text-[11px]">
-                            <span class="font-bold text-white">Pedido #${numeroPedido}</span>
-                            <span>${dataPedido}</span>
+                const rawTotal = p.total;
+                const totalExibivel = typeof rawTotal === 'number' ? fMoeda(rawTotal) : (rawTotal || 'R$ 0,00');
+                const dataPedido = p.data ? new Date(p.data).toLocaleString('pt-BR') : (p.criadoEm ? new Date(p.criadoEm).toLocaleString('pt-BR') : 'Data Indefinida');
+
+                let totalPecas = 0;
+                if (Array.isArray(p.itens)) {
+                    p.itens.forEach(i => totalPecas += (parseInt(i.quantidade || i.qtd) || 1));
+                }
+
+                const numeroPedido = id.substring(1, 10).toUpperCase();
+
+                stackHtml.push(`
+                    <div class="card p-4 flex flex-col justify-between border border-zinc-800 bg-[#121212] rounded-xl hover:border-zinc-700 transition-all text-xs space-y-3">
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center text-gray-400 font-mono text-[11px]">
+                                <span class="font-bold text-white">Pedido #${numeroPedido}</span>
+                                <span>${dataPedido}</span>
+                            </div>
+                            <div class="font-bold text-gray-200 uppercase tracking-wide truncate">${nomeCliente}</div>
+                            <div class="text-zinc-400 flex items-center gap-1">
+                                <span>📱 WhatsApp:</span>
+                                <a href="https://wa.me/${whatsappCliente.replace(/\D/g,'')}" target="_blank" class="font-mono text-blue-400 underline">${whatsappCliente}</a>
+                            </div>
+                            <div class="text-zinc-400 flex items-center gap-1 font-mono text-[11px]">
+                                <span>📦 Volume total:</span>
+                                <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span>
+                            </div>
+                            <div class="text-zinc-400 truncate">
+                                <span>📍 Endereço:</span>
+                                <span class="italic text-zinc-500">${enderecoCliente}</span>
+                            </div>
+                            <div class="pt-1.5 flex justify-between items-center border-t border-zinc-900 mt-1">
+                                <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
+                                <span class="text-sm font-black text-[#caa85c] font-mono">${totalExibivel}</span>
+                            </div>
                         </div>
-                        <div class="font-bold text-gray-200 uppercase tracking-wide truncate">${nomeCliente}</div>
-                        <div class="text-zinc-400 flex items-center gap-1">
-                            <span>📱 WhatsApp:</span>
-                            <a href="https://wa.me/${whatsappCliente.replace(/\D/g,'')}" target="_blank" class="font-mono text-blue-400 underline">${whatsappCliente}</a>
+                        <div class="bg-black/40 p-2 rounded-lg border border-zinc-900 space-y-1.5">
+                            <div class="flex gap-1.5">
+                                <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1 rounded flex-1 outline-none">
+                                    <option value="1">1. Conferência de Separação</option>
+                                    <option value="2">2. Financeiro e Faturamento</option>
+                                    <option value="3">3. Vitrine (Fotográfica)</option>
+                                    <option value="4">4. Grade Comparativa</option>
+                                    <option value="5">5. Grade Financeira Expandida</option>
+                                    <option value="6">6. Grade Consolidada Total</option>
+                                </select>
+                                <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; pedidoEditando='${id}'; imprimirRomaneioDinamico(parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-2.5 py-1 rounded hover:brightness-110 uppercase tracking-wider">Imprimir</button>
+                            </div>
                         </div>
-                        <div class="text-zinc-400 flex items-center gap-1 font-mono text-[11px]">
-                            <span>📦 Volume total:</span>
-                            <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span>
-                        </div>
-                        <div class="text-zinc-400 truncate">
-                            <span>📍 Endereço:</span>
-                            <span class="italic text-zinc-500">${enderecoCliente}</span>
-                        </div>
-                        <div class="pt-1.5 flex justify-between items-center border-t border-zinc-900 mt-1">
-                            <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
-                            <span class="text-sm font-black text-[#caa85c] font-mono">${totalExibivel}</span>
+                        <div class="flex gap-2 pt-2 border-t border-zinc-900">
+                            <button onclick="abrirEditorPedidoDinamico('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-1 px-2 rounded transition-all text-center">⚙️ Gerenciar</button>
+                            <button onclick="pedidoEditando='${id}'; dectruirPedidoDinamico();" class="bg-red-950/30 hover:bg-red-900/50 text-red-400 border border-red-900/30 font-medium py-1 px-2 rounded transition-all">🗑️ Excluir</button>
                         </div>
                     </div>
-                    <div class="bg-black/40 p-2 rounded-lg border border-zinc-900 space-y-1.5">
-                        <div class="flex gap-1.5">
-                            <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1 rounded flex-1 outline-none">
-                                <option value="1">1. Conferência de Separação</option>
-                                <option value="2">2. Financeiro e Faturamento</option>
-                                <option value="3">3. Vitrine (Fotográfica)</option>
-                                <option value="4">4. Grade Comparativa</option>
-                                <option value="5">5. Grade Financeira Expandida</option>
-                                <option value="6">6. Grade Consolidada Total</option>
-                            </select>
-                            <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; pedidoEditando='${id}'; imprimirRomaneioDinamico(parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-2.5 py-1 rounded hover:brightness-110 uppercase tracking-wider">Imprimir</button>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 pt-2 border-t border-zinc-900">
-                        <button onclick="abrirEditorPedidoDinamico('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-1 px-2 rounded transition-all text-center">⚙️ Gerenciar</button>
-                        <button onclick="pedidoEditando='${id}'; dectruirPedidoDinamico();" class="bg-red-950/30 hover:bg-red-900/50 text-red-400 border border-red-900/30 font-medium py-1 px-2 rounded transition-all">🗑️ Excluir</button>
-                    </div>
-                </div>
-            `);
+                `);
+            });
+
+            containerAtualizado.innerHTML = stackHtml.reverse().join('');
+            if (badgeCount) badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
+        }, erro => {
+            console.error("Erro de permissão ou leitura no Firebase Orders:", erro);
+            const containerErro = document.getElementById('lista-pedidos');
+            if(containerErro) containerErro.innerHTML = `<p class="text-red-400 text-xs p-4">Erro ao ler Firebase: ${erro.message}</p>`;
         });
+    };
 
-        container.innerHTML = stackHtml.reverse().join('');
-        if (badgeCount) badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
-    }, erro => {
-        console.error("Erro de permissão ou leitura no Firebase Orders:", erro);
-        const container = document.getElementById('lista-pedidos');
-        if(container) container.innerHTML = `<p class="text-red-400 text-xs p-4">Erro ao ler Firebase: ${erro.message}</p>`;
-    });
+    // Executa a verificação
+    escutarFirebase();
 }
 
 function abrirEditorPedidoDinamico(id) {
@@ -359,3 +371,8 @@ const salvarPedidoEditado = salvarPedidoEditadoDinamico;
 const excluirPedido = dectruirPedidoDinamico;
 const imprimirRomaneio = imprimirRomaneioDinamico;
 const addItemEditor = addItemEditorDinamico;
+
+// Inicialização Automática da Primeira Aba de Trabalho ao abrir a página
+document.addEventListener("DOMContentLoaded", () => {
+    mudarAbaDinamica('pedidos');
+});

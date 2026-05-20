@@ -255,206 +255,218 @@
             window.pedidoEditando = null;
         };
 
-// MODIFICAÇÃO: Agora gera o layout instantaneamente na tela dentro do modal de Preview
-        window.imprimirRomaneio = function(tipo) {
-            const p = todosPedidosLocal[window.pedidoEditando];
-            if(!p) {
-                alert("🚨 Selecione ou abra um pedido antes de imprimir!");
-                return;
-            }
+window.imprimirRomaneio = function(tipo) {
+    const p = todosPedidosLocal[window.pedidoEditando];
+    if(!p) {
+        alert("🚨 Selecione ou abra um pedido antes de imprimir!");
+        return;
+    }
 
-            const previewArea = document.getElementById('corpo-preview-a4');
-            const modalPreview = document.getElementById('previewRomaneio');
-            if(!previewArea || !modalPreview) return;
+    const previewArea = document.getElementById('corpo-preview-a4');
+    const modalPreview = document.getElementById('previewRomaneio');
+    if(!previewArea || !modalPreview) return;
 
-            const numPedidoFriendly = window.pedidoEditando.slice(-6).toUpperCase();
-            const cliente = p.nome || p.cliente || 'Cliente Oculto';
-            const dataPedido = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : 'N/A';
+    const numPedidoFriendly = window.pedidoEditando.slice(-6).toUpperCase();
+    const dataPedido = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : 'N/A';
+    
+    // Inicialização dos acumuladores logísticos e financeiros
+    let subtotalGeral = 0;
+    let totalPecasGeral = 0;
+    let totalPesoGeral = 0;
+    
+    if (Array.isArray(p.itens)) {
+        p.itens.forEach(i => {
+            const qtd = parseInt(i.quantidade || i.qtd || 0);
+            const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
             
-            let subtotalGeral = 0;
-            let totalPecasGeral = 0;
+            // Tratamento dinâmico para extrair o peso numérico (ex: "4.5g", "4,5" ou 4.5)
+            let pesoTexto = (i.peso || i.weight || "0").toString().toLowerCase().replace('g', '').replace(',', '.').trim();
+            let pesoNumerico = parseFloat(pesoTexto) || 0;
+
+            subtotalGeral += (preco * qtd);
+            totalPecasGeral += qtd;
+            totalPesoGeral += (pesoNumerico * qtd);
+        });
+    }
+
+    const descPromo = parseFloat(p.descontoPromo || p.desconto || 0);
+    const descPix = parseFloat(p.descontoPix || 0);
+    const frete = parseFloat(p.frete || 0);
+    const totalLiquido = subtotalGeral - descPromo - descPix + frete;
+
+    // Determina flags de visualização com base no tipo selecionado
+    // tipo 1 = Lista Conferência, tipo 2 = Lista Financeiro, tipo 3 = Lista Financeiro + Foto
+    // tipo 4 = Grade Conferência, tipo 5 = Grade Financeiro, tipo 6 = Grade Financeiro + Foto
+    const ehConferencia = (tipo === 1 || tipo === 4);
+    const comFoto = (tipo === 3 || tipo === 6);
+
+    // 1. NOVO CABEÇALHO: Apenas Dados Limpos da Empresa
+    let htmlGerado = `
+        <div style="font-family: 'Inter', monospace, sans-serif; color: #000; font-size: 11px; line-height: 1.3;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px;">
+                <div>
+                    <h1 style="margin: 0; font-size: 15px; font-weight: 900; tracking-tight; letter-spacing: -0.5px;">ABELLA JÓIAS</h1>
+                    <p style="margin: 0; font-size: 9px; text-transform: uppercase; color: #333; font-weight: 600;">Atacado de Jóias no Bruto e Semi-jóias</p>
+                    <p style="margin: 1px 0 0 0; font-size: 9px; color: #555; font-family: monospace;">Contato: (19) 99847-5124 • Limeira/SP</p>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 12px; font-weight: bold; background: #000; color: #fff; padding: 3px 6px; border-radius: 4px; font-family: monospace;">PEDIDO #${numPedidoFriendly}</span>
+                    <p style="margin: 3px 0 0 0; font-size: 9px; font-weight: bold; color: #444;">Emissão: ${dataPedido}</p>
+                </div>
+            </div>
             
-            if (Array.isArray(p.itens)) {
-                p.itens.forEach(i => {
-                    const qtd = parseInt(i.quantidade || i.qtd || 0);
-                    const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
-                    subtotalGeral += (preco * qtd);
-                    totalPecasGeral += qtd;
-                });
-            }
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div style="border: 1px solid #000; padding: 6px; border-radius: 4px; background: #fafafa;">
+                    <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 0.5px;">Dados do Cliente</div>
+                    <b>Nome:</b> ${(p.nome || p.cliente || 'Não Informado').toUpperCase()}<br>
+                    <b>Whats/Tel:</b> ${p.whats || p.telefone || 'Não Informado'}<br>
+                    <b>Cidade Base:</b> ${p.cidade || 'Limeira / SP'}
+                </div>
+                <div style="border: 1px solid #000; padding: 6px; border-radius: 4px; background: #fafafa;">
+                    <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 0.5px;">Local de Entrega Completo</div>
+                    <b>Destino:</b> ${(p.localEntrega || p.nome || p.cliente || 'Retirada na Galvânica').toUpperCase()}<br>
+                    <b>Endereço:</b> ${p.rua || 'Rua não informada'}, ${p.numero || 'S/N'}<br>
+                    <b>Bairro/Cidade:</b> ${p.bairro || 'Centro'} — ${p.cidade || 'Limeira/SP'}
+                </div>
+            </div>
+    `;
 
-            const descPromo = parseFloat(p.descontoPromo || p.desconto || 0);
-            const descPix = parseFloat(p.descontoPix || 0);
-            const frete = parseFloat(p.frete || 0);
-            const totalLiquido = subtotalGeral - descPromo - descPix + frete;
+    // RENDERIZAÇÃO EM MODO LISTA (Estilos 1, 2 e 3)
+    if (tipo === 1 || tipo === 2 || tipo === 3) {
+        htmlGerado += `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+                <thead>
+                    <tr style="background: #000; color: #fff; font-size: 9px; text-transform: uppercase; font-family: sans-serif;">
+                        ${comFoto ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 35px;">Foto</th>' : ''}
+                        <th style="padding: 4px; border: 1px solid #000; text-align: left; width: 75px;">SKU</th>
+                        <th style="padding: 4px; border: 1px solid #000; text-align: left;">Descrição da Peça</th>
+                        ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 45px;">Peso Un.</th>' : ''}
+                        ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: right; width: 65px;">Preço Un.</th>' : ''}
+                        <th style="padding: 4px; border: 1px solid #000; text-align: center; width: 40px;">Qtd</th>
+                        ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: right; width: 75px;">Total</th>' : ''}
+                        ${ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 45px;">Conf.</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody>
+        `;
 
-            // Início do layout limpo e focado em folha branca A4
-            let htmlGerado = `
-                <div style="font-family: 'Inter', monospace, sans-serif; color: #000; font-size: 11px; line-height: 1.3;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px;">
-                        <div>
-                            <h1 style="margin: 0; font-size: 14px; font-weight: 900; tracking-tight;">ABELLA JÓIAS — ATACADO NO BRUTO</h1>
-                            <p style="margin: 0; font-size: 9px; color: #444;">MÓDULO LOGÍSTICO COMPACTO A4 • MODALIDADE: ${
-                                tipo === 1 ? 'LISTA: CONFERÊNCIA DE SEPARAÇÃO' :
-                                tipo === 2 ? 'LISTA: FINANCEIRO E FATURAMENTO' :
-                                tipo === 3 ? 'LISTA: CONFERÊNCIA FOTOGRÁFICA (VITRINE)' :
-                                tipo === 4 ? 'GRADE: CONFERÊNCIA DE SEPARAÇÃO' :
-                                tipo === 5 ? 'GRADE: FINANCEIRO EXPANDIDO' :
-                                'GRADE: CONSOLIDADO TOTAL + FOTO'
-                            }</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <span style="font-size: 13px; font-weight: bold; background: #000; color: #fff; padding: 2px 6px; border-radius: 4px;">PEDIDO #${numPedidoFriendly}</span>
-                            <p style="margin: 2px 0 0 0; font-size: 10px; font-weight: bold;">Data: ${dataPedido}</p>
-                        </div>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; background: #f5f5f5; padding: 6px; border-radius: 4px; margin-bottom: 10px; font-size: 10px; border: 1px solid #ddd;">
-                        <div>
-                            <b>Cliente:</b> ${cliente.toUpperCase()}<br>
-                            <b>WhatsApp:</b> ${p.whats || p.telefone || 'Não informado'}<br>
-                            <b>Logradouro:</b> ${p.rua || 'Não informado'}
-                        </div>
-                        <div style="text-align: right;">
-                            <b>Cidade/UF:</b> ${p.cidade || 'Retirada em Limeira / SP'}<br>
-                            <b>Total de Peças:</b> ${totalPecasGeral} u.<br>
-                            <b>Pagamento:</b> ${p.formaPagamento || 'Pix'}
-                        </div>
-                    </div>
-            `;
-
-            // RENDERS EM FORMATO DE LISTA (Modelos 1, 2 e 3)
-            if (tipo === 1 || tipo === 2 || tipo === 3) {
+        if (Array.isArray(p.itens)) {
+            p.itens.forEach(i => {
+                const qtd = parseInt(i.quantidade || i.qtd || 1);
+                const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+                const pesoUnitario = i.peso || i.weight || '0g';
+                
                 htmlGerado += `
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
-                        <thead>
-                            <tr style="background: #000; color: #fff; font-size: 10px; text-transform: uppercase;">
-                                ${tipo === 3 ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 40px;">Foto</th>' : ''}
-                                <th style="padding: 4px; border: 1px solid #000; text-align: left; width: 80px;">SKU / Ref.</th>
-                                <th style="padding: 4px; border: 1px solid #000; text-align: left;">Descrição da Peça</th>
-                                <th style="padding: 4px; border: 1px solid #000; text-align: center; width: 50px;">Qtd</th>
-                                ${tipo !== 1 ? '<th style="padding: 4px; border: 1px solid #000; text-align: right; width: 70px;">Unitário</th>' : ''}
-                                ${tipo !== 1 ? '<th style="padding: 4px; border: 1px solid #000; text-align: right; width: 80px;">Subtotal</th>' : ''}
-                                ${tipo === 1 ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 60px;">Conf.</th>' : ''}
-                            </tr>
-                        </thead>
-                        <tbody>
+                    <tr style="border-bottom: 1px solid #ddd; font-size: 10px;">
+                        ${comFoto ? `
+                            <td style="padding: 3px; border: 1px solid #ddd; text-align: center;">
+                                <div style="width: 28px; height: 28px; background: #eee; border: 1px dashed #aaa; margin: auto; font-size: 6px; display: flex; align-items: center; justify-content: center; color: #777; overflow:hidden;">
+                                    ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '[FOTO]'}
+                                </div>
+                            </td>` : ''
+                        }
+                        <td style="padding: 4px; border: 1px solid #ddd; font-weight: bold; font-family: monospace;">${i.sku || 'N/A'}</td>
+                        <td style="padding: 4px; border: 1px solid #ddd; text-transform: uppercase; font-size: 9px;">${i.name || i.nome || 'Peça bruta s/ identificação'}</td>
+                        ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-family: monospace; color:#555;">${pesoUnitario}</td>` : ''}
+                        ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${fMoedaLocal(preco)}</td>` : ''}
+                        <td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 11px; background: #fbfbfb;">${qtd}</td>
+                        ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-weight: bold; font-family: monospace;">${fMoedaLocal(preco * qtd)}</td>` : ''}
+                        ${ehConferencia ? '<td style="padding: 4px; border: 1px solid #ddd; text-align: center; color: #bbb; font-weight: normal; font-size:9px;">[  ]</td>' : ''}
+                    </tr>
                 `;
+            });
+        }
+        htmlGerado += `</tbody></table>`;
+    } 
+    
+    // RENDERIZAÇÃO EM MODO GRADE ADAPTADA (Estilos 4, 5 e 6)
+    else if (tipo === 4 || tipo === 5 || tipo === 6) {
+        htmlGerado += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px;">`;
 
-                if (Array.isArray(p.itens)) {
-                    p.itens.forEach(i => {
-                        const qtd = parseInt(i.quantidade || i.qtd || 1);
-                        const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+        if (Array.isArray(p.itens)) {
+            p.itens.forEach(i => {
+                const qtd = parseInt(i.quantidade || i.qtd || 1);
+                const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+                const pesoUnitario = i.peso || i.weight || '0g';
+
+                htmlGerado += `
+                    <div style="border: 1px solid #000; padding: 4px; border-radius: 4px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 2px;">
+                            <span style="font-family: monospace; font-weight: bold; font-size: 9px; background: #e0e0e0; padding: 1px 3px; border-radius: 2px;">${i.sku || 'N/A'}</span>
+                            <span style="font-size: 11px; font-weight: 900; background: #000; color: #fff; padding: 1px 5px; border-radius: 3px;">X${qtd}</span>
+                        </div>
                         
-                        htmlGerado += `
-                            <tr style="border-bottom: 1px solid #ccc; font-size: 10px;">
-                                ${tipo === 3 ? `
-                                    <td style="padding: 3px; border: 1px solid #ddd; text-align: center;">
-                                        <div style="width: 30px; height: 30px; background: #eee; border: 1px dashed #aaa; margin: auto; font-size: 7px; display: flex; align-items: center; justify-content: center; color: #888;">[FOTO]</div>
-                                    </td>` : ''
-                                }
-                                <td style="padding: 4px; border: 1px solid #ddd; font-weight: bold; font-family: monospace;">${i.sku || 'N/A'}</td>
-                                <td style="padding: 4px; border: 1px solid #ddd; text-transform: uppercase;">${i.nome || 'Produto não identificado'}</td>
-                                <td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 11px;">${qtd}</td>
-                                ${tipo !== 1 ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${fMoedaLocal(preco)}</td>` : ''}
-                                ${tipo !== 1 ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-weight: bold; font-family: monospace;">${fMoedaLocal(preco * qtd)}</td>` : ''}
-                                ${tipo === 1 ? '<td style="padding: 4px; border: 1px solid #ddd; text-align: center; color: #ccc;">[  ]</td>' : ''}
-                            </tr>
-                        `;
-                    });
-                }
-                htmlGerado += `</tbody></table>`;
-            } 
-            
-            // RENDERS EM FORMATO DE GRADE COMPACTA (Modelos 4, 5 e 6)
-            else if (tipo === 4 || tipo === 5 || tipo === 6) {
-                htmlGerado += `
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px;">
-                `;
+                        ${comFoto ? `
+                            <div style="width: 100%; height: 42px; background: #f9f9f9; border: 1px dashed #ccc; margin: 2px 0; display: flex; align-items: center; justify-content: center; overflow:hidden;">
+                                ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:7px; color:#999;">[SEM FOTO]</span>'}
+                            </div>` : ''
+                        }
 
-                if (Array.isArray(p.itens)) {
-                    p.itens.forEach(i => {
-                        const qtd = parseInt(i.quantidade || i.qtd || 1);
-                        const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+                        <div style="font-size: 9px; text-transform: uppercase; color: #111; min-height: 20px; line-height: 1.1; font-weight: 500; margin-bottom: 2px;">
+                            ${i.name || i.nome || 'Sem Descrição'}
+                        </div>
 
-                        htmlGerado += `
-                            <div style="border: 1px solid #000; padding: 4px; border-radius: 4px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid;">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 2px;">
-                                    <span style="font-family: monospace; font-weight: bold; font-size: 9px; background: #e0e0e0; padding: 1px 3px; border-radius: 2px;">${i.sku || 'N/A'}</span>
-                                    <span style="font-size: 11px; font-weight: 900; background: #000; color: #fff; padding: 1px 5px; border-radius: 3px;">X${qtd}</span>
+                        <div style="background: #fdfdfd; padding-top: 2px; border-top: 1px dashed #ddd; font-size: 8px; font-family: monospace; display: flex; flex-direction: column; gap: 1px;">
+                            ${!ehConferencia ? `
+                                <div style="display:flex; justify-content:space-between; color:#444;">
+                                    <span>Peso: ${pesoUnitario}</span>
+                                    <span>Un: ${fMoedaLocal(preco)}</span>
                                 </div>
-                                
-                                ${tipo === 6 ? `
-                                    <div style="width: 100%; height: 40px; background: #f9f9f9; border: 1px dashed #ccc; margin: 2px 0; display: flex; align-items: center; justify-content: center; font-size: 7px; color: #999;">
-                                        [FOTO DO PRODUTO]
-                                    </div>` : ''
-                                }
-
-                                <div style="font-size: 9px; text-transform: uppercase; color: #222; min-height: 20px; line-height: 1.1; overflow: hidden; font-weight: 500;">
-                                    ${i.nome || 'Sem Descrição'}
+                                <div style="display:flex; justify-content:space-between; font-weight:bold; color:#000; border-top:1px dotted #eee; pt:1px;">
+                                    <span>SUBTOTAL:</span>
+                                    <span>${fMoedaLocal(preco * qtd)}</span>
                                 </div>
-
-                                ${tipo !== 4 ? `
-                                    <div style="display: flex; justify-content: space-between; align-items: center; background: #fcfcfc; padding-top: 2px; border-top: 1px dashed #ddd; font-size: 9px; font-family: monospace; margin-top: 2px;">
-                                        <span style="color:#666;">Un: ${fMoedaLocal(preco)}</span>
-                                        <span style="font-weight: bold; color:#000;">Total: ${fMoedaLocal(preco * qtd)}</span>
-                                    </div>` : ''
-                                }
-                            </div>
-                        `;
-                    });
-                }
-                htmlGerado += `</div>`;
-            }
-
-            // FECHAMENTO E RESUMO FINANCEIRO
-            if (tipo !== 1 && tipo !== 4) {
-                htmlGerado += `
-                    <div style="margin-top: 12px; page-break-inside: avoid;">
-                        <div style="width: 260px; margin-left: auto; background: #fff; border: 2px solid #000; border-radius: 6px; padding: 6px; font-size: 10px; line-height: 1.4;">
-                            <div style="display: flex; justify-content: space-between;"><span>Subtotal Bruto:</span><span style="font-family: monospace;">${fMoedaLocal(subtotalGeral)}</span></div>
-                            <div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto Comercial:</span><span style="font-family: monospace;">-${fMoedaLocal(descPromo)}</span></div>
-                            ${descPix > 0 ? `<div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto Pix:</span><span style="font-family: monospace;">-${fMoedaLocal(descPix)}</span></div>` : ''}
-                            <div style="display: flex; justify-content: space-between;"><span>(+) Adicional de Frete:</span><span style="font-family: monospace;">${fMoedaLocal(frete)}</span></div>
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; border-top: 1px dashed #000; padding-top: 3px; margin-top: 4px;">
-                                <span>VALOR LÍQUIDO:</span>
-                                <span style="font-family: monospace; color: #000; font-weight: bold;">${fMoedaLocal(totalLiquido)}</span>
-                            </div>
+                            ` : `
+                                <div style="color:#aaa; text-align:center; font-size:8px; letter-spacing:1px; padding:1px 0;">[ CONFERIDO ]</div>
+                            `}
                         </div>
                     </div>
                 `;
-            }
+            });
+        }
+        htmlGerado += `</div>`;
+    }
 
-            htmlGerado += `
-                    <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: center; font-size: 9px; page-break-inside: avoid;">
-                        <div style="border-top: 1px dashed #000; padding-top: 4px; margin-top: 15px;">Conferido e Separado por (Abella Jóias)</div>
-                        <div style="border-top: 1px dashed #000; padding-top: 4px; margin-top: 15px;">Recebido em conformidade por: ${cliente.toUpperCase()}</div>
+    // 3. NOVO RODAPÉ UNIFICADO: Consolidação Absoluta de Peças e Pesos Brutos
+    htmlGerado += `
+        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-start; page-break-inside: avoid;">
+            
+            <div style="border: 1px solid #000; background: #fff; border-radius: 4px; padding: 5px 8px; font-size: 10px; min-width: 180px;">
+                <div style="text-transform: uppercase; font-size: 8px; font-weight: 900; color: #555; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 3px;">Consolidação Logística</div>
+                <div style="display: flex; justify-content: space-between;"><span>Total de Peças:</span><b style="font-size:11px;">${totalPecasGeral} u.</b></div>
+                <div style="display: flex; justify-content: space-between; margin-top: 1px;"><span>Peso Bruto Total:</span><b style="font-size:11px; font-family:monospace;">${totalPesoGeral.toFixed(2)}g</b></div>
+            </div>
+
+            ${!ehConferencia ? `
+                <div style="width: 250px; background: #fff; border: 2px solid #000; border-radius: 6px; padding: 6px; font-size: 10px; line-height: 1.4;">
+                    <div style="display: flex; justify-content: space-between;"><span>Subtotal das Peças:</span><span style="font-family: monospace;">${fMoedaLocal(subtotalGeral)}</span></div>
+                    <div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto Grade/Campanha:</span><span style="font-family: monospace;">-${fMoedaLocal(descPromo)}</span></div>
+                    ${descPix > 0 ? `<div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Bonif. Antecipação Pix:</span><span style="font-family: monospace;">-${fMoedaLocal(descPix)}</span></div>` : ''}
+                    <div style="display: flex; justify-content: space-between;"><span>(+) Despesas de Envio/Frete:</span><span style="font-family: monospace;">${fMoedaLocal(frete)}</span></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; border-top: 1px dashed #000; padding-top: 3px; margin-top: 4px;">
+                        <span>VALOR OPERACIONAL LÍQUIDO:</span>
+                        <span style="font-family: monospace; background: #000; color: #fff; padding: 0 4px; border-radius: 2px;">${fMoedaLocal(totalLiquido)}</span>
                     </div>
                 </div>
-            `;
+            ` : '<div style="flex-grow:1;"></div>'}
+        </div>
+    `;
 
-            // Alimenta a div do Preview visual instantaneamente
-            previewArea.innerHTML = htmlGerado;
-            
-            // Alimenta a div oculta oficial do admin (que a @media print vai usar para bater o papel real)
-            const printArea = document.getElementById('print-area');
-            if(printArea) printArea.innerHTML = htmlGerado;
+    // Termo de Responsabilidade Logística para Galvânicas e Parceiros de Limeira
+    htmlGerado += `
+            <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: center; font-size: 8px; page-break-inside: avoid;">
+                <div style="border-top: 1px dashed #000; padding-top: 4px;">Expedição interna (Abella Jóias)</div>
+                <div style="border-top: 1px dashed #000; padding-top: 4px;">Recebido por: ${(p.nome || p.cliente || '').toUpperCase()}</div>
+            </div>
+        </div>
+    `;
 
-            // Abre a janela de visualização flutuante de forma imediata e fluida
-            modalPreview.classList.remove('hidden');
-        };
+    // Injeta as informações formatadas nas respectivas views do ecossistema
+    previewArea.innerHTML = htmlGerado;
+    const printArea = document.getElementById('print-area');
+    if(printArea) printArea.innerHTML = htmlGerado;
 
-        // Nova Função: Fecha o modal de preview e limpa o cache
-        window.fecharPreviewRomaneio = function() {
-            const modalPreview = document.getElementById('previewRomaneio');
-            if(modalPreview) modalPreview.classList.add('hidden');
-        };
-
-        // Nova Função: Executa a chamada física de impressão real apenas quando o usuário valida no botão do cabeçalho
-        window.confirmarImpressaoFisica = function() {
-            window.print();
-        };
-
-        carregarPedidos();
-    })();
+    // Dispara a exibição fluida na tela do administrador
+    modalPreview.classList.remove('hidden');
+};
 </script>

@@ -3,11 +3,14 @@
         <h2 class="text-xl font-black text-white uppercase tracking-tight">Módulo de Pedidos Recebidos</h2>
         <p class="text-xs text-gray-500">Fluxo operacional assíncrono conectado em tempo real</p>
     </div>
-    <span id="qtd-pedidos" class="bg-[#caa85c]/10 border border-[#caa85c]/20 text-[#caa85c] px-3 py-1 rounded-full text-xs font-bold font-mono">0 pedidos</span>
+    <span id="qtd-pedidos" class="bg-[#caa85c]/10 border border-[#caa85c]/20 text-[#caa85c] px-3 py-1 rounded-full text-xs font-bold font-mono">Carregando contador...</span>
 </div>
 
 <div id="lista-pedidos" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div class="col-span-full text-center py-12 text-zinc-600 italic text-xs animate-pulse font-mono">
+        Buscando dados ativos na árvore 'orders' do Firebase...
     </div>
+</div>
 
 <div id="editorPedido" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4">
     <div class="bg-[#111] w-full max-w-5xl rounded-2xl p-6 overflow-auto max-h-[95vh] border border-[#333] custom-scroll space-y-6">
@@ -51,3 +54,15 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Se o motor do admin-logic já estiver carregado na memória global, força a renderização imediata do banco
+    if (typeof inicializarModuloPedidos === 'function') {
+        inicializarModuloPedidos();
+    } else {
+        // Fallback de segurança temporário caso haja atraso na leitura do script de lógica principal
+        setTimeout(() => {
+            if (typeof inicializarModuloPedidos === 'function') inicializarModuloPedidos();
+        }, 250);
+    }
+</script>

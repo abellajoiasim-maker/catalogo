@@ -88,14 +88,16 @@ var pedidoEditando = null;
 function inicializarModuloPedidos() {
     listenersAtivos['orders'] = true;
 
+    // Força o Firebase a escutar em tempo real o nó correto
     db.ref('orders').on('value', snap => {
         const container = document.getElementById('lista-pedidos');
         const badgeCount = document.getElementById('qtd-pedidos');
         
-        if (!container) return; // Proteção caso o usuário mude de aba antes do retorno assíncrono
+        // Se o usuário já mudou de aba, interrompe para não dar erro
+        if (!container) return; 
 
         if (!snap.exists()) {
-            container.innerHTML = '<p class="text-xs text-gray-500 italic col-span-full">Nenhum pedido ativo recebido...</p>';
+            container.innerHTML = '<p class="text-xs text-gray-500 italic col-span-full p-4">Nenhum pedido ativo recebido no Firebase...</p>';
             if (badgeCount) badgeCount.innerText = "0 pedidos";
             todosPedidos = {};
             return;
@@ -178,6 +180,10 @@ function inicializarModuloPedidos() {
 
         container.innerHTML = stackHtml.reverse().join('');
         if (badgeCount) badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
+    }, erro => {
+        console.error("Erro de permissão ou leitura no Firebase Orders:", erro);
+        const container = document.getElementById('lista-pedidos');
+        if(container) container.innerHTML = `<p class="text-red-400 text-xs p-4">Erro ao ler Firebase: ${erro.message}</p>`;
     });
 }
 
@@ -343,7 +349,13 @@ function imprimirRomaneioDinamico(tipo) {
     window.print();
 }
 
-// Inicialização Automática da Primeira Aba de Trabalho ao abrir a página
-document.addEventListener("DOMContentLoaded", () => {
-    mudarAbaDinamica('pedidos');
-});
+// =========================================================================
+// PONTES DE COMPATIBILIDADE (EVITA ERRO DE METODOS SEM O SUFIXO "DINAMICO")
+// =========================================================================
+const abrirEditorPedido = abrirEditorPedidoDinamico;
+const fecharEditorPedido = fecharEditorPedidoDinamico;
+const recalcularTotalEd = recalcularTotalEdDinamico;
+const salvarPedidoEditado = salvarPedidoEditadoDinamico;
+const excluirPedido = dectruirPedidoDinamico;
+const imprimirRomaneio = imprimirRomaneioDinamico;
+const addItemEditor = addItemEditorDinamico;

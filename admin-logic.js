@@ -301,3 +301,163 @@ window.confirmarImpressaoFisica = function() {
 document.addEventListener("DOMContentLoaded", () => {
     mudarAbaDinamica('pedidos');
 });
+
+// =========================================================================
+// MÓDULO: CONFIGURAÇÕES - ECOSSISTEMA ADMINISTRATIVO
+// =========================================================================
+
+function carregarModuloConfiguracoes() {
+    const container = document.getElementById('conteudo-modulo');
+    if (!container) return;
+
+    // Estrutura HTML com Tailwind CSS moderno e focado na experiência do usuário
+    container.innerHTML = `
+        <div class="p-6 max-w-4xl mx-auto space-y-6 animate-fade-in">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <span>⚙️</span> Configurações do Sistema
+                    </h1>
+                    <p class="text-sm text-gray-500 mt-1">Gerencie as regras de negócio, dados da empresa e condições de pagamento do catálogo em tempo real.</p>
+                </div>
+                <button id="btnSalvarConfig" onclick="salvarConfiguracoes()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2">
+                    <span>💾</span> Salvar Alterações
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2 border-b border-gray-50 pb-2">
+                        🏢 Dados da Empresa
+                    </h2>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nome da Loja</label>
+                        <input type="text" id="cfgNome" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Slogan / Descrição Curta</label>
+                        <input type="text" id="cfgSlogan" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">WhatsApp de Recebimento (com DDD)</label>
+                        <input type="number" id="cfgWhatsapp" placeholder="Ex: 19999999999" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 font-mono focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2 border-b border-gray-50 pb-2">
+                        💳 Condições de Pagamento
+                    </h2>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Desconto Pix (%)</label>
+                            <div class="relative">
+                                <input type="number" id="cfgDescPix" min="0" max="100" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-8 py-2.5 text-gray-800 font-mono focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+                                <span class="absolute right-3 top-3 text-gray-400 font-medium">%</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Parcelas no Cartão</label>
+                            <input type="number" id="cfgParcelas" min="1" max="24" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 font-mono focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Pedido Mínimo (R$ Atacado)</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-3 text-gray-400 text-sm font-medium">R$</span>
+                            <input type="number" id="cfgValorMinimo" step="0.01" class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-gray-800 font-mono focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-50 pb-2">
+                    <h2 class="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                        📢 Tarja de Avisos (Topo do Catálogo)
+                    </h2>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="cfgAtivarAviso" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        <span class="ml-2 text-xs font-bold text-gray-500 uppercase">Exibir Barra</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Texto do Alerta Geral</label>
+                    <input type="text" id="cfgTextoAviso" placeholder="Ex: ✨ Frete grátis para galvânicas de Limeira nas compras acima de R$100! ✨" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Disparar a busca dos dados originais salvos no Firebase
+    buscarConfiguracoesFirebase();
+}
+
+// =========================================================================
+// LÓGICA DE PERSISTÊNCIA REALTIME (FIREBASE)
+// =========================================================================
+
+function buscarConfiguracoesFirebase() {
+    // Escuta de disparo único (.once) para preencher o formulário ao abrir a aba
+    db.ref('configuracoes').once('value').then((snapshot) => {
+        const config = snapshot.val() || {};
+
+        // Preenche cada campo tratando valores nulos padrão de segurança
+        document.getElementById('cfgNome').value = config.nomeLoja || '';
+        document.getElementById('cfgSlogan').value = config.sloganLoja || '';
+        document.getElementById('cfgWhatsapp').value = config.whatsappNum || '';
+        document.getElementById('cfgDescPix').value = config.descontoPix !== undefined ? config.descontoPix : 0;
+        document.getElementById('cfgParcelas').value = config.maxParcelas || 1;
+        document.getElementById('cfgValorMinimo').value = config.pedidoMinimo || 0;
+        document.getElementById('cfgTextoAviso').value = config.textoAviso || '';
+        document.getElementById('cfgAtivarAviso').checked = !!config.exibirAviso;
+    }).catch(erro => {
+        console.error("Erro ao buscar configurações:", erro);
+    });
+}
+
+function salvarConfiguracoes() {
+    const btn = document.getElementById('btnSalvarConfig');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "⏳ Salvando...";
+    }
+
+    // Coleta dos dados da UI tratados
+    const dadosNovos = {
+        nomeLoja: document.getElementById('cfgNome').value.trim(),
+        sloganLoja: document.getElementById('cfgSlogan').value.trim(),
+        whatsappNum: document.getElementById('cfgWhatsapp').value.trim(),
+        descontoPix: parseFloat(document.getElementById('cfgDescPix').value) || 0,
+        maxParcelas: parseInt(document.getElementById('cfgParcelas').value) || 1,
+        pedidoMinimo: parseFloat(document.getElementById('cfgValorMinimo').value) || 0,
+        textoAviso: document.getElementById('cfgTextoAviso').value.trim(),
+        exibirAviso: document.getElementById('cfgAtivarAviso').checked
+    };
+
+    // Salva diretamente no nó global de configurações do Firebase
+    db.ref('configuracoes').set(dadosNovos)
+        .then(() => {
+            alert("✅ Configurações salvas e aplicadas em tempo real!");
+        })
+        .catch((erro) => {
+            alert("❌ Erro ao salvar configurações.");
+            console.error(erro);
+        })
+        .finally(() => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = "<span>💾</span> Salvar Alterações";
+            }
+        });
+}

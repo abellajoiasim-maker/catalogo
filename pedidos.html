@@ -256,7 +256,7 @@
         };
 
 window.imprimirRomaneio = function(tipo) {
-    // 1. Tratamento de segurança para verificar se a função de moeda existe, senão cria uma local
+    // Garante que a função de formatação de moeda exista no escopo
     const fMoedaLocal = (typeof window.fMoeda === 'function') ? window.fMoeda : 
                         (typeof fMoeda === 'function' ? fMoeda : 
                         v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0));
@@ -281,14 +281,23 @@ window.imprimirRomaneio = function(tipo) {
     let totalPecasGeral = 0;
     let totalPesoGeral = 0;
     
-    // 2. Processamento blindado dos itens para evitar congelamentos por dados nulos
+    // Cria uma cópia limpa e segura do array de itens para ordenação
+    let itensOrdenados = [];
     if (p.itens && Array.isArray(p.itens)) {
-        p.itens.forEach(i => {
-            if (!i) return;
+        itensOrdenados = [...p.itens].filter(i => i !== null);
+        
+        // AJUSTE SOLICITADO: Ordenação Alfabética Rígida por SKU (A-Z)
+        itensOrdenados.sort((a, b) => {
+            const skuA = (a.sku || '').toString().toUpperCase().trim();
+            const skuB = (b.sku || '').toString().toUpperCase().trim();
+            return skuA.localeCompare(skuB, 'pt-BR', { sensitivity: 'base', numeric: true });
+        });
+
+        // Calcula os acumuladores logísticos com base na lista já ordenada
+        itensOrdenados.forEach(i => {
             const qtd = parseInt(i.quantidade || i.qtd || 0);
             const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
             
-            // Isola o tratamento de peso para não quebrar o loop se a propriedade falhar
             let pesoNumerico = 0;
             try {
                 let pesoBruto = i.peso || i.weight || "0";
@@ -312,7 +321,7 @@ window.imprimirRomaneio = function(tipo) {
     const ehConferencia = (tipo === 1 || tipo === 4);
     const comFoto = (tipo === 3 || tipo === 6);
 
-    // CABEÇALHO DA EMPRESA ENXUTO
+    // ESTRUTURA INSTITUCIONAL DO CABEÇALHO ABELLA JOIAS
     let htmlGerado = `
         <div style="font-family: 'Inter', monospace, sans-serif; color: #000; font-size: 11px; line-height: 1.3;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px;">
@@ -343,7 +352,7 @@ window.imprimirRomaneio = function(tipo) {
             </div>
     `;
 
-    // RENDERS EM MODO LISTA
+    // FORMATO EM LISTA (Modelos 1, 2 e 3)
     if (tipo === 1 || tipo === 2 || tipo === 3) {
         htmlGerado += `
             <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
@@ -362,86 +371,80 @@ window.imprimirRomaneio = function(tipo) {
                 <tbody>
         `;
 
-        if (p.itens && Array.isArray(p.itens)) {
-            p.itens.forEach(i => {
-                if (!i) return;
-                const qtd = parseInt(i.quantidade || i.qtd || 1);
-                const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
-                const pesoUnitario = i.peso || i.weight || '0g';
-                
-                htmlGerado += `
-                    <tr style="border-bottom: 1px solid #ddd; font-size: 10px;">
-                        ${comFoto ? `
-                            <td style="padding: 3px; border: 1px solid #ddd; text-align: center;">
-                                <div style="width: 28px; height: 28px; background: #eee; border: 1px dashed #aaa; margin: auto; font-size: 6px; display: flex; align-items: center; justify-content: center; overflow:hidden;">
-                                    ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '[FOTO]'}
-                                </div>
-                            </td>` : ''
-                        }
-                        <td style="padding: 4px; border: 1px solid #ddd; font-weight: bold; font-family: monospace;">${i.sku || 'N/A'}</td>
-                        <td style="padding: 4px; border: 1px solid #ddd; text-transform: uppercase; font-size: 9px;">${i.name || i.nome || 'Peça bruta s/ identificação'}</td>
-                        ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-family: monospace; color:#555;">${pesoUnitario}</td>` : ''}
-                        ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${fMoedaLocal(preco)}</td>` : ''}
-                        <td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 11px; background: #fbfbfb;">${qtd}</td>
-                        ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-weight: bold; font-family: monospace;">${fMoedaLocal(preco * qtd)}</td>` : ''}
-                        ${ehConferencia ? '<td style="padding: 4px; border: 1px solid #ddd; text-align: center; color: #bbb;">[  ]</td>' : ''}
-                    </tr>
-                `;
-            });
-        }
+        itensOrdenados.forEach(i => {
+            const qtd = parseInt(i.quantidade || i.qtd || 1);
+            const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+            const pesoUnitario = i.peso || i.weight || '0g';
+            
+            htmlGerado += `
+                <tr style="border-bottom: 1px solid #ddd; font-size: 10px;">
+                    ${comFoto ? `
+                        <td style="padding: 3px; border: 1px solid #ddd; text-align: center;">
+                            <div style="width: 28px; height: 28px; background: #eee; border: 1px dashed #aaa; margin: auto; font-size: 6px; display: flex; align-items: center; justify-content: center; overflow:hidden;">
+                                ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '[FOTO]'}
+                            </div>
+                        </td>` : ''
+                    }
+                    <td style="padding: 4px; border: 1px solid #ddd; font-weight: bold; font-family: monospace; background:#f9f9f9;">${i.sku || 'N/A'}</td>
+                    <td style="padding: 4px; border: 1px solid #ddd; text-transform: uppercase; font-size: 9px;">${i.name || i.nome || 'Peça bruta s/ identificação'}</td>
+                    ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-family: monospace; color:#555;">${pesoUnitario}</td>` : ''}
+                    ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${fMoedaLocal(preco)}</td>` : ''}
+                    <td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 11px; background: #fbfbfb;">${qtd}</td>
+                    ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-weight: bold; font-family: monospace;">${fMoedaLocal(preco * qtd)}</td>` : ''}
+                    ${ehConferencia ? '<td style="padding: 4px; border: 1px solid #ddd; text-align: center; color: #bbb;">[  ]</td>' : ''}
+                </tr>
+            `;
+        });
         htmlGerado += `</tbody></table>`;
     } 
     
-    // RENDERS EM MODO GRADE
+    // FORMATO EM GRADE COMPACTA (Modelos 4, 5 e 6)
     else if (tipo === 4 || tipo === 5 || tipo === 6) {
         htmlGerado += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px;">`;
 
-        if (p.itens && Array.isArray(p.itens)) {
-            p.itens.forEach(i => {
-                if (!i) return;
-                const qtd = parseInt(i.quantidade || i.qtd || 1);
-                const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
-                const pesoUnitario = i.peso || i.weight || '0g';
+        itensOrdenados.forEach(i => {
+            const qtd = parseInt(i.quantidade || i.qtd || 1);
+            const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+            const pesoUnitario = i.peso || i.weight || '0g';
 
-                htmlGerado += `
-                    <div style="border: 1px solid #000; padding: 4px; border-radius: 4px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 2px;">
-                            <span style="font-family: monospace; font-weight: bold; font-size: 9px; background: #e0e0e0; padding: 1px 3px; border-radius: 2px;">${i.sku || 'N/A'}</span>
-                            <span style="font-size: 11px; font-weight: 900; background: #000; color: #fff; padding: 1px 5px; border-radius: 3px;">X${qtd}</span>
-                        </div>
-                        
-                        ${comFoto ? `
-                            <div style="width: 100%; height: 42px; background: #f9f9f9; border: 1px dashed #ccc; margin: 2px 0; display: flex; align-items: center; justify-content: center; overflow:hidden;">
-                                ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:7px; color:#999;">[SEM FOTO]</span>'}
-                            </div>` : ''
-                        }
-
-                        <div style="font-size: 9px; text-transform: uppercase; color: #111; min-height: 20px; line-height: 1.1; font-weight: 500; margin-bottom: 2px;">
-                            ${i.name || i.nome || 'Sem Descrição'}
-                        </div>
-
-                        <div style="background: #fdfdfd; padding-top: 2px; border-top: 1px dashed #ddd; font-size: 8px; font-family: monospace; display: flex; flex-direction: column; gap: 1px;">
-                            ${!ehConferencia ? `
-                                <div style="display:flex; justify-content:space-between; color:#444;">
-                                    <span>Peso: ${pesoUnitario}</span>
-                                    <span>Un: ${fMoedaLocal(preco)}</span>
-                                </div>
-                                <div style="display:flex; justify-content:space-between; font-weight:bold; color:#000; border-top:1px dotted #eee; padding-top:1px;">
-                                    <span>SUBTOTAL:</span>
-                                    <span>${fMoedaLocal(preco * qtd)}</span>
-                                </div>
-                            ` : `
-                                <div style="color:#aaa; text-align:center; font-size:8px; letter-spacing:1px; padding:1px 0;">[ CONFERIDO ]</div>
-                            `}
-                        </div>
+            htmlGerado += `
+                <div style="border: 1px solid #000; padding: 4px; border-radius: 4px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 2px;">
+                        <span style="font-family: monospace; font-weight: bold; font-size: 9px; background: #e0e0e0; padding: 1px 3px; border-radius: 2px;">${i.sku || 'N/A'}</span>
+                        <span style="font-size: 11px; font-weight: 900; background: #000; color: #fff; padding: 1px 5px; border-radius: 3px;">X${qtd}</span>
                     </div>
-                `;
-            });
-        }
+                    
+                    ${comFoto ? `
+                        <div style="width: 100%; height: 42px; background: #f9f9f9; border: 1px dashed #ccc; margin: 2px 0; display: flex; align-items: center; justify-content: center; overflow:hidden;">
+                            ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:7px; color:#999;">[SEM FOTO]</span>'}
+                        </div>` : ''
+                    }
+
+                    <div style="font-size: 9px; text-transform: uppercase; color: #111; min-height: 20px; line-height: 1.1; font-weight: 500; margin-bottom: 2px;">
+                        ${i.name || i.nome || 'Sem Descrição'}
+                    </div>
+
+                    <div style="background: #fdfdfd; padding-top: 2px; border-top: 1px dashed #ddd; font-size: 8px; font-family: monospace; display: flex; flex-direction: column; gap: 1px;">
+                        ${!ehConferencia ? `
+                            <div style="display:flex; justify-content:space-between; color:#444;">
+                                <span>Peso: ${pesoUnitario}</span>
+                                <span>Un: ${fMoedaLocal(preco)}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-weight:bold; color:#000; border-top:1px dotted #eee; padding-top:1px;">
+                                <span>SUBTOTAL:</span>
+                                <span>${fMoedaLocal(preco * qtd)}</span>
+                            </div>
+                        ` : `
+                            <div style="color:#aaa; text-align:center; font-size:8px; letter-spacing:1px; padding:1px 0;">[ CONFERIDO ]</div>
+                        `}
+                    </div>
+                </div>
+            `;
+        });
         htmlGerado += `</div>`;
     }
 
-    // RODAPÉ LOGÍSTICO E FINANCEIRO
+    // RESUMO CONSOLIDADO
     htmlGerado += `
         <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-start; page-break-inside: avoid;">
             <div style="border: 1px solid #000; background: #fff; border-radius: 4px; padding: 5px 8px; font-size: 10px; min-width: 180px;">
@@ -470,7 +473,6 @@ window.imprimirRomaneio = function(tipo) {
         </div>
     `;
 
-    // Injeta os dados renderizados e remove a classe hidden de forma segura
     previewArea.innerHTML = htmlGerado;
     const printArea = document.getElementById('print-area');
     if(printArea) printArea.innerHTML = htmlGerado;

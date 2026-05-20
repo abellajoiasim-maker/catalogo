@@ -30,6 +30,12 @@ function mudarAba(idAba) {
 // ==========================================
 // 1. SINCRONIZAÇÃO TOTAL DE PEDIDOS RECEBIDOS
 // ==========================================
+let todosPedidos = {}; // Memória global compartilhada para os modais e impressões
+var pedidoEditando = null;
+
+// Atalho global para formatação de moeda padrão do ecossistema BR
+const fMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
 db.ref('orders').on('value', snap => {
     const container = document.getElementById('lista-pedidos');
     const badgeCount = document.getElementById('qtd-pedidos');
@@ -37,27 +43,40 @@ db.ref('orders').on('value', snap => {
     if (!snap.exists()) {
         container.innerHTML = '<p class="text-xs text-gray-500 italic col-span-full">Nenhum pedido ativo recebido...</p>';
         badgeCount.innerText = "0 pedidos";
+        todosPedidos = {};
         return;
     }
 
+    todosPedidos = snap.val(); // Alinha os dados na memória global para os motores de cálculo
     let count = 0;
-    let stackHtml = []; // Otimização extrema de memória
+    let stackHtml = []; // Otimização extrema de renderização
 
-    snap.forEach(child => {
-        const id = child.key;
-        const o = child.val() || {};
+    Object.keys(todosPedidos).forEach(id => {
+        const p = todosPedidos[id];
         count++;
 
-        // Tratamento flexível e seguro para os dados do cliente
-        const nomeCliente = (o.cliente?.nome || o.cliente || o.nome || 'Cliente Oculto').toUpperCase();
-        const whatsappCliente = o.cliente?.telefone || o.telefone || o.whats || 'Não informado';
-        const enderecoCliente = o.entrega?.rua || o.endereco || 'Retirada / Não informado';
+        // Tratamento flexível de dados legado/novo para evitar erros na tela
+        const nomeCliente = (p.nome || p.cliente || 'Cliente Oculto').toUpperCase();
+        const whatsappCliente = p.whats || p.telefone || 'Não informado';
+        
+        let enderecoCliente = 'Retirada / Não informado';
+        if (p.rua) {
+            enderecoCliente = `${p.rua}${p.numero ? ', ' + p.numero : ''}${p.cidade ? ' - ' + p.cidade : ''}`;
+        } else if (p.endereco) {
+            enderecoCliente = p.endereco;
+        }
 
-        const rawTotal = o.total;
+        const rawTotal = p.total;
         const totalExibivel = typeof rawTotal === 'number' ? fMoeda(rawTotal) : (rawTotal || 'R$ 0,00');
-        const dataPedido = o.criadoEm ? new Date(o.criadoEm).toLocaleString('pt-BR') : (o.data || 'Data Indefinida');
+        const dataPedido = p.data ? new Date(p.data).toLocaleString('pt-BR') : (p.criadoEm ? new Date(p.criadoEm).toLocaleString('pt-BR') : 'Data Indefinida');
 
-        // Número amigável baseado no ID do Firebase
+        // Calcula o volume real de peças dentro do pedido
+        let totalPecas = 0;
+        if (Array.isArray(p.itens)) {
+            p.itens.forEach(i => totalPecas += (parseInt(i.quantidade || i.qtd) || 1));
+        }
+
+        // Número amigável baseado no ID do Firebase para exibição limpa
         const numeroPedido = id.substring(1, 10).toUpperCase();
 
         stackHtml.push(`
@@ -70,14 +89,18 @@ db.ref('orders').on('value', snap => {
                     <div class="font-bold text-gray-200 uppercase tracking-wide truncate">${nomeCliente}</div>
                     <div class="text-zinc-400 flex items-center gap-1">
                         <span>📱 WhatsApp:</span>
-                        <span class="font-mono text-gray-300">${whatsappCliente}</span>
+                        <a href="https://wa.me/${whatsappCliente.replace(/\D/g,'')}" target="_blank" class="font-mono text-blue-400 underline">${whatsappCliente}</a>
+                    </div>
+                    <div class="text-zinc-400 flex items-center gap-1 font-mono text-[11px]">
+                        <span>📦 Volume total:</span>
+                        <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span>
                     </div>
                     <div class="text-zinc-400 truncate">
                         <span>📍 Endereço:</span>
                         <span class="italic text-zinc-500">${enderecoCliente}</span>
                     </div>
                     <div class="pt-1.5 flex justify-between items-center border-t border-zinc-900/50 mt-1">
-                        <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total</span>
+                        <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
                         <span class="text-sm font-black text-[#caa85c] font-mono">${totalExibivel}</span>
                     </div>
                 </div>
@@ -85,22 +108,22 @@ db.ref('orders').on('value', snap => {
                 <div class="bg-black/40 p-2 rounded-lg border border-zinc-900 space-y-1.5">
                     <div class="flex gap-1.5">
                         <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1 rounded flex-1 outline-none">
-                            <option value="1">1. Conferência de Pedido</option>
-                            <option value="2">2. Romaneio Financeiro</option>
-                            <option value="3">3. Catálogo do Pedido</option>
-                            <option value="4">4. Grade de Conferência</option>
-                            <option value="5">5. Grade Financeira</option>
-                            <option value="6">6. Romaneio Completo (Foto/Preço)</option>
+                            <option value="1">1. Conferência de Separação</option>
+                            <option value="2">2. Financeiro e Faturamento</option>
+                            <option value="3">3. Vitrine (Conferência Fotográfica)</option>
+                            <option value="4">4. Grade Comparativa Conf.</option>
+                            <option value="5">5. Grade Financeira Expandida</option>
+                            <option value="6">6. Grade Consolidada Total</option>
                         </select>
-                        <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; imprimirRomaneio('${id}', parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-2.5 py-1 rounded hover:brightness-110 uppercase tracking-wider">Imprimir</button>
+                        <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; pedidoEditando='${id}'; imprimirRomaneio(parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-2.5 py-1 rounded hover:brightness-110 uppercase tracking-wider">Imprimir</button>
                     </div>
                 </div>
 
                 <div class="flex gap-2 pt-2 border-t border-zinc-900">
-                    <button onclick="editarPedido('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-1 px-2 rounded transition-all text-center">
-                        ✏️ Editar
+                    <button onclick="abrirEditorPedido('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-1 px-2 rounded transition-all text-center">
+                        ⚙️ Gerenciar / Editar
                     </button>
-                    <button onclick="arquivarPedido('${id}')" class="bg-red-950/30 hover:bg-red-900/50 text-red-400 border border-red-900/30 font-medium py-1 px-2 rounded transition-all">
+                    <button onclick="pedidoEditando='${id}'; excluirPedido();" class="bg-red-950/30 hover:bg-red-900/50 text-red-400 border border-red-900/30 font-medium py-1 px-2 rounded transition-all">
                         🗑️ Excluir
                     </button>
                 </div>
@@ -108,15 +131,9 @@ db.ref('orders').on('value', snap => {
         `);
     });
 
-    container.innerHTML = stackHtml.reverse().join(''); // Mais novos sempre em primeiro
+    container.innerHTML = stackHtml.reverse().join(''); // Garante cronologia decrescente (mais recentes primeiro)
     badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
 });
-
-function arquivarPedido(id) {
-    if (confirm("Deseja realmente remover ou arquivar este pedido do painel?")) {
-        db.ref('orders/' + id).remove();
-    }
-}
 // ==========================================
 // 2. PAINEL DE OFERTAS AVANÇADO (LEQUE DE MARKETING)
 // ==========================================

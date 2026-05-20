@@ -256,6 +256,11 @@
         };
 
 window.imprimirRomaneio = function(tipo) {
+    // 1. Tratamento de segurança para verificar se a função de moeda existe, senão cria uma local
+    const fMoedaLocal = (typeof window.fMoeda === 'function') ? window.fMoeda : 
+                        (typeof fMoeda === 'function' ? fMoeda : 
+                        v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0));
+
     const p = todosPedidosLocal[window.pedidoEditando];
     if(!p) {
         alert("🚨 Selecione ou abra um pedido antes de imprimir!");
@@ -264,24 +269,34 @@ window.imprimirRomaneio = function(tipo) {
 
     const previewArea = document.getElementById('corpo-preview-a4');
     const modalPreview = document.getElementById('previewRomaneio');
-    if(!previewArea || !modalPreview) return;
+    if(!previewArea || !modalPreview) {
+        console.error("🚨 Elementos de Preview não encontrados no DOM do admin.html");
+        return;
+    }
 
     const numPedidoFriendly = window.pedidoEditando.slice(-6).toUpperCase();
     const dataPedido = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : 'N/A';
     
-    // Inicialização dos acumuladores logísticos e financeiros
     let subtotalGeral = 0;
     let totalPecasGeral = 0;
     let totalPesoGeral = 0;
     
-    if (Array.isArray(p.itens)) {
+    // 2. Processamento blindado dos itens para evitar congelamentos por dados nulos
+    if (p.itens && Array.isArray(p.itens)) {
         p.itens.forEach(i => {
+            if (!i) return;
             const qtd = parseInt(i.quantidade || i.qtd || 0);
             const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
             
-            // Tratamento dinâmico para extrair o peso numérico (ex: "4.5g", "4,5" ou 4.5)
-            let pesoTexto = (i.peso || i.weight || "0").toString().toLowerCase().replace('g', '').replace(',', '.').trim();
-            let pesoNumerico = parseFloat(pesoTexto) || 0;
+            // Isola o tratamento de peso para não quebrar o loop se a propriedade falhar
+            let pesoNumerico = 0;
+            try {
+                let pesoBruto = i.peso || i.weight || "0";
+                let pesoTexto = pesoBruto.toString().toLowerCase().replace('g', '').replace(',', '.').trim();
+                pesoNumerico = parseFloat(pesoTexto) || 0;
+            } catch(e) {
+                pesoNumerico = 0;
+            }
 
             subtotalGeral += (preco * qtd);
             totalPecasGeral += qtd;
@@ -294,13 +309,10 @@ window.imprimirRomaneio = function(tipo) {
     const frete = parseFloat(p.frete || 0);
     const totalLiquido = subtotalGeral - descPromo - descPix + frete;
 
-    // Determina flags de visualização com base no tipo selecionado
-    // tipo 1 = Lista Conferência, tipo 2 = Lista Financeiro, tipo 3 = Lista Financeiro + Foto
-    // tipo 4 = Grade Conferência, tipo 5 = Grade Financeiro, tipo 6 = Grade Financeiro + Foto
     const ehConferencia = (tipo === 1 || tipo === 4);
     const comFoto = (tipo === 3 || tipo === 6);
 
-    // 1. NOVO CABEÇALHO: Apenas Dados Limpos da Empresa
+    // CABEÇALHO DA EMPRESA ENXUTO
     let htmlGerado = `
         <div style="font-family: 'Inter', monospace, sans-serif; color: #000; font-size: 11px; line-height: 1.3;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px;">
@@ -331,12 +343,12 @@ window.imprimirRomaneio = function(tipo) {
             </div>
     `;
 
-    // RENDERIZAÇÃO EM MODO LISTA (Estilos 1, 2 e 3)
+    // RENDERS EM MODO LISTA
     if (tipo === 1 || tipo === 2 || tipo === 3) {
         htmlGerado += `
             <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
                 <thead>
-                    <tr style="background: #000; color: #fff; font-size: 9px; text-transform: uppercase; font-family: sans-serif;">
+                    <tr style="background: #000; color: #fff; font-size: 9px; text-transform: uppercase;">
                         ${comFoto ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 35px;">Foto</th>' : ''}
                         <th style="padding: 4px; border: 1px solid #000; text-align: left; width: 75px;">SKU</th>
                         <th style="padding: 4px; border: 1px solid #000; text-align: left;">Descrição da Peça</th>
@@ -350,8 +362,9 @@ window.imprimirRomaneio = function(tipo) {
                 <tbody>
         `;
 
-        if (Array.isArray(p.itens)) {
+        if (p.itens && Array.isArray(p.itens)) {
             p.itens.forEach(i => {
+                if (!i) return;
                 const qtd = parseInt(i.quantidade || i.qtd || 1);
                 const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
                 const pesoUnitario = i.peso || i.weight || '0g';
@@ -360,7 +373,7 @@ window.imprimirRomaneio = function(tipo) {
                     <tr style="border-bottom: 1px solid #ddd; font-size: 10px;">
                         ${comFoto ? `
                             <td style="padding: 3px; border: 1px solid #ddd; text-align: center;">
-                                <div style="width: 28px; height: 28px; background: #eee; border: 1px dashed #aaa; margin: auto; font-size: 6px; display: flex; align-items: center; justify-content: center; color: #777; overflow:hidden;">
+                                <div style="width: 28px; height: 28px; background: #eee; border: 1px dashed #aaa; margin: auto; font-size: 6px; display: flex; align-items: center; justify-content: center; overflow:hidden;">
                                     ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '[FOTO]'}
                                 </div>
                             </td>` : ''
@@ -371,7 +384,7 @@ window.imprimirRomaneio = function(tipo) {
                         ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${fMoedaLocal(preco)}</td>` : ''}
                         <td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 11px; background: #fbfbfb;">${qtd}</td>
                         ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-weight: bold; font-family: monospace;">${fMoedaLocal(preco * qtd)}</td>` : ''}
-                        ${ehConferencia ? '<td style="padding: 4px; border: 1px solid #ddd; text-align: center; color: #bbb; font-weight: normal; font-size:9px;">[  ]</td>' : ''}
+                        ${ehConferencia ? '<td style="padding: 4px; border: 1px solid #ddd; text-align: center; color: #bbb;">[  ]</td>' : ''}
                     </tr>
                 `;
             });
@@ -379,12 +392,13 @@ window.imprimirRomaneio = function(tipo) {
         htmlGerado += `</tbody></table>`;
     } 
     
-    // RENDERIZAÇÃO EM MODO GRADE ADAPTADA (Estilos 4, 5 e 6)
+    // RENDERS EM MODO GRADE
     else if (tipo === 4 || tipo === 5 || tipo === 6) {
         htmlGerado += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px;">`;
 
-        if (Array.isArray(p.itens)) {
+        if (p.itens && Array.isArray(p.itens)) {
             p.itens.forEach(i => {
+                if (!i) return;
                 const qtd = parseInt(i.quantidade || i.qtd || 1);
                 const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
                 const pesoUnitario = i.peso || i.weight || '0g';
@@ -412,7 +426,7 @@ window.imprimirRomaneio = function(tipo) {
                                     <span>Peso: ${pesoUnitario}</span>
                                     <span>Un: ${fMoedaLocal(preco)}</span>
                                 </div>
-                                <div style="display:flex; justify-content:space-between; font-weight:bold; color:#000; border-top:1px dotted #eee; pt:1px;">
+                                <div style="display:flex; justify-content:space-between; font-weight:bold; color:#000; border-top:1px dotted #eee; padding-top:1px;">
                                     <span>SUBTOTAL:</span>
                                     <span>${fMoedaLocal(preco * qtd)}</span>
                                 </div>
@@ -427,10 +441,9 @@ window.imprimirRomaneio = function(tipo) {
         htmlGerado += `</div>`;
     }
 
-    // 3. NOVO RODAPÉ UNIFICADO: Consolidação Absoluta de Peças e Pesos Brutos
+    // RODAPÉ LOGÍSTICO E FINANCEIRO
     htmlGerado += `
         <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-start; page-break-inside: avoid;">
-            
             <div style="border: 1px solid #000; background: #fff; border-radius: 4px; padding: 5px 8px; font-size: 10px; min-width: 180px;">
                 <div style="text-transform: uppercase; font-size: 8px; font-weight: 900; color: #555; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 3px;">Consolidação Logística</div>
                 <div style="display: flex; justify-content: space-between;"><span>Total de Peças:</span><b style="font-size:11px;">${totalPecasGeral} u.</b></div>
@@ -440,33 +453,28 @@ window.imprimirRomaneio = function(tipo) {
             ${!ehConferencia ? `
                 <div style="width: 250px; background: #fff; border: 2px solid #000; border-radius: 6px; padding: 6px; font-size: 10px; line-height: 1.4;">
                     <div style="display: flex; justify-content: space-between;"><span>Subtotal das Peças:</span><span style="font-family: monospace;">${fMoedaLocal(subtotalGeral)}</span></div>
-                    <div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto Grade/Campanha:</span><span style="font-family: monospace;">-${fMoedaLocal(descPromo)}</span></div>
-                    ${descPix > 0 ? `<div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Bonif. Antecipação Pix:</span><span style="font-family: monospace;">-${fMoedaLocal(descPix)}</span></div>` : ''}
-                    <div style="display: flex; justify-content: space-between;"><span>(+) Despesas de Envio/Frete:</span><span style="font-family: monospace;">${fMoedaLocal(frete)}</span></div>
+                    <div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto:</span><span style="font-family: monospace;">-${fMoedaLocal(descPromo)}</span></div>
+                    ${descPix > 0 ? `<div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto Pix:</span><span style="font-family: monospace;">-${fMoedaLocal(descPix)}</span></div>` : ''}
+                    <div style="display: flex; justify-content: space-between;"><span>(+) Frete:</span><span style="font-family: monospace;">${fMoedaLocal(frete)}</span></div>
                     <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; border-top: 1px dashed #000; padding-top: 3px; margin-top: 4px;">
-                        <span>VALOR OPERACIONAL LÍQUIDO:</span>
+                        <span>VALOR LÍQUIDO:</span>
                         <span style="font-family: monospace; background: #000; color: #fff; padding: 0 4px; border-radius: 2px;">${fMoedaLocal(totalLiquido)}</span>
                     </div>
                 </div>
             ` : '<div style="flex-grow:1;"></div>'}
         </div>
-    `;
-
-    // Termo de Responsabilidade Logística para Galvânicas e Parceiros de Limeira
-    htmlGerado += `
-            <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: center; font-size: 8px; page-break-inside: avoid;">
-                <div style="border-top: 1px dashed #000; padding-top: 4px;">Expedição interna (Abella Jóias)</div>
-                <div style="border-top: 1px dashed #000; padding-top: 4px;">Recebido por: ${(p.nome || p.cliente || '').toUpperCase()}</div>
-            </div>
+        
+        <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: center; font-size: 8px; page-break-inside: avoid;">
+            <div style="border-top: 1px dashed #000; padding-top: 4px;">Expedição interna (Abella Jóias)</div>
+            <div style="border-top: 1px dashed #000; padding-top: 4px;">Recebido por: ${(p.nome || p.cliente || '').toUpperCase()}</div>
         </div>
     `;
 
-    // Injeta as informações formatadas nas respectivas views do ecossistema
+    // Injeta os dados renderizados e remove a classe hidden de forma segura
     previewArea.innerHTML = htmlGerado;
     const printArea = document.getElementById('print-area');
     if(printArea) printArea.innerHTML = htmlGerado;
 
-    // Dispara a exibição fluida na tela do administrador
     modalPreview.classList.remove('hidden');
 };
 </script>

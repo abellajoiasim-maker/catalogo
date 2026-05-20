@@ -74,9 +74,9 @@
         }
     })();
 
-    // ESCUTA EM TEMPO REAL (REALTIME DATABASE)
+    // ESCUTA EM TEMPO REAL MAPEADA PARA 'categories'
     function escutarCategoriasFirebase() {
-        db.ref('categorias').on('value', (snapshot) => {
+        db.ref('categories').on('value', (snapshot) => {
             const grid = document.getElementById('grid-categorias');
             if (!grid) return;
             
@@ -86,7 +86,7 @@
             if (!dados) {
                 grid.innerHTML = `
                     <div class="col-span-full text-center py-12 text-gray-400 border border-dashed border-gray-200 rounded-2xl bg-white">
-                        📦 Nenhuma categoria cadastrada até o momento.
+                        📦 Nenhuma categoria cadastrada até o momento no nó 'categories'.
                     </div>`;
                 return;
             }
@@ -116,7 +116,7 @@
                         <button onclick="editarCategoria('${id}', '${cat.nome}', '${cat.urlImagem || ''}')" class="py-2.5 text-xs font-semibold text-blue-600 hover:bg-blue-50/50 transition-all flex items-center justify-center gap-1">
                             ✏️ Editar
                         </button>
-                        <button onclick="alternarStatusCategoria('${id}', '${cat.status || 'ativo'}')" class="py-2.5 text-xs font-semibold ${estaPausado ? 'text-emerald-600 hover:bg-emerald-50/50' : 'text-amber-600 hover:bg-amber-50/50'} transition-all flex items-center justify-center gap-1">
+                        <button onclick="alternarStatusCategoria('${id}', '${cat.status || 'ativo'}')" class="py-2.5 text-xs font-semibold ${estaPausado ? 'text-emerald-600 hover:bg-emerald-50/50' : 'text-amber-600 hover:bg-emerald-50/50'} transition-all flex items-center justify-center gap-1">
                             ${estaPausado ? '▶️ Ativar' : '⏸️ Pausar'}
                         </button>
                         <button onclick="deletarCategoria('${id}')" class="py-2.5 text-xs font-semibold text-rose-600 hover:bg-rose-50/50 transition-all flex items-center justify-center gap-1">
@@ -129,7 +129,7 @@
         });
     }
 
-    // MODAL WINDOW CONTROL
+    // CONTROLADORES DO MODAL
     function abrirModalCategoria() {
         document.getElementById('modalTitulo').innerText = "Nova Categoria";
         document.getElementById('catId').value = "";
@@ -144,7 +144,7 @@
         document.getElementById('modalCategoria').classList.add('hidden');
     }
 
-    // PERSISTÊNCIA: SALVAR / EDITAR
+    // PERSISTÊNCIA: SALVAR / EDITAR NO NÓ 'categories'
     function salvarCategoriaFirebase() {
         const id = document.getElementById('catId').value;
         const nome = document.getElementById('catNome').value.trim();
@@ -165,19 +165,19 @@
         };
 
         if (id) {
-            // Edição: Mantém o status atual se já existir
-            db.ref(`categorias/${id}`).update(dados)
-                .then(() => fecharEALertar("Categoria atualizada com sucesso!"))
+            // Edição: Atualiza no caminho categories/id
+            db.ref(`categories/${id}`).update(dados)
+                .then(() => fecharEAlertar("Categoria atualizada com sucesso!"))
                 .catch(erro => tratarErro(erro));
         } else {
-            // Nova categoria: Define padrão como ativo
+            // Nova categoria: Salva no nó categories com status padrão ativo
             dados.status = "ativo";
-            db.ref('categorias').push(dados)
-                .then(() => fecharEALertar("Nova categoria adicionada com sucesso!"))
+            db.ref('categories').push(dados)
+                .then(() => fecharEAlertar("Nova categoria adicionada com sucesso!"))
                 .catch(erro => tratarErro(erro));
         }
 
-        function fecharEALertar(msg) {
+        function fecharEAlertar(msg) {
             alert(`✅ ${msg}`);
             fecharModalCategoria();
             btn.disabled = false;
@@ -214,17 +214,17 @@
         document.getElementById('modalCategoria').classList.remove('hidden');
     }
 
-    // PAUSAR / ATIVAR CATEGORIA
+    // PAUSAR / ATIVAR CATEGORIA NO NÓ 'categories'
     function alternarStatusCategoria(id, statusAtual) {
         const novoStatus = statusAtual === 'ativo' ? 'pausado' : 'ativo';
-        db.ref(`categorias/${id}`).update({ status: novoStatus })
+        db.ref(`categories/${id}`).update({ status: novoStatus })
             .catch(erro => console.error("Erro ao alternar status:", erro));
     }
 
-    // EXCLUIR CATEGORIA
+    // EXCLUIR CATEGORIA NO NÓ 'categories'
     function deletarCategoria(id) {
         if (confirm("⚠️ Tem certeza absoluta que deseja remover esta categoria?\nIsso pode afetar a exibição de produtos vinculados a ela.")) {
-            db.ref(`categorias/${id}`).remove()
+            db.ref(`categories/${id}`).remove()
                 .then(() => alert("✅ Categoria removida com sucesso."))
                 .catch(erro => console.error("Erro ao remover:", erro));
         }

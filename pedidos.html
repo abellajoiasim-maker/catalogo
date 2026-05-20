@@ -60,9 +60,17 @@
 
 <script>
     (function() {
+        // Verifica se o Firebase já está pronto na janela global, senão aguarda
+        if (typeof firebase === 'undefined' || !firebase.apps.length) {
+            setTimeout(arguments.callee, 50);
+            return;
+        }
+
         const db = firebase.database();
         let todosPedidosLocal = {};
-        const fMoedaLocal = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: BRL }).format(v || 0);
+        
+        // CORREÇÃO: Adicionado aspas em 'BRL' para não quebrar o script
+        const fMoedaLocal = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
         window.carregarPedidos = function() {
             db.ref('orders').once('value').then(snap => {
@@ -266,7 +274,7 @@
             p.total = subtotal - p.descontoPromo - p.descontoPix + p.frete;
 
             db.ref('orders/' + idTarget).set(p).then(() => {
-                alert("✅ Pedido atualizado com sucesso!");
+                alert("✅ Pedido updated com sucesso!");
                 fecharEditorPedido();
                 carregarPedidos();
             });
@@ -321,7 +329,6 @@
             window.print();
         };
 
-        // Inicialização primária assíncrona automática do módulo
         carregarPedidos();
     })();
 </script>

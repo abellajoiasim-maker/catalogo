@@ -7,248 +7,52 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background: #0b0b0b; color: #eee; }
-        .sidebar { background: #111; border-right: 1px solid #222; }
-        .tab-btn { transition: 0.2s; border-radius: 8px; text-align: left; width: 100%; padding: 12px 16px; font-size: 13px; font-weight: 600; }
-        .tab-btn.active { background: #caa85c; color: #000; }
-        .tab-btn:not(.active):hover { background: #1a1a1a; color: #caa85c; }
-        .card { background: #141414; border: 1px solid #222; border-radius: 12px; }
-        .input-adm { background: #0b0b0b; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; width: 100%; outline: none; font-size: 13px; transition: 0.2s; }
-        .input-adm:focus { border-color: #caa85c; background: #111; }
-        .frame-container { width: 100%; height: 82vh; border: none; border-radius: 12px; background: #141414; }
-
-        /* Estilos necessários para o sistema de impressão nativo */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #caa85c; border-radius: 10px; }
         @media print {
-            body * { display: none !important; }
-            #print-area, #print-area * { display: block !important; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; color: #000 !important; background: #fff !important; }
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
         }
     </style>
 </head>
-<body class="flex min-h-screen">
+<body class="flex h-screen overflow-hidden">
 
-    <aside class="w-64 sidebar p-6 flex flex-col justify-between shrink-0">
-        <div>
-            <div class="mb-8 px-2">
-                <h1 class="text-[#caa85c] font-bold tracking-wider text-base uppercase">Abella Admin</h1>
-                <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Gestor do Ecossistema</p>
+    <aside class="w-64 bg-[#111] border-r border-[#222] flex flex-col justify-between shrink-0 z-20">
+        <div class="p-6 space-y-6">
+            <div class="flex items-center gap-3 border-b border-[#222] pb-4">
+                <div class="w-8 h-8 rounded-full bg-[#caa85c] flex items-center justify-center text-black font-black font-mono">A</div>
+                <div>
+                    <h1 class="text-sm font-bold text-white tracking-tight uppercase">Abella Joias</h1>
+                    <p class="text-[10px] text-gray-500 font-medium">Painel Administrativo</p>
+                </div>
             </div>
-            <nav class="space-y-1">
-                <button onclick="mudarAba('pedidos')" id="btn-pedidos" class="tab-btn active">📦 Pedidos Recebidos</button>
-                <button onclick="mudarAba('editor')" id="btn-editor" class="tab-btn">⚡ Editor Full Master</button>
-                <button onclick="mudarAba('ofertas')" id="btn-ofertas" class="tab-btn">🏷️ Painel de Ofertas Avançado</button>
-                <button onclick="mudarAba('galvanicas')" id="btn-galvanicas" class="tab-btn">🚚 Galvânicas Parceiras</button>
-                <button onclick="mudarAba('produtos')" id="btn-produtos" class="tab-btn">💍 Produtos (Gestão Ativa)</button>
-                <button onclick="mudarAba('categorias')" id="btn-categorias" class="tab-btn">📁 Coleções / Categorias</button>
-                <button onclick="mudarAba('config')" id="btn-config" class="tab-btn">⚙️ Configurações</button>
+            <nav class="space-y-1" id="menu-navegacao">
+                <button onclick="mudarAbaDinamica('pedidos')" id="btn-pedidos" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">📦 Pedidos Recebidos</button>
+                <button onclick="mudarAbaDinamica('editor')" id="btn-editor" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">⚡ Editor Full Master</button>
+                <button onclick="mudarAbaDinamica('ofertas')" id="btn-ofertas" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">🏷️ Painel de Ofertas</button>
+                <button onclick="mudarAbaDinamica('galvanicas')" id="btn-galvanicas" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">🚚 Galvânicas Parceiras</button>
+                <button onclick="mudarAbaDinamica('produtos')" id="btn-produtos" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">💍 Gestão de Produtos</button>
+                <button onclick="mudarAbaDinamica('categorias')" id="btn-categorias" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">📁 Coleções / Categorias</button>
+                <button onclick="mudarAbaDinamica('config')" id="btn-config" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">⚙️ Configurações</button>
             </nav>
         </div>
-        <div class="px-2 pt-4 border-t border-zinc-900 text-center text-[10px] text-gray-600">
-            Abella Joias v3.2
+        <div class="p-4 border-t border-[#222] bg-black/20 text-center text-[10px] text-gray-600 font-mono">
+            v3.2.0 • Sistema Modular
         </div>
     </aside>
 
-    <main class="flex-1 p-8 overflow-y-auto w-full">
-        
-        <section id="aba-pedidos" class="space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold tracking-wide">Pedidos Recebidos</h2>
-                <span id="qtd-pedidos" class="bg-zinc-800 border border-zinc-700 px-3 py-1 rounded-full text-xs text-gray-400 font-mono">0 pedidos</span>
-            </div>
-            <div id="lista-pedidos" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <p class="text-xs text-gray-500 italic col-span-full">Buscando lista de compras no Firebase...</p>
-            </div>
-        </section>
-
-        <section id="aba-editor" class="hidden space-y-4">
-            <iframe src="editor.html" class="frame-container"></iframe>
-        </section>
-
-        <section id="aba-ofertas" class="hidden space-y-6">
-            <div class="flex flex-col lg:flex-row gap-6">
-                <div class="card p-6 w-full lg:w-[400px] space-y-4 shrink-0">
-                    <h3 class="text-sm font-bold text-[#caa85c] uppercase tracking-wider">Criar Nova Ação Promocional</h3>
-                    
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Tipo de Oferta / Campanha</label>
-                        <select id="of-tipo" class="input-adm w-full" onchange="ajustarCamposOferta()">
-                            <option value="relampago">⚡ Oferta Relâmpago (Contagem Decrescente)</option>
-                            <option value="cupom">🎟️ Cupom de Desconto Fixo</option>
-                            <option value="categoria">📁 Desconto em Coleção Específica</option>
-                            <option value="progressivo">💰 Desconto por Valor Mínimo de Compra</option>
-                            <option value="badge">🏷️ Crachás/Tarjas Informativas nos Produtos</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Título/Identificador da Campanha</label>
-                        <input id="of-nome" class="input-adm" placeholder="Ex: PROMOOUTONO, LIQUIDA50">
-                    </div>
-
-                    <div id="campo-of-valor">
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Valor da Promoção (R$ ou %)</label>
-                        <input id="of-valor" type="number" class="input-adm" placeholder="Ex: 15">
-                    </div>
-
-                    <div id="campo-of-extra" class="hidden">
-                    </div>
-
-                    <button onclick="salvarOferta()" class="w-full bg-[#caa85c] text-black font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase hover:brightness-110">Lançar Campanha no Catálogo</button>
-                </div>
-
-                <div class="flex-1 space-y-4">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Ações de Marketing Ativas</h3>
-                    <div id="lista-ofertas-ativas" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <p class="text-xs text-gray-500 italic">Nenhuma promoção activa...</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="aba-galvanicas" class="hidden space-y-6">
-            <div class="flex flex-col lg:flex-row justify-between items-start gap-6">
-                <div class="card p-6 w-full lg:w-96 space-y-4 shrink-0">
-                    <h3 class="text-sm font-bold text-[#caa85c] uppercase tracking-wider" id="galv-titulo-form">Novo Parceiro Galvânico</h3>
-                    <input type="hidden" id="galv-edit-id" value="">
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Nome da Empresa</label>
-                        <input id="galv-nome" class="input-adm" placeholder="Ex: Galvânica Limeira">
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Selo / Destaque</label>
-                        <input id="galv-selo" class="input-adm" placeholder="Ex: Parceiro Ouro, Frete Grátis">
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Endereço Completo</label>
-                        <input id="galv-endereco" class="input-adm" placeholder="Rua, Número, Bairro - Cidade">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="text-[10px] text-gray-400 font-bold block mb-1">Telefone Fixo</label>
-                            <input id="galv-telefone" class="input-adm" placeholder="(19) 3333-3333">
-                        </div>
-                        <div>
-                            <label class="text-[10px] text-gray-400 font-bold block mb-1">WhatsApp (Só números)</label>
-                            <input id="galv-whatsapp" class="input-adm" placeholder="5519999999999">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">URL do Logotipo/Imagem</label>
-                        <input id="galv-imagem" class="input-adm" placeholder="https://...">
-                    </div>
-                    <div>
-                        <label class="text-[10px] text-gray-400 font-bold block mb-1">Descrição/Slogan</label>
-                        <textarea id="galv-descricao" class="input-adm h-16 resize-none" placeholder="Breve resumo dos serviços..."></textarea>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="salvarGalvanica()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase">💾 Guardar</button>
-                        <button onclick="limparFormGalvanica()" id="btn-cancelar-galv" class="hidden bg-zinc-800 hover:bg-zinc-700 text-gray-300 font-bold px-4 rounded-lg text-xs uppercase">Cancelar</button>
-                    </div>
-                </div>
-
-                <div class="flex-1 w-full space-y-4">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">Parceiros Homologados</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="lista-galvanicas-adm"></div>
-                </div>
-            </div>
-        </section>
-
-        <section id="aba-produtos" class="hidden space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold tracking-wide">Produtos Ativos (Controlo de Stock Rápido)</h2>
-                <div class="flex gap-2">
-                    <button onclick="abrirModalProduto()" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold hover:brightness-110">+ NOVO PRODUTO</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="lista-produtos"></div>
-        </section>
-
-        <section id="aba-categorias" class="hidden space-y-6">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold tracking-wide">Coleções / Categorias</h2>
-                <button onclick="abrirModalCategoria()" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl text-xs font-bold">+ NOVA COLECÇÃO</button>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4" id="lista-categorias"></div>
-        </section>
-
-        <section id="aba-config" class="hidden space-y-6">
-            <h2 class="text-xl font-bold tracking-wide">Configurações do Catálogo</h2>
-            <div class="card p-6 max-w-xl space-y-4">
-                <div>
-                    <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Nome da Empresa</label>
-                    <input id="cfg-nome" class="input-adm">
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Slogan Comercial</label>
-                    <input id="cfg-slogan" class="input-adm">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Máximo de Parcelas</label>
-                        <input id="cfg-parcelas" type="number" class="input-adm">
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">Desconto PIX (%)</label>
-                        <input id="cfg-pix" type="number" class="input-adm">
-                    </div>
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-1">WhatsApp de Recebimento (com DDD)</label>
-                    <input id="cfg-whatsapp" class="input-adm" placeholder="Ex: 19999999999">
-                </div>
-                <button onclick="salvarConfig()" class="w-full bg-[#caa85c] text-black font-bold py-3 rounded-xl text-xs tracking-wider mt-4 hover:brightness-110">SALVAR CONFIGURAÇÕES</button>
-            </div>
-        </section>
+    <main id="conteudo-dinamico" class="flex-1 overflow-y-auto p-8 custom-scroll relative z-10 bg-[#0b0b0b]">
+        <div class="flex items-center justify-center h-full text-zinc-600 italic text-xs">
+            Carregando ecossistema operacional...
+        </div>
     </main>
 
-    <div id="print-area"></div>
+    <div id="print-area" class="hidden"></div>
 
     <script src="admin-logic.js"></script>
-    <div id="editorPedido" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4">
-        <div class="bg-[#111] w-full max-w-5xl rounded-2xl p-6 overflow-auto max-h-[95vh] border border-[#333] custom-scroll space-y-6">
-            
-            <div class="flex justify-between items-center border-b border-[#222] pb-4">
-                <h2 class="text-[#caa85c] font-bold uppercase tracking-tighter text-lg">Editar Estrutura do Pedido</h2>
-                <div id="totalPreview" class="text-[#caa85c] font-black text-2xl font-mono">R$ 0,00</div>
-            </div>
-            
-            <div class="grid md:grid-cols-2 gap-4">
-                <div class="bg-black/40 p-4 border border-[#222] rounded-xl space-y-2">
-                    <p class="text-[10px] text-[#caa85c] uppercase font-bold tracking-widest">Dados do Comprador</p>
-                    <input id="edClienteNome" placeholder="Nome do Cliente" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
-                    <input id="edClienteTel" placeholder="WhatsApp" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
-                </div>
-                <div class="bg-black/40 p-4 border border-[#222] rounded-xl space-y-2">
-                    <p class="text-[10px] text-[#caa85c] uppercase font-bold tracking-widest">Destino da Entrega</p>
-                    <input id="edRua" placeholder="Rua, Número, Bairro" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
-                    <input id="edCidade" placeholder="Cidade / Estado" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
-                </div>
-            </div>
-
-            <div>
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-[#caa85c] font-bold text-sm uppercase italic tracking-wide">Produtos Vinculados</h3>
-                    <button class="bg-green-950 text-green-400 border border-green-800 hover:bg-green-900 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider" onclick="addItemEditor()">+ Inserir Peça (SKU)</button>
-                </div>
-                <div id="edItens" class="space-y-2 max-h-60 overflow-y-auto custom-scroll pr-1"></div>
-            </div>
-
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-[#1a1a1a] p-4 border border-[#222] rounded-xl">
-                <div><label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Desc. Campanha (R$)</label><input id="edDescPromo" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white"></div>
-                <div><label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Desc. Pix (R$)</label><input id="edDescPix" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white"></div>
-                <div><label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Frete Adicional (R$)</label><input id="edFrete" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white"></div>
-                <div><label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Total Unidades</label><input id="edQtdTotal" type="number" readonly class="w-full bg-black/50 border border-[#333] p-2 rounded text-sm font-mono text-gray-400 cursor-not-allowed"></div>
-            </div>
-
-            <div class="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#222]">
-                <button class="bg-[#caa85c] text-black font-bold flex-grow py-3 rounded-lg text-sm uppercase tracking-wider hover:brightness-110" onclick="salvarPedidoEditado()">SALVAR ALTERAÇÕES</button>
-                <button class="border border-[#333] text-gray-400 py-3 px-6 rounded-lg text-sm font-bold uppercase hover:bg-zinc-900" onclick="fecharEditorPedido()">CANCELAR</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="print-area"></div>
 </body>
 </html>

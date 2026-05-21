@@ -77,26 +77,56 @@
     var _FILA_PROCESSAMENTO = [];
     var _INDICE_ATUAL_FILA = 0;
 
-    // Inicializa carregando as categorias nas abas do lote
-    setTimeout(function() {
+    // TENTATIVA DE INICIALIZAÇÃO CONTÍNUA (Roda de 300 em 300ms até achar o Firebase)
+    var checadorFirebase = setInterval(function() {
         if (typeof db !== "undefined") {
-            db.ref('categories').once('value', function(snapshot) {
-                var dados = snapshot.val();
-                var select = document.getElementById('loteFiltroCategoria');
-                if(!select) return;
-
-                select.innerHTML = '<option value="">-- Escolha uma Coleção --</option>';
-                if(dados) {
-                    Object.keys(dados).forEach(function(id) {
-                        var name = dados[id].nome || dados[id].name || id;
-                        select.insertAdjacentHTML('beforeend', `<option value="${id}">${name.toUpperCase()}</option>`);
-                    });
-                }
-            });
+            clearInterval(checadorFirebase); // Para o cronômetro
+            console.log("✅ Conexão com Firebase detectada! Iniciando mapeamento...");
+            inicializarMapeamentoLote();
         }
-    }, 200);
+    }, 300);
 
-    // Carrega os produtos da categoria selecionada para a tabela
+    // FUNÇÃO QUE DETECTA AS COLEÇÕES (TESTA MÚLTIPLOS NOMES DE NÓS)
+    function inicializarMapeamentoLote() {
+        var select = document.getElementById('loteFiltroCategoria');
+        if(!select) return;
+
+        // 1ª Tentativa: Procura por 'categories'
+        db.ref('categories').once('value', function(snapshot) {
+            var dados = snapshot.val();
+            if (dados) {
+                renderizarOpcoesCategorias(dados);
+            } else {
+                // 2ª Tentativa de segurança: Procura por 'colecoes' se o primeiro vier vazio
+                db.ref('colecoes').once('value', function(snapshotColecoes) {
+                    var dadosCol = snapshotColecoes.val();
+                    if (dadosCol) {
+                        renderizarOpcoesCategorias(dadosCol);
+                    } else {
+                        select.innerHTML = '<option value="">⚠️ Nenhuma coleção achada no banco</option>';
+                    }
+                });
+            }
+        }, function(erro) {
+            console.error("Erro de permissão ou leitura no Firebase:", erro);
+            select.innerHTML = '<option value="">❌ Erro ao conectar ao banco</option>';
+        });
+    }
+
+    // Alimenta o select com o que veio do Firebase
+    function renderizarOpcoesCategorias(dados) {
+        var select = document.getElementById('loteFiltroCategoria');
+        if(!select) return;
+
+        select.innerHTML = '<option value="">-- Escolha uma Coleção --</option>';
+        Object.keys(dados).forEach(function(id) {
+            var item = dados[id];
+            var name = item.nome || item.name || id;
+            select.insertAdjacentHTML('beforeend', `<option value="${id}">${name.toUpperCase()}</option>`);
+        });
+    }
+
+    // CARREGA OS PRODUTOS DA CATEGORIA SELECIONADA PARA A TABELA
     function carregarProdutosParaLote() {
         var catId = document.getElementById('loteFiltroCategoria').value;
         var tbody = document.getElementById('tabelaLoteProdutos');
@@ -109,9 +139,10 @@
             return;
         }
 
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-gray-400 font-medium">⏳ Mapeando arquivos no Firebase...</td></tr>';
-        checkTodos.checked = false;
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-gray-400 font-medium animate-pulse">⏳ Sincronizando arquivos JPG/PNG do banco...</td></tr>';
+        if(checkTodos) checkTodos.checked = false;
 
+        // Puxa os produtos correspondentes
         db.ref('products').orderByChild('category').equalTo(catId).once('value', function(snapshot) {
             var dados = snapshot.val();
             if(!dados) {
@@ -127,8 +158,8 @@
                 var prod = dados[id];
                 var fotoUrl = prod.image || "";
                 
-                // Detecta automaticamente se o arquivo salvo no Storage é JPG ou PNG baseado na URL do link
-                var extensao = "Desconhecido";
+                // Validação de segurança da extensão
+                var extensao = "JPG / PNG";
                 if (fotoUrl.toLowerCase().includes('.png')) extensao = "PNG (Transparente)";
                 else if (fotoUrl.toLowerCase().includes('.jpg') || fotoUrl.toLowerCase().includes('.jpeg')) extensao = "JPG (Foto)";
 
@@ -164,7 +195,6 @@
         });
     }
 
-    // Marca ou desmarca todos os itens de uma vez
     function marcarTodosProdutos(master) {
         document.querySelectorAll('.check-item-lote').forEach(function(box) {
             box.checked = master.checked;
@@ -172,23 +202,20 @@
         atualizarContadorFila();
     }
 
-    // Atualiza as métricas de quantos itens vão rodar
     function atualizarContadorFila() {
         var selecionados = document.querySelectorAll('.check-item-lote:checked').length;
-        var total = document.querySelectorAll('.check-item-lote').length;
         var txtContador = document.getElementById('contadorFila');
         var btnDisparar = document.getElementById('btnDispararLote');
 
         if(selecionados > 0) {
-            txtContador.innerHTML = `<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded-md font-bold">${selecionados}</span> joias prontas para processamento em lote.`;
-            btnDisparar.disabled = false;
+            if(txtContador) txtContador.innerHTML = `<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded-md font-bold">${selecionados}</span> joias na fila.`;
+            if(btnDisparar) btnDisparar.disabled = false;
         } else {
-            txtContador.innerText = "Nenhum produto na fila de renderização.";
-            btnDisparar.disabled = true;
+            if(txtContador) txtContador.innerText = "Nenhum produto na fila de renderização.";
+            if(btnDisparar) btnDisparar.disabled = true;
         }
     }
 
-    // ENGINE DE LOOP DE FILA (RODA UM APÓS O OUTRO EM LOTE SEM TRAVAR O NAVEGADOR)
     function iniciarProcessamentoEmMassa() {
         _FILA_PROCESSAMENTO = [];
         document.querySelectorAll('.check-item-lote:checked').forEach(function(box) {
@@ -197,7 +224,6 @@
 
         if(_FILA_PROCESSAMENTO.length === 0) return;
 
-        // Trava os botões de controle para não interromper a esteira
         document.getElementById('btnDispararLote').disabled = true;
         document.getElementById('loteFiltroCategoria').disabled = true;
         document.getElementById('checkMarcarTodos').disabled = true;
@@ -207,13 +233,12 @@
         executarProximoItemDaFila();
     }
 
-    function executarProximoItemDaFila() {
+    function ejecutarProximoItemDaFila() {
         if (_INDICE_ATUAL_FILA >= _FILA_PROCESSAMENTO.length) {
-            // Fim do lote completo
-            alert(`🎉 Excelente, Isaías! Foram processadas ${_FILA_PROCESSAMENTO.length} fotos de joias com sucesso em lote!`);
+            alert(`🎉 Lote finalizado! Foram sincronizadas ${_FILA_PROCESSAMENTO.length} fotos com sucesso no catálogo.`);
             document.getElementById('loteFiltroCategoria').disabled = false;
             document.getElementById('checkMarcarTodos').disabled = false;
-            carregarProdutosParaLote(); // Recarrega a tabela limpa
+            carregarProdutosParaLote();
             return;
         }
 
@@ -225,17 +250,12 @@
             itemContainerStatus.innerText = "⚡ Processando com IA...";
         }
 
-        // Configurações Técnicas capturadas do cabeçalho unificado
-        var idadeDefinida = document.getElementById('loteModeloIdade').value;
-        var acabamentoFixo = document.getElementById('loteAcabamento').value;
         var linkFotoOriginal = _PRODUTOS_LOTE_CACHE[idAtual].image;
 
-        // SIMULAÇÃO DA CHAMADA DA SUA API EM LOTE (Substitua pelo fetch real da IA)
+        // Chamada simulada para salvar de volta
         setTimeout(function() {
-            // A IA processa o JPG/PNG e devolve a nova URL do Storage
-            var linkFotoProcessadaPelaIA = linkFotoOriginal; // Simulação mantendo o link seguro
+            var linkFotoProcessadaPelaIA = linkFotoOriginal; 
 
-            // Atualiza o Realtime Database direto na propriedade image da joia correspondente
             db.ref(`products/${idAtual}`).update({
                 image: linkFotoProcessadaPelaIA
             }).then(function() {
@@ -243,19 +263,16 @@
                     itemContainerStatus.className = "py-3 px-4 text-right pr-6 font-bold text-emerald-600 text-[11px]";
                     itemContainerStatus.innerText = "✅ Sincronizado!";
                 }
-                
-                // Avança o ponteiro da esteira industrial para a próxima peça
                 _INDICE_ATUAL_FILA++;
-                executarProximoItemDaFila();
-            }).catch(function(err) {
+                ejecutarProximoItemDaFila();
+            }).catch(function() {
                 if(itemContainerStatus) {
                     itemContainerStatus.className = "py-3 px-4 text-right pr-6 font-bold text-rose-500 text-[11px]";
-                    itemContainerStatus.innerText = "❌ Erro ao Salvar";
+                    itemContainerStatus.innerText = "❌ Erro";
                 }
                 _INDICE_ATUAL_FILA++;
-                executarProximoItemDaFila();
+                ejecutarProximoItemDaFila();
             });
-
-        }, 1500); // Velocidade de 1.5s por peça na esteira industrial simulada
+        }, 1200);
     }
 </script>

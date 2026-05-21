@@ -1,124 +1,295 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Marketing • Abella Joias</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<div class="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-100 pb-4 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span>🏷️</span> Painel de Ofertas e Promoções
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">Gerencie crachás, tarjetas de desconto e etiquetas promocionais em massa por categoria.</p>
+        </div>
+        <button onclick="abrirModalNovaOferta()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 text-sm whitespace-nowrap md:self-center">
+            <span>➕</span> Nova Tarjeta / Campanha
+        </button>
+    </div>
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <div class="bg-gray-900 text-white p-5 rounded-2xl border border-gray-800 shadow-md">
+        <h2 class="text-xs font-bold text-amber-400 uppercase tracking-widest font-mono mb-4 flex items-center gap-1.5">
+            <span>🚀</span> Aplicação de Desconto em Massa por Coleção
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 tracking-wider">1. Selecionar Coleção</label>
+                <select id="ofertaFiltroCategoria" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                    <option value="">Carregando coleções...</option>
+                </select>
+            </div>
 
-<style>
-body { background:#0b0b0b; color:#eee; font-family: Arial; }
-.card { background:#141414; border:1px solid #2a2a2a; border-radius:16px; padding:20px; }
-.input { background:#0b0b0b; border:1px solid #333; padding:10px; border-radius:8px; width:100%; color:#fff; }
-.btn { background:#caa85c; color:#000; font-weight:bold; padding:10px 20px; border-radius:8px; cursor:pointer; }
-</style>
-</head>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 tracking-wider">2. Desconto (%)</label>
+                <input type="number" id="ofertaPorcentagemMassa" placeholder="Ex: 10" min="0" max="100" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:ring-2 focus:ring-amber-500 outline-none font-mono">
+            </div>
 
-<body class="p-4 pb-28">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1.5 tracking-wider">3. Crachá Visual da Foto</label>
+                <select id="ofertaBadgeMassa" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-xs text-white focus:ring-2 focus:ring-amber-500 outline-none">
+                    <option value="">Nenhum Crachá</option>
+                    <option value="🔥 OUTLET">🔥 OUTLET</option>
+                    <option value="💎 MAIS VENDIDO">💎 MAIS VENDIDO</option>
+                    <option value="✨ LANÇAMENTO">✨ LANÇAMENTO</option>
+                    <option value="📦 ATACADO BRUTO">📦 ATACADO BRUTO</option>
+                </select>
+            </div>
 
-<a href="admin.html" class="text-[12px] text-[#caa85c]">← Voltar ao Admin</a>
+            <button onclick="aplicarDescontoEmMassa()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl shadow-md transition-all text-xs h-10 flex items-center justify-center gap-1">
+                💥 Aplicar na Coleção
+            </button>
+        </div>
+    </div>
 
-<div class="max-w-4xl mx-auto">
-
-<header class="mb-6">
-    <h1 class="text-xl text-[#caa85c] font-bold uppercase">Painel de Ofertas</h1>
-    <p class="text-xs text-gray-400">Gerencie campanhas e promoções da Abella Joias</p>
-</header>
-
-<div class="card mb-6">
-    <h2 class="text-[#caa85c] font-bold mb-4">Configuração de Oferta</h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input id="titulo" class="input" placeholder="Título da campanha">
-        <input id="subtitulo" class="input" placeholder="Subtítulo">
-        <input id="desconto" type="number" class="input" placeholder="Desconto (%)">
-        <input id="cupom" class="input" placeholder="Código do cupom">
+    <div class="space-y-3">
+        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider font-mono">Tarjetas de Campanhas Ativas (Layout de Etiquetas)</h3>
+        <div id="grid-tarjetas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="col-span-full text-center py-8 text-gray-400 font-medium">
+                ⏳ Sincronizando regras de promoções...
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="card mb-6 flex justify-between items-center">
-    <div>
-        <p class="text-xs text-gray-400 uppercase">Status da Campanha</p>
-        <h3 id="statusCampanha">Carregando...</h3>
-    </div>
-    <button onclick="alternarCampanha()" class="btn">Ativar / Desativar</button>
-</div>
+<div id="modalOferta" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 relative my-8">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <h3 id="modalOfertaTitulo" class="text-base font-bold text-gray-800">Nova Tarjeta Promocional</h3>
+            <button onclick="fecharModalNovaOferta()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+        </div>
+        
+        <input type="hidden" id="ofertaId">
 
-</div>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nome da Promoção / Etiqueta</label>
+                <input type="text" id="ofertaNome" placeholder="Ex: Queima de Estoque de Brincos" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none">
+            </div>
 
-<div class="fixed bottom-0 left-0 right-0 p-4 bg-black/90 backdrop-blur-lg border-t border-[#caa85c]/20 z-[9999]">
-    <div class="max-w-4xl mx-auto flex justify-between items-center">
-        <span class="text-xs text-gray-400">Salve suas alterações</span>
-        <button onclick="salvarCampanha()" class="btn">💾 Salvar Oferta</button>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Texto da Tarjeta</label>
+                    <input type="text" id="ofertaTextoTarjeta" placeholder="Ex: 15% OFF" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cor de Fundo</label>
+                    <select id="ofertaCor" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none">
+                        <option value="bg-rose-600 text-white">🔴 Vermelho (Urgência)</option>
+                        <option value="bg-amber-500 text-white">🟡 Âmbar (Atenção)</option>
+                        <option value="bg-purple-600 text-white">🟣 Roxo (Exclusivo)</option>
+                        <option value="bg-gray-900 text-white">⚫ Preto (Premium)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Vincular à Coleção</label>
+                <select id="ofertaModalCategoria" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none">
+                    <option value="">Selecione uma coleção...</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 border-t border-gray-50 pt-3 mt-4">
+            <button onclick="fecharModalNovaOferta()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2 rounded-xl text-xs transition-all">Cancelar</button>
+            <button id="btnSalvarOferta" onclick="salvarOfertaFirebase()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 py-2 rounded-xl text-xs transition-all">Ativar Tarjeta</button>
+        </div>
     </div>
 </div>
 
 <script>
-window.onerror = function(msg, src, line){
-    console.error("Erro:", msg, "Linha:", line);
-    return true;
-};
+    var _CATEGORIAS_OFERTAS_CACHE = {};
 
-const firebaseConfig = {
-    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-    authDomain: "catalogo-abella-joias.firebaseapp.com",
-    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
-    projectId: "catalogo-abella-joias",
-    storageBucket: "catalogo-abella-joias.firebasestorage.app"
-};
+    // Inicialização Blindada e Sincronizada
+    var checadorFirebaseOfertas = setInterval(function() {
+        if (typeof db !== "undefined") {
+            clearInterval(checadorFirebaseOfertas);
+            console.log("✅ Conexão estabelecida com sucesso no modulo de ofertas!");
+            inicializarMapeamentoOfertas();
+        }
+    }, 300);
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    function inicializarMapeamentoOfertas() {
+        db.ref('categories').once('value', function(snapshot) {
+            var dados = snapshot.val();
+            if (dados) {
+                _CATEGORIAS_OFERTAS_CACHE = dados;
+                renderizarDropdownsPromo(dados);
+            } else {
+                db.ref('colecoes').once('value', function(snapshotCol) {
+                    var dadosCol = snapshotCol.val();
+                    if(dadosCol) {
+                        _CATEGORIAS_OFERTAS_CACHE = dadosCol;
+                        renderizarDropdownsPromo(dadosCol);
+                    }
+                });
+            }
+        });
 
-const safe = id => document.getElementById(id);
-const val = (v,d='') => v ?? d;
+        // Carrega as tarjetas ativas salvas na raiz promocional
+        escutarTarjetasPromocionais();
+    }
 
-// 🔥 CARREGAR CAMPANHA (Isolada em marketing/abella)
-function carregarCampanha(){
-    db.ref('marketing/abella').on('value', snap=>{
-        const d = snap.val() || {};
+    function renderizarDropdownsPromo(dados) {
+        var selMassa = document.getElementById('ofertaFiltroCategoria');
+        var selModal = document.getElementById('ofertaModalCategoria');
+        
+        if(selMassa) selMassa.innerHTML = '<option value="">-- Escolha a Coleção --</option>';
+        if(selModal) selModal.innerHTML = '<option value="">-- Vincular à Coleção --</option>';
 
-        safe('titulo').value = val(d.titulo);
-        safe('subtitulo').value = val(d.subtitulo);
-        safe('desconto').value = val(d.desconto, 0);
-        safe('cupom').value = val(d.cupom);
+        Object.keys(dados).forEach(function(id) {
+            var item = dados[id];
+            var name = (item.nome || item.name || id).toUpperCase();
+            var optionHtml = `<option value="${id}">${name}</option>`;
+            
+            if(selMassa) selMassa.insertAdjacentHTML('beforeend', optionHtml);
+            if(selModal) selModal.insertAdjacentHTML('beforeend', optionHtml);
+        });
+    }
 
-        safe('statusCampanha').innerText = d.ativo ? "🟢 Ativa" : "🔴 Inativa";
-    });
-}
+    // LISTAGEM DINÂMICA DAS REGRAS ATIVAS NO BANCO
+    function escutarTarjetasPromocionais() {
+        db.ref('promotions').on('value', function(snapshot) {
+            var dados = snapshot.val();
+            var container = document.getElementById('grid-tarjetas');
+            if(!container) return;
 
-// 🔥 SALVAR
-function salvarCampanha(){
-    try{
-        const data = {
-            titulo: safe('titulo').value,
-            subtitulo: safe('subtitulo').value,
-            desconto: parseFloat(safe('desconto').value) || 0,
-            cupom: safe('cupom').value,
+            if(!dados) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 bg-white border border-dashed border-gray-200 rounded-2xl text-gray-400 font-medium">
+                        📦 Nenhuma tarjeta global ativa. Crie uma nova no botão superior!
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            Object.keys(dados).forEach(function(id) {
+                var promo = dados[id];
+                var catNome = _CATEGORIAS_OFERTAS_CACHE[promo.category] ? (_CATEGORIAS_OFERTAS_CACHE[promo.category].nome || _CATEGORIAS_OFERTAS_CACHE[promo.category].name) : 'Geral';
+                var statusAtivo = promo.active !== false;
+
+                var card = document.createElement('div');
+                card.className = "bg-white border border-gray-200 rounded-2xl p-4 shadow-xs space-y-3 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold text-gray-400 font-mono uppercase">Campanha Ativa</span>
+                            <button onclick="alternarStatusTarjeta('${id}', ${statusAtivo})" class="text-[10px] font-bold font-mono px-2 py-0.5 rounded ${statusAtivo ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-400'}">
+                                ${statusAtivo ? '🟢 ATIVA' : '⚪ INATIVA'}
+                            </button>
+                        </div>
+                        <h4 class="font-bold text-gray-800 text-sm capitalize">${promo.name}</h4>
+                        <p class="text-[10px] text-gray-400 -mt-1 font-medium">Vinculada em: <span class="text-gray-600 font-bold capitalize">${catNome}</span></p>
+                        
+                        <div class="pt-2">
+                            <div class="w-full ${promo.colorClass || 'bg-rose-600 text-white'} text-center py-1.5 rounded-lg text-xs font-black tracking-widest uppercase shadow-xs">
+                                ${promo.badgeText || 'OFERTA'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2 border-t border-gray-50 pt-2.5 mt-2">
+                        <button onclick="deletarTarjeta('${id}')" class="text-xs font-semibold text-rose-600 hover:bg-rose-50 px-2 py-1 rounded-md transition-all">Remover</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        });
+    }
+
+    // 3. LOGICA DE DESCONTO EM MASSA (MUDANÇA DE CAMPOS DIRETAMENTE NOS PRODUTOS)
+    function aplicarDescontoEmMassa() {
+        var categoryId = document.getElementById('ofertaFiltroCategoria').value;
+        var porcentagem = parseFloat(document.getElementById('ofertaPorcentagemMassa').value) || 0;
+        var badge = document.getElementById('ofertaBadgeMassa').value;
+
+        if(!categoryId) { alert("⚠️ Escolha uma coleção de joias!"); return; }
+        if(porcentagem < 0 || porcentagem > 100) { alert("⚠️ O desconto deve ser entre 0% e 100%!"); return; }
+
+        if(!confirm(`⚠️ ATENÇÃO ISAÍAS:\nVocê deseja aplicar ${porcentagem}% de desconto e fixar o crachá "${badge || 'Nenhum'}" para TODOS os produtos desta coleção?`)) {
+            return;
+        }
+
+        // Faz a busca e a atualização em lote
+        db.ref('products').orderByChild('category').equalTo(categoryId).once('value', function(snapshot) {
+            var produtos = snapshot.val();
+            if(!produtos) { alert("📦 Nenhum produto localizado nesta coleção para alterar."); return; }
+
+            var chaves = Object.keys(produtos);
+            var totalAlterados = 0;
+
+            chaves.forEach(function(id) {
+                var prod = produtos[id];
+                var precoOriginal = parseFloat(prod.price || 0);
+                
+                // Calcula o preço promocional final seguro
+                var novoPrecoFinal = precoOriginal;
+                if(porcentagem > 0) {
+                    novoPrecoFinal = precoOriginal - (precoOriginal * (porcentagem / 100));
+                }
+
+                // Faz a gravação dos crachás e etiquetas no nó individual do produto
+                db.ref(`products/${id}`).update({
+                    precoPromocional: novoPrecoFinal,
+                    porcentagemDesconto: porcentagem,
+                    crachaVisual: badge || null,
+                    emOferta: porcentagem > 0
+                });
+                totalAlterados++;
+            });
+
+            alert(`🎉 Sucesso! Campanha aplicada com sucesso em ${totalAlterados} joias do catálogo.`);
+            document.getElementById('ofertaPorcentagemMassa').value = '';
+            document.getElementById('ofertaBadgeMassa').value = '';
+        });
+    }
+
+    // FUNÇÕES COMPLEMENTARES DO MODAL
+    function abrirModalNovaOferta() {
+        document.getElementById('ofertaId').value = '';
+        document.getElementById('ofertaNome').value = '';
+        document.getElementById('ofertaTextoTarjeta').value = '';
+        document.getElementById('ofertaCor').value = 'bg-rose-600 text-white';
+        document.getElementById('ofertaModalCategoria').value = '';
+        document.getElementById('modalOferta').classList.remove('hidden');
+    }
+
+    function fecharModalNovaOferta() {
+        document.getElementById('modalOferta').classList.add('hidden');
+    }
+
+    function salvarOfertaFirebase() {
+        var name = document.getElementById('ofertaNome').value.trim();
+        var badgeText = document.getElementById('ofertaTextoTarjeta').value.trim();
+        var colorClass = document.getElementById('ofertaCor').value;
+        var category = document.getElementById('ofertaModalCategoria').value;
+
+        if(!name || !badgeText || !category) { alert("⚠️ Todos os campos são obrigatórios!"); return; }
+
+        var dados = {
+            name: name,
+            badgeText: badgeText,
+            colorClass: colorClass,
+            category: category,
+            active: true
         };
 
-        db.ref('marketing/abella').update(data)
-        .then(()=> alert("Campanha salva com sucesso!"))
-        .catch(()=> alert("Erro ao salvar no banco."));
-
-    }catch(e){
-        console.error(e);
+        db.ref('promotions').push(dados).then(function() {
+            fecharModalNovaOferta();
+        });
     }
-}
 
-// 🔥 TOGGLE (Seguro contra interferência)
-function alternarCampanha(){
-    const ref = db.ref('marketing/abella/ativo');
-    ref.transaction(current=>{
-        return !current;
-    })
-    .catch(err=> console.error(err));
-}
+    function alternarStatusTarjeta(id, statusAtivoAtual) {
+        db.ref(`promotions/${id}`).update({ active: !statusAtivoAtual });
+    }
 
-carregarCampanha();
+    function deletarTarjeta(id) {
+        if(confirm("Deseja remover permanentemente esta tarjeta de campanha?")) {
+            db.ref(`promotions/${id}`).remove();
+        }
+    }
 </script>
-</body>
-</html>

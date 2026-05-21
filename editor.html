@@ -1,268 +1,235 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Editor Full Master v3.2 • Abella Joias</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <style>
-        body { background: #0b0b0b; color: #eee; font-family: 'Poppins', sans-serif; }
-        .input-dark { background: #1a1a1a; border: 1px solid #333; color: white; padding: 6px; border-radius: 6px; width: 100%; font-size: 10px; transition: 0.3s; }
-        .input-dark:focus { border-color: #caa85c; outline: none; background: #222; }
-        .edit-sku { color: #caa85c; font-family: monospace; font-weight: bold; text-transform: uppercase; }
-        tr.is-paused { opacity: 0.4; background: #2a1010 !important; }
-        .btn-status { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 4px; border-radius: 4px; cursor: pointer; width: 50px; text-align: center; }
-        .status-on { background: #15803d; color: white; }
-        .status-off { background: #b91c1c; color: white; }
-        .sticky-header th { position: sticky; top: 0; background: #0b0b0b; z-index: 10; border-bottom: 2px solid #caa85c; padding: 10px; font-size: 9px; }
-        .img-preview { width: 35px; height: 35px; object-fit: contain; background: #222; border-radius: 4px; border: 1px solid #444; margin-bottom: 2px; }
-        .img-error { border-color: #ef4444; background: #451a1a; }
-        .highlight-var { border: 1px solid #caa85c !important; background: #262116 !important; }
-    </style>
-</head>
-<body class="p-2">
-
-    <div class="max-w-[100%] mx-auto">
-        <header class="bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] shadow-xl mb-4 flex flex-col xl:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-xl font-bold text-[#caa85c]">Editor Full Master v3.2</h1>
-                <p class="text-[9px] text-gray-400 uppercase tracking-widest">Controle de Estoque e URLs de Imagens • Abella Joias</p>
-            </div>
-            
-            <div class="flex flex-wrap gap-2 justify-center">
-                <a href="admin.html" class="bg-zinc-900 border border-zinc-800 text-gray-400 font-bold px-4 py-2 rounded-lg text-[10px] flex items-center justify-center hover:bg-zinc-800">❮ VOLTAR</a>
-                <button onclick="criarNovoProduto()" class="bg-white text-black font-black px-4 py-2 rounded-lg text-[10px] hover:bg-gray-200">+ NOVO PRODUTO</button>
-                <select id="filtroCat" class="bg-[#0b0b0b] border border-[#333] px-2 py-2 rounded-lg text-[10px] text-white outline-none focus:border-[#caa85c]"><option value="">Todas Categorias</option></select>
-                <input id="filtroSku" onkeypress="if(event.key === 'Enter') carregarProdutos()" placeholder="SKU ou Nome..." class="bg-[#0b0b0b] border border-[#333] px-2 py-2 rounded-lg text-[10px] w-32 text-white">
-                <button onclick="carregarProdutos()" class="bg-[#caa85c] text-black font-bold px-4 py-2 rounded-lg text-[10px] hover:brightness-110">🔍 BUSCAR</button>
-                <button onclick="sincronizarFotosInteligente()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-[10px]">🔄 AUTO-SYNC (SKU)</button>
-            </div>
-        </header>
-
-        <div class="bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-2xl">
-            <div class="overflow-x-auto" style="max-height: 75vh;">
-                <table class="w-full text-left text-[10px] border-collapse">
-                    <thead class="sticky-header">
-                        <tr class="text-[#caa85c] uppercase tracking-wider">
-                            <th class="p-2 w-16">Status</th>
-                            <th class="w-48">Imagem (URL/Preview)</th>
-                            <th class="w-24">SKU</th>
-                            <th>Nome do Produto</th>
-                            <th class="w-16 text-center">Peso(g)</th>
-                            <th class="w-32">Categoria</th>
-                            <th class="w-24">Variação</th>
-                            <th class="w-32">Opções Lista</th>
-                            <th class="w-20">Preço R$</th>
-                            <th class="text-center w-20">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaCorpo">
-                        <tr><td colspan="10" class="p-20 text-center text-gray-500 italic">Busque produtos ou crie um novo.</td></tr>
-                    </tbody>
-                </table>
-            </div>
+<div class="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-100 pb-4 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span>⚡</span> Editor Full Master IA
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">Tratamento de imagens automatizado com sincronização direta via SKU do Firebase.</p>
         </div>
-
-        <div class="mt-4 flex flex-col md:flex-row justify-between items-center bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] gap-4">
-            <div id="statusInfo" class="text-[10px] text-gray-400 font-mono">Status: Pronto.</div>
-            <button onclick="salvarAlteracoes()" class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-black px-12 py-3 rounded-lg uppercase tracking-widest text-xs shadow-lg shadow-green-900/20">
-                💾 SALVAR TUDO
+        
+        <div class="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 w-full md:w-auto">
+            <span class="text-xs font-bold text-gray-500 pl-2 uppercase font-mono">Sincronizar SKU:</span>
+            <input type="text" id="skuEditorBusca" placeholder="Ex: PRC-61" class="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs font-mono font-bold text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none uppercase w-32">
+            <button onclick="sincronizarImagemPorSKU()" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-xs flex items-center gap-1">
+                <span>🔄</span> Vincular
             </button>
         </div>
     </div>
 
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-    authDomain: "catalogo-abella-joias.firebaseapp.com",
-    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
-    projectId: "catalogo-abella-joias",
-    storageBucket: "catalogo-abella-joias.firebasestorage.app"
-};
-if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let categoriasCache = {};
-
-async function carregarCategorias() {
-    const snap = await db.ref('categories').once('value');
-    categoriasCache = snap.val() || {};
-    const filterSelect = document.getElementById('filtroCat');
-    let options = '<option value="">Todas Categorias</option>';
-    
-    Object.entries(categoriasCache).forEach(([id, cat]) => {
-        // FILTRO PROTETOR: Não lista categorias da Luary no painel Abella
-        if(cat.loja === "luary" || id.toLowerCase().includes("luary") || cat.projeto === "luary") return;
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        options += `<option value="${id}">${cat.name}</option>`;
-    });
-    filterSelect.innerHTML = options;
-}
-
-function atualizarPreview(input) {
-    const url = input.value.trim();
-    const img = input.closest('td').querySelector('.row-img');
-    img.src = url || 'https://via.placeholder.com/40';
-    img.classList.remove('img-error');
-}
-
-function criarLinhaHTML(id, p) {
-    let catOptions = '';
-    Object.entries(categoriasCache).forEach(([cid, cat]) => {
-        if(cat.loja === "luary" || cid.toLowerCase().includes("luary") || cat.projeto === "luary") return;
-        catOptions += `<option value="${cid}" ${p.category === cid ? 'selected' : ''}>${cat.name}</option>`;
-    });
-
-    const precoFinal = p.precoFinal ?? p.price ?? 0;
-
-    return `
-    <tr data-id="${id}" class="border-b border-[#222] ${p.paused ? 'is-paused' : ''}">
-        <td class="p-2 text-center">
-            <button class="btn-status ${p.paused ? 'status-off' : 'status-on'}" onclick="toggleStatus(this)">${p.paused ? 'OFF' : 'ON'}</button>
-        </td>
-        <td class="p-1">
-            <div class="flex items-center gap-2">
-                <img src="${p.image || ''}" class="img-preview row-img" onerror="this.classList.add('img-error')">
-                <input class="input-dark edit-img text-[9px]" value="${p.image || ''}" placeholder="Cole a URL da foto aqui" onchange="atualizarPreview(this)">
-            </div>
-        </td>
-        <td class="p-1"><input class="input-dark edit-sku font-mono" value="${p.sku || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-name" value="${p.name || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-peso text-center" value="${p.peso || '0.00'}"></td>
-        <td class="p-1"><select class="input-dark edit-cat">${catOptions}</select></td>
-        <td class="p-1">
-            <select class="input-dark edit-varTipo" onchange="liberarCampoLista(this)">
-                <option value="" ${!p.variacaoTipo ? 'selected' : ''}>Padrão</option>
-                <option value="Aro" ${p.variacaoTipo === 'Aro' ? 'selected' : ''}>Aro</option>
-                <option value="Lista" ${p.variacaoTipo === 'Lista' ? 'selected' : ''}>Lista</option>
-            </select>
-        </td>
-        <td class="p-1"><input class="input-dark edit-opcoes ${p.variacaoTipo === 'Lista' ? 'highlight-var' : 'opacity-20 pointer-events-none'}" value="${p.opcoesPersonalizadas || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-precoFinal text-gold font-bold" type="number" step="0.01" value="${precoFinal}"></td>
-        <td class="p-1 text-center">
-             <div class="flex justify-center gap-1">
-                <button onclick="salvarLinhaUnica(this)" title="Salvar Linha" class="bg-green-600 p-2 rounded hover:bg-green-500">✅</button>
-                <button onclick="deletarProduto('${id}')" title="Excluir" class="bg-red-900 p-2 rounded hover:bg-red-700">🗑️</button>
-             </div>
-        </td>
-    </tr>`;
-}
-
-function criarNovoProduto() {
-    const novoRef = db.ref('products').push();
-    const novoProduto = { sku: "SKU-TEMP", name: "Novo Produto", peso: "0.00", precoFinal: 0, price: 0, paused: true, image: "", projeto: "abella_joias" };
-    const corpo = document.getElementById('tabelaCorpo');
-    if(corpo.innerText.includes("Busque")) corpo.innerHTML = '';
-    corpo.insertAdjacentHTML('afterbegin', criarLinhaHTML(novoRef.key, novoProduto));
-}
-
-async function carregarProdutos() {
-    const filtroTexto = document.getElementById('filtroSku').value.trim().toUpperCase();
-    const filtroCat = document.getElementById('filtroCat').value;
-    const corpo = document.getElementById('tabelaCorpo');
-    corpo.innerHTML = '<tr><td colspan="10" class="p-20 text-center text-[#caa85c] animate-pulse font-bold">BUSCANDO NO BANCO...</td></tr>';
-
-    db.ref('products').once('value', snapshot => {
-        let html = '';
-        let contador = 0;
-        snapshot.forEach(child => {
-            const p = child.val() || {};
-            const id = child.key;
+        <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-gray-200 space-y-4 shadow-xs">
+            <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider border-b border-gray-50 pb-2">⚙️ Ajustes da Joia</h2>
             
-            // FILTRO DE SEGURANÇA: Isola dados da Luary Shop
-            if (p.loja === "luary" || id.toLowerCase().includes("luary") || p.projeto === "luary") return;
+            <div id="statusSincronizacao" class="bg-gray-50 border border-gray-100 p-3 rounded-xl text-xs space-y-1">
+                <span class="text-gray-400 font-medium block">Nenhuma peça vinculada de forma ativa no momento. Digite um SKU acima.</span>
+            </div>
 
-            const sku = String(p.sku || "").toUpperCase();
-            const nome = String(p.name || "").toUpperCase();
-            if ((!filtroTexto || sku.includes(filtroTexto) || nome.includes(filtroTexto)) && (!filtroCat || p.category === filtroCat)) {
-                contador++;
-                html += criarLinhaHTML(id, p);
+            <div class="space-y-1">
+                <label class="block text-xs font-bold text-gray-500 uppercase">Substituir Imagem Manualmente</label>
+                <div class="border-2 border-dashed border-gray-200 hover:border-amber-400 bg-gray-50/50 rounded-xl p-4 text-center cursor-pointer transition-all relative group">
+                    <input type="file" id="uploadManualEditor" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="carregarImagemLocal(this)">
+                    <span class="text-xl block group-hover:scale-110 transition-transform">📸</span>
+                    <span class="text-[11px] font-medium text-gray-500 block mt-1">Arraste ou clique para upload</span>
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-2">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Público / Modelo Humano</label>
+                    <select id="editorModeloIdade" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-amber-500 outline-none">
+                        <option value="adulto">Adulto (Padrão Catálogo)</option>
+                        <option value="infantil">Infantil</option>
+                        <option value="infanto-juvenil">Infanto-Juvenil</option>
+                        <option value="senior">Sênior</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Acabamento do Bruto (Não Inventar)</label>
+                    <select id="editorAcabamento" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-amber-500 outline-none">
+                        <option value="original">Manter Detalhes Originais do Upload</option>
+                        <option value="latao-fosco">Latão sem Brilho (Bruto Real)</option>
+                        <option value="argolinha-central">Passador com Argolinha Central Única</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="btnProcessarIA" onclick="dispararGeracaoIA()" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-3 rounded-xl shadow-md transition-all text-xs flex items-center justify-center gap-2 mt-4" disabled>
+                <span>✨</span> Processar Joia com IA
+            </button>
+        </div>
+
+        <div class="lg:col-span-8 bg-gray-50 border border-gray-200 rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center justify-center min-h-[450px] relative overflow-hidden shadow-xs">
+            
+            <div class="w-full md:w-1/2 flex flex-col items-center gap-2">
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Original no Firebase</span>
+                <div class="w-full aspect-square bg-white border border-gray-200 rounded-xl shadow-xs overflow-hidden relative flex items-center justify-center p-2">
+                    <img id="imgOriginalEditor" src="" alt="Aguardando SKU..." class="hidden w-full h-full object-cover rounded-lg">
+                    <div id="placeholderOriginal" class="text-center p-4">
+                        <span class="text-2xl text-gray-300 block">🖼️</span>
+                        <span class="text-[11px] text-gray-400 font-medium">Aguardando vínculo por SKU</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full md:w-1/2 flex flex-col items-center gap-2">
+                <span class="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Mockup IA Renderizado</span>
+                <div class="w-full aspect-square bg-white border border-gray-200 rounded-xl shadow-xs overflow-hidden relative flex items-center justify-center p-2">
+                    <img id="imgResultadoEditor" src="" alt="Resultado IA" class="hidden w-full h-full object-cover rounded-lg">
+                    <div id="placeholderResultado" class="text-center p-4">
+                        <span class="text-2xl text-gray-300 block">⚡</span>
+                        <span class="text-[11px] text-gray-400 font-medium">Aguardando processamento</span>
+                    </div>
+                    
+                    <div id="loaderEditorIA" class="hidden absolute inset-0 bg-white/90 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center space-y-2 animate-fade-in">
+                        <div class="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p class="text-xs font-bold text-gray-700">A IA está renderizando a peça no modelo humano...</p>
+                        <span class="text-[10px] text-gray-400 font-medium">Forçando preservação dos detalhes originais.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="painelSalvarEditor" class="hidden absolute bottom-4 left-4 right-4 bg-gray-900/95 backdrop-blur-md p-3 rounded-xl border border-gray-800 flex items-center justify-between text-white animate-slide-up shadow-lg">
+                <div class="flex items-center gap-2">
+                    <span class="text-emerald-400 text-sm">✅</span>
+                    <span class="text-xs font-semibold">Imagem processada com sucesso!</span>
+                </div>
+                <button onclick="salvarImagemTratadaNoFirebase()" class="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all shadow-xs">
+                    💾 Atualizar Foto no Catálogo
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // Objeto global para monitorar o produto ativo que está sendo editado
+    var _PRODUTO_ATIVO_EDITOR = null;
+    var _PRODUTO_ATIVO_ID = null;
+
+    // 1. ENGINE DE SINCRONIZAÇÃO INTELIGENTE POR SKU
+    function sincronizarImagemPorSKU() {
+        var skuBusca = document.getElementById('skuEditorBusca').value.trim().toUpperCase();
+        if (!skuBusca) { alert("⚠️ Digite um código de SKU para buscar!"); return; }
+
+        var statusDiv = document.getElementById('statusSincronizacao');
+        statusDiv.innerHTML = `<span class="text-amber-500 font-medium animate-pulse">🔍 Varrendo nó 'products' procurando por: ${skuBusca}...</span>`;
+
+        // Varre a tabela products na origem filtrando pelo SKU digitado
+        db.ref('products').orderByChild('sku').equalTo(skuBusca).once('value', function(snapshot) {
+            var dados = snapshot.val();
+            
+            if (!dados) {
+                statusDiv.innerHTML = `<span class="text-rose-500 font-bold">❌ SKU "${skuBusca}" não foi localizado no catálogo de produtos!</span>`;
+                resetarCanvasEditor();
+                return;
+            }
+
+            // Captura o ID interno (Chave do Firebase) e o objeto de dados
+            _PRODUTO_ATIVO_ID = Object.keys(dados)[0];
+            _PRODUTO_ATIVO_EDITOR = dados[_PRODUTO_ATIVO_ID];
+
+            // Atualiza painel informando sucesso
+            statusDiv.innerHTML = `
+                <div class="font-semibold text-emerald-600 flex items-center gap-1">✅ Peça Sincronizada!</div>
+                <div class="text-gray-700 font-bold mt-0.5">${_PRODUTO_ATIVO_EDITOR.name}</div>
+                <div class="text-[10px] text-gray-400 font-mono">ID: ${_PRODUTO_ATIVO_ID} | Categoria: ${_PRODUTO_ATIVO_EDITOR.category || 'Geral'}</div>
+            `;
+
+            // Alimenta a imagem original puxando o link do Firebase Storage que já está na chave 'image'
+            var imgOriginal = document.getElementById('imgOriginalEditor');
+            var placeholderOrig = document.getElementById('placeholderOriginal');
+            
+            if (_PRODUTO_ATIVO_EDITOR.image) {
+                imgOriginal.src = _PRODUTO_ATIVO_EDITOR.image;
+                imgOriginal.classList.remove('hidden');
+                placeholderOrig.classList.add('hidden');
+                document.getElementById('btnProcessarIA').disabled = false; // Ativa o botão de geração
+            } else {
+                imgOriginal.classList.add('hidden');
+                placeholderOrig.classList.remove('hidden');
+                placeholderOrig.innerHTML = `<span class="text-2xl block">⚠️</span><span class="text-[11px] text-amber-600 font-medium">Joia achada, mas está sem foto vinculada.</span>`;
+                document.getElementById('btnProcessarIA').disabled = false; // Permite rodar mesmo se for subir manual agora
             }
         });
-        corpo.innerHTML = html || '<tr><td colspan="10" class="p-20 text-center text-red-500">Nada encontrado.</td></tr>';
-        document.getElementById('statusInfo').innerText = `Total exibido: ${contador} produtos da Abella Joias.`;
-    });
-}
+    }
 
-function sincronizarFotosInteligente() {
-    const ext = prompt("Qual a extensão das fotos no Storage? (png, jpg ou webp)", "png");
-    if(!ext) return;
-    const dominio = "catalogo-abella-joias.firebasestorage.app";
-    let count = 0;
-    document.querySelectorAll('#tabelaCorpo tr[data-id]').forEach(tr => {
-        const sku = tr.querySelector('.edit-sku').value.trim();
-        const inputImg = tr.querySelector('.edit-img');
-        if (sku) {
-            const link = `https://firebasestorage.googleapis.com/v0/b/${dominio}/o/produtos%2F${sku}.${ext}?alt=media`;
-            inputImg.value = link;
-            atualizarPreview(inputImg);
-            count++;
+    // 2. CARREGAMENTO MANUAL CASO DESEJE ALTERAR A ORIGEM
+    function carregarImagemLocal(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var imgOriginal = document.getElementById('imgOriginalEditor');
+                imgOriginal.src = e.target.result;
+                imgOriginal.classList.remove('hidden');
+                document.getElementById('placeholderOriginal').document.classList.add('hidden');
+                document.getElementById('btnProcessarIA').disabled = false;
+            };
+            reader.readAsDataURL(input.files[0]);
         }
-    });
-    alert(`${count} SKUs processados.`);
-}
+    }
 
-function salvarLinhaUnica(btn) {
-    const tr = btn.closest('tr');
-    const id = tr.dataset.id;
-    const preco = parseFloat(tr.querySelector('.edit-precoFinal').value) || 0;
-    const data = {
-        sku: tr.querySelector('.edit-sku').value.toUpperCase(),
-        name: tr.querySelector('.edit-name').value,
-        peso: tr.querySelector('.edit-peso').value.replace(',', '.'),
-        category: tr.querySelector('.edit-cat').value,
-        variacaoTipo: tr.querySelector('.edit-varTipo').value,
-        opcoesPersonalizadas: tr.querySelector('.edit-opcoes').value,
-        precoFinal: preco, 
-        price: preco,
-        image: tr.querySelector('.edit-img').value.trim(),
-        paused: tr.querySelector('.btn-status').classList.contains('status-off'),
-        projeto: 'abella_joias' // Preserva a marcação do projeto ao salvar
-    };
-    db.ref(`products/${id}`).update(data).then(() => {
-        btn.classList.replace('bg-green-600', 'bg-blue-600');
-        setTimeout(() => btn.classList.replace('bg-blue-600', 'bg-green-600'), 1000);
-    });
-}
+    // 3. DISPARADOR DA INTELIGÊNCIA ARTIFICIAL (PRESERVANDO DETALHES)
+    function dispararGeracaoIA() {
+        var loader = document.getElementById('loaderEditorIA');
+        var imgResult = document.getElementById('imgResultadoEditor');
+        var placeholderRes = document.getElementById('placeholderResultado');
+        var painelSalvar = document.getElementById('painelSalvarEditor');
 
-function salvarAlteracoes() {
-    const updates = {};
-    document.querySelectorAll('#tabelaCorpo tr[data-id]').forEach(tr => {
-        const id = tr.dataset.id;
-        const preco = parseFloat(tr.querySelector('.edit-precoFinal').value) || 0;
-        updates[`/products/${id}/sku`] = tr.querySelector('.edit-sku').value.toUpperCase();
-        updates[`/products/${id}/name`] = tr.querySelector('.edit-name').value;
-        updates[`/products/${id}/peso`] = tr.querySelector('.edit-peso').value.replace(',', '.');
-        updates[`/products/${id}/category`] = tr.querySelector('.edit-cat').value;
-        updates[`/products/${id}/variacaoTipo`] = tr.querySelector('.edit-varTipo').value;
-        updates[`/products/${id}/opcoesPersonalizadas`] = tr.querySelector('.edit-opcoes').value;
-        updates[`/products/${id}/precoFinal`] = preco;
-        updates[`/products/${id}/price`] = preco;
-        updates[`/products/${id}/image`] = tr.querySelector('.edit-img').value.trim();
-        updates[`/products/${id}/paused`] = tr.querySelector('.btn-status').classList.contains('status-off');
-        updates[`/products/${id}/projeto`] = 'abella_joias';
-    });
-    db.ref().update(updates).then(() => alert("✅ Banco de dados atualizado com sucesso!"));
-}
+        loader.classList.remove('hidden');
+        imgResult.classList.add('hidden');
+        placeholderRes.classList.add('hidden');
+        painelSalvar.classList.add('hidden');
 
-function liberarCampoLista(select) {
-    const input = select.closest('tr').querySelector('.edit-opcoes');
-    if(select.value === 'Lista') { input.classList.remove('opacity-20', 'pointer-events-none'); input.classList.add('highlight-var'); }
-    else { input.classList.add('opacity-20', 'pointer-events-none'); input.classList.remove('highlight-var'); input.value = ''; }
-}
+        // Captura os filtros aplicados para a sua API / Prompt da IA
+        var faixaEtaria = document.getElementById('editorModeloIdade').value;
+        var acabamentoFixo = document.getElementById('editorAcabamento').value;
 
-function toggleStatus(btn) {
-    const isActive = btn.classList.contains('status-on');
-    btn.className = `btn-status ${isActive ? 'status-off' : 'status-on'}`;
-    btn.innerText = isActive ? 'OFF' : 'ON';
-    btn.closest('tr').classList.toggle('is-paused', isActive);
-}
+        console.log(`Disparando IA para o modelo: ${faixaEtaria}, Configuração técnica de restrição: ${acabamentoFixo}`);
 
-function deletarProduto(id) { if(confirm("Apagar produto definitivamente?")) db.ref('products/' + id).remove().then(() => carregarProdutos()); }
+        // Simulador de processamento da IA (Aqui entra o fetch com a sua API de Imagem IA)
+        setTimeout(function() {
+            loader.classList.add('hidden');
+            
+            // Simulação de retorno da imagem tratada (Mantemos a mesma para teste, mas modificada pelo prompt)
+            var urlExemploTratada = document.getElementById('imgOriginalEditor').src;
+            
+            imgResult.src = urlExemploTratada;
+            imgResult.classList.remove('hidden');
+            painelSalvar.classList.remove('hidden');
+            painelSalvar.style.display = 'flex';
+        }, 3000); 
+    }
 
-carregarCategorias();
+    // 4. GRAVAÇÃO COMPATÍVEL ATUALIZANDO O LINK DA FOTO DIRETAMENTE NO PRODUTO
+    function salvarImagemTratadaNoFirebase() {
+        if (!_PRODUTO_ATIVO_ID) { alert("❌ Nenhuma peça ativa selecionada para gravação!"); return; }
+
+        var novaUrlTratada = document.getElementById('imgResultadoEditor').src;
+
+        // Se for Base64 (upload manual), você precisará fazer upload para o Storage primeiro.
+        // Se a sua API já devolve um link público do Firebase Storage, salvamos direto:
+        db.ref(`products/${_PRODUTO_ATIVO_ID}`).update({
+            image: novaUrlTratada
+        }).then(function() {
+            alert("✅ Sucesso! A nova foto tratada pela IA foi sincronizada e atualizada no seu catálogo.");
+            document.getElementById('painelSalvarEditor').classList.add('hidden');
+        }).catch(function(err) {
+            alert("❌ Erro ao salvar o novo link de imagem no Firebase.");
+            console.error(err);
+        });
+    }
+
+    function resetarCanvasEditor() {
+        document.getElementById('imgOriginalEditor').classList.add('hidden');
+        document.getElementById('placeholderOriginal').classList.remove('hidden');
+        document.getElementById('imgResultadoEditor').classList.add('hidden');
+        document.getElementById('placeholderResultado').classList.remove('hidden');
+        document.getElementById('btnProcessarIA').disabled = true;
+        document.getElementById('painelSalvarEditor').classList.add('hidden');
+        _PRODUTO_ATIVO_EDITOR = null;
+        _PRODUTO_ATIVO_ID = null;
+    }
 </script>
-</body>
-</html>

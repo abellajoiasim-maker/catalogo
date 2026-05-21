@@ -222,7 +222,7 @@
 
     function carregarProximaPagina() { carregarBlocoProdutos(false); }
 
-    // RENDERIZAÇÃO LIMPA E TOTALMENTE CLICÁVEL
+   // RENDERIZAÇÃO LIMPA E TOTALMENTE CLICÁVEL (VISÃO ESPELHO COM PROMOÇÕES)
     function renderizarGridClean(produtos) {
         var grid = document.getElementById('grid-produtos');
         if (!grid) return;
@@ -232,7 +232,13 @@
             var prod = produtos[id];
             var estaPausado = prod.paused === true;
             var fotoPadrao = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23ccc" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
-            var precoExibicao = parseFloat(prod.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            
+            // Verifica se o produto possui desconto ativo
+            var temDesconto = prod.emOferta === true || (parseFloat(prod.porcentagemDesconto) > 0);
+            
+            // Formatação inteligente dos Preços
+            var precoOriginal = parseFloat(prod.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            var precoPromocional = temDesconto ? parseFloat(prod.precoPromocional || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
 
             var card = document.createElement('div');
             // O CARD AGORA É TOTALMENTE CLICÁVEL (Chama editarProduto)
@@ -249,16 +255,40 @@
                                 ${estaPausado ? '⏸️ Pausado' : '🟢 Ativo'}
                             </button>
                         </div>
+
+                        ${prod.crachaVisual ? `
+                            <div class="absolute top-3 right-3 z-20 bg-gray-900/90 backdrop-blur-xs text-[9px] font-black text-amber-400 px-2 py-1 rounded-lg uppercase tracking-wider shadow-sm">
+                                ${prod.crachaVisual}
+                            </div>
+                        ` : ''}
                         
                         <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-xs text-white text-[9px] px-2 py-0.5 rounded-md font-mono">
                             ${prod.weight || '0.00'}g
                         </div>
                     </div>
+                    
                     <div class="p-4 space-y-1.5">
-                        <h3 class="font-bold text-gray-800 text-sm truncate capitalize">${prod.name || 'Joia Sem Nome'}</h3>
-                        <div class="flex items-center justify-between gap-2 pt-1">
+                        <div class="flex items-center justify-between gap-1">
+                            <h3 class="font-bold text-gray-800 text-sm truncate capitalize">${prod.name || 'Joia Sem Nome'}</h3>
+                            
+                            ${temDesconto ? `
+                                <span class="bg-rose-100 text-rose-700 text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase font-mono tracking-wider shrink-0 animate-pulse">
+                                    ${prod.porcentagemDesconto}% OFF
+                                </span>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="flex items-end justify-between gap-2 pt-1 border-t border-gray-50 mt-1">
                             <span class="text-[10px] text-gray-400 font-mono truncate">SKU: ${prod.sku || 'N/A'}</span>
-                            <span class="font-bold text-emerald-600 text-sm whitespace-nowrap">${precoExibicao}</span>
+                            
+                            <div class="text-right">
+                                ${temDesconto ? `
+                                    <div class="text-gray-400 line-through text-[10px] font-mono leading-none mb-0.5">${precoOriginal}</div>
+                                    <div class="font-black text-rose-600 text-sm whitespace-nowrap leading-none">${precoPromocional}</div>
+                                ` : `
+                                    <div class="font-bold text-emerald-600 text-sm whitespace-nowrap leading-none">${precoOriginal}</div>
+                                `}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -266,7 +296,6 @@
             grid.appendChild(card);
         });
     }
-
     function filtrarLocalmente() {
         var termo = document.getElementById('buscaProduto').value.toLowerCase().trim();
         var status = document.getElementById('filtroStatus').value;

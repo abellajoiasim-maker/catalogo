@@ -25,7 +25,7 @@ window.pedidoEditando = null;
 window.fMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
 // =========================================================================
-// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (CORRIGIDO)
+// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO
 // =========================================================================
 async function mudarAbaDinamica(nomeAba) {
     const container = document.getElementById('conteudo-dinamico');
@@ -43,7 +43,7 @@ async function mudarAbaDinamica(nomeAba) {
         btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
     }
 
-    // Mata conexões específicas anteriores do Firebase
+    // Mata conexões específicas anteriores do Firebase para evitar concorrência de renderização
     if (listenersAtivos['orders']) {
         db.ref('orders').off();
         delete listenersAtivos['orders'];
@@ -53,15 +53,15 @@ async function mudarAbaDinamica(nomeAba) {
 
     try {
         if (!cacheModulos[nomeAba]) {
-            // Busca saindo de admin/ e entrando direto na pasta catalogo/modulo/
+            // Busca saindo de admin/ e buscando na pasta raiz catalogo/modulo/
             const resposta = await fetch(`../modulo/${nomeAba}.html`);
-            if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado.`);
+            if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado na raiz.`);
             cacheModulos[nomeAba] = await resposta.text();
         }
 
         container.innerHTML = cacheModulos[nomeAba];
 
-        // Força a execução dos scripts internos do módulo
+        // Força o Navegador a executar códigos Javascript dentro da página injetada
         const scripts = container.querySelectorAll("script");
         scripts.forEach(scriptAntigo => {
             const scriptNovo = document.createElement("script");
@@ -73,6 +73,7 @@ async function mudarAbaDinamica(nomeAba) {
             document.body.appendChild(scriptNovo).parentNode.removeChild(scriptNovo);
         });
 
+        // Se a aba injetada for a de pedidos, ativa o sincronizador central imediatamente
         if (nomeAba === 'pedidos') {
             window.forcarCargaFirebase();
         }
@@ -86,6 +87,7 @@ async function mudarAbaDinamica(nomeAba) {
         `;
     }
 }
+
 // =========================================================================
 // SINCRONIZADOR CENTRAL RESTRITO DO FIREBASE (DRIVE DE DADOS)
 // =========================================================================
@@ -112,7 +114,6 @@ window.abrirEditorPedido = function(id) {
     const p = window.todosPedidosLocal[id];
     if (!p) return;
 
-    // Vinculação protegida contra elementos ausentes
     const elId = document.getElementById('idPedidoInterno');
     if (elId) elId.innerText = id;
 
@@ -137,7 +138,6 @@ window.abrirEditorPedido = function(id) {
     const elFrete = document.getElementById('edFrete');
     if (elFrete) elFrete.value = p.frete || 0;
 
-    // ORDENAÇÃO DE A-Z POR SKU: Carga dos itens no Editor Master
     if (p.itens && Array.isArray(p.itens)) {
         p.itens = p.itens.filter(i => i !== null);
         p.itens.sort((a, b) => {
@@ -296,7 +296,7 @@ window.confirmarImpressaoFisica = function() {
     window.print();
 };
 
-// Start
+// Start Inicializador Central
 document.addEventListener("DOMContentLoaded", () => {
     mudarAbaDinamica('pedidos');
 });

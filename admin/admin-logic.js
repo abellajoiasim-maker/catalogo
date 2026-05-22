@@ -1,6 +1,7 @@
-// =========================================================================
-// CONFIGURAÇÃO OFICIAL DO FIREBASE (MÁSCARA CONTROLADORA DA INFRAESTRUTURA)
-// =========================================================================
+// ==========================================
+// CONFIGURAÇÃO INICIAL DO FIREBASE (COMPAT)
+// ==========================================
+// Nota: Substitua as credenciais abaixo pelas chaves oficiais do seu projeto Abella Joias se necessário
 const firebaseConfig = {
     apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
     authDomain: "catalogo-abella-joias.firebaseapp.com",
@@ -11,292 +12,307 @@ const firebaseConfig = {
     appId: "1:727568435294:web:442c0179ecf0686dff4ccf"
 };
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+// Inicializa o Firebase caso ele não tenha sido iniciado em outro script global
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.database();
 
-const cacheModulos = {};
-let listenersAtivos = {};
+// ==========================================
+// GERENCIAMENTO DE ABAS DINÂMICAS DO PAINEL
+// ==========================================
+function mudarAbaDinamica(aba) {
+    const conteudoDinamico = document.getElementById('conteudo-dinamico');
+    if (!conteudoDinamico) return;
 
-// Cache global de segurança e memória de estado do ecossistema
-window.todosPedidosLocal = {};
-window.pedidoEditando = null;
-
-// Utilitário de Formatação de Uso Geral no Ecossistema BR
-window.fMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-
-// =========================================================================
-// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO
-// =========================================================================
-async function mudarAbaDinamica(nomeAba) {
-    const container = document.getElementById('conteudo-dinamico');
-    if (!container) return;
-
-    // Ajuste Visual da Sidebar
-    document.querySelectorAll('#menu-navegacao .tab-btn').forEach(btn => {
-        btn.classList.remove('bg-[#caa85c]', 'text-black');
+    // Remove classes de ativação antigas dos botões do menu lateral
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-[#caa85c]', 'text-black', 'font-bold');
         btn.classList.add('bg-zinc-900', 'text-gray-400');
     });
-    
-    const btnAtivo = document.getElementById(`btn-${nomeAba}`);
+
+    // Ativa visualmente o botão clicado
+    const btnAtivo = document.getElementById(`btn-${aba}`);
     if (btnAtivo) {
         btnAtivo.classList.remove('bg-zinc-900', 'text-gray-400');
-        btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
+        btnAtivo.classList.add('bg-[#caa85c]', 'text-black', 'font-bold');
     }
 
-    // Mata conexões específicas anteriores do Firebase para evitar concorrência de renderização
-    if (listenersAtivos['orders']) {
-        db.ref('orders').off();
-        delete listenersAtivos['orders'];
-    }
+    // Fluxo de carregamento do conteúdo de cada aba
+    if (aba === 'categorias') {
+        // Injeta o HTML estruturado do módulo de categorias
+        conteudoDinamico.innerHTML = `
+            <div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
+                <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                            <span>📁</span> Gestão de Categorias e Coleções
+                        </h1>
+                        <p class="text-sm text-gray-500 mt-1">Gerencie as divisões do seu catálogo, controle visibilidade e organize seus produtos.</p>
+                    </div>
+                    <button onclick="abrirModalCategoria()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 text-sm">
+                        <span>➕</span> Nova Categoria
+                    </button>
+                </div>
 
-    container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ${nomeAba}.html...</div>`;
+                <div id="grid-categorias" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div class="col-span-full text-center py-12 text-gray-400 font-medium">
+                        ⏳ Carregando coleções em tempo real...
+                    </div>
+                </div>
+            </div>
 
-    try {
-        if (!cacheModulos[nomeAba]) {
-            // Busca saindo de admin/ e buscando na pasta raiz catalogo/modulo/
-            const resposta = await fetch(`../modulo/${nomeAba}.html`);
-            if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado na raiz.`);
-            cacheModulos[nomeAba] = await resposta.text();
-        }
+            <div id="modalCategoria" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[99999] animate-fade-in">
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 relative text-white">
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                        <h3 id="modalTitulo" class="text-lg font-bold text-[#caa85c]">Nova Categoria</h3>
+                        <button onclick="fecharModalCategoria()" class="text-gray-400 hover:text-white text-xl font-bold">&times;</button>
+                    </div>
+                    
+                    <input type="hidden" id="catId">
 
-        container.innerHTML = cacheModulos[nomeAba];
+                    <div class="space-y-3 text-left">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">ID Único (Slug / Link)</label>
+                            <input type="text" id="catSlug" placeholder="ex: brincos-pequenos" class="w-full bg-[#0b0b0b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white font-mono text-xs focus:border-[#caa85c] outline-none transition-all">
+                        </div>
 
-        // Força o Navegador a executar códigos Javascript dentro da página injetada
-        const scripts = container.querySelectorAll("script");
-        scripts.forEach(scriptAntigo => {
-            const scriptNovo = document.createElement("script");
-            if (scriptAntigo.src) {
-                scriptNovo.src = scriptAntigo.src;
-            } else {
-                scriptNovo.textContent = scriptAntigo.textContent;
-            }
-            document.body.appendChild(scriptNovo).parentNode.removeChild(scriptNovo);
-        });
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nome da Categoria</label>
+                            <input type="text" id="catNome" placeholder="Ex: Brincos Pequenos" class="w-full bg-[#0b0b0b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white font-medium focus:border-[#caa85c] outline-none transition-all">
+                        </div>
 
-        // Se a aba injetada for a de pedidos, ativa o sincronizador central imediatamente
-        if (nomeAba === 'pedidos') {
-            window.forcarCargaFirebase();
-        }
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">URL da Imagem</label>
+                            <input type="text" id="catUrlImagem" placeholder="https://linkdafoto.com/imagem.jpg" class="w-full bg-[#0b0b0b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:border-[#caa85c] outline-none transition-all">
+                        </div>
+                        
+                        <div class="border border-dashed border-zinc-800 rounded-xl p-2 bg-black/40 flex items-center justify-center aspect-square overflow-hidden max-h-40 mx-auto">
+                            <img id="catPreviewModal" src="" alt="Preview" class="hidden w-full h-full object-contain rounded-lg">
+                            <span id="catPreviewPlaceholder" class="text-xs text-gray-500">Nenhuma imagem carregada</span>
+                        </div>
+                    </div>
 
-    } catch (erro) {
-        container.innerHTML = `
-            <div class="bg-red-950/20 border border-red-900 text-red-400 p-4 rounded-xl text-xs font-mono">
-                <p class="font-bold">⚠️ Falha ao renderizar componente: ${nomeAba}.html</p>
-                <p class="text-zinc-500 mt-1">${erro.message}</p>
+                    <div class="flex items-center justify-end gap-3 border-t border-zinc-800 pt-3">
+                        <button onclick="fecharModalCategoria()" class="bg-zinc-800 hover:bg-zinc-700 text-gray-300 font-medium px-4 py-2 rounded-xl transition-all text-sm">Cancelar</button>
+                        <button id="btnSalvarCategoria" onclick="salvarCategoriaFirebase()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2 rounded-xl transition-all text-sm">Salvar Registro</button>
+                    </div>
+                </div>
             </div>
         `;
+
+        // Ativa o listener em tempo real das categorias e configura o input de preview
+        escutarCategoriasFirebase();
+        configurarPreviewImagem();
+
+    } else {
+        // Fallback temporário para outras abas operacionais do painel administrativo
+        conteudoDinamico.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-zinc-500 space-y-2">
+                <span class="text-2xl">⚙️</span>
+                <p class="text-xs italic capitalize">Módulo [Mudar Aba Dinamica: ${aba}] carregado via admin-logic.js.</p>
+            </div>`;
     }
 }
 
-// =========================================================================
-// SINCRONIZADOR CENTRAL RESTRITO DO FIREBASE (DRIVE DE DADOS)
-// =========================================================================
-window.forcarCargaFirebase = function() {
-    listenersAtivos['orders'] = true;
-    
-    db.ref('orders').on('value', snapshot => {
-        window.todosPedidosLocal = snapshot.val() || {};
+// ==========================================
+// FUNÇÃO DE LEITURA BLINDADA (ANTI-DUPLICIDADE)
+// ==========================================
+function escutarCategoriasFirebase() {
+    db.ref('categories').on('value', (snapshot) => {
+        const grid = document.getElementById('grid-categorias');
+        if (!grid) return;
         
-        // Se a função de renderização visual da tabela existir no escopo atual, executa ela
-        if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
-            window.renderizarTabelaPedidosVisivel();
+        // Limpeza primária estrutural do grid
+        grid.innerHTML = '';
+        const dados = snapshot.val();
+
+        if (!dados) {
+            grid.innerHTML = `
+                <div class="col-span-full text-center py-12 text-gray-500 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/50">
+                    📦 Nenhuma categoria encontrada no nó 'categories'.
+                </div>`;
+            return;
         }
-    }, erro => {
-        console.error("🚨 Falha crítica de leitura no Firebase Realtime Database:", erro);
-    });
-};
 
-// =========================================================================
-// MÓDULO CONTROLADOR COESIVO - GERENCIAMENTO AVANÇADO DE PEDIDOS
-// =========================================================================
-window.abrirEditorPedido = function(id) {
-    window.pedidoEditando = id;
-    const p = window.todosPedidosLocal[id];
-    if (!p) return;
+        Object.keys(dados).forEach((id) => {
+            const cat = dados[id];
+            
+            const nomeCategoria = (cat.nome || cat.name || id).replace(/-/g, ' '); 
+            const imagemCategoria = cat.image || cat.urlImagem || '';
+            const estaPausado = cat.status === 'pausado' || cat.status === 'inactive';
+            
+            const fotoPadrao = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
 
-    const elId = document.getElementById('idPedidoInterno');
-    if (elId) elId.innerText = id;
+            // DEPURADOR CRÍTICO: Se o card já existir no DOM por um duplo disparo, elimina o clone antigo
+            const cardExistente = document.getElementById(`card-cat-${id}`);
+            if (cardExistente) {
+                cardExistente.remove();
+            }
 
-    const elNome = document.getElementById('edClienteNome');
-    if (elNome) elNome.value = p.nome || p.cliente || '';
-
-    const elTel = document.getElementById('edClienteTel');
-    if (elTel) elTel.value = p.whats || p.telefone || '';
-
-    const elRua = document.getElementById('edRua');
-    if (elRua) elRua.value = p.rua || '';
-
-    const elCidade = document.getElementById('edCidade');
-    if (elCidade) elCidade.value = p.cidade || '';
-
-    const elDescPromo = document.getElementById('edDescPromo');
-    if (elDescPromo) elDescPromo.value = p.descontoPromo || p.desconto || 0;
-
-    const elDescPix = document.getElementById('edDescPix');
-    if (elDescPix) elDescPix.value = p.descontoPix || 0;
-
-    const elFrete = document.getElementById('edFrete');
-    if (elFrete) elFrete.value = p.frete || 0;
-
-    if (p.itens && Array.isArray(p.itens)) {
-        p.itens = p.itens.filter(i => i !== null);
-        p.itens.sort((a, b) => {
-            const skuA = (a.sku || '').toString().toUpperCase().trim();
-            const skuB = (b.sku || '').toString().toUpperCase().trim();
-            return skuA.localeCompare(skuB, 'pt-BR', { sensitivity: 'base', numeric: true });
-        });
-    }
-
-    const boxItens = document.getElementById('edItens');
-    if (boxItens) {
-        boxItens.innerHTML = '';
-        if (p.itens && Array.isArray(p.itens)) {
-            p.itens.forEach((item, index) => {
-                const itemQtd = item.quantidade || item.qtd || 1;
-                const itemPreco = item.precoFinal || item.price || item.preco || 0;
-                const itemPeso = item.peso || item.weight || '0g';
-                const itemSku = item.sku || 'N/A';
-                const itemNome = item.name || item.nome || 'Sem Descrição';
-
-                boxItens.innerHTML += `
-                    <div class="flex items-center gap-2 bg-black/40 p-2 border border-zinc-800 rounded-lg font-mono text-[11px]">
-                        <div class="w-16 font-bold text-zinc-400 truncate">${itemSku}</div>
-                        <div class="flex-1 text-white truncate uppercase">${itemNome}</div>
-                        <div class="w-16 text-zinc-400 text-center">${itemPeso}</div>
-                        <div class="w-20">
-                            <input type="number" step="0.01" value="${itemPreco}" class="w-full bg-[#0b0b0b] border border-zinc-700 text-right p-1 rounded text-white text-[11px] focus:border-[#caa85c] outline-none" oninput="window.atualizarObjetoItem(${index}, 'preco', this.value)">
+            const card = document.createElement('div');
+            card.id = `card-cat-${id}`; // Trava a identidade do card para evitar sobreposição
+            card.className = `bg-[#111] rounded-2xl border border-zinc-800 overflow-hidden shadow-xl flex flex-col justify-between transition-all ${estaPausado ? 'opacity-40 grayscale' : ''}`;
+            
+            card.innerHTML = `
+                <div>
+                    <div class="w-full aspect-square bg-zinc-900 relative border-b border-zinc-800 overflow-hidden block">
+                        <img src="${imagemCategoria || fotoPadrao}" alt="${nomeCategoria}" class="absolute inset-0 w-full h-full object-cover object-center m-0 p-0" onerror="this.src='${fotoPadrao}'">
+                        <div class="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
+                            ${estaPausado ? '<span class="bg-amber-600 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-md shadow-md">⏸️ Pausada</span>' : '<span class="bg-emerald-600 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-md shadow-md">🟢 Ativa</span>'}
                         </div>
-                        <div class="w-14">
-                            <input type="number" value="${itemQtd}" class="w-full bg-[#0b0b0b] border border-zinc-700 text-center p-1 rounded text-white text-[11px] font-bold focus:border-[#caa85c] outline-none" oninput="window.atualizarObjetoItem(${index}, 'qtd', this.value)">
-                        </div>
-                        <button onclick="window.removerItemEditor(${index})" class="text-red-400 hover:text-red-300 font-bold px-2">✕</button>
                     </div>
-                `;
-            });
-        }
-    }
+                    
+                    <div class="p-4 text-left">
+                        <h3 class="font-bold text-white truncate text-base capitalize mb-1">${nomeCategoria}</h3>
+                        <p class="text-[10px] text-zinc-500 font-mono bg-black/40 p-1.5 rounded border border-zinc-800/80 truncate" title="${id}">slug: ${id}</p>
+                    </div>
+                </div>
 
-    window.recalcularTotalEd();
-
-    const modalEditor = document.getElementById('editorPedido');
-    if (modalEditor) modalEditor.classList.remove('hidden');
-};
-
-window.atualizarObjetoItem = function(index, campo, valor) {
-    const p = window.todosPedidosLocal[window.pedidoEditando];
-    if (!p || !p.itens || !p.itens[index]) return;
-
-    if (campo === 'preco') p.itens[index].precoFinal = parseFloat(valor) || 0;
-    if (campo === 'qtd') p.itens[index].quantidade = parseInt(valor) || 0;
-    window.recalcularTotalEd();
-};
-
-window.removerItemEditor = function(index) {
-    const p = window.todosPedidosLocal[window.pedidoEditando];
-    if (!p || !p.itens) return;
-    
-    if (confirm("Deseja remover este item da lista de compras do pedido?")) {
-        p.itens.splice(index, 1);
-        window.abrirEditorPedido(window.pedidoEditando);
-    }
-};
-
-window.recalcularTotalEd = function() {
-    const p = window.todosPedidosLocal[window.pedidoEditando];
-    if (!p) return;
-
-    if (p.itens && Array.isArray(p.itens)) {
-        p.itens.sort((a, b) => {
-            const skuA = (a.sku || '').toString().toUpperCase().trim();
-            const skuB = (b.sku || '').toString().toUpperCase().trim();
-            return skuA.localeCompare(skuB, 'pt-BR', { sensitivity: 'base', numeric: true });
+                <div class="grid grid-cols-3 border-t border-zinc-800 bg-zinc-900/50 divide-x divide-zinc-800 mt-auto">
+                    <button onclick="editarCategoria('${id}', '${nomeCategoria.replace(/'/g, "\\'")}', '${imagemCategoria}')" class="py-2.5 text-xs font-semibold text-blue-400 hover:bg-blue-950/30 transition-all flex items-center justify-center gap-1">
+                        ✏️ Editar
+                    </button>
+                    <button onclick="alternarStatusCategoria('${id}', '${cat.status || 'ativo'}')" class="py-2.5 text-xs font-semibold ${estaPausado ? 'text-emerald-400 hover:bg-emerald-950/30' : 'text-amber-400 hover:bg-amber-950/30'} transition-all flex items-center justify-center gap-1">
+                        ${estaPausado ? '▶️ Ativar' : '⏸️ Pausar'}
+                    </button>
+                    <button onclick="deletarCategoria('${id}')" class="py-2.5 text-xs font-semibold text-rose-400 hover:bg-rose-950/30 transition-all flex items-center justify-center gap-1">
+                        🗑️ Excluir
+                    </button>
+                </div>
+            `;
+            grid.appendChild(card);
         });
-    }
-
-    let subtotal = 0, totalQtd = 0;
-    if (p.itens && Array.isArray(p.itens)) {
-        p.itens.forEach(i => {
-            const qtd = parseInt(i.quantidade || i.qtd || 0);
-            const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
-            subtotal += (preco * qtd);
-            totalQtd += qtd;
-        });
-    }
-
-    const elDescPromo = document.getElementById('edDescPromo');
-    const elDescPix = document.getElementById('edDescPix');
-    const elFrete = document.getElementById('edFrete');
-
-    const descPromo = elDescPromo ? (parseFloat(elDescPromo.value) || 0) : 0;
-    const descPix = elDescPix ? (parseFloat(elDescPix.value) || 0) : 0;
-    const frete = elFrete ? (parseFloat(elFrete.value) || 0) : 0;
-
-    const liquidoGeral = subtotal - descPromo - descPix + frete;
-
-    const elTotalPreview = document.getElementById('totalPreview');
-    if (elTotalPreview) elTotalPreview.innerText = window.fMoeda(liquidoGeral);
-
-    const elQtdTotal = document.getElementById('edQtdTotal');
-    if (elQtdTotal) elQtdTotal.value = totalQtd;
-};
-
-window.salvarPedidoEditado = function() {
-    const id = window.pedidoEditando;
-    const p = window.todosPedidosLocal[id];
-    if (!p) return;
-
-    p.nome = document.getElementById('edClienteNome')?.value.trim() || p.nome;
-    p.whats = document.getElementById('edClienteTel')?.value.trim() || p.whats;
-    p.rua = document.getElementById('edRua')?.value.trim() || p.rua;
-    p.cidade = document.getElementById('edCidade')?.value.trim() || p.cidade;
-    p.descontoPromo = parseFloat(document.getElementById('edDescPromo')?.value) || 0;
-    p.descontoPix = parseFloat(document.getElementById('edDescPix')?.value) || 0;
-    p.frete = parseFloat(document.getElementById('edFrete')?.value) || 0;
-
-    let subtotal = 0;
-    if (p.itens && Array.isArray(p.itens)) {
-        p.itens.sort((a, b) => {
-            return (a.sku || '').toString().toUpperCase().trim().localeCompare((b.sku || '').toString().toUpperCase().trim(), 'pt-BR', {numeric: true});
-        });
-        p.itens.forEach(i => {
-            subtotal += (parseFloat(i.precoFinal || i.price || i.preco || 0) * parseInt(i.quantidade || i.qtd || 0));
-        });
-    }
-    p.total = subtotal - p.descontoPromo - p.descontoPix + p.frete;
-
-    db.ref('orders/' + id).set(p).then(() => {
-        alert("✅ Pedido gravado e sincronizado!");
-        window.fecharEditorPedido();
-    }).catch(err => {
-        alert("🚨 Erro ao salvar: " + err.message);
     });
-};
+}
 
-window.excluirPedido = function() {
-    if (confirm("🚨 Deletar permanentemente este pedido?")) {
-        db.ref('orders/' + window.pedidoEditando).remove().then(() => {
-            alert("Pedido excluído!");
-            window.fecharEditorPedido();
-        });
+// ==========================================
+// OPERAÇÕES COMPLEMENTARES DO MODAL
+// ==========================================
+function configurarPreviewImagem() {
+    const inputUrl = document.getElementById('catUrlImagem');
+    if (!inputUrl) return;
+
+    inputUrl.addEventListener('input', function(e) {
+        const img = document.getElementById('catPreviewModal');
+        const placeholder = document.getElementById('catPreviewPlaceholder');
+        if (e.target.value.trim() !== "") {
+            img.src = e.target.value.trim();
+            img.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        } else {
+            img.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+        }
+    });
+}
+
+function abrirModalCategoria() {
+    document.getElementById('modalTitulo').innerText = "Nova Categoria";
+    document.getElementById('catId').value = "";
+    document.getElementById('catSlug').value = "";
+    document.getElementById('catSlug').disabled = false;
+    document.getElementById('catNome').value = "";
+    document.getElementById('catUrlImagem').value = "";
+    document.getElementById('catPreviewModal').classList.add('hidden');
+    document.getElementById('catPreviewPlaceholder').classList.remove('hidden');
+    document.getElementById('modalCategoria').classList.remove('hidden');
+}
+
+function fecharModalCategoria() {
+    document.getElementById('modalCategoria').classList.add('hidden');
+}
+
+function salvarCategoriaFirebase() {
+    const idExistente = document.getElementById('catId').value;
+    const slugInformado = document.getElementById('catSlug').value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+    const nome = document.getElementById('catNome').value.trim();
+    const urlImagem = document.getElementById('catUrlImagem').value.trim();
+
+    if (!nome) {
+        alert("⚠️ Insira o nome da categoria!");
+        return;
     }
-};
 
-window.fecharEditorPedido = function() {
-    const modalEditor = document.getElementById('editorPedido');
-    if (modalEditor) modalEditor.classList.add('hidden');
-    window.pedidoEditando = null;
-};
+    let idFinal = idExistente || slugInformado || nome.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
+    const btn = document.getElementById('btnSalvarCategoria');
+    btn.disabled = true;
+    btn.innerText = "⏳ Gravando...";
 
-window.fecharPreviewRomaneio = function() {
-    const modalPreview = document.getElementById('previewRomaneio');
-    if (modalPreview) modalPreview.classList.add('hidden');
-};
+    const dados = {
+        nome: nome,
+        name: nome,
+        image: urlImagem,
+        urlImagem: urlImagem
+    };
 
-window.confirmarImpressaoFisica = function() {
-    window.print();
-};
+    if (idExistente) {
+        db.ref(`categories/${idExistente}`).update(dados)
+            .then(() => fecharEAlertar("Categoria atualizada com sucesso!"))
+            .catch(erro => tratarErro(erro));
+    } else {
+        dados.status = "ativo";
+        db.ref(`categories/${idFinal}`).set(dados)
+            .then(() => fecharEAlertar("Nova categoria adicionada!"))
+            .catch(erro => tratarErro(erro));
+    }
 
-// Start Inicializador Central
-document.addEventListener("DOMContentLoaded", () => {
-    mudarAbaDinamica('pedidos');
-});
+    function fecharEAlertar(msg) {
+        alert(`✅ ${msg}`);
+        fecharModalCategoria();
+        btn.disabled = false;
+        btn.innerHTML = "Salvar Registro";
+    }
+
+    function tratarErro(e) {
+        alert("❌ Erro ao salvar dados.");
+        console.error(e);
+        btn.disabled = false;
+        btn.innerHTML = "Salvar Registro";
+    }
+}
+
+function editarCategoria(id, nome, urlImagem) {
+    document.getElementById('modalTitulo').innerText = "Editar Categoria";
+    document.getElementById('catId').value = id;
+    document.getElementById('catSlug').value = id;
+    document.getElementById('catSlug').disabled = true;
+    document.getElementById('catNome').value = nome;
+    document.getElementById('catUrlImagem').value = urlImagem;
+
+    const img = document.getElementById('catPreviewModal');
+    const placeholder = document.getElementById('catPreviewPlaceholder');
+    
+    if (urlImagem && urlImagem !== 'undefined') {
+        img.src = urlImagem;
+        img.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    } else {
+        img.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+    }
+
+    document.getElementById('modalCategoria').classList.remove('hidden');
+}
+
+function alternarStatusCategoria(id, statusAtual) {
+    const novoStatus = (statusAtual === 'ativo' || statusAtual === 'active') ? 'pausado' : 'ativo';
+    db.ref(`categories/${id}`).update({ status: novoStatus })
+        .catch(erro => console.error("Erro ao alternar status:", erro));
+}
+
+function deletarCategoria(id) {
+    if (confirm(`⚠️ Deseja mesmo excluir permanentemente a categoria '${id}'?\nIsto pode remover a visualização dos produtos associados a ela.`)) {
+        db.ref(`categories/${id}`).remove()
+            .then(() => alert("✅ Categoria removida."))
+            .catch(erro => console.error("Erro ao remover:", erro));
+    }
+}
+
+// ==========================================
+// DISPARO AUTOMÁTICO NA INICIALIZAÇÃO
+// ==========================================
+window.onload = () => {
+    // Inicializa o ecossistema na aba de pedidos por padrão ou categorias
+    mudarAbaDinamica('categorias');
+};

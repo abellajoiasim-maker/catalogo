@@ -52,13 +52,12 @@ async function mudarAbaDinamica(nomeAba) {
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ${nomeAba}.html...</div>`;
 
     try {
-        if (!cacheModulos[nomeAba]) {
-            // CORREÇÃO AQUI: Aponta explicitamente para a pasta 'modulo' interna do admin
-            const resposta = await fetch(`modulo/${nomeAba}.html`);
-            if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado.`);
-            cacheModulos[nomeAba] = await resposta.text();
-        }
-
+       // Procure por este bloco na função mudarAbaDinamica e altere:
+if (!cacheModulos[nomeAba]) {
+    const resposta = await fetch(`../modulo/${nomeAba}.html`); // Adicionado ../ para buscar na raiz
+    if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado.`);
+    cacheModulos[nomeAba] = await resposta.text();
+}
         container.innerHTML = cacheModulos[nomeAba];
 
         // Força o Navegador a executar códigos Javascript dentro da página injetada

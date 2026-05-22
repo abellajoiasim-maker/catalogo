@@ -18,101 +18,74 @@ if (!firebase.apps.length) {
 }
 const db = firebase.database();
 
-// ==========================================
-// GERENCIAMENTO DE ABAS DINÂMICAS DO PAINEL
-// ==========================================
+// =========================================================================
+// GERENCIAMENTO DE ABAS DINÂMICAS COM CONVERSOR AUTOMÁTICO DE IMAGENS (GS -> HTTPS)
+// =========================================================================
 function mudarAbaDinamica(aba) {
     const conteudoDinamico = document.getElementById('conteudo-dinamico');
     if (!conteudoDinamico) return;
 
-    // Remove classes de ativação antigas dos botões do menu lateral
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('bg-[#caa85c]', 'text-black', 'font-bold');
         btn.classList.add('bg-zinc-900', 'text-gray-400');
     });
 
-    // Ativa visualmente o botão clicado
     const btnAtivo = document.getElementById(`btn-${aba}`);
     if (btnAtivo) {
         btnAtivo.classList.remove('bg-zinc-900', 'text-gray-400');
         btnAtivo.classList.add('bg-[#caa85c]', 'text-black', 'font-bold');
     }
 
-    // Fluxo de carregamento do conteúdo de cada aba
     if (aba === 'categorias') {
-        // Injeta o HTML estruturado do módulo de categorias
         conteudoDinamico.innerHTML = `
             <div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
                 <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
                     <div>
-                        <h1 class="text-2xl font-bold text-white flex items-center gap-2">
-                            <span>📁</span> Gestão de Categorias e Coleções
-                        </h1>
-                        <p class="text-sm text-gray-500 mt-1">Gerencie as divisões do seu catálogo, controle visibilidade e organize seus produtos.</p>
+                        <h1 class="text-2xl font-bold text-white flex items-center gap-2"><span>📁</span> Gestão de Categorias</h1>
                     </div>
-                    <button onclick="abrirModalCategoria()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 text-sm">
-                        <span>➕</span> Nova Categoria
-                    </button>
+                    <button onclick="abrirModalCategoria()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm transition-all text-sm">➕ Nova Categoria</button>
                 </div>
-
                 <div id="grid-categorias" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    <div class="col-span-full text-center py-12 text-gray-400 font-medium">
-                        ⏳ Carregando coleções em tempo real...
-                    </div>
+                    <div class="col-span-full text-center py-12 text-gray-400">⏳ Carregando coleções...</div>
                 </div>
             </div>
+            `;
 
-            <div id="modalCategoria" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[99999] animate-fade-in">
-                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 relative text-white">
-                    <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
-                        <h3 id="modalTitulo" class="text-lg font-bold text-[#caa85c]">Nova Categoria</h3>
-                        <button onclick="fecharModalCategoria()" class="text-gray-400 hover:text-white text-xl font-bold">&times;</button>
-                    </div>
-                    
-                    <input type="hidden" id="catId">
-
-                    <div class="space-y-3 text-left">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">ID Único (Slug / Link)</label>
-                            <input type="text" id="catSlug" placeholder="ex: brincos-pequenos" class="w-full bg-[#0b0b0b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white font-mono text-xs focus:border-[#caa85c] outline-none transition-all">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nome da Categoria</label>
-                            <input type="text" id="catNome" placeholder="Ex: Brincos Pequenos" class="w-full bg-[#0b0b0b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white font-medium focus:border-[#caa85c] outline-none transition-all">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">URL da Imagem</label>
-                            <input type="text" id="catUrlImagem" placeholder="https://linkdafoto.com/imagem.jpg" class="w-full bg-[#0b0b0b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white font-mono text-sm focus:border-[#caa85c] outline-none transition-all">
-                        </div>
-                        
-                        <div class="border border-dashed border-zinc-800 rounded-xl p-2 bg-black/40 flex items-center justify-center aspect-square overflow-hidden max-h-40 mx-auto">
-                            <img id="catPreviewModal" src="" alt="Preview" class="hidden w-full h-full object-contain rounded-lg">
-                            <span id="catPreviewPlaceholder" class="text-xs text-gray-500">Nenhuma imagem carregada</span>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-end gap-3 border-t border-zinc-800 pt-3">
-                        <button onclick="fecharModalCategoria()" class="bg-zinc-800 hover:bg-zinc-700 text-gray-300 font-medium px-4 py-2 rounded-xl transition-all text-sm">Cancelar</button>
-                        <button id="btnSalvarCategoria" onclick="salvarCategoriaFirebase()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2 rounded-xl transition-all text-sm">Salvar Registro</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Ativa o listener em tempo real das categorias e configura o input de preview
+        // Agora, dentro da função de escuta, chamaremos o conversor
         escutarCategoriasFirebase();
         configurarPreviewImagem();
 
     } else {
-        // Fallback temporário para outras abas operacionais do painel administrativo
-        conteudoDinamico.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-zinc-500 space-y-2">
-                <span class="text-2xl">⚙️</span>
-                <p class="text-xs italic capitalize">Módulo [Mudar Aba Dinamica: ${aba}] carregado via admin-logic.js.</p>
-            </div>`;
+        conteudoDinamico.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 text-xs italic">Módulo ${aba} em desenvolvimento.</div>`;
     }
+}
+
+// ATUALIZAÇÃO DA FUNÇÃO DE ESCUTA NO MESMO ARQUIVO
+async function escutarCategoriasFirebase() {
+    db.ref('categories').on('value', async (snapshot) => {
+        const grid = document.getElementById('grid-categorias');
+        if (!grid) return;
+        
+        grid.innerHTML = '';
+        const dados = snapshot.val();
+        if (!dados) return;
+
+        for (const id in dados) {
+            const cat = dados[id];
+            // AQUI ESTÁ A MÁGICA: Converte GS para HTTPS antes de renderizar
+            const urlFinal = await obterLinkPublico(cat.image || cat.urlImagem);
+            
+            const card = document.createElement('div');
+            card.className = "bg-[#111] rounded-2xl border border-zinc-800 overflow-hidden";
+            card.innerHTML = `
+                <div class="w-full aspect-square bg-zinc-900 relative">
+                    <img src="${urlFinal || ''}" class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23444%22 stroke-width=%222%22><rect x=%223%22 y=%223%22 width=%2218%22 height=%2218%22 rx=%222%22/><circle cx=%228.5%22 cy=%228.5%22 r=%221.5%22/><polyline points=%2221 15 16 10 5 21%22/></svg>'">
+                </div>
+                <div class="p-4"><h3 class="text-white font-bold">${cat.nome || id}</h3></div>
+            `;
+            grid.appendChild(card);
+        }
+    });
 }
 
 // ==========================================

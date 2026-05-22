@@ -43,7 +43,7 @@ async function mudarAbaDinamica(nomeAba) {
         btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
     }
 
-    // Mata conexões específicas anteriores do Firebase para evitar concorrência de renderização
+    // Mata conexões específicas anteriores do Firebase
     if (listenersAtivos['orders']) {
         db.ref('orders').off();
         delete listenersAtivos['orders'];
@@ -51,17 +51,17 @@ async function mudarAbaDinamica(nomeAba) {
 
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ${nomeAba}.html...</div>`;
 
-   try {
+    try {
         if (!cacheModulos[nomeAba]) {
-            // CORREÇÃO: Adicionado "../" para o sistema sair da pasta admin e buscar na raiz do catálogo
+            // Busca saindo de admin/ e entrando direto na pasta catalogo/modulo/
             const resposta = await fetch(`../modulo/${nomeAba}.html`);
-            if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado na raiz.`);
+            if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado.`);
             cacheModulos[nomeAba] = await resposta.text();
         }
 
         container.innerHTML = cacheModulos[nomeAba];
 
-        // Força o Navegador a executar códigos Javascript dentro da página injetada
+        // Força a execução dos scripts internos do módulo
         const scripts = container.querySelectorAll("script");
         scripts.forEach(scriptAntigo => {
             const scriptNovo = document.createElement("script");
@@ -73,7 +73,6 @@ async function mudarAbaDinamica(nomeAba) {
             document.body.appendChild(scriptNovo).parentNode.removeChild(scriptNovo);
         });
 
-        // Se a aba injetada for a de pedidos, ativa o sincronizador central imediatamente
         if (nomeAba === 'pedidos') {
             window.forcarCargaFirebase();
         }
@@ -86,6 +85,7 @@ async function mudarAbaDinamica(nomeAba) {
             </div>
         `;
     }
+}
 // =========================================================================
 // SINCRONIZADOR CENTRAL RESTRITO DO FIREBASE (DRIVE DE DADOS)
 // =========================================================================

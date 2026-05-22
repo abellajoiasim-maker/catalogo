@@ -69,7 +69,7 @@
                         </div>
                         <div class="space-y-1">
                             <label class="text-[10px] text-zinc-500 uppercase font-bold">Cidade:</label>
-                            <input type="text" id="entCidade" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:border-[#caa85c] outline-none">
+                            <input type="text" id="entCidade" placeholder="Ex: Limeira - SP" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:border-[#caa85c] outline-none">
                         </div>
                         <div class="space-y-1 md:col-span-2">
                             <label class="text-[10px] text-zinc-500 uppercase font-bold">Rua / Logradouro:</label>
@@ -284,14 +284,13 @@
         }
 
         // =======================================================
-        // ENVIAR PARA WHATSAPP COM DADOS DE ENDEREÇO INCLUSOS
+        // ENVIAR PARA WHATSAPP COM CORREÇÃO DA CIDADE
         // =======================================================
         function finalizarPedidoWhatsapp() {
             const nomeCli = document.getElementById('cliNome').value.trim();
             const whatsCli = document.getElementById('cliWhats').value.trim();
             const pagamento = document.getElementById('cliPagamento').value;
 
-            // Variáveis de endereço
             const entLocal = document.getElementById('entLocal').value.trim() || "Não informado";
             const entCidade = document.getElementById('entCidade').value.trim() || "Não informada";
             const entRua = document.getElementById('entRua').value.trim() || "Não informada";
@@ -315,10 +314,10 @@
             msg += `*Pagamento:* ${pagamento}\n`;
             msg += `-------------------------------------------\n`;
             msg += `*LOCAL DE ENTREGA / DESTINO:*\n`;
-            msg += `• *Local:* ${entLocal}\n`;
+            msg += `• *Local / Destinatário:* ${entLocal}\n`;
             msg += `• *Endereço:* ${entRua}, nº ${entNumero}\n`;
             msg += `• *Bairro:* ${entBairro}\n`;
-            msg += `• *Cidade:* ${entCidade}\n`;
+            msg += `• *Cidade:* ${entCidade}\n`; // AJUSTE CIRÚRGICO: Cidade inclusa na API do Whats
             msg += `-------------------------------------------\n\n`;
             msg += `*RELAÇÃO DE ITENS (BRUTO):*\n`;
 
@@ -328,6 +327,8 @@
             carrinho.forEach(item => {
                 const subItem = item.precoFinal * item.quantidade;
                 const pesoItem = item.peso * item.quantidade;
+                subtotal += subItem;
+                totalPesoCalculado = pesoItem;
                 subtotal += subItem;
                 pesoTotal += pesoItem;
 
@@ -354,7 +355,7 @@
         }
 
         // =======================================================
-        // GERADOR DE PDF A4 AJUSTADO COM LINHAS DE ENDEREÇO
+        // GERADOR DE PDF A4 CORRIGIDO COM LINHA DA CIDADE
         // =======================================================
         function gerarPdfPedido(incluirFotos) {
             const { jsPDF } = window.jspdf;
@@ -370,7 +371,6 @@
             const entNumero = document.getElementById('entNumero').value.trim() || "S/N";
             const entBairro = document.getElementById('entBairro').value.trim() || "Não informado";
 
-            // Título principal
             pdf.setFont("Helvetica", "bold");
             pdf.setFontSize(14);
             pdf.setTextColor(17, 17, 17);
@@ -381,7 +381,7 @@
             pdf.setTextColor(90, 90, 90);
             pdf.text(`Emitido em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 15, 23);
 
-            // Bloco unificado de informações (Identificação + Destino)
+            // Quadro Unificado com Altura Calibrada para a Cidade
             pdf.setFillColor(248, 248, 248);
             pdf.rect(15, 26, 180, 26, "F");
             
@@ -392,11 +392,12 @@
             pdf.text(`Condição: ${pagamento}`, 115, 32);
 
             pdf.setFont("Helvetica", "normal");
-            pdf.setFillColor(100);
-            pdf.text(`Destino: [${entLocal}] ${entRua}, ${entNumero} - Bairro: ${entBairro} - ${entCidade}`, 18, 46);
+            // AJUSTE CIRÚRGICO: Cidade renderizada perfeitamente no cabeçalho do PDF impresso
+            pdf.text(`Destino: [${entLocal}] ${entRua}, nº ${entNumero} - Bairro: ${entBairro}`, 18, 45);
+            pdf.setFont("Helvetica", "bold");
+            pdf.text(`Cidade / UF: ${entCidade}`, 18, 49);
 
-            // Configuração da listagem de itens
-            let y = 62;
+            let y = 64;
             pdf.setFont("Helvetica", "bold");
             pdf.setFontSize(9);
             pdf.text("CÓD / SKU", 15, y);
@@ -440,7 +441,6 @@
                 y += 8;
             });
 
-            // Resumo Consolidado no rodapé
             y += 4;
             if (y > 240) { pdf.addPage(); y = 20; }
             
@@ -466,7 +466,12 @@
             pdf.setFont("Helvetica", "normal");
             pdf.text(`Líquido no Cartão: ${fM(subtotal)} (ou ${configGlobal.parcelasMax}x de ${fM(subtotal/configGlobal.parcelasMax)})`, 110, y);
 
-            pdf.save(`Pedido_Abella_${nomeCli.replace(/\s+/g, '_')}.pdf`);
+            // Gera o PDF como um Blob (objeto binário)
+const blob = pdf.output('blob');
+const blobURL = URL.createObjectURL(blob);
+
+// Abre o PDF em uma nova aba para o cliente visualizar antes de baixar
+window.open(blobURL, '_blank');
         }
 
         window.onload = init;

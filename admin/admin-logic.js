@@ -42,11 +42,14 @@ async function obterLinkPublico(caminhoGS) {
 }
 
 // =========================================================================
-// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (AJUSTE DE ROTAS ESTREITAS)
+// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (CORREÇÃO DE REFERÊNCIA)
 // =========================================================================
 async function mudarAbaDinamica(nomeAba) {
     const container = document.getElementById('conteudo-dinamico');
     if (!container) return;
+
+    // Garantia de escopo da variável para evitar o ReferenceError no Catch
+    let nomeArquivo = nomeAba;
 
     // Ajuste Visual da Sidebar
     document.querySelectorAll('#menu-navegacao .tab-btn').forEach(btn => {
@@ -66,27 +69,21 @@ async function mudarAbaDinamica(nomeAba) {
         delete listenersAtivos['orders'];
     }
 
-    container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ../modulo/${nomeAba}.html...</div>`;
+    container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ../modulo/${nomeArquivo}.html...</div>`;
 
     try {
-        // TRATAMENTO REFORÇADO DE ROTAS: Garante o mapeamento exato com o arquivo físico
-        let nomeArquivo = nomeAba;
-        
+        // Alinhamento estrito com os arquivos do seu GitHub
+        // Se o admin.html chamar 'config', aponta para 'config.html'
         if (nomeAba === 'config') {
-            nomeArquivo = 'configuracoes';
-        }
-        
-        // Caso o botão passe alguma variação, forçamos o padrão exato da pasta 'modulo'
-        if (nomeAba === 'pedidos') {
-            nomeArquivo = 'pedidos'; 
+            nomeArquivo = 'config';
         }
 
         if (!cacheModulos[nomeAba]) {
-            // Requisição apontando corretamente para fora da pasta admin, mirando a pasta modulo
+            // Requisição com o caminho físico exato saindo de admin/ para modulo/
             const resposta = await fetch(`../modulo/${nomeArquivo}.html`);
             
             if (!resposta.ok) {
-                throw new Error(`Servidor respondeu com status ${resposta.status}. Verifique se o arquivo "${nomeArquivo}.html" existe exatamente com este nome dentro da pasta "modulo".`);
+                throw new Error(`Servidor retornou status ${resposta.status}. O arquivo "${nomeArquivo}.html" não existe na pasta "modulo".`);
             }
             
             cacheModulos[nomeAba] = await resposta.text();
@@ -107,18 +104,12 @@ async function mudarAbaDinamica(nomeAba) {
         });
 
     } catch (erro) {
+        // Bloco corrigido: nomeArquivo agora está visível aqui e não quebra o script
         container.innerHTML = `
             <div class="bg-red-950/20 border border-red-900 text-red-400 p-4 rounded-xl text-xs font-mono">
                 <p class="font-bold">⚠️ Falha ao renderizar componente: ${nomeAba}.html</p>
                 <p class="text-zinc-500 mt-1">${erro.message}</p>
-                <div class="mt-2 text-[10px] text-zinc-400 bg-black/40 p-2 rounded border border-zinc-800">
-                    <strong>Estrutura esperada:</strong><br>
-                    catalogo/<br>
-                    ├── admin/admin-logic.js<br>
-                    └── modulo/<br>
-                        ├── pedidos.html (tentando ler como: ${nomeArquivo}.html)<br>
-                        └── configuracoes.html
-                </div>
+                <p class="text-[10px] text-zinc-400 mt-2">Tentou buscar em: ../modulo/${nomeArquivo}.html</p>
             </div>
         `;
     }

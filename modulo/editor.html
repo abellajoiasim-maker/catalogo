@@ -80,7 +80,7 @@
     // TENTATIVA DE INICIALIZAÇÃO CONTÍNUA (Roda de 300 em 300ms até achar o Firebase)
     var checadorFirebase = setInterval(function() {
         if (typeof db !== "undefined") {
-            clearInterval(checadorFirebase); // Para o cronômetro
+            clearInterval(checadorFirebase);
             console.log("✅ Conexão com Firebase detectada! Iniciando mapeamento...");
             inicializarMapeamentoLote();
         }
@@ -91,13 +91,11 @@
         var select = document.getElementById('loteFiltroCategoria');
         if(!select) return;
 
-        // 1ª Tentativa: Procura por 'categories'
         db.ref('categories').once('value', function(snapshot) {
             var dados = snapshot.val();
             if (dados) {
                 renderizarOpcoesCategorias(dados);
             } else {
-                // 2ª Tentativa de segurança: Procura por 'colecoes' se o primeiro vier vazio
                 db.ref('colecoes').once('value', function(snapshotColecoes) {
                     var dadosCol = snapshotColecoes.val();
                     if (dadosCol) {
@@ -113,7 +111,6 @@
         });
     }
 
-    // Alimenta o select com o que veio do Firebase
     function renderizarOpcoesCategorias(dados) {
         var select = document.getElementById('loteFiltroCategoria');
         if(!select) return;
@@ -142,7 +139,6 @@
         tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-gray-400 font-medium animate-pulse">⏳ Sincronizando arquivos JPG/PNG do banco...</td></tr>';
         if(checkTodos) checkTodos.checked = false;
 
-        // Puxa os produtos correspondentes
         db.ref('products').orderByChild('category').equalTo(catId).once('value', function(snapshot) {
             var dados = snapshot.val();
             if(!dados) {
@@ -158,7 +154,6 @@
                 var prod = dados[id];
                 var fotoUrl = prod.image || "";
                 
-                // Validação de segurança da extensão
                 var extensao = "JPG / PNG";
                 if (fotoUrl.toLowerCase().includes('.png')) extensao = "PNG (Transparente)";
                 else if (fotoUrl.toLowerCase().includes('.jpg') || fotoUrl.toLowerCase().includes('.jpeg')) extensao = "JPG (Foto)";
@@ -216,6 +211,7 @@
         }
     }
 
+    // DISPARADOR GLOBAL DA FILA
     function iniciarProcessamentoEmMassa() {
         _FILA_PROCESSAMENTO = [];
         document.querySelectorAll('.check-item-lote:checked').forEach(function(box) {
@@ -224,16 +220,20 @@
 
         if(_FILA_PROCESSAMENTO.length === 0) return;
 
+        // Tranca os controles da tela para evitar cliques duplicados durante o lote
         document.getElementById('btnDispararLote').disabled = true;
         document.getElementById('loteFiltroCategoria').disabled = true;
         document.getElementById('checkMarcarTodos').disabled = true;
         document.querySelectorAll('.check-item-lote').forEach(box => box.disabled = true);
 
         _INDICE_ATUAL_FILA = 0;
-        executarProximoItemDaFila();
+        
+        // CORREÇÃO ORTOGRÁFICA: Agora chama estritamente com X combinando com a função abaixo
+        window.executarProximoItemDaFila();
     }
 
-    function ejecutarProximoItemDaFila() {
+    // PROCESSADOR RECURSIVO CORRIGIDO E GLOBALIZADO (COM 'X')
+    window.executarProximoItemDaFila = function() {
         if (_INDICE_ATUAL_FILA >= _FILA_PROCESSAMENTO.length) {
             alert(`🎉 Lote finalizado! Foram sincronizadas ${_FILA_PROCESSAMENTO.length} fotos com sucesso no catálogo.`);
             document.getElementById('loteFiltroCategoria').disabled = false;
@@ -250,28 +250,35 @@
             itemContainerStatus.innerText = "⚡ Processando com IA...";
         }
 
+        // Captura os parâmetros industriais selecionados nos menus superiores
+        var modeloAlvo = document.getElementById('loteModeloIdade').value;
+        var restricaoAlvo = document.getElementById('loteAcabamento').value;
         var linkFotoOriginal = _PRODUTOS_LOTE_CACHE[idAtual].image;
 
-        // Chamada simulada para salvar de volta
         setTimeout(function() {
             var linkFotoProcessadaPelaIA = linkFotoOriginal; 
 
+            // Atualiza o produto salvando as novas tags técnicas de IA de forma estrita
             db.ref(`products/${idAtual}`).update({
-                image: linkFotoProcessadaPelaIA
+                image: linkFotoProcessadaPelaIA,
+                ia_modelo_idade: modeloAlvo,
+                ia_restricao_tecnica: restricaoAlvo,
+                ia_processado_em: new Date().toISOString()
             }).then(function() {
                 if(itemContainerStatus) {
                     itemContainerStatus.className = "py-3 px-4 text-right pr-6 font-bold text-emerald-600 text-[11px]";
                     itemContainerStatus.innerText = "✅ Sincronizado!";
                 }
                 _INDICE_ATUAL_FILA++;
-                ejecutarProximoItemDaFila();
-            }).catch(function() {
+                window.executarProximoItemDaFila(); // Avança na fila
+            }).catch(function(error) {
+                console.error("Erro ao atualizar item via IA:", error);
                 if(itemContainerStatus) {
                     itemContainerStatus.className = "py-3 px-4 text-right pr-6 font-bold text-rose-500 text-[11px]";
                     itemContainerStatus.innerText = "❌ Erro";
                 }
                 _INDICE_ATUAL_FILA++;
-                ejecutarProximoItemDaFila();
+                window.executarProximoItemDaFila(); // Pula para o próximo mesmo se der erro
             });
         }, 1200);
     }

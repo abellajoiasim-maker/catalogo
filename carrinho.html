@@ -2,95 +2,134 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Checkout • Abella Joias</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Meu Carrinho • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght=400;600;800&display=swap" rel="stylesheet">
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        body { background:#0a0a0a; color:#fff; font-family:'Inter'; padding-bottom: 240px !important; min-height: 100vh; }
-        .serif { font-family:'Cinzel'; }
+        body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
+        .serif { font-family:'Cinzel', serif; }
         .gold { color:#caa85c; }
-        .card { background:#111; border:1px solid #222; border-radius:16px; padding:16px; margin-bottom:12px; }
-        .input { width:100%; background:#000; border:1px solid #333; border-radius:10px; padding:12px; font-size:14px; color: white; outline: none; }
-        .input:focus { border-color:#caa85c; }
-        .btn-pay { flex:1; border:1px solid #333; padding:12px; border-radius:12px; text-align:center; transition: 0.2s; cursor: pointer; }
-        .btn-pay.active { border-color:#caa85c; background:rgba(202,168,92,0.1); color:#caa85c; font-weight: bold; }
-        .item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #222; align-items: center; }
+        .bg-card { background:#141414; border:1px solid #2a2a2a; }
+        
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #0b0b0b; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #caa85c; }
     </style>
 </head>
-<body class="p-3">
+<body class="pb-12">
 
-    <div class="flex justify-between items-center mb-4 max-w-3xl mx-auto">
-        <button onclick="location.href='index.html'" class="text-sm gold font-bold">← Voltar às compras</button>
-        <h1 class="serif gold text-lg uppercase tracking-wider">Seu Carrinho</h1>
-        <div></div>
-    </div>
-
-    <div id="areaPDF" class="max-w-3xl mx-auto">
-        <div class="card">
-            <h2 class="gold text-sm font-bold uppercase tracking-wide mb-3">Resumo dos Itens selecionados</h2>
-            <div id="lista"></div>
+    <header class="sticky top-0 bg-black/90 backdrop-blur border-b border-[#222] z-50">
+        <div class="max-w-6xl mx-auto p-5 flex justify-between items-center">
+            <a href="index.html" class="text-xs text-gray-400 hover:text-white transition-all flex items-center gap-1">
+                ← Continuar Comprando
+            </a>
+            <h1 class="serif tracking-widest gold text-sm uppercase">Checkout de Atacado</h1>
         </div>
+    </header>
 
-        <div class="card space-y-2">
-            <h2 class="gold text-sm font-bold uppercase tracking-wide mb-1">Dados Cadastrais Identificação</h2>
-            <input class="input" id="nome" placeholder="Nome completo *">
-            <input class="input" id="whats" placeholder="WhatsApp com DDD *">
-            <input class="input" id="cidade" placeholder="Cidade de Origem *">
-        </div>
-
-        <div class="card space-y-2">
-            <h2 class="gold text-sm font-bold uppercase tracking-wide mb-1">Local e Endereço de Entrega</h2>
-            <input class="input" id="local" placeholder="Nome do local (ex: Loja, Galvânica, Transportadora)">
-            <input class="input" id="rua" placeholder="Rua / Avenida / Logradouro *">
-            <input class="input" id="numero" placeholder="Número / Bloco / Apto *">
-            <input class="input" id="bairro" placeholder="Bairro de Destino *">
-            <input class="input" id="cidadeEntrega" placeholder="Cidade de Entrega *">
-        </div>
-
-        <div class="card">
-            <h2 class="gold text-sm font-bold uppercase tracking-wide text-center mb-3">Forma de Liquidação / Pagamento</h2>
-            <div class="flex gap-2">
-                <button onclick="setMetodo('pix')" id="btn-pix" class="btn-pay">⚡ PIX À VISTA</button>
-                <button onclick="setMetodo('cartao')" id="btn-cartao" class="btn-pay">💳 CARTÃO DE CRÉDITO</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="fixed bottom-0 left-0 right-0 bg-black border-t border-[#333] p-4 z-[9999] shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
-        <div class="max-w-3xl mx-auto space-y-1">
-            <div class="text-xs flex justify-between text-gray-400">
-                <span>Total de Peças: <b id="pecas" class="text-white font-mono">0</b> un</span>
-                <span>Peso Bruto Coletivo: <b id="peso" class="text-white font-mono">0.00g</b></span>
+    <main class="max-w-6xl mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 space-y-4">
+            <div class="bg-card rounded-2xl p-4">
+                <h2 class="serif gold text-base uppercase tracking-wider mb-4 border-b border-zinc-900 pb-2">Itens Selecionados</h2>
+                <div id="container-itens-carrinho" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scroll">
+                    </div>
             </div>
 
-            <div class="text-xs text-gray-400 flex justify-between">
-                <span>Preço Bruto Atacado:</span> <b id="sub" class="text-white font-mono">R$ 0,00</b>
+            <div class="bg-card rounded-2xl p-5 space-y-4">
+                <h2 class="serif gold text-base uppercase tracking-wider border-b border-zinc-900 pb-2">Identificação do Comprador</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-gray-400 uppercase font-bold">Nome Completo / Razão Social:</label>
+                        <input type="text" id="cliNome" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:border-[#caa85c] outline-none font-medium">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] text-gray-400 uppercase font-bold">WhatsApp / Telefone:</label>
+                        <input type="tel" id="cliWhats" placeholder="(00) 00000-0000" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:border-[#caa85c] outline-none font-mono">
+                    </div>
+                    <div class="space-y-1 md:col-span-2">
+                        <label class="text-[10px] text-gray-400 uppercase font-bold">Forma de Pagamento Preferencial:</label>
+                        <select id="cliPagamento" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:border-[#caa85c] outline-none font-bold">
+                            <option value="PIX">À Vista no PIX (Com Desconto Adicional)</option>
+                            <option value="Cartão de Crédito">Cartão de Crédito (Até 6x sem juros)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <div class="text-green-400 text-xs flex justify-between font-bold" id="pixDesc"></div>
-            <div class="text-blue-400 text-xs flex justify-between" id="promoDesc"></div>
-            <div class="text-zinc-500 text-[11px] italic" id="parcelas"></div>
+        <div class="space-y-4">
+            <div class="bg-card rounded-2xl p-5 space-y-4 sticky top-24">
+                <h2 class="serif gold text-base uppercase tracking-wider border-b border-zinc-900 pb-2">Resumo do Pedido</h2>
+                
+                <div class="space-y-2.5 text-sm font-mono text-gray-400">
+                    <div class="flex justify-between">
+                        <span>Total de Itens:</span>
+                        <span id="finQtdItens" class="text-white font-bold">0 pçs</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Peso Bruto Total:</span>
+                        <span id="finPesoTotal" class="text-[#caa85c] font-bold">0.00g</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Subtotal Original:</span>
+                        <span id="finSubtotal" class="text-white">R$ 0,00</span>
+                    </div>
+                    <div id="bloco-fin-desconto" class="flex justify-between text-red-500 hidden">
+                        <span>Ofertas/Promoções:</span>
+                        <span id="finDescontoOferta">- R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between text-emerald-500 bg-emerald-950/20 p-2 rounded-xl border border-emerald-900/30">
+                        <span>Bônus à vista PIX (<span id="finPixPorcentagem">5</span>%):</span>
+                        <span id="finDescontoPix">- R$ 0,00</span>
+                    </div>
+                </div>
 
-            <div class="text-xl font-black gold flex justify-between items-center pt-2 border-t border-zinc-900 mt-2">
-                <span>TOTAL DO PEDIDO:</span>
-                <span id="total" class="font-mono text-2xl">R$ 0,00</span>
-            </div>
+                <div class="bg-black p-4 rounded-xl border border-zinc-900 space-y-2 text-left">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-400">Total à Vista (PIX):</span>
+                        <span id="resTotalPix" class="gold font-black text-xl font-mono">R$ 0,00</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-zinc-900 pt-2 text-xs text-gray-500">
+                        <span>Total no Cartão:</span>
+                        <span id="resTotalCartao" class="text-gray-300 font-bold font-mono">R$ 0,00</span>
+                    </div>
+                    <div class="text-[10px] text-zinc-400 text-right font-mono">
+                        Ou em até <span id="resParcelasTexto" class="text-white font-bold">6x de R$ 0,00</span> sem juros
+                    </div>
+                </div>
 
-            <div class="flex gap-2 mt-3">
-                <button onclick="gerarPDFLimpoAbella()" class="bg-zinc-900 text-gray-300 border border-zinc-800 px-4 py-2.5 rounded-xl font-bold text-xs uppercase hover:bg-zinc-800 transition-all">PDF</button>
-                <button onclick="finalizar()" class="bg-[#caa85c] text-black flex-1 rounded-xl py-2.5 font-bold uppercase text-xs tracking-wider hover:brightness-110 transition-all">
-                    Finalizar e Enviar via WhatsApp
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    <button onclick="gerarPdfPedido(true)" class="border border-zinc-800 hover:bg-zinc-900 text-gray-300 py-2.5 rounded-xl text-[10px] uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-1">
+                        📄 Com Fotos
+                    </button>
+                    <button onclick="gerarPdfPedido(false)" class="border border-zinc-800 hover:bg-zinc-900 text-gray-300 py-2.5 rounded-xl text-[10px] uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-1">
+                        📝 Sem Fotos
+                    </button>
+                </div>
+
+                <button onclick="finalizarPedidoWhatsapp()" class="w-full bg-[#caa85c] hover:bg-[#bda152] text-black font-black py-4 rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#caa85c]/10">
+                    🚀 Finalizar e Enviar no WhatsApp
                 </button>
+                
+                <p class="text-[9px] text-gray-500 italic text-center">
+                    Ao finalizar, sua lista e os dados de pesagem serão enviados diretamente para validação e liberação do link de pagamento.
+                </p>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
+        // Configurações do Firebase combinadas para ler os parâmetros da empresa
         const firebaseConfig = {
             apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
             databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
@@ -98,342 +137,298 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-        let metodo = 'pix';
-        let empresa = { pixDesconto: 5, parcelas: 6, whatsapp: '5519988207658' };
+        const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-        const f = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+        let configGlobal = { pixDesc: 5, parcelasMax: 6, whatsEmpresa: "5519999999999" };
+        let carrinho = [];
 
-        async function init() {
-            try {
-                const snap = await db.ref('settings').once('value');
-                if (snap.exists()) {
-                    const dadosS = snap.val();
-                    const empSub = dadosS.empresa || {};
-                    
-                    empresa.pixDesconto = parseFloat(dadosS.pix || empSub.pix || 5);
-                    empresa.parcelas = parseInt(dadosS.parcelas || empSub.parcelas || 6);
-                    empresa.whatsapp = dadosS.whatsapp || empSub.whatsapp || '5519988207658';
-                    empresa.whatsapp = empresa.whatsapp.replace(/\D/g, ''); // higieniza o número
+        function init() {
+            // Busca parâmetros operacionais definidos no seu painel principal
+            db.ref('settings').once('value', snap => {
+                if(snap.exists()){
+                    const settings = snap.val() || {};
+                    const emp = settings.empresa || {};
+                    configGlobal.pixDesc = parseFloat(settings.pix || emp.pix || 5);
+                    configGlobal.parcelasMax = parseInt(settings.parcelas || emp.parcelas || 6);
+                    configGlobal.whatsEmpresa = (settings.whatsapp || emp.whatsapp || "5519999999999").replace(/\D/g, '');
+                    document.getElementById('finPixPorcentagem').innerText = configGlobal.pixDesc;
                 }
-            } catch (e) { 
-                console.error("Erro leitura settings", e); 
-            }
-            render();
+                carregarItensCarrinho();
+            });
         }
 
-        function render() {
-            let html = '';
-            let sub = 0, peso = 0, pecas = 0;
+        function carregarItensCarrinho() {
+            carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+            const container = document.getElementById('container-itens-carrinho');
+            container.innerHTML = '';
 
             if (carrinho.length === 0) {
-                document.getElementById('lista').innerHTML = '<p class="text-center py-6 text-gray-500 italic text-sm">Seu carrinho está vazio.</p>';
-                document.getElementById('pecas').innerText = '0';
-                document.getElementById('peso').innerText = '0.00g';
-                document.getElementById('sub').innerText = f(0);
-                document.getElementById('total').innerText = f(0);
-                document.getElementById('pixDesc').innerHTML = '';
-                document.getElementById('parcelas').innerText = '';
+                container.innerHTML = `
+                    <div class="text-center py-12 text-zinc-500 space-y-3">
+                        <p class="text-xs italic">Seu carrinho de compras está vazio.</p>
+                        <a href="index.html" class="inline-block bg-[#caa85c]/10 border border-[#caa85c]/30 text-[#caa85c] px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider">Voltar à Vitrine</a>
+                    </div>
+                `;
+                atualizarResumoFinanceiro(0, 0, 0);
                 return;
             }
 
-            carrinho.forEach((p, i) => {
-                let precoUnitario = parseFloat(p.precoFinal || p.price || p.preco || 0);
-                let qtd = parseInt(p.quantidade || 1);
-                let totalItem = precoUnitario * qtd;
-                let pesoItem = parseFloat(p.peso || p.weight || 0) * qtd;
+            let subtotalGeral = 0;
+            let totalPecas = 0;
+            let pesoGeral = 0;
 
-                sub += totalItem;
-                peso += pesoItem;
-                pecas += qtd;
+            carrinho.forEach((item, index) => {
+                const precoUnitario = parseFloat(item.precoFinal || 0);
+                const qtd = parseInt(item.quantidade || 1);
+                const pesoUnitario = parseFloat(item.peso || 0);
 
-                html += `
-                    <div class="item">
-                        <img src="${p.image || p.imageUrl || 'https://via.placeholder.com/80'}" class="w-12 h-12 object-contain rounded bg-black p-0.5 shrink-0">
-                        <div class="flex-1 min-w-0">
-                            <div class="text-xs font-bold text-white truncate">${p.nome || p.name}</div>
-                            <div class="text-[10px] text-gray-500 font-mono">SKU: ${p.sku || 'N/A'} | Peso Un: ${p.peso || 0}g</div>
-                            <div class="flex justify-between items-center mt-2">
-                                <div class="flex items-center border border-zinc-800 rounded bg-black overflow-hidden">
-                                    <button onclick="alterarQtdDireto(${i}, -1)" class="px-2 py-0.5 text-gray-400 font-bold bg-zinc-900 hover:bg-zinc-800">-</button>
-                                    <span class="px-3 font-mono text-xs text-white">${qtd}</span>
-                                    <button onclick="alterarQtdDireto(${i}, 1)" class="px-2 py-0.5 text-gray-400 font-bold bg-zinc-900 hover:bg-zinc-800">+</button>
+                const itemSubtotal = precoUnitario * qtd;
+                const itemPesoTotal = pesoUnitario * qtd;
+
+                subtotalGeral += itemSubtotal;
+                totalPecas += qtd;
+                pesoGeral += itemPesoTotal;
+
+                container.innerHTML += `
+                    <div class="flex items-start gap-4 bg-zinc-950 p-3 rounded-xl border border-zinc-900 text-left">
+                        <div class="w-16 h-16 bg-black rounded-lg border border-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+                            <img src="${item.image || 'https://via.placeholder.com/150?text=Joia'}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 min-w-0 space-y-1">
+                            <h3 class="text-white text-xs font-bold whitespace-normal break-words leading-tight">${item.nome}</h3>
+                            <div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-gray-500">
+                                <span>SKU: <strong class="text-gray-300">${item.sku}</strong></span>
+                                <span>Ref: ${pesoUnitario.toFixed(2)}g</span>
+                                ${item.variacao ? `<span class="bg-[#caa85c]/10 text-[#caa85c] px-1.5 py-0.2 rounded font-sans font-bold">Var: ${item.variacao}</span>` : ''}
+                            </div>
+                            <div class="flex justify-between items-center pt-1.5 border-t border-zinc-900/80">
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="mudarQtdItem(${index}, -1)" class="w-6 h-6 bg-zinc-900 border border-zinc-800 text-gray-400 hover:text-white rounded flex items-center justify-center font-bold text-xs">-</button>
+                                    <input type="number" value="${qtd}" min="1" onchange="editarQtdDireto(${index}, this.value)" class="w-10 bg-black text-center font-mono text-white text-xs font-bold border border-zinc-800 rounded py-0.5 outline-none">
+                                    <button onclick="mudarQtdItem(${index}, 1)" class="w-6 h-6 bg-zinc-900 border border-zinc-800 text-gray-400 hover:text-white rounded flex items-center justify-center font-bold text-xs">+</button>
                                 </div>
-                                <button onclick="rem(${i})" class="text-gray-500 hover:text-red-400 text-xs">✕ Remover</button>
+                                <div class="text-right font-mono">
+                                    <p class="text-[10px] text-gray-500">${qtd}x ${fM(precoUnitario)}</p>
+                                    <p class="text-white font-bold text-xs">${fM(itemSubtotal)}</p>
+                                    <p class="text-[9px] gold">⚖️ ${itemPesoTotal.toFixed(2)}g</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="text-xs font-bold text-[#caa85c] font-mono text-right shrink-0">${f(totalItem)}</div>
+                        <button onclick="removerItemCarrinho(${index})" class="text-zinc-600 hover:text-red-500 text-sm font-bold pl-1 transition-all">✕</button>
                     </div>
                 `;
             });
 
-            document.getElementById('lista').innerHTML = html;
+            atualizarResumoFinanceiro(subtotalGeral, totalPecas, pesoGeral);
+        }
 
-            let descPix = metodo === 'pix' ? sub * (empresa.pixDesconto / 100) : 0;
-            let totalFinal = sub - descPix;
+        function atualizarResumoFinanceiro(subtotal, qtd, peso) {
+            const descontoPix = subtotal * (configGlobal.pixDesc / 100);
+            const totalPix = subtotal - descontoPix;
+            const parcelaValor = subtotal / configGlobal.parcelasMax;
 
-            document.getElementById('pecas').innerText = pecas;
-            document.getElementById('peso').innerText = peso.toFixed(2) + 'g';
-            document.getElementById('sub').innerText = f(sub);
-            document.getElementById('total').innerText = f(totalFinal);
+            document.getElementById('finQtdItens').innerText = `${qtd} pçs`;
+            document.getElementById('finPesoTotal').innerText = `${peso.toFixed(2)}g`;
+            document.getElementById('finSubtotal').innerText = fM(subtotal);
+            document.getElementById('finDescontoPix').innerText = `- ${fM(descontoPix)}`;
             
-            document.getElementById('pixDesc').innerHTML = descPix ? `<span>Desconto PIX (${empresa.pixDesconto}%):</span> <span>-${f(descPix)}</span>` : '';
-            document.getElementById('parcelas').innerText = metodo === 'cartao' ? `Ou parcelado em até ${empresa.parcelas}x de ${f(totalFinal / empresa.parcelas)} sem juros` : '';
-
-            // Atualiza botões de pagamento de forma segura
-            document.getElementById('btn-pix').classList.remove('active');
-            document.getElementById('btn-cartao').classList.remove('active');
-            if (document.getElementById('btn-' + metodo)) {
-                document.getElementById('btn-' + metodo).classList.add('active');
-            }
+            document.getElementById('resTotalPix').innerText = fM(totalPix);
+            document.getElementById('resTotalCartao').innerText = fM(subtotal);
+            document.getElementById('resParcelasTexto').innerText = `${configGlobal.parcelasMax}x de ${fM(parcelaValor)}`;
         }
 
-        function alterarQtdDireto(i, fator) {
-            let novaQtd = (parseInt(carrinho[i].quantidade) || 1) + fator;
-            if (novaQtd < 1) novaQtd = 1;
-            carrinho[i].quantidade = novaQtd;
-            salvar();
+        function mudarQtdItem(index, fator) {
+            carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+            if(!carrinho[index]) return;
+            
+            let novaQtd = (parseInt(carrinho[index].quantidade) || 1) + fator;
+            if(novaQtd < 1) novaQtd = 1;
+            
+            carrinho[index].quantidade = novaQtd;
+            localStorage.setItem('carrinho', JSON.stringify(carrinho));
+            carregarItensCarrinho();
         }
 
-        function rem(i) { 
-            carrinho.splice(i, 1); 
-            salvar(); 
+        function editarQtdDireto(index, valor) {
+            carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+            if(!carrinho[index]) return;
+            
+            let novaQtd = parseInt(valor) || 1;
+            if(novaQtd < 1) novaQtd = 1;
+            
+            carrinho[index].quantidade = novaQtd;
+            localStorage.setItem('carrinho', JSON.stringify(carrinho));
+            carregarItensCarrinho();
         }
-        
-        function salvar() { 
-            localStorage.setItem('carrinho', JSON.stringify(carrinho)); 
-            render(); 
-        }
-        
-        function setMetodo(m) { 
-            metodo = m; 
-            render(); 
+
+        function removerItemCarrinho(index) {
+            carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+            carrinho.splice(index, 1);
+            localStorage.setItem('carrinho', JSON.stringify(carrinho));
+            carregarItensCarrinho();
         }
 
         // =======================================================
-        // RELATÓRIO DO ROMANEIO IMPRESSO (CLEAN DESIGN AUTO-INFORMATIVO)
+        // INTEGRAÇÃO DE SAÍDA: DISPARO AUTOMÁTICO WHATSAPP
         // =======================================================
-        function gerarPDFLimpoAbella() {
-            if(carrinho.length === 0) {
-                alert("O carrinho está vazio!");
+        function finalizarPedidoWhatsapp() {
+            const nomeCli = document.getElementById('cliNome').value.trim();
+            const whatsCli = document.getElementById('cliWhats').value.trim();
+            const pagamento = document.getElementById('cliPagamento').value;
+
+            if(!nomeCli || !whatsCli) {
+                alert("Por favor, preencha seu Nome e WhatsApp de contato antes de finalizar.");
                 return;
             }
 
-            let subtotal = 0;
-            let linhasProdutosHtml = "";
-            
-            // Puxa dados do comprador preenchidos em tempo real para o documento fiscal
-            const cNome = document.getElementById('nome').value.trim() || "Não Informado";
-            const cWhats = document.getElementById('whats').value.trim() || "Não Informado";
-            const cLocal = document.getElementById('local').value.trim() || "Entrega Direta / Padrão";
-            const cRua = document.getElementById('rua').value.trim() || "";
-            const cNum = document.getElementById('numero').value.trim() || "";
-            const cBairro = document.getElementById('bairro').value.trim() || "";
-            const cCid = document.getElementById('cidadeEntrega').value.trim() || "";
-            
-            let enderecoCompleto = cRua ? `${cRua}, Nº ${cNum} - ${cBairro} (${cCid})` : "Retirada em Mãos / A Combinar";
-
-            carrinho.forEach((item, index) => {
-                let precoUn = parseFloat(item.precoFinal || item.price || 0);
-                let qtd = parseInt(item.quantidade || 1);
-                let totalItem = precoUn * qtd;
-                subtotal += totalItem;
-                
-                linhasProdutosHtml += `
-                    <tr>
-                        <td style="text-align: center; color: #777;">${String(index + 1).padStart(2, '0')}</td>
-                        <td>
-                            <strong style="color:#111;">${item.nome || item.name}</strong>
-                            <span style="font-family: monospace; font-size: 8.5pt; color: #666; display: block; margin-top: 1px;">
-                                SKU: ${item.sku || 'N/A'} ${item.peso ? `• Peso Un: ${item.peso}g` : ''}
-                            </span>
-                        </td>
-                        <td style="text-align: right; font-weight: bold;">${qtd} un</td>
-                        <td style="text-align: right;">R$ ${precoUn.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td style="text-align: right; font-weight: bold;">R$ ${totalItem.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    </tr>
-                `;
-            });
-
-            let valorDesconto = metodo === 'pix' ? subtotal * (empresa.pixDesconto / 100) : 0;
-            let totalLiquido = subtotal - valorDesconto;
-            
-            let dataAtual = new Date().toLocaleDateString('pt-BR');
-            let numeroPedidoRandom = Math.floor(10000 + Math.random() * 90000);
-
-            let conteudoHtmlPDF = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <title>Pedido Abella Joias</title>
-                <style>
-                    @page { size: A4; margin: 12mm 15mm; }
-                    body { font-family: Arial, sans-serif; color: #222; background: #fff; margin: 0; padding: 0; font-size: 10pt; line-height: 1.4; }
-                    .header { border-bottom: 2px solid #caa85c; padding-bottom: 12px; margin-bottom: 15px; }
-                    .brand-title { font-size: 20pt; font-weight: bold; color: #000; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-                    .brand-subtitle { font-size: 8.5pt; color: #caa85c; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; margin: 2px 0 0 0; }
-                    .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    .info-box { background-color: #fcfbf9; border: 1px solid #e2dfd8; border-radius: 8px; padding: 10px 12px; height: 100%; }
-                    .info-title { font-size: 8pt; text-transform: uppercase; color: #caa85c; font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid #f0ede6; padding-bottom: 2px; }
-                    .products-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-                    .products-table th { background-color: #111; color: #fff; font-size: 8.5pt; text-transform: uppercase; padding: 7px 10px; text-align: left; }
-                    .products-table td { padding: 7px 10px; border-bottom: 1px solid #e8e8e8; font-size: 9.5pt; }
-                    .products-table tr:nth-child(even) { background-color: #fbfbfb; }
-                    .financial-section { width: 100%; margin-top: 10px; page-break-inside: avoid; }
-                    .financial-table { width: 45%; margin-left: 55%; border-collapse: collapse; }
-                    .financial-table td { padding: 5px 8px; font-size: 9.5pt; }
-                    .financial-table .total-row td { border-top: 1px solid #111; padding-top: 8px; font-size: 11pt; font-weight: bold; }
-                    .footer-notes { margin-top: 25px; background-color: #f9f9f9; border-left: 3px solid #caa85c; padding: 10px 12px; border-radius: 4px; page-break-inside: avoid; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <table style="width: 100%;">
-                        <tr>
-                            <td>
-                                <h1 class="brand-title">Abella Joias</h1>
-                                <p class="brand-subtitle">Atacado de Joias no Bruto</p>
-                            </td>
-                            <td style="text-align: right; font-size: 9pt; color: #555;">
-                                <span style="font-size: 14pt; font-weight: bold; color: #222; text-transform: uppercase;">Resumo do Pedido</span><br>
-                                <strong>Pedido:</strong> #${numeroPedidoRandom}<br>
-                                <strong>Data:</strong> ${dataAtual}
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-
-                <table class="info-grid">
-                    <tr>
-                        <td style="width: 50%; padding-right: 6px; vertical-align: top;">
-                            <div class="info-box">
-                                <div class="info-title">Dados do Comprador</div>
-                                <div style="font-size: 9pt; line-height: 1.5;">
-                                    <strong>Cliente:</strong> ${cNome}<br>
-                                    <strong>WhatsApp:</strong> ${cWhats}<br>
-                                    <strong>Destino:</strong> ${cLocal}<br>
-                                    <strong>Endereço:</strong> ${enderecoCompleto}
-                                </div>
-                            </div>
-                        </td>
-                        <td style="width: 50%; padding-left: 6px; vertical-align: top;">
-                            <div class="info-box">
-                                <div class="info-title">Dados do Fornecedor</div>
-                                <div style="font-size: 9pt; line-height: 1.5;">
-                                    <strong>Fornecedor:</strong> Abella Joias Corporativo<br>
-                                    <strong>Logística Base:</strong> Limeira - SP<br>
-                                    <strong>Meio de Liquidação:</strong> ${metodo.toUpperCase()}<br>
-                                    <strong>Atendimento Atacado:</strong> +${empresa.whatsapp}
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-
-                <table class="products-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 8%; text-align: center;">Item</th>
-                            <th style="width: 52%;">Descrição da Peça (No Bruto)</th>
-                            <th style="width: 12%; text-align: right;">Qtd</th>
-                            <th style="width: 14%; text-align: right;">Preço Un.</th>
-                            <th style="width: 14%; text-align: right;">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${linhasProdutosHtml}
-                    </tbody>
-                </table>
-
-                <div class="financial-section">
-                    <table class="financial-table">
-                        <tr>
-                            <td style="text-align: right; color: #555;">Subtotal Bruto:</td>
-                            <td style="text-align: right; font-weight: bold;">R$ ${subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        </tr>
-                        <tr>
-                            <td style="text-align: right; color: #555;">Desconto (${metodo === 'pix' ? empresa.pixDesconto : 0}% PIX):</td>
-                            <td style="text-align: right; font-weight: bold; color: #bc3e3e;">- R$ ${valorDesconto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        </tr>
-                        <tr class="total-row">
-                            <td style="text-align: right;">Total Líquido:</td>
-                            <td style="text-align: right; color: #caa85c;">R$ ${totalLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                        </tr>
-                    </table>
-                </div>
-
-                <div class="footer-notes">
-                    <div style="font-size: 8.5pt; font-weight: bold; color: #111; margin-bottom: 3px;">Informações Importantes:</div>
-                    <p style="font-size: 8.5pt; color: #555; margin: 0; line-height: 1.4;">
-                        • Este documento descreve peças em metal bruto comercializadas em regime de atacado.<br>
-                        • <strong>Logística de Limeira:</strong> Frete gratuito para entrega direto nas galvânicas parceiras regulamentadas de Limeira-SP para compras elegíveis acima de R$100.
-                    </p>
-                </div>
-            </body>
-            </html>`;
-
-            const janelaImpressao = window.open('', '_blank');
-            janelaImpressao.document.write(conteudoHtmlPDF);
-            janelaImpressao.document.close();
-            
-            setTimeout(() => {
-                janelaImpressao.print();
-                janelaImpressao.close();
-            }, 450);
-        }
-
-        async function finalizar() {
-            const nome = document.getElementById('nome').value.trim();
-            const whats = document.getElementById('whats').value.trim();
-            const rua = document.getElementById('rua').value.trim();
-            const numero = document.getElementById('numero').value.trim();
-            const bairro = document.getElementById('bairro').value.trim();
-            const cidadeEntrega = document.getElementById('cidadeEntrega').value.trim();
-
-            if (!nome || !whats || !rua || !numero || !bairro || !cidadeEntrega) {
-                return alert("Por favor, preencha todos os campos obrigatórios assinalados com (*)");
+            if(carrinho.length === 0) {
+                alert("Seu carrinho está vazio.");
+                return;
             }
 
-            let valorTotalTxt = document.getElementById('total').innerText;
-            let subtotalTxt = document.getElementById('sub').innerText;
+            let msg = `*NOVO PEDIDO DE ATACADO - ABELLA JOIAS*\n`;
+            msg += `-------------------------------------------\n`;
+            msg += `*Cliente:* ${nomeCli}\n`;
+            msg += `*WhatsApp:* ${whatsCli}\n`;
+            msg += `*Pagamento:* ${pagamento}\n`;
+            msg += `-------------------------------------------\n\n`;
+            msg += `*RELAÇÃO DE ITENS (BRUTO):*\n`;
 
-            let totalPecas = 0;
-            carrinho.forEach(item => totalPecas += parseInt(item.quantidade || 1));
+            let subtotal = 0;
+            let pesoTotal = 0;
 
-            const descPixValor = metodo === 'pix' ? (parseFloat(subtotalTxt.replace(/[^\d,]/g, '').replace(',', '.')) * (empresa.pixDesconto / 100)) : 0;
+            carrinho.forEach(item => {
+                const subItem = item.precoFinal * item.quantidade;
+                const pesoItem = item.peso * item.quantidade;
+                subtotal += subItem;
+                pesoTotal += pesoItem;
 
-            const novoPedido = {
-                nome: nome,
-                whats: whats,
-                cidade: cidadeEntrega,
-                local: document.getElementById('local').value || 'Não Especificado',
-                rua: rua,
-                numero: numero,
-                bairro: bairro,
-                metodo: metodo,
-                total: parseFloat(valorTotalTxt.replace(/[^\d,]/g, '').replace(',', '.')),
-                descontoPix: descPixValor,
-                descontoPromo: 0,
-                frete: 0,
-                itens: carrinho,
-                data: new Date().toISOString()
-            };
+                msg += `• ${item.quantidade}x ${item.nome}\n`;
+                msg += `  [SKU: ${item.sku}] ${item.variacao ? `(Var: ${item.variacao})` : ''}\n`;
+                msg += `  Un: ${fM(item.precoFinal)} | Total: ${fM(subItem)} | ${pesoItem.toFixed(2)}g\n\n`;
+            });
 
-            await db.ref('orders').push(novoPedido);
+            const descPix = subtotal * (configGlobal.pixDesc / 100);
+            const liqPix = subtotal - descPix;
 
-            const msgWhats = `*Novo Pedido - Abella Joias Atacado*\n\n` +
-                             `*Cliente:* ${nome}\n` +
-                             `*WhatsApp:* ${whats}\n` +
-                             `*Volume Itens:* ${totalPecas} peças\n` +
-                             `*Pagamento Selecionado:* ${metodo.toUpperCase()}\n` +
-                             `*Total Bruto Atacado:* ${subtotalTxt}\n` +
-                             `*Valor Líquido Final:* ${valorTotalTxt}\n\n` +
-                             `_O romaneio detalhado e estruturado já se encontra disponível no Painel Administrativo de Separação._`;
+            msg += `-------------------------------------------\n`;
+            msg += `*Resumo Geral do Bruto:*\n`;
+            msg += `• Total de Peças: ${carrinho.reduce((acc, curr) => acc + curr.quantidade, 0)} un\n`;
+            msg += `• Peso Total Acumulado: ${pesoTotal.toFixed(2)}g\n`;
+            msg += `• Subtotal Original: ${fM(subtotal)}\n`;
+            msg += `• Valor Líquido no PIX: *${fM(liqPix)}*\n`;
+            msg += `• Valor no Cartão: ${fM(subtotal)} (ou ${configGlobal.parcelasMax}x de ${fM(subtotal / configGlobal.parcelasMax)})\n`;
+            msg += `-------------------------------------------\n\n`;
+            msg += `_Estou aguardando o link definitivo para o pagamento e a confirmação do prazo final de entrega do lote._`;
 
-            localStorage.removeItem('carrinho');
-            window.open(`https://wa.me/${empresa.whatsapp}?text=${encodeURIComponent(msgWhats)}`);
-            location.href = 'index.html';
+            const urlWhats = `https://api.whatsapp.com/send?phone=${configGlobal.whatsEmpresa}&text=${encodeURIComponent(msg)}`;
+            window.open(urlWhats, '_blank');
+        }
+
+        // =======================================================
+        // FUNÇÃO DE IMPRESSÃO CIRÚRGICA: ESPELHO EM FOLHA A4 CLEAN
+        // =======================================================
+        function generarPdfPedido(incluirFotos) {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            
+            const nomeCli = document.getElementById('cliNome').value.trim() || "Cliente Não Identificado";
+            const whatsCli = document.getElementById('cliWhats').value.trim() || "Não Informado";
+            const pagamento = document.getElementById('cliPagamento').value;
+
+            // Layout Cabeçalho do PDF
+            pdf.setFont("Helvetica", "bold");
+            pdf.setFontSize(16);
+            pdf.setTextColor(17, 17, 17);
+            pdf.text("ABELLA JOIAS - SOLICITAÇÃO DE ATACADO", 15, 20);
+            
+            pdf.setFontSize(9);
+            pdf.setFont("Helvetica", "normal");
+            pdf.setTextColor(85, 85, 85);
+            pdf.text(`Data de Emissão: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 15, 25);
+
+            // Quadro do Comprador
+            pdf.setFillColor(245, 245, 245);
+            pdf.rect(15, 30, 180, 20, "F");
+            pdf.setFont("Helvetica", "bold");
+            pdf.setTextColor(17, 17, 17);
+            pdf.text(`Comprador: ${nomeCli}`, 18, 37);
+            pdf.text(`Contato/Whats: ${whatsCli}`, 18, 44);
+            pdf.text(`Preferência de Acerto: ${pagamento}`, 110, 37);
+
+            // Tabela de Produtos
+            let y = 60;
+            pdf.setFontSize(10);
+            pdf.text("CÓD / SKU", 15, y);
+            pdf.text("DESCRIÇÃO DA JOIA NO BRUTO", 45, y);
+            pdf.text("QTD", 125, y);
+            pdf.text("PESO TOT", 140, y);
+            pdf.text("V. TOTAL", 165, y);
+            
+            pdf.setDrawColor(200, 200, 200);
+            pdf.line(15, y + 2, 195, y + 2);
+            y += 7;
+
+            let subtotal = 0;
+            let pesoTotal = 0;
+
+            pdf.setFont("Helvetica", "normal");
+            pdf.setFontSize(9);
+
+            carrinho.forEach(item => {
+                if (y > 270) { pdf.addPage(); y = 20; }
+
+                const subItem = item.precoFinal * item.quantidade;
+                const pesoItem = item.peso * item.quantidade;
+                subtotal += subItem;
+                pesoTotal += pesoItem;
+
+                pdf.setFont("Helvetica", "bold");
+                pdf.text(item.sku || 'N/A', 15, y);
+                
+                pdf.setFont("Helvetica", "normal");
+                // Concatena variação ao nome
+                let txtNome = item.nome;
+                if(item.variacao) txtNome += ` (Var: ${item.variacao})`;
+                
+                // Corta strings muito extensas no PDF para evitar sobreposição
+                if(txtNome.length > 42) txtNome = txtNome.substring(0, 39) + "...";
+                pdf.text(txtNome, 45, y);
+                
+                pdf.text(item.quantidade.toString(), 127, y);
+                pdf.text(`${pesoItem.toFixed(2)}g`, 140, y);
+                pdf.text(fM(subItem), 165, y);
+
+                y += 8;
+            });
+
+            // Bloco de Fechamento Financeiro
+            y += 5;
+            if (y > 240) { pdf.addPage(); y = 20; }
+            
+            pdf.setDrawColor(17, 17, 17);
+            pdf.line(15, y, 195, y);
+            y += 6;
+
+            const descPix = subtotal * (configGlobal.pixDesc / 100);
+            
+            pdf.setFont("Helvetica", "bold");
+            pdf.setFontSize(11);
+            pdf.text("RESUMO CONSOLIDADO DO PEDIDO", 15, y);
+            
+            pdf.setFontSize(10);
+            pdf.setFont("Helvetica", "normal");
+            y += 6;
+            pdf.text(`Peso Total do Lote: ${pesoTotal.toFixed(2)}g`, 15, y);
+            pdf.text(`Subtotal em Peças: ${fM(subtotal)}`, 110, y);
+            
+            y += 6;
+            pdf.setFont("Helvetica", "bold");
+            pdf.text(`LÍQUIDO À VISTA (PIX -${configGlobal.pixDesc}%): ${fM(subtotal - descPix)}`, 15, y);
+            pdf.setFont("Helvetica", "normal");
+            pdf.text(`Líquido no Cartão: ${fM(subtotal)} (ou ${configGlobal.parcelasMax}x de ${fM(subtotal/configGlobal.parcelasMax)})`, 110, y);
+
+            pdf.save(`Pedido_Abella_${nomeCli.replace(/\s+/g, '_')}.pdf`);
         }
 
         window.onload = init;

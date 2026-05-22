@@ -56,7 +56,6 @@
 
     <div id="editorPedido" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[99998] p-4 font-sans">
         <div class="bg-[#111] w-full max-w-5xl rounded-2xl p-6 overflow-y-auto max-h-[90vh] border border-[#222] custom-scroll space-y-6 shadow-2xl text-xs text-white">
-            
             <div class="flex justify-between items-center border-b border-[#222] pb-4">
                 <div>
                     <h2 class="text-[#caa85c] font-black uppercase tracking-tighter text-lg">Gerenciamento Avançado de Pedido</h2>
@@ -114,7 +113,6 @@
 
     <div id="previewRomaneio" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center z-[99999] p-4 font-sans">
         <div class="bg-zinc-900 w-full max-w-4xl rounded-2xl border border-zinc-800 flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
-            
             <div class="bg-[#111] border-b border-zinc-800 p-4 flex justify-between items-center shrink-0">
                 <div>
                     <h3 class="text-[#caa85c] font-black uppercase text-sm tracking-wide flex items-center gap-2">👁️ Pré-visualização do Romaneio</h3>
@@ -129,14 +127,57 @@
                     </button>
                 </div>
             </div>
-
             <div class="flex-1 overflow-y-auto p-6 bg-zinc-800/40 custom-scroll flex justify-center">
-                <div id="corpo-preview-a4" class="bg-white w-full max-w-[210mm] min-h-[297mm] p-8 shadow-xl text-black rounded-sm border border-gray-300 overflow-x-auto">
-                    </div>
+                <div id="corpo-preview-a4" class="bg-white w-full max-w-[210mm] min-h-[297mm] p-8 shadow-xl text-black rounded-sm border border-gray-300 overflow-x-auto"></div>
             </div>
         </div>
     </div>
 
+    <script>
+        // Adicione aqui as credenciais do seu projeto Firebase caso elas não estejam no arquivo externo
+        const firebaseConfig = {
+            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com" // Exemplo
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        // Expõe a variável 'db' na raiz global (window) para o iframe coletar sem reconectar
+        window.db = firebase.database();
+    </script>
+
     <script src="admin-logic.js"></script>
+
+    <script>
+        // Armazena a função original de troca de abas caso ela exista no seu arquivo de lógica externa
+        const funcaoMudarAbaOriginal = window.mudarAbaDinamica;
+
+        window.mudarAbaDinamica = function(aba) {
+            // Se o usuário clicar no Editor Full Master, intercepta e injeta o iframe isolado
+            if (aba === 'editor') {
+                const container = document.getElementById('conteudo-dinamico');
+                
+                // Remove os scrolls extras do container pai para deixar o controle total do design com o módulo
+                container.classList.remove('p-8');
+                container.innerHTML = `
+                    <iframe src="modulo/image-editor.html" class="w-full h-[calc(100vh-10px)] border-none" id="iframe-editor-ia"></iframe>
+                `;
+                
+                // Gerencia o visual de seleção ativa no menu lateral
+                document.querySelectorAll('#menu-navegacao button').forEach(btn => btn.classList.remove('bg-zinc-800', 'text-white'));
+                const btnEditor = document.getElementById('btn-editor');
+                if(btnEditor) btnEditor.classList.add('bg-zinc-800', 'text-white');
+            } else {
+                // Para todas as outras abas, restaura o espaçamento padrão e chama a lógica nativa do seu script
+                const container = document.getElementById('conteudo-dinamico');
+                if(!container.classList.contains('p-8')) container.classList.add('p-8');
+                
+                if (typeof funcaoMudarAbaOriginal === "function") {
+                    funcaoMudarAbaOriginal(aba);
+                }
+            }
+        };
+    </script>
 </body>
 </html>

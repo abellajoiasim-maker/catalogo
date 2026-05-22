@@ -17,6 +17,28 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.database();
+/**
+ * Converte links gs:// em URLs públicas de download do Firebase Storage.
+ * Útil para exibir imagens em tempo real no catálogo.
+ */
+async function obterLinkPublico(caminhoGS) {
+    if (!caminhoGS || typeof caminhoGS !== 'string') return caminhoGS;
+    
+    // Se já for um link http, retorna direto
+    if (caminhoGS.startsWith('http')) return caminhoGS;
+
+    // Se for o formato gs://, faz a conversão
+    if (caminhoGS.startsWith('gs://')) {
+        try {
+            const storageRef = firebase.storage().refFromURL(caminhoGS);
+            return await storageRef.getDownloadURL();
+        } catch (error) {
+            console.error("Erro ao converter link GS:", error);
+            return null; // Retorna nulo se o arquivo não existir
+        }
+    }
+    return caminhoGS;
+}
 
 // =========================================================================
 // GERENCIAMENTO DE ABAS DINÂMICAS COM CONVERSOR AUTOMÁTICO DE IMAGENS (GS -> HTTPS)

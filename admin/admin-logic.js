@@ -58,16 +58,16 @@ window.mudarAbaDinamica = function(aba) {
     }
 }
 
-// INJETOR DO TEMPLATE NATIVO DO EDITOR MASTER IA
+// INJETOR DO TEMPLATE NATIVO DO EDITOR MASTER IA (CORRIGIDO PARA RETORNAR À RAIZ)
 function carregarTemplateEditorIA(targetContainer) {
-    fetch('modulo/image-editor.html')
+    // O "../" faz o navegador sair da pasta 'admin/' e achar a pasta 'modulo/' na raiz de 'catalogo/'
+    fetch('../modulo/image-editor.html')
         .then(response => {
             if(!response.ok) throw new Error("Módulo image-editor.html não localizado na pasta.");
             return response.text();
         })
         .then(html => {
             targetContainer.innerHTML = html;
-            // Executa o gatilho de carga das coleções após renderizar os nós visuais
             if(typeof window.inicializarMapeamentoLote === "function") {
                 window.inicializarMapeamentoLote();
             }
@@ -75,11 +75,10 @@ function carregarTemplateEditorIA(targetContainer) {
         .catch(err => {
             console.error(err);
             targetContainer.innerHTML = `<div class="p-6 bg-red-950/20 border border-red-900 text-red-400 rounded-xl text-xs font-mono">
-                ❌ Falha crítica ao carregar interface do Editor: ${err.message}<br>Verifique se o arquivo está na pasta correta: <b>modulo/image-editor.html</b>
+                ❌ Falha crítica ao carregar interface do Editor: ${err.message}<br>Caminho tentado: <b>../modulo/image-editor.html</b>
             </div>`;
         });
 }
-
 // GATILHO AUTOMÁTICO INICIAL
 document.addEventListener("DOMContentLoaded", function() {
     mudarAbaDinamica('pedidos');

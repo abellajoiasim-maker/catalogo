@@ -25,7 +25,7 @@ window.pedidoEditando = null;
 window.fMoeda = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
 // =========================================================================
-// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO
+// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (CORRIGIDO)
 // =========================================================================
 async function mudarAbaDinamica(nomeAba) {
     const container = document.getElementById('conteudo-dinamico');
@@ -53,8 +53,9 @@ async function mudarAbaDinamica(nomeAba) {
 
     try {
         if (!cacheModulos[nomeAba]) {
-            const resposta = await fetch(`${nomeAba}.html`);
-            if (!resposta.ok) throw new Error(`Arquivo ${nomeAba}.html não mapeado.`);
+            // CORREÇÃO AQUI: Aponta explicitamente para a pasta 'modulo' interna do admin
+            const resposta = await fetch(`modulo/${nomeAba}.html`);
+            if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado.`);
             cacheModulos[nomeAba] = await resposta.text();
         }
 
@@ -86,7 +87,6 @@ async function mudarAbaDinamica(nomeAba) {
         `;
     }
 }
-
 // =========================================================================
 // SINCRONIZADOR CENTRAL RESTRITO DO FIREBASE (DRIVE DE DADOS)
 // =========================================================================

@@ -42,7 +42,7 @@ async function obterLinkPublico(caminhoGS) {
 }
 
 // =========================================================================
-// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (CORRIGIDO PARA PASTA MODULO)
+// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (AJUSTE DE ROTAS ESTREITAS)
 // =========================================================================
 async function mudarAbaDinamica(nomeAba) {
     const container = document.getElementById('conteudo-dinamico');
@@ -69,16 +69,26 @@ async function mudarAbaDinamica(nomeAba) {
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ../modulo/${nomeAba}.html...</div>`;
 
     try {
-        // Se o botão do HTML disparar 'config', nós traduzimos aqui para buscar o arquivo certo 'configuracoes.html'
+        // TRATAMENTO REFORÇADO DE ROTAS: Garante o mapeamento exato com o arquivo físico
         let nomeArquivo = nomeAba;
+        
         if (nomeAba === 'config') {
             nomeArquivo = 'configuracoes';
         }
+        
+        // Caso o botão passe alguma variação, forçamos o padrão exato da pasta 'modulo'
+        if (nomeAba === 'pedidos') {
+            nomeArquivo = 'pedidos'; 
+        }
 
         if (!cacheModulos[nomeAba]) {
-            // CORREÇÃO DO CAMINHO: Sobe para a raiz e entra na pasta 'modulo'
+            // Requisição apontando corretamente para fora da pasta admin, mirando a pasta modulo
             const resposta = await fetch(`../modulo/${nomeArquivo}.html`);
-            if (!resposta.ok) throw new Error(`Arquivo ../modulo/${nomeArquivo}.html não mapeado na árvore de diretórios.`);
+            
+            if (!resposta.ok) {
+                throw new Error(`Servidor respondeu com status ${resposta.status}. Verifique se o arquivo "${nomeArquivo}.html" existe exatamente com este nome dentro da pasta "modulo".`);
+            }
+            
             cacheModulos[nomeAba] = await resposta.text();
         }
 
@@ -101,6 +111,14 @@ async function mudarAbaDinamica(nomeAba) {
             <div class="bg-red-950/20 border border-red-900 text-red-400 p-4 rounded-xl text-xs font-mono">
                 <p class="font-bold">⚠️ Falha ao renderizar componente: ${nomeAba}.html</p>
                 <p class="text-zinc-500 mt-1">${erro.message}</p>
+                <div class="mt-2 text-[10px] text-zinc-400 bg-black/40 p-2 rounded border border-zinc-800">
+                    <strong>Estrutura esperada:</strong><br>
+                    catalogo/<br>
+                    ├── admin/admin-logic.js<br>
+                    └── modulo/<br>
+                        ├── pedidos.html (tentando ler como: ${nomeArquivo}.html)<br>
+                        └── configuracoes.html
+                </div>
             </div>
         `;
     }

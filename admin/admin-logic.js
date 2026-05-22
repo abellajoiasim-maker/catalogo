@@ -42,7 +42,7 @@ async function obterLinkPublico(caminhoGS) {
 }
 
 // =========================================================================
-// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO
+// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (CORRIGIDO PARA PASTA MODULO)
 // =========================================================================
 async function mudarAbaDinamica(nomeAba) {
     const container = document.getElementById('conteudo-dinamico');
@@ -66,12 +66,19 @@ async function mudarAbaDinamica(nomeAba) {
         delete listenersAtivos['orders'];
     }
 
-    container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ${nomeAba}.html...</div>`;
+    container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ../modulo/${nomeAba}.html...</div>`;
 
     try {
+        // Se o botão do HTML disparar 'config', nós traduzimos aqui para buscar o arquivo certo 'configuracoes.html'
+        let nomeArquivo = nomeAba;
+        if (nomeAba === 'config') {
+            nomeArquivo = 'configuracoes';
+        }
+
         if (!cacheModulos[nomeAba]) {
-            const resposta = await fetch(`${nomeAba}.html`);
-            if (!resposta.ok) throw new Error(`Arquivo ${nomeAba}.html não mapeado.`);
+            // CORREÇÃO DO CAMINHO: Sobe para a raiz e entra na pasta 'modulo'
+            const resposta = await fetch(`../modulo/${nomeArquivo}.html`);
+            if (!resposta.ok) throw new Error(`Arquivo ../modulo/${nomeArquivo}.html não mapeado na árvore de diretórios.`);
             cacheModulos[nomeAba] = await resposta.text();
         }
 
@@ -98,7 +105,6 @@ async function mudarAbaDinamica(nomeAba) {
         `;
     }
 }
-
 // MÓDULO CONTROLADOR COESIVO - GERENCIAMENTO AVANÇADO DE PEDIDOS (SEGURANÇA DE ELEMENTOS)
 // =========================================================================
 window.abrirEditorPedido = function(id) {

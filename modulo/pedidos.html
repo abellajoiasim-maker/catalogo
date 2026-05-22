@@ -105,11 +105,34 @@
         if (badgeCount) badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
     };
 
-    // Função legada adaptada para manter retrocompatibilidade com inputs antigos do sistema
-    window.carregarPedidos = function() {
-        window.renderizarTabelaPedidosVisivel();
-    };
+    // =========================================================================
+// FUNÇÃO LEGADA ADAPTADA PARA MANTER RETROCOMPATIBILIDADE (CONEXÃO FIREBASE)
+// =========================================================================
+window.carregarPedidos = function() {
+    console.log("📦 [Ecossistema] Iniciando escuta em tempo real do nó 'orders'...");
+    
+    // Liga o listener em tempo real no nó de pedidos do Firebase
+    db.ref('orders').on('value', (snapshot) => {
+        const dados = snapshot.val() || {};
+        
+        // Alimenta o cache de segurança inter-abas que o admin-logic e o editor usam
+        window.todosPedidosLocal = dados;
+        
+        console.log(`✅ [Ecossistema] ${Object.keys(dados).length} pedidos mapeados com sucesso.`);
+        
+        // Dispara a renderização visual da tabela que você já tem implementada
+        if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
+            window.renderizarTabelaPedidosVisivel();
+        } else {
+            console.error("🚨 Erro: A função 'window.renderizarTabelaPedidosVisivel' não foi encontrada no escopo deste módulo.");
+        }
+    }, (error) => {
+        console.error("🚨 Erro de permissão ou leitura no nó 'orders':", error);
+    });
+};
 
+// Executa a função imediatamente para disparar a carga assim que a aba é injetada
+window.carregarPedidos();
     // Métodos utilitários delegados ao Firebase via referências do Motor Central
     function renderItensEditor(itens) {
         const box = document.getElementById('edItens');

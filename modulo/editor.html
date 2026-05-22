@@ -233,6 +233,7 @@
     }
 
     // PROCESSADOR RECURSIVO CORRIGIDO E GLOBALIZADO (COM 'X')
+   // PROCESSADOR RECURSIVO BLINDADO (LOCALIZAÇÃO DINÂMICA VIA DOM)
     window.executarProximoItemDaFila = function() {
         if (_INDICE_ATUAL_FILA >= _FILA_PROCESSAMENTO.length) {
             alert(`🎉 Lote finalizado! Foram sincronizadas ${_FILA_PROCESSAMENTO.length} fotos com sucesso no catálogo.`);
@@ -243,11 +244,30 @@
         }
 
         var idAtual = _FILA_PROCESSAMENTO[_INDICE_ATUAL_FILA];
-        var itemContainerStatus = document.getElementById(`status-lote-${idAtual}`);
         
+        // ESTRATÉGIA DE SEGURANÇA: Localiza o checkbox e acha a célula de status na mesma linha física
+        var itemContainerStatus = null;
+        var checkboxFisico = document.querySelector(`.check-item-lote[value="${idAtual}"]`);
+        
+        if (checkboxFisico) {
+            var linhaTr = checkboxFisico.closest('tr');
+            if (linhaTr) {
+                // Seleciona a última célula (coluna de status) daquela linha específica
+                itemContainerStatus = linhaTr.cells[linhaTr.cells.length - 1];
+            }
+        }
+
+        // Caso falhe por segurança, usa o ID textual puro como Plano B
+        if (!itemContainerStatus) {
+            itemContainerStatus = document.getElementById(`status-lote-${idAtual}`);
+        }
+        
+        // Modifica visualmente o status para processamento
         if(itemContainerStatus) {
             itemContainerStatus.className = "py-3 px-4 text-right pr-6 font-bold text-amber-500 animate-pulse text-[11px]";
             itemContainerStatus.innerText = "⚡ Processando com IA...";
+        } else {
+            console.warn(`⚠️ Não foi possível encontrar o container de status para o ID: ${idAtual}`);
         }
 
         // Captura os parâmetros industriais selecionados nos menus superiores
@@ -270,7 +290,7 @@
                     itemContainerStatus.innerText = "✅ Sincronizado!";
                 }
                 _INDICE_ATUAL_FILA++;
-                window.executarProximoItemDaFila(); // Avança na fila
+                window.executarProximoItemDaFila(); // Avança na fila de execução
             }).catch(function(error) {
                 console.error("Erro ao atualizar item via IA:", error);
                 if(itemContainerStatus) {
@@ -278,8 +298,9 @@
                     itemContainerStatus.innerText = "❌ Erro";
                 }
                 _INDICE_ATUAL_FILA++;
-                window.executarProximoItemDaFila(); // Pula para o próximo mesmo se der erro
+                window.executarProximoItemDaFila(); // Força avanço mesmo em caso de falha individual
             });
         }, 1200);
     }
+
 </script>

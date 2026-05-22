@@ -1,5 +1,5 @@
 // ==========================================
-// CONFIGURAÇÃO INICIAL
+// 1. CONFIGURAÇÃO E INICIALIZAÇÃO
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
@@ -13,17 +13,18 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const storage = firebase.storage();
 
 // ==========================================
-// CONVERSOR GS:// PARA HTTPS:// (GLOBAL)
+// 2. CONVERSOR DE IMAGENS (GS -> HTTPS)
 // ==========================================
 async function obterLinkPublico(caminhoGS) {
     if (!caminhoGS || typeof caminhoGS !== 'string' || caminhoGS.startsWith('http')) return caminhoGS;
     if (caminhoGS.startsWith('gs://')) {
         try {
-            return await firebase.storage().refFromURL(caminhoGS).getDownloadURL();
+            return await storage.refFromURL(caminhoGS).getDownloadURL();
         } catch (error) {
-            console.error("Erro ao converter link GS:", error);
+            console.error("Erro ao converter:", error);
             return null;
         }
     }
@@ -31,78 +32,72 @@ async function obterLinkPublico(caminhoGS) {
 }
 
 // ==========================================
-// GERENCIAMENTO DE ABAS
+// 3. GERENCIADOR DE ABAS (O CÉREBRO)
 // ==========================================
 function mudarAbaDinamica(aba) {
-    const conteudoDinamico = document.getElementById('conteudo-dinamico');
-    if (!conteudoDinamico) return;
-
+    const main = document.getElementById('conteudo-dinamico');
+    
+    // Atualiza estilo dos botões
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('bg-[#caa85c]', 'text-black', 'font-bold');
         btn.classList.add('bg-zinc-900', 'text-gray-400');
     });
+    const btn = document.getElementById(`btn-${aba}`);
+    if (btn) { btn.classList.add('bg-[#caa85c]', 'text-black', 'font-bold'); }
 
-    const btnAtivo = document.getElementById(`btn-${aba}`);
-    if (btnAtivo) {
-        btnAtivo.classList.remove('bg-zinc-900', 'text-gray-400');
-        btnAtivo.classList.add('bg-[#caa85c]', 'text-black', 'font-bold');
-    }
-
-    // Carregamento de módulos
-    if (aba === 'categorias') {
-        renderizarCategoriasUI();
-        escutarCategoriasFirebase();
-        configurarPreviewImagem();
-    } else {
-        conteudoDinamico.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-zinc-500">
-                <p class="text-xs italic">O módulo <strong>${aba}</strong> está em desenvolvimento.</p>
-                <button onclick="mudarAbaDinamica('categorias')" class="mt-4 text-[#caa85c] underline">Voltar para Categorias</button>
-            </div>`;
+    // Roteador de Módulos
+    switch (aba) {
+        case 'categorias': renderCategorias(main); break;
+        case 'produtos': renderProdutos(main); break;
+        case 'pedidos': renderPedidos(main); break;
+        default: main.innerHTML = `<div class="p-10 text-zinc-500">Módulo ${aba} ainda não implementado.</div>`;
     }
 }
 
 // ==========================================
-// MÓDULO CATEGORIAS (CORRIGIDO E UNIFICADO)
+// 4. MÓDULOS DE RENDERIZAÇÃO
 // ==========================================
-function renderizarCategoriasUI() {
-    document.getElementById('conteudo-dinamico').innerHTML = `
-        <div class="p-6 max-w-6xl mx-auto space-y-6">
-            <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
-                <h1 class="text-2xl font-bold text-white">📁 Gestão de Categorias</h1>
-                <button onclick="abrirModalCategoria()" class="bg-emerald-600 px-5 py-2 rounded-xl text-sm">➕ Nova Categoria</button>
-            </div>
-            <div id="grid-categorias" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"></div>
-        </div>
-        `;
-}
 
-async function escutarCategoriasFirebase() {
-    db.ref('categories').on('value', async (snapshot) => {
-        const grid = document.getElementById('grid-categorias');
-        if (!grid) return;
+// --- Módulo: Categorias ---
+async function renderCategorias(container) {
+    container.innerHTML = `<div class="p-6"><h1 class="text-xl text-white font-bold mb-4">Gestão de Categorias</h1><div id="grid-cat" class="grid grid-cols-4 gap-4"></div></div>`;
+    db.ref('categories').on('value', async (snap) => {
+        const grid = document.getElementById('grid-cat');
         grid.innerHTML = '';
-        const dados = snapshot.val();
-        if (!dados) return;
-
-        for (const id in dados) {
-            const cat = dados[id];
-            const urlFinal = await obterLinkPublico(cat.image || cat.urlImagem);
-            
-            const card = document.createElement('div');
-            card.className = "bg-[#111] rounded-2xl border border-zinc-800 overflow-hidden";
-            card.innerHTML = `
-                <div class="w-full aspect-square bg-zinc-900">
-                    <img src="${urlFinal || ''}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150'">
-                </div>
-                <div class="p-4 text-white font-bold">${cat.nome || id}</div>
-            `;
-            grid.appendChild(card);
+        const dados = snap.val() || {};
+        for (let id in dados) {
+            const url = await obterLinkPublico(dados[id].image || dados[id].urlImagem);
+            grid.innerHTML += `
+                <div class="bg-[#111] p-2 rounded-xl">
+                    <img src="${url}" class="w-full aspect-square object-cover rounded-lg">
+                    <p class="text-white text-xs mt-2">${dados[id].nome}</p>
+                </div>`;
         }
     });
 }
 
-// ==========================================
-// INICIALIZAÇÃO
-// ==========================================
-window.onload = () => mudarAbaDinamica('categorias');
+// --- Módulo: Produtos ---
+async function renderProdutos(container) {
+    container.innerHTML = `<div class="p-6"><h1 class="text-xl text-white font-bold mb-4">Gestão de Produtos</h1><div id="grid-prod" class="grid grid-cols-4 gap-4"></div></div>`;
+    db.ref('products').on('value', async (snap) => {
+        const grid = document.getElementById('grid-prod');
+        grid.innerHTML = '';
+        const dados = snap.val() || {};
+        for (let id in dados) {
+            const url = await obterLinkPublico(dados[id].imagem);
+            grid.innerHTML += `
+                <div class="bg-[#111] p-2 rounded-xl">
+                    <img src="${url}" class="w-full aspect-square object-cover rounded-lg">
+                    <p class="text-white text-xs mt-2">${dados[id].nome || 'Sem Nome'}</p>
+                </div>`;
+        }
+    });
+}
+
+// --- Módulo: Pedidos (Exemplo de estrutura) ---
+function renderPedidos(container) {
+    container.innerHTML = `<div class="p-6 text-white"><h1 class="text-xl font-bold">Pedidos Recebidos</h1><p>Lista de pedidos aqui...</p></div>`;
+}
+
+// Inicialização
+window.onload = () => mudarAbaDinamica('pedidos');

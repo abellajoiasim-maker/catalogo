@@ -1,5 +1,5 @@
 // =========================================================================
-// CONFIGURAÇÃO E INICIALIZAÇÃO DO FIREBASE COLETIVO (MANTIDA INTEGRALMENTE)
+// CONFIGURAÇÃO E INICIALIZAÇÃO DO FIREBASE COLETIVO
 // =========================================================================
 const firebaseConfig = {
     apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
@@ -16,23 +16,23 @@ if (!firebase.apps.length) {
 }
 const db = firebase.database();
 
-// CACHES GLOBAIS DE OPERAÇÃO DO EDITOR
+// CACHES GLOBAIS DE OPERAÇÃO DO EDITOR IA
 var _PRODUTOS_LOTE_CACHE = {};
 var _FILA_PROCESSAMENTO = [];
 var _INDICE_ATUAL_FILA = 0;
 
 // =========================================================================
-// INTERCEPTADOR DE ABAS BLINDADO (SALVA E PRESERVA TODA A SUA LÓGICA ANTIGA)
+// INTERCEPTADOR DE ABAS: COMPATIBILIDADE TOTAL COM SCRIPTS NATIVOS ANTERIORES
 // =========================================================================
 (function() {
-    // Captura e guarda na memória o motor antigo de abas que já funcionava no seu painel
+    // Preserva a função antiga completa que já existia na memória (se houver)
     const funcaoMudarAbaOriginal = window.mudarAbaDinamica;
 
     window.mudarAbaDinamica = function(aba) {
         const container = document.getElementById('conteudo-dinamico');
         if (!container) return;
         
-        // 1. Atualiza o estado visual de seleção do menu lateral (Garante o destaque dourado)
+        // 1. Gerenciamento Visual Ativo/Inativo do Menu Lateral
         document.querySelectorAll('#menu-navegacao button').forEach(btn => {
             btn.classList.remove('bg-[#caa85c]', 'text-black');
             btn.classList.add('bg-zinc-900', 'text-gray-400');
@@ -44,20 +44,18 @@ var _INDICE_ATUAL_FILA = 0;
             btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
         }
 
-        // 2. Roteamento Inteligente
+        // 2. Roteador de Módulos
         if (aba === 'editor') {
-            // Remove margens para dar espaço máximo à mesa de renderização de fotos
-            container.classList.remove('p-8'); 
+            container.classList.remove('p-8'); // Abre espaço total para o Editor IA
             carregarTemplateEditorIA(container);
         } else {
-            // Restaura o espaçamento padrão de layout (p-8) para os outros módulos
             if(!container.classList.contains('p-8')) container.classList.add('p-8');
 
-            // DEVOLUÇÃO SEGURA: Executa o seu código nativo original para Pedidos, Ofertas, Produtos, etc.
-            if (typeof funcaoMudarAbaOriginal === "function") {
+            // Se o seu script antigo de Pedidos/Produtos possuía a função, executa-a integralmente
+            if (typeof funcaoMudarAbaOriginal === "function" && funcaoMudarAbaOriginal !== window.mudarAbaDinamica) {
                 funcaoMudarAbaOriginal(aba);
             } else {
-                // Caso não encontre a cópia, executa o mapeamento de retaguarda padrão do ecossistema
+                // Rota de contingência direta vinculada ao ecossistema do Firebase
                 executarMapeamentoFallback(aba, container);
             }
         }
@@ -65,48 +63,60 @@ var _INDICE_ATUAL_FILA = 0;
 })();
 
 // =========================================================================
-// INTERRUPTOR DE RETAGUARDA (FALLBACK CASO AS FUNÇÕES COPIADAS SE PERCAM)
+// ROUTER DE CONTINGÊNCIA (FALLBACK DOS MÓDULOS DO BANCO)
 // =========================================================================
 function ejecutarMapeamentoFallback(aba, container) {
     switch(aba) {
         case 'pedidos':
             if (typeof window.carregarPedidos === "function") window.carregarPedidos();
             else if (typeof window.listarPedidos === "function") window.listarPedidos();
+            else {
+                container.innerHTML = `<div class="space-y-4">
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">📦 Pedidos Recebidos</h2>
+                    <div id="tabela-pedidos-container" class="text-zinc-500 italic text-xs animate-pulse">Sincronizando com Firebase real...</div>
+                </div>`;
+                if (typeof window.inicializarPainelPedidos === "function") window.inicializarPainelPedidos();
+            }
             break;
+
         case 'produtos':
             if (typeof window.carregarProdutos === "function") window.carregarProdutos();
             else if (typeof window.listarProdutos === "function") window.listarProdutos();
             break;
+
         case 'ofertas':
             if (typeof window.carregarOfertas === "function") window.carregarOfertas();
             break;
+
         case 'galvanicas':
             if (typeof window.carregarGalvanicas === "function") window.carregarGalvanicas();
             break;
+
         case 'categorias':
             if (typeof window.carregarCategorias === "function") window.carregarCategorias();
             break;
+
         case 'config':
             if (typeof window.carregarConfiguracoes === "function") window.carregarConfiguracoes();
             break;
+
         default:
-            container.innerHTML = `<div class="flex items-center justify-center h-48 text-zinc-500 italic text-xs">Módulo [${aba.toUpperCase()}] carregando dados do Firebase...</div>`;
+            container.innerHTML = `<div class="flex items-center justify-center h-48 text-zinc-500 italic text-xs">Módulo [${aba.toUpperCase()}] inicializando...</div>`;
     }
 }
 
 // =========================================================================
-// INJETOR DO TEMPLATE NATIVO DO EDITOR (RESOLVE ERROS 404 DE SUBPASTAS DO GITHUB)
+// INJETOR DO TEMPLATE NATIVO DO EDITOR MASTER IA (URL ABSOLUTA CONTRA 404)
 // =========================================================================
 function carregarTemplateEditorIA(targetContainer) {
-    // URL absoluta e imutável para não errar o caminho caso o painel esteja na pasta /admin/
     fetch('https://abellajoiasim-maker.github.io/catalogo/modulo/image-editor.html')
         .then(response => {
-            if(!response.ok) throw new Error("Não foi possível ler o arquivo image-editor.html no repositório GitHub.");
+            if(!response.ok) throw new Error("Módulo image-editor.html não localizado no servidor GitHub.");
             return response.text();
         })
         .then(html => {
             targetContainer.innerHTML = html;
-            // Dispara o gatilho assíncrono interno para preencher o select de categorias
+            // Dispara a leitura assíncrona das coleções do Firebase para alimentar o Lote
             if(typeof window.inicializarMapeamentoLote === "function") {
                 window.inicializarMapeamentoLote();
             }
@@ -120,10 +130,10 @@ function carregarTemplateEditorIA(targetContainer) {
 }
 
 // =========================================================================
-// GATILHO AUTOMÁTICO INICIAL
+// GATILHO AUTOMÁTICO INICIAL (CICLO DE VIDA CONCLUÍDO)
 // =========================================================================
 document.addEventListener("DOMContentLoaded", function() {
-    // Inicializa abrindo a tela de pedidos padrão do catálogo
+    // Inicializa o painel abrindo por padrão o fluxo de monitoramento de pedidos
     if (typeof window.mudarAbaDinamica === "function") {
         window.mudarAbaDinamica('pedidos');
     }

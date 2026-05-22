@@ -42,14 +42,20 @@ async function obterLinkPublico(caminhoGS) {
 }
 
 // =========================================================================
-// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (CORREÇÃO DE REFERÊNCIA)
+// INTERRUPÇÃO ASSÍNCRONA E INJEÇÃO DE ESCOPO ISOLADO (RESOLUÇÃO DE CACHE)
 // =========================================================================
 async function mudarAbaDinamica(nomeAba) {
     const container = document.getElementById('conteudo-dinamico');
     if (!container) return;
 
-    // Garantia de escopo da variável para evitar o ReferenceError no Catch
+    // Normaliza o nome para evitar problemas se o HTML passar 'configuracoes' ou 'config'
     let nomeArquivo = nomeAba;
+    if (nomeAba === 'configuracoes' || nomeAba === 'config') {
+        nomeArquivo = 'config';
+    }
+    if (nomeAba === 'pedidos') {
+        nomeArquivo = 'pedidos';
+    }
 
     // Ajuste Visual da Sidebar
     document.querySelectorAll('#menu-navegacao .tab-btn').forEach(btn => {
@@ -57,7 +63,8 @@ async function mudarAbaDinamica(nomeAba) {
         btn.classList.add('bg-zinc-900', 'text-gray-400');
     });
     
-    const btnAtivo = document.getElementById(`btn-${nomeAba}`);
+    // Tenta iluminar o botão correto na sidebar (trata as duas IDs possíveis)
+    const btnAtivo = document.getElementById(`btn-${nomeAba}`) || document.getElementById(`btn-${nomeArquivo}`);
     if (btnAtivo) {
         btnAtivo.classList.remove('bg-zinc-900', 'text-gray-400');
         btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
@@ -72,24 +79,18 @@ async function mudarAbaDinamica(nomeAba) {
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ../modulo/${nomeArquivo}.html...</div>`;
 
     try {
-        // Alinhamento estrito com os arquivos do seu GitHub
-        // Se o admin.html chamar 'config', aponta para 'config.html'
-        if (nomeAba === 'config') {
-            nomeArquivo = 'config';
-        }
-
-        if (!cacheModulos[nomeAba]) {
-            // Requisição com o caminho físico exato saindo de admin/ para modulo/
+        if (!cacheModulos[nomeArquivo]) {
+            // Requisição apontando estritamente para o arquivo físico real
             const resposta = await fetch(`../modulo/${nomeArquivo}.html`);
             
             if (!resposta.ok) {
-                throw new Error(`Servidor retornou status ${resposta.status}. O arquivo "${nomeArquivo}.html" não existe na pasta "modulo".`);
+                throw new Error(`O arquivo "${nomeArquivo}.html" não foi encontrado dentro da pasta "modulo".`);
             }
             
-            cacheModulos[nomeAba] = await resposta.text();
+            cacheModulos[nomeArquivo] = await resposta.text();
         }
 
-        container.innerHTML = cacheModulos[nomeAba];
+        container.innerHTML = cacheModulos[nomeArquivo];
 
         // Força o Navegador a executar códigos Javascript dentro da página injetada
         const scripts = container.querySelectorAll("script");
@@ -104,12 +105,11 @@ async function mudarAbaDinamica(nomeAba) {
         });
 
     } catch (erro) {
-        // Bloco corrigido: nomeArquivo agora está visível aqui e não quebra o script
         container.innerHTML = `
             <div class="bg-red-950/20 border border-red-900 text-red-400 p-4 rounded-xl text-xs font-mono">
                 <p class="font-bold">⚠️ Falha ao renderizar componente: ${nomeAba}.html</p>
                 <p class="text-zinc-500 mt-1">${erro.message}</p>
-                <p class="text-[10px] text-zinc-400 mt-2">Tentou buscar em: ../modulo/${nomeArquivo}.html</p>
+                <p class="text-[10px] text-zinc-400 mt-2 font-bold bg-black/50 p-2 rounded">Alvo real do sistema: catalogo/modulo/${nomeArquivo}.html</p>
             </div>
         `;
     }

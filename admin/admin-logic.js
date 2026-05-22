@@ -51,13 +51,14 @@ async function mudarAbaDinamica(nomeAba) {
 
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-500 font-mono text-xs animate-pulse">Injetando componente ${nomeAba}.html...</div>`;
 
-    try {
-       // Procure por este bloco na função mudarAbaDinamica e altere:
-if (!cacheModulos[nomeAba]) {
-    const resposta = await fetch(`../modulo/${nomeAba}.html`); // Adicionado ../ para buscar na raiz
-    if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado.`);
-    cacheModulos[nomeAba] = await resposta.text();
-}
+   try {
+        if (!cacheModulos[nomeAba]) {
+            // CORREÇÃO: Adicionado "../" para o sistema sair da pasta admin e buscar na raiz do catálogo
+            const resposta = await fetch(`../modulo/${nomeAba}.html`);
+            if (!resposta.ok) throw new Error(`Arquivo modulo/${nomeAba}.html não encontrado na raiz.`);
+            cacheModulos[nomeAba] = await resposta.text();
+        }
+
         container.innerHTML = cacheModulos[nomeAba];
 
         // Força o Navegador a executar códigos Javascript dentro da página injetada
@@ -85,7 +86,6 @@ if (!cacheModulos[nomeAba]) {
             </div>
         `;
     }
-}
 // =========================================================================
 // SINCRONIZADOR CENTRAL RESTRITO DO FIREBASE (DRIVE DE DADOS)
 // =========================================================================

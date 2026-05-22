@@ -151,15 +151,16 @@
 
     <script>
         // Armazena a função original de troca de abas caso ela exista no seu arquivo de lógica externa
+        <script>
         const funcaoMudarAbaOriginal = window.mudarAbaDinamica;
 
         window.mudarAbaDinamica = function(aba) {
-            // Se o usuário clicar no Editor Full Master, intercepta e injeta o iframe isolado
             if (aba === 'editor') {
                 const container = document.getElementById('conteudo-dinamico');
                 
-                // Remove os scrolls extras do container pai para deixar o controle total do design com o módulo
-                container.classList.remove('p-8');
+                container.classList.remove('p-8'); // Remove espaçamento para o editor ocupar tudo
+                
+                // CAMINHO CORRETO E SEGURO: Busca a pasta 'modulo' no mesmo nível do admin.html
                 container.innerHTML = `
                     <iframe src="modulo/image-editor.html" class="w-full h-[calc(100vh-10px)] border-none" id="iframe-editor-ia"></iframe>
                 `;
@@ -169,7 +170,7 @@
                 const btnEditor = document.getElementById('btn-editor');
                 if(btnEditor) btnEditor.classList.add('bg-zinc-800', 'text-white');
             } else {
-                // Para todas as outras abas, restaura o espaçamento padrão e chama a lógica nativa do seu script
+                // Restaura o painel padrão para as outras abas (pedidos, ofertas, etc)
                 const container = document.getElementById('conteudo-dinamico');
                 if(!container.classList.contains('p-8')) container.classList.add('p-8');
                 
@@ -178,6 +179,7 @@
                 }
             }
         };
+    </script>
     </script>
 </body>
 </html>

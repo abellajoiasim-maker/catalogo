@@ -19,7 +19,6 @@
         .card:hover { transform:translateY(-5px); border-color:#caa85c; }
         .badge { position:absolute; top:12px; right:12px; font-size:9px; padding:4px 10px; border-radius:20px; font-weight:800; color:#000; z-index: 10; }
         
-        /* Chaves de animação para o fluxo do modal */
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
     </style>
@@ -72,36 +71,6 @@
         </div>
     </div>
 
-    <div id="modalCompraAbella" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-[99999] p-4 animate-fade-in">
-        <div class="bg-[#111] border border-[#2a2a2a] w-full max-w-md rounded-2xl p-5 text-center space-y-4">
-            <h3 class="text-[#caa85c] font-bold uppercase tracking-wider text-sm">Adicionar Peça ao Pedido</h3>
-            
-            <div class="bg-black p-2 rounded-xl border border-zinc-900 flex justify-center">
-                <img id="mdCompraImg" src="" class="h-44 object-contain rounded-lg">
-            </div>
-            
-            <div>
-                <h4 id="mdCompraNome" class="text-sm font-bold text-white truncate">Nome da Peça</h4>
-                <p id="mdCompraSku" class="text-[10px] text-gray-500 font-mono mt-0.5">SKU: N/A</p>
-                <p id="mdCompraPreco" class="text-sm font-bold text-[#caa85c] font-mono mt-1">R$ 0,00</p>
-            </div>
-
-            <div class="space-y-1">
-                <label class="text-[10px] text-gray-400 font-bold uppercase block">Determine a quantidade de caixas/unidades:</label>
-                <div class="flex items-center justify-center gap-3">
-                    <button onclick="ajustarQtdModal(-1)" class="w-10 h-10 bg-zinc-900 rounded-lg text-lg font-bold border border-zinc-800 text-gray-400 hover:bg-zinc-800">-</button>
-                    <input type="number" id="mdCompraQtd" value="1" min="1" class="w-20 h-10 bg-black border border-[#333] rounded-lg text-center font-mono text-white font-bold text-base outline-none focus:border-[#caa85c]">
-                    <button onclick="ajustarQtdModal(1)" class="w-10 h-10 bg-zinc-900 rounded-lg text-lg font-bold border border-zinc-800 text-gray-400 hover:bg-zinc-800">+</button>
-                </div>
-            </div>
-
-            <div class="flex gap-2 pt-2">
-                <button onclick="confirmarInjecaoCarrinho()" class="bg-[#caa85c] text-black font-bold flex-1 py-3 rounded-xl text-xs uppercase tracking-wider hover:brightness-110">Confirmar Inclusão</button>
-                <button onclick="fecharModalCompra()" class="border border-zinc-800 text-zinc-400 px-4 rounded-xl text-xs uppercase font-bold hover:bg-zinc-900">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
@@ -111,10 +80,9 @@
         const db = firebase.database();
         
         const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-        let produtoSelecionadoModal = null;
 
         async function init(){
-            // 1. Sincronização dinâmica com o painel de configurações (Root + Sub-objeto Empresa)
+            // 1. Sincronização dinâmica com o painel de configurações
             db.ref('settings').on('value', snap => {
                 if(!snap.exists()) return;
                 const settingsGerais = snap.val() || {};
@@ -123,6 +91,14 @@
                 document.getElementById("nome").innerText = settingsGerais.name || emp.nome || "Abella Joias";
                 document.getElementById("slogan").innerText = settingsGerais.slogan || emp.slogan || "Atacado de Joias no Bruto";
                 
+                // Banner promocional dinâmico do Admin
+                if(settingsGerais.bannerAtivo || emp.bannerAtivo) {
+                    document.getElementById("bannerTexto").innerText = settingsGerais.bannerTexto || emp.bannerTexto || "";
+                    document.getElementById("banner").classList.remove("hidden");
+                } else {
+                    document.getElementById("banner").classList.add("hidden");
+                }
+
                 const parc = settingsGerais.parcelas || emp.parcelas || 6;
                 document.getElementById("parcelamento").innerText = `Até ${parc}x no cartão`;
                 
@@ -135,7 +111,7 @@
                 }
             });
 
-            // 2. Renderização Inteligente das Categorias Isoladas por Ecossistema
+            // 2. Renderização das Categorias Filtradas por Marca (Abella Joias)
             db.ref('categories').on('value', snap => {
                 const grid = document.getElementById('grid');
                 grid.innerHTML = '';
@@ -151,21 +127,28 @@
                     const id = child.key;
                     const cat = child.val() || {};
 
-                    // Filtros Estruturais de Isolamento de Marca (Abella Joias de Limeira)
-                    if(cat.loja === "luary" || id.toLowerCase().includes("luary") || cat.projeto === "luary") return;
-                    if(cat.paused) return;
+                    // Proteção Multi-loja: Garante o isolamento completo da Abella Joias
+                    if(cat.loja === "luary" || cat.projeto === "luary" || id.toLowerCase().includes("luary")) return;
+                    if(cat.loja === "marcinha" || cat.projeto === "marcinha" || id.toLowerCase().includes("marcinha")) return;
+                    if(cat.paused === true || cat.paused === "true") return;
 
                     totalItensRenderizados++;
-                    const promoTag = cat.promoAtiva ? `<span class="badge" style="background:${cat.promoColor || '#caa85c'}">${cat.promoTag || 'OFERTA'}</span>` : '';
                     
+                    // Tratamento flexível de chaves de promoção do banco
+                    const isPromo = cat.promoAtiva === true || cat.promoAtiva === "true";
+                    const promoTag = isPromo ? `<span class="badge" style="background:${cat.promoColor || '#caa85c'}">${cat.promoTag || 'OFERTA'}</span>` : '';
+                    
+                    // Fallback seguro de imagem (imagem ou image)
+                    const urlImagem = cat.imagem || cat.image || 'https://via.placeholder.com/400?text=Abella+Joias';
+
                     grid.innerHTML += `
-                        <div class="card relative cursor-pointer" onclick="location.href='produtos.html?id=${id}'">
+                        <div class="card relative cursor-pointer animate-fade-in" onclick="location.href='produtos.html?id=${id}'">
                             ${promoTag}
                             <div class="overflow-hidden aspect-square w-full bg-zinc-950 flex items-center justify-center">
-                                <img src="${cat.image || 'https://via.placeholder.com/400?text=Abella+Joias'}" class="w-full h-full object-cover hover:scale-105 transition-all duration-500" loading="lazy">
+                                <img src="${urlImagem}" class="w-full h-full object-cover hover:scale-105 transition-all duration-500" loading="lazy">
                             </div>
                             <div class="p-4 bg-zinc-900/40 border-t border-zinc-900">
-                                <h3 class="font-bold text-xs truncate text-white uppercase tracking-wider">${cat.name || id.replace(/-/g, ' ')}</h3>
+                                <h3 class="font-bold text-xs truncate text-white uppercase tracking-wider">${cat.name || cat.nome || id.replace(/-/g, ' ')}</h3>
                                 <p class="text-[10px] text-gray-500 mt-1 flex items-center justify-between">Explorar modelos <span class="gold text-xs">➔</span></p>
                             </div>
                         </div>
@@ -173,7 +156,7 @@
                 });
 
                 if(totalItensRenderizados === 0) {
-                    grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-10 italic">Nenhuma coleção ativa configurada no momento.</p>';
+                    grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-10 italic">Nenhuma coleção disponível para exibição.</p>';
                 }
             });
             
@@ -189,62 +172,6 @@
                 total += (preco * qtd);
             });
             document.getElementById('cartTotal').innerText = fM(total);
-        }
-
-        // =======================================================
-        // COMPONENTES DO MOTOR DE SELEÇÃO POR MODAL DE QUANTIDADE
-        // =======================================================
-        function acionarFluxoCompra(produto) {
-            produtoSelecionadoModal = produto;
-            
-            document.getElementById('mdCompraImg').src = produto.image || produto.imageUrl || 'https://via.placeholder.com/300?text=Joia';
-            document.getElementById('mdCompraNome').innerText = produto.name || produto.nome || 'Peça Sem Nome';
-            document.getElementById('mdCompraSku').innerText = "SKU: " + (produto.sku || 'N/A');
-            
-            let precoExibir = parseFloat(produto.price || produto.precoFinal || 0);
-            document.getElementById('mdCompraPreco').innerText = fM(precoExibir);
-            
-            document.getElementById('mdCompraQtd').value = 1;
-            document.getElementById('modalCompraAbella').classList.remove('hidden');
-        }
-
-        function ajustarQtdModal(fator) {
-            let input = document.getElementById('mdCompraQtd');
-            let atual = parseInt(input.value) || 1;
-            let novo = atual + fator;
-            if (novo < 1) novo = 1;
-            input.value = novo;
-        }
-
-        function fecharModalCompra() {
-            document.getElementById('modalCompraAbella').classList.add('hidden');
-            produtoSelecionadoModal = null;
-        }
-
-        function confirmarInjecaoCarrinho() {
-            if (!produtoSelecionadoModal) return;
-            
-            let qtdDigitada = parseInt(document.getElementById('mdCompraQtd').value) || 1;
-            let localCarrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            
-            let indexExistente = localCarrinho.findIndex(i => i.sku === produtoSelecionadoModal.sku);
-            
-            if (indexExistente > -1) {
-                localCarrinho[indexExistente].quantidade = (parseInt(localCarrinho[indexExistente].quantidade) || 0) + qtdDigitada;
-            } else {
-                localCarrinho.push({
-                    sku: produtoSelecionadoModal.sku,
-                    nome: produtoSelecionadoModal.name || produtoSelecionadoModal.nome,
-                    image: produtoSelecionadoModal.image || produtoSelecionadoModal.imageUrl || '',
-                    precoFinal: parseFloat(produtoSelecionadoModal.price || produtoSelecionadoModal.precoFinal || 0),
-                    peso: parseFloat(produtoSelecionadoModal.peso || produtoSelecionadoModal.weight || 0),
-                    quantidade: qtdDigitada
-                });
-            }
-            
-            localStorage.setItem('carrinho', JSON.stringify(localCarrinho));
-            atualizarCarrinho();
-            fecharModalCompra();
         }
 
         window.onload = init;

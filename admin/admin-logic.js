@@ -58,12 +58,12 @@ window.mudarAbaDinamica = function(aba) {
     }
 }
 
-// INJETOR DO TEMPLATE NATIVO DO EDITOR MASTER IA (CORRIGIDO PARA RETORNAR À RAIZ)
+// INJETOR DO TEMPLATE NATIVO DO EDITOR MASTER IA (URL ABSOLUTA INFALÍVEL)
 function carregarTemplateEditorIA(targetContainer) {
-    // O "../" faz o navegador sair da pasta 'admin/' e achar a pasta 'modulo/' na raiz de 'catalogo/'
-    fetch('../modulo/image-editor.html')
+    // Busca direto do servidor do GitHub sem errar a rota das pastas
+    fetch('https://abellajoiasim-maker.github.io/catalogo/modulo/image-editor.html')
         .then(response => {
-            if(!response.ok) throw new Error("Módulo image-editor.html não localizado na pasta.");
+            if(!response.ok) throw new Error("Módulo image-editor.html não localizado no servidor GitHub.");
             return response.text();
         })
         .then(html => {
@@ -75,7 +75,7 @@ function carregarTemplateEditorIA(targetContainer) {
         .catch(err => {
             console.error(err);
             targetContainer.innerHTML = `<div class="p-6 bg-red-950/20 border border-red-900 text-red-400 rounded-xl text-xs font-mono">
-                ❌ Falha crítica ao carregar interface do Editor: ${err.message}<br>Caminho tentado: <b>../modulo/image-editor.html</b>
+                ❌ Falia ao carregar do servidor: ${err.message}<br>Verifique se o arquivo está commitado exatamente em: <b>catalogo/modulo/image-editor.html</b>
             </div>`;
         });
 }

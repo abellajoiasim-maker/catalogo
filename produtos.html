@@ -64,15 +64,10 @@
                 </div>
             </div>
 
-            <div id="bloco-variacoes" class="space-y-3 text-left hidden">
-                <div id="wrapper-inicial" class="hidden">
-                    <label class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Iniciais Desejadas:</label>
-                    <input type="text" id="input-inicial" placeholder="Ex: A, M, J" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:border-[#caa85c] outline-none font-mono">
-                </div>
-                <div id="wrapper-dizeres" class="hidden">
-                    <label class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">Dizeres / Nome Personalizado:</label>
-                    <input type="text" id="input-dizeres" placeholder="Digite o nome ou frase a ser gravada" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:border-[#caa85c] outline-none">
-                </div>
+            <div id="bloco-variacoes-painel" class="space-y-2 text-left hidden bg-zinc-950 p-3.5 rounded-xl border border-zinc-900">
+                <label id="label-variacao-dinamica" class="text-[10px] text-[#caa85c] font-bold uppercase tracking-wider block mb-1">Escolha a Variação:</label>
+                <div id="wrapper-input-dinamico">
+                    </div>
             </div>
 
             <div class="bg-zinc-950 p-4 rounded-xl border border-zinc-900 text-left space-y-2">
@@ -241,7 +236,7 @@
         }
 
         // =======================================================
-        // INTERFACE DO MODAL DE COMPRA COM TRATAMENTO DE VARIANTES
+        // INTERFACE DO MODAL ADAPTADO ÀS CONFIGURAÇÕES DO PAINEL
         // =======================================================
         function abrirModalCompra(idNoCache) {
             const produto = listaProdutosCache.find(p => p.id === idNoCache);
@@ -257,35 +252,42 @@
             document.getElementById('mdCompraSku').innerText = "SKU: " + (produto.sku || 'N/A');
             document.getElementById('mdCompraPeso').innerText = "Peso: " + (produto.peso || produto.weight || '0') + "g";
             
-            // Limpa as inputs de variação passadas
-            document.getElementById('input-inicial').value = '';
-            document.getElementById('input-dizeres').value = '';
+            // Captura os elementos de variação dinâmicos
+            const blocoVariacoes = document.getElementById('bloco-variacoes-painel');
+            const wrapperInput = document.getElementById('wrapper-input-dinamico');
+            const labelVariacao = document.getElementById('label-variacao-dinamica');
+            
+            wrapperInput.innerHTML = ''; // Limpa seletores antigos
+            
+            // Lê o tipo de variação definido pelo Painel Administrativo
+            const tipo = produto.tipoVariacao || produto.tipo_variacao || '';
+            const opcoesTexto = produto.opcoesPersonalizadas || produto.opcoes || '';
 
-            // Lógica inteligente para ligar/desligar inputs de personalização
-            const blocoVariacoes = document.getElementById('bloco-variacoes');
-            const wrapperInicial = document.getElementById('wrapper-inicial');
-            const wrapperDizeres = document.getElementById('wrapper-dizeres');
-
-            let temVariacao = false;
-
-            // Checa flags do banco de dados (ex: produto.hasIniciais, produto.hasDizeres ou similar)
-            if (produto.hasIniciais === true || produto.hasIniciais === "true" || produto.iniciais === true) {
-                wrapperInicial.classList.remove('hidden');
-                temVariacao = true;
-            } else {
-                wrapperInicial.classList.add('hidden');
-            }
-
-            if (produto.hasDizeres === true || produto.hasDizeres === "true" || produto.dizeres === true) {
-                wrapperDizeres.classList.remove('hidden');
-                temVariacao = true;
-            } else {
-                wrapperDizeres.classList.add('hidden');
-            }
-
-            if(temVariacao) {
+            if (tipo === 'Lista' && opcoesTexto.trim() !== '') {
+                // Divide a string de opções pelas vírgulas salvas no painel
+                const listaOpcoes = opcoesTexto.split(',').map(o => o.trim()).filter(o => o !== '');
+                
+                labelVariacao.innerText = "Selecione a Letra / Inicial:";
+                
+                let htmlSelect = `<select id="input-variacao-final" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:border-[#caa85c] outline-none font-bold font-mono">`;
+                htmlSelect += `<option value="">-- Escolha uma opção --</option>`;
+                listaOpcoes.forEach(opcao => {
+                    htmlSelect += `<option value="${opcao}">${opcao}</option>`;
+                });
+                htmlSelect += `</select>`;
+                
+                wrapperInput.innerHTML = htmlSelect;
+                blocoVariacoes.classList.remove('hidden');
+                
+            } else if (tipo === 'Texto' || produto.hasDizeres === true || produto.dizeres === true) {
+                // Caso use digitação livre (frases/dizeres)
+                labelVariacao.innerText = "Dizeres / Nome Personalizado:";
+                wrapperInput.innerHTML = `
+                    <input type="text" id="input-variacao-final" placeholder="Digite o nome ou frase a ser gravada" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:border-[#caa85c] outline-none">
+                `;
                 blocoVariacoes.classList.remove('hidden');
             } else {
+                // Produto padrão sem variações ativas
                 blocoVariacoes.classList.add('hidden');
             }
 
@@ -340,13 +342,21 @@
             if (!produtoSelecionadoModal) return;
             
             let qtdDigitada = parseInt(document.getElementById('mdCompraQtd').value) || 1;
-            let valInicial = document.getElementById('input-inicial').value.trim();
-            let valDizeres = document.getElementById('input-dizeres').value.trim();
+            
+            // Captura o valor da variação selecionada/digitada (se o campo existir na tela)
+            const inputVariacao = document.getElementById('input-variacao-final');
+            let valorVariacao = inputVariacao ? inputVariacao.value.trim() : '';
+
+            // Se o campo de variação está visível e for do tipo select (Lista), obriga a escolher uma letra
+            if (inputVariacao && inputVariacao.tagName === 'SELECT' && !valorVariacao) {
+                alert("Por favor, selecione uma Inicial para continuar.");
+                return;
+            }
 
             let localCarrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
             
-            // Chave de identificação única inclui as variantes para não misturar itens com gravações diferentes
-            let chaveUnicaItem = produtoSelecionadoModal.sku + (valInicial ? `-${valInicial}` : '') + (valDizeres ? `-${valDizeres}` : '');
+            // Cria uma chave única combinando o SKU + variação para evitar misturar letras diferentes no carrinho
+            let chaveUnicaItem = produtoSelecionadoModal.sku + (valorVariacao ? `-${valorVariacao}` : '');
             let indexExistente = localCarrinho.findIndex(i => i.itemChave === chaveUnicaItem);
             
             if (indexExistente > -1) {
@@ -360,9 +370,8 @@
                     precoFinal: parseFloat(produtoSelecionadoModal.price || produtoSelecionadoModal.precoFinal || 0),
                     peso: parseFloat(produtoSelecionadoModal.peso || produtoSelecionadoModal.weight || 0),
                     quantidade: qtdDigitada,
-                    // Injeta os dados da variação direto no objeto do carrinho
-                    inicial: valInicial || null,
-                    dizeres: valDizeres || null
+                    // Passa a variação escolhida estruturada para o romaneio/pedido
+                    variacao: valorVariacao || null
                 });
             }
             

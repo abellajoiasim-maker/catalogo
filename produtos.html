@@ -235,9 +235,6 @@
             document.getElementById('mdCompraImg').src = urlAlvo;
         }
 
-        // =======================================================
-        // INTERFACE DO MODAL ADAPTADO ÀS CONFIGURAÇÕES DO PAINEL
-        // =======================================================
         function abrirModalCompra(idNoCache) {
             const produto = listaProdutosCache.find(p => p.id === idNoCache);
             if (!produto) return;
@@ -252,40 +249,40 @@
             document.getElementById('mdCompraSku').innerText = "SKU: " + (produto.sku || 'N/A');
             document.getElementById('mdCompraPeso').innerText = "Peso: " + (produto.peso || produto.weight || '0') + "g";
             
-            // Captura os elementos de variação dinâmicos
             const blocoVariacoes = document.getElementById('bloco-variacoes-painel');
             const wrapperInput = document.getElementById('wrapper-input-dinamico');
             const labelVariacao = document.getElementById('label-variacao-dinamica');
             
-            wrapperInput.innerHTML = ''; // Limpa seletores antigos
+            wrapperInput.innerHTML = '';
             
-           // =======================================================================
-// LOCALIZADO DENTRO DA FUNÇÃO abrirModalCompra(idNoCache)
-// =======================================================================
+            // MAPEA DIRETAMENTE O SEU CAMPO DO BANCO DE DADOS (variacaoTipo)
+            const tipo = produto.variacaoTipo || produto.tipoVariacao || '';
+            const opcoesTexto = produto.opcoesPersonalizadas || produto.opcoes || '';
 
-// Substitua a leitura antiga por esta linha corrigida:
-const tipo = produto.variacaoTipo || produto.tipoVariacao || produto.tipo_variacao || '';
-const opcoesTexto = produto.opcoesPersonalizadas || produto.opcoes || '';
+            if (tipo === 'Lista' && opcoesTexto.trim() !== '') {
+                const listaOpcoes = opcoesTexto.split(',').map(o => o.trim()).filter(o => o !== '');
+                labelVariacao.innerText = "Selecione a Letra / Inicial:";
+                
+                let htmlSelect = `<select id="input-variacao-final" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:border-[#caa85c] outline-none font-bold font-mono">`;
+                htmlSelect += `<option value="">-- Escolha uma opção --</option>`;
+                listaOpcoes.forEach(opcao => {
+                    htmlSelect += `<option value="${opcao}">${opcao}</option>`;
+                });
+                htmlSelect += `</select>`;
+                
+                wrapperInput.innerHTML = htmlSelect;
+                blocoVariacoes.classList.remove('hidden');
+                
+            } else if (tipo === 'Texto') {
+                labelVariacao.innerText = "Dizeres / Nome Personalizado:";
+                wrapperInput.innerHTML = `
+                    <input type="text" id="input-variacao-final" placeholder="Digite o nome ou frase a ser gravada" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:border-[#caa85c] outline-none">
+                `;
+                blocoVariacoes.classList.remove('hidden');
+            } else {
+                blocoVariacoes.classList.add('hidden');
+            }
 
-if (tipo === 'Lista' && opcoesTexto.trim() !== '') {
-    // Divide a string de opções pelas vírgulas salvas no painel
-    const listaOpcoes = opcoesTexto.split(',').map(o => o.trim()).filter(o => o !== '');
-    
-    labelVariacao.innerText = "Selecione a Letra / Inicial:";
-    
-    let htmlSelect = `<select id="input-variacao-final" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:border-[#caa85c] outline-none font-bold font-mono">`;
-    htmlSelect += `<option value="">-- Escolha uma opção --</option>`;
-    listaOpcoes.forEach(opcao => {
-        htmlSelect += `<option value="${opcao}">${opcao}</option>`;
-    });
-    htmlSelect += `</select>`;
-    
-    wrapperInput.innerHTML = htmlSelect;
-    blocoVariacoes.classList.remove('hidden');
-    
-} else if (tipo === 'Texto') {
-
-            // Configuração dos thumbnails internos
             const boxSeletores = document.getElementById('mdFotosSeletores');
             boxSeletores.innerHTML = '';
             if(foto2) {
@@ -336,20 +333,15 @@ if (tipo === 'Lista' && opcoesTexto.trim() !== '') {
             if (!produtoSelecionadoModal) return;
             
             let qtdDigitada = parseInt(document.getElementById('mdCompraQtd').value) || 1;
-            
-            // Captura o valor da variação selecionada/digitada (se o campo existir na tela)
             const inputVariacao = document.getElementById('input-variacao-final');
             let valorVariacao = inputVariacao ? inputVariacao.value.trim() : '';
 
-            // Se o campo de variação está visível e for do tipo select (Lista), obriga a escolher uma letra
             if (inputVariacao && inputVariacao.tagName === 'SELECT' && !valorVariacao) {
                 alert("Por favor, selecione uma Inicial para continuar.");
                 return;
             }
 
             let localCarrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            
-            // Cria uma chave única combinando o SKU + variação para evitar misturar letras diferentes no carrinho
             let chaveUnicaItem = produtoSelecionadoModal.sku + (valorVariacao ? `-${valorVariacao}` : '');
             let indexExistente = localCarrinho.findIndex(i => i.itemChave === chaveUnicaItem);
             
@@ -364,7 +356,6 @@ if (tipo === 'Lista' && opcoesTexto.trim() !== '') {
                     precoFinal: parseFloat(produtoSelecionadoModal.price || produtoSelecionadoModal.precoFinal || 0),
                     peso: parseFloat(produtoSelecionadoModal.peso || produtoSelecionadoModal.weight || 0),
                     quantidade: qtdDigitada,
-                    // Passa a variação escolhida estruturada para o romaneio/pedido
                     variacao: valorVariacao || null
                 });
             }

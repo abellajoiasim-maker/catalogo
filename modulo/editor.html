@@ -232,8 +232,7 @@
         window.executarProximoItemDaFila();
     }
 
-    // PROCESSADOR RECURSIVO CORRIGIDO E GLOBALIZADO (COM 'X')
-   // PROCESSADOR RECURSIVO BLINDADO (LOCALIZAÇÃO DINÂMICA VIA DOM)
+   // PROCESSADOR RECURSIVO BLINDADO COM CONVERSOR DE LINKS STORAGE (gs:// -> https://)
     window.executarProximoItemDaFila = function() {
         if (_INDICE_ATUAL_FILA >= _FILA_PROCESSAMENTO.length) {
             alert(`🎉 Lote finalizado! Foram sincronizadas ${_FILA_PROCESSAMENTO.length} fotos com sucesso no catálogo.`);
@@ -245,42 +244,60 @@
 
         var idAtual = _FILA_PROCESSAMENTO[_INDICE_ATUAL_FILA];
         
-        // ESTRATÉGIA DE SEGURANÇA: Localiza o checkbox e acha a célula de status na mesma linha física
+        // Localiza visualmente a linha do item na tabela
         var itemContainerStatus = null;
         var checkboxFisico = document.querySelector(`.check-item-lote[value="${idAtual}"]`);
+        var imgElemento = null;
         
         if (checkboxFisico) {
             var linhaTr = checkboxFisico.closest('tr');
             if (linhaTr) {
-                // Seleciona a última célula (coluna de status) daquela linha específica
                 itemContainerStatus = linhaTr.cells[linhaTr.cells.length - 1];
+                imgElemento = linhaTr.querySelector('img'); // Pega a tag <img> da linha para atualizar a foto na hora
             }
         }
 
-        // Caso falhe por segurança, usa o ID textual puro como Plano B
         if (!itemContainerStatus) {
             itemContainerStatus = document.getElementById(`status-lote-${idAtual}`);
         }
         
-        // Modifica visualmente o status para processamento
         if(itemContainerStatus) {
             itemContainerStatus.className = "py-3 px-4 text-right pr-6 font-bold text-amber-500 animate-pulse text-[11px]";
-            itemContainerStatus.innerText = "⚡ Processando com IA...";
-        } else {
-            console.warn(`⚠️ Não foi possível encontrar o container de status para o ID: ${idAtual}`);
+            itemContainerStatus.innerText = "⚡ Convertendo e Sincronizando...";
+        }
+
+        // 1. Recupera o link bruto (ex: gs://catalogo-abella-joias...)
+        var linkFotoOriginal = _PRODUTOS_LOTE_CACHE[idAtual].image || "";
+        var linkFotoPublica = linkFotoOriginal;
+
+        // 2. CONVERSOR AUTOMÁTICO DE SEGURANÇA (Se for gs://, reconstrói para HTTPS público)
+        if (linkFotoOriginal.startsWith("gs://")) {
+            try {
+                // Remove o prefixo gs:// e divide o caminho
+                var caminhoLimpo = linkFotoOriginal.replace("gs://", "");
+                var primeiraBarra = caminhoLimpo.indexOf("/");
+                var bucket = caminhoLimpo.substring(0, primeiraBarra);
+                var caminhoArquivo = caminhoLimpo.substring(primeiraBarra + 1);
+                
+                // Transforma as barras do caminho em código URL (%2F)
+                var caminhoUrlEncode = encodeURIComponent(caminhoArquivo);
+                
+                // Monta o link público estruturado que o navegador aceita
+                linkFotoPublica = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${caminhoUrlEncode}?alt=media`;
+                console.log(`🔗 Link Convertido com Sucesso para ID ${idAtual}:`, linkFotoPublica);
+            } catch (err) {
+                console.error("Erro na conversão do formato gs://", err);
+            }
         }
 
         // Captura os parâmetros industriais selecionados nos menus superiores
         var modeloAlvo = document.getElementById('loteModeloIdade').value;
         var restricaoAlvo = document.getElementById('loteAcabamento').value;
-        var linkFotoOriginal = _PRODUTOS_LOTE_CACHE[idAtual].image;
 
         setTimeout(function() {
-            var linkFotoProcessadaPelaIA = linkFotoOriginal; 
-
-            // Atualiza o produto salvando as novas tags técnicas de IA de forma estrita
+            // Atualiza o produto salvando o link HTTPS limpo e público no banco de dados
             db.ref(`products/${idAtual}`).update({
-                image: linkFotoProcessadaPelaIA,
+                image: linkFotoPublica, // Aqui entra o link público real!
                 ia_modelo_idade: modeloAlvo,
                 ia_restricao_tecnica: restricaoAlvo,
                 ia_processado_em: new Date().toISOString()
@@ -289,8 +306,14 @@
                     itemContainerStatus.className = "py-3 px-4 text-right pr-6 font-bold text-emerald-600 text-[11px]";
                     itemContainerStatus.innerText = "✅ Sincronizado!";
                 }
+                
+                // Força a imagem que estava quebrada (ícone cinza) a carregar a foto real na tela imediatamente!
+                if (imgElemento && linkFotoPublica) {
+                    imgElemento.src = linkFotoPublica;
+                }
+
                 _INDICE_ATUAL_FILA++;
-                window.executarProximoItemDaFila(); // Avança na fila de execução
+                window.executarProximoItemDaFila(); // Vai para o próximo item
             }).catch(function(error) {
                 console.error("Erro ao atualizar item via IA:", error);
                 if(itemContainerStatus) {
@@ -298,9 +321,8 @@
                     itemContainerStatus.innerText = "❌ Erro";
                 }
                 _INDICE_ATUAL_FILA++;
-                window.executarProximoItemDaFila(); // Força avanço mesmo em caso de falha individual
+                window.executarProximoItemDaFila();
             });
         }, 1200);
     }
-
 </script>

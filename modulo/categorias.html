@@ -99,7 +99,7 @@
                 const cat = dados[id];
                 
                 // Mapeamento de segurança
-                const nomeCategoria = (cat.nome || cat.name || id).replace(/-/g, ' '); // Remove hífens se usar ID
+                const nomeCategoria = (cat.nome || cat.name || id).replace(/-/g, ' '); 
                 const imagemCategoria = cat.image || cat.urlImagem || '';
                 const estaPausado = cat.status === 'pausado' || cat.status === 'inactive';
                 
@@ -108,19 +108,15 @@
                 const card = document.createElement('div');
                 card.className = `bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs flex flex-col justify-between transition-all ${estaPausado ? 'opacity-60 grayscale' : ''}`;
                 
-                // AJUSTE REALIZADO AQUI: CLASSE 'aspect-square' NO CONTAINER DA IMAGEM
+                // CORREÇÃO EFETUADA AQUI: Estrutura HTML limpa e tags duplicadas removidas
                 card.innerHTML = `
                     <div>
-              <div class="w-full aspect-square bg-gray-50 relative border-b border-gray-100 overflow-hidden block">
-    <img src="${imagemCategoria || fotoPadrao}" alt="${nomeCategoria}" class="absolute inset-0 w-full h-full object-cover object-center m-0 p-0" onerror="this.src='${fotoPadrao}'">
-    
-   <div class="w-full aspect-square bg-gray-50 relative border-b border-gray-100 overflow-hidden block">
-    <img src="${imagemCategoria || fotoPadrao}" alt="${nomeCategoria}" class="absolute inset-0 w-full h-full object-cover object-center m-0 p-0" onerror="this.src='${fotoPadrao}'">
-    
-    <div class="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
-        ${estaPausado ? '<span class="bg-amber-500 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-md shadow-sm">⏸️ Pausada</span>' : '<span class="bg-emerald-500 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-md shadow-sm">🟢 Ativa</span>'}
-    </div>
-</div>
+                        <div class="w-full aspect-square bg-gray-50 relative border-b border-gray-100 overflow-hidden block">
+                            <img src="${imagemCategoria || fotoPadrao}" alt="${nomeCategoria}" class="absolute inset-0 w-full h-full object-cover object-center m-0 p-0" onerror="this.src='${fotoPadrao}'">
+                            <div class="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
+                                ${estaPausado ? '<span class="bg-amber-500 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-md shadow-sm">⏸️ Pausada</span>' : '<span class="bg-emerald-500 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-md shadow-sm">🟢 Ativa</span>'}
+                            </div>
+                        </div>
                         
                         <div class="p-4">
                             <h3 class="font-bold text-gray-800 truncate text-lg capitalize mb-2">${nomeCategoria}</h3>
@@ -187,7 +183,7 @@
 
         if (idExistente) {
             db.ref(`categories/${idExistente}`).update(dados)
-                .then(() => fecharEAlertar("Categoria atualizada com sucesso!"))
+                .then(() => fecharEAlertar("Categoria updated com sucesso!"))
                 .catch(erro => tratarErro(erro));
         } else {
             dados.status = "ativo";

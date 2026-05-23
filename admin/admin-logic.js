@@ -1,5 +1,5 @@
 // IMPORTAÇÃO CONECTIVA DO FIREBASE CENTRAL
-import { db } from '../images/js/firebase/firebase.js';
+import { db as firebaseDB } from '../images/js/firebase/firebase.js';
 
 // CACHES GLOBAIS DE OPERAÇÃO DO EDITOR IA
 window._PRODUTOS_LOTE_CACHE = {};
@@ -7,15 +7,26 @@ window._FILA_PROCESSAMENTO = [];
 window._INDICE_ATUAL_FILA = 0;
 window.todosPedidosLocal = {};
 
+// GLOBALIZAÇÃO CRÍTICA PARA OS SUBMÓDULOS HTML ENXERGAREM O BANCO
+window.db = firebaseDB; 
+
+// Garante que o atalho clássico do firebase também exista globalmente se disponível
+if (!window.firebase && window.firebaseDB && window.firebaseDB.app) {
+    window.firebase = window.firebaseDB.app;
+}
+
 // Sincronização em Tempo Real com a árvore de pedidos ("orders") no Firebase
-if (db) {
-    db.ref('orders').on('value', function(snapshot) {
+if (window.db) {
+    console.log("🔥 [Firebase] Conexão estabelecida com sucesso no escopo global.");
+    window.db.ref('orders').on('value', function(snapshot) {
         window.todosPedidosLocal = snapshot.val() || {};
         // Só força a renderização visual se o elemento container real já existir na DOM
         if (document.getElementById('listaPedidos') && typeof window.renderizarTabelaPedidosVisivel === 'function') {
             window.renderizarTabelaPedidosVisivel();
         }
     });
+} else {
+    console.error("❌ [Firebase] A importação de '../images/js/firebase/firebase.js' retornou indefinida.");
 }
 
 // =========================================================================
@@ -38,7 +49,7 @@ window.mudarAbaDinamica = function(aba) {
         btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
     }
 
-    // Limpa listeners antigos pendentes para evitar conflitos entre as abas
+    // Mensagem de transição rápida
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-600 italic text-xs font-mono animate-pulse">Carregando módulo [${aba.toUpperCase()}]...</div>`;
 
     // 2. Roteamento Avançado de Módulos (Garante caminhos absolutos corretos)
@@ -61,7 +72,7 @@ window.mudarAbaDinamica = function(aba) {
                 // Executa o script de inicialização específico de cada aba com um delay seguro pós-renderização
                 setTimeout(() => {
                     executarMapeamentoFallback(aba);
-                }, 50);
+                }, 60);
             })
             .catch(err => {
                 console.error(err);
@@ -73,13 +84,15 @@ window.mudarAbaDinamica = function(aba) {
 // =========================================================================
 // MAPEAMENTO DE CONTINGÊNCIA (EXECUÇÃO DE FUNÇÕES INTERNAS DE SCRIPT)
 // =========================================================================
-function ejecutarMapeamentoFallback(aba) {
+function executarMapeamentoFallback(aba) {
     switch(aba) {
         case 'pedidos':
             if (typeof window.carregarPedidos === "function") {
                 window.carregarPedidos();
             } else if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
                 window.renderizarTabelaPedidosVisivel();
+            } else if (typeof window.inicializarPainelPedidos === "function") {
+                window.inicializarPainelPedidos();
             }
             break;
 
@@ -120,12 +133,10 @@ function carregarTemplateEditorIA(targetContainer) {
             targetContainer.innerHTML = html;
             // Executa os ganchos internos do editor de lote se existirem
             setTimeout(() => {
-                if(typeof window.inicializarMapeamentoLote === "function") {
+                if (typeof window.inicializarMapeamentoLote === "function") {
                     window.inicializarMapeamentoLote();
-                } else if (typeof window.carregarCategoriasEditor === "function") {
-                    window.carregarCategoriasEditor();
                 }
-            }, 50);
+            }, 60);
         })
         .catch(err => {
             console.error(err);

@@ -2,534 +2,129 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-
     <title>Painel Administrativo • Abella Joias</title>
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root{
-            --gold:#caa85c;
-            --bg:#0b0b0b;
-            --panel:#111111;
-            --border:#222222;
-        }
-
-        *{
-            margin:0;
-            padding:0;
-            box-sizing:border-box;
-        }
-
-        html{
-            height:100%;
-            overflow:hidden;
-            background:var(--bg);
-        }
-
-        body{
-            font-family:'Inter',sans-serif;
-            background:var(--bg);
-            color:#eee;
-            height:100%;
-            overflow:hidden;
-            -webkit-font-smoothing:antialiased;
-            text-rendering:optimizeLegibility;
-        }
-
-        .custom-scroll{
-            scrollbar-width:thin;
-            scrollbar-color:var(--gold) transparent;
-        }
-
-        .custom-scroll::-webkit-scrollbar{
-            width:6px;
-            height:6px;
-        }
-
-        .custom-scroll::-webkit-scrollbar-thumb{
-            background:var(--gold);
-            border-radius:999px;
-        }
-
-        .custom-scroll::-webkit-scrollbar-track{
-            background:transparent;
-        }
-
-        .sidebar-shadow{
-            box-shadow:
-            0 0 0 1px rgba(255,255,255,0.03),
-            0 10px 40px rgba(0,0,0,0.45);
-        }
-
-        .module-transition{
-            transition:
-            opacity .18s ease,
-            transform .18s ease;
-        }
-
-        .tab-btn.active{
-            background:#1b1b1b;
-            color:#fff;
-            border:1px solid rgba(202,168,92,.18);
-            box-shadow:
-            inset 0 0 0 1px rgba(202,168,92,.06),
-            0 0 18px rgba(202,168,92,.08);
-        }
-
-        .main-gradient{
-            background:
-            radial-gradient(circle at top right, rgba(202,168,92,.06), transparent 28%),
-            radial-gradient(circle at bottom left, rgba(255,255,255,.02), transparent 24%),
-            var(--bg);
-        }
-
-        .safe-modal{
-            overscroll-behavior:contain;
-            isolation:isolate;
-        }
-
-        @media (max-width: 1024px){
-
-            aside{
-                width:88px !important;
-            }
-
-            .menu-text{
-                display:none;
-            }
-
-            .logo-text{
-                display:none;
-            }
-
-            .tab-btn{
-                justify-content:center;
-            }
-        }
-
-        @media (max-width: 768px){
-
-            body{
-                overflow:auto;
-            }
-
-            #conteudo-dinamico{
-                padding:18px !important;
-            }
-
-            aside{
-                position:fixed;
-                left:0;
-                top:0;
-                bottom:0;
-                z-index:9999;
-            }
-
-            main{
-                margin-left:88px;
-            }
-        }
-
-        @media print{
-
-            body *{
-                visibility:hidden !important;
-            }
-
-            #print-area,
-            #print-area *{
-                visibility:visible !important;
-            }
-
-            #print-area{
-                position:absolute;
-                left:0;
-                top:0;
-                width:100%;
-                background:#fff;
-            }
+        body { font-family: 'Inter', sans-serif; background: #0b0b0b; color: #eee; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #caa85c; border-radius: 10px; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
         }
     </style>
 </head>
+<body class="flex h-screen overflow-hidden relative">
 
-<body>
-
-<div class="w-full h-screen flex overflow-hidden relative">
-
-    <aside class="w-64 bg-[#111] border-r border-[#222] flex flex-col justify-between shrink-0 z-40 sidebar-shadow">
-
-        <div class="p-6 space-y-6 overflow-y-auto custom-scroll">
-
+    <aside class="w-64 bg-[#111] border-r border-[#222] flex flex-col justify-between shrink-0 z-20">
+        <div class="p-6 space-y-6">
             <div class="flex items-center gap-3 border-b border-[#222] pb-4">
-
-                <div class="w-9 h-9 rounded-full bg-[#caa85c] flex items-center justify-center text-black font-black font-mono shrink-0">
-                    A
+                <div class="w-8 h-8 rounded-full bg-[#caa85c] flex items-center justify-center text-black font-black font-mono">A</div>
+                <div>
+                    <h1 class="text-sm font-bold text-white tracking-tight uppercase">Abella Joias</h1>
+                    <p class="text-[10px] text-gray-500 font-medium">Painel Administrativo</p>
                 </div>
-
-                <div class="logo-text min-w-0">
-                    <h1 class="text-sm font-black text-white tracking-tight uppercase leading-none">
-                        Abella Joias
-                    </h1>
-
-                    <p class="text-[10px] text-gray-500 font-medium mt-1">
-                        Painel Administrativo
-                    </p>
-                </div>
-
             </div>
-
             <nav class="space-y-1" id="menu-navegacao">
-
-                <button
-                    onclick="mudarAbaDinamica('pedidos')"
-                    id="btn-pedidos"
-                    class="tab-btn w-full text-left p-3 rounded-xl text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-3"
-                >
-                    <span>📦</span>
-                    <span class="menu-text">Pedidos Recebidos</span>
-                </button>
-
-                <button
-                    onclick="mudarAbaDinamica('editor')"
-                    id="btn-editor"
-                    class="tab-btn w-full text-left p-3 rounded-xl text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-3"
-                >
-                    <span>⚡</span>
-                    <span class="menu-text">Editor de Imagens</span>
-                </button>
-
-                <button
-                    onclick="mudarAbaDinamica('ofertas')"
-                    id="btn-ofertas"
-                    class="tab-btn w-full text-left p-3 rounded-xl text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-3"
-                >
-                    <span>🏷️</span>
-                    <span class="menu-text">Painel de Ofertas</span>
-                </button>
-
-                <button
-                    onclick="mudarAbaDinamica('galvanicas')"
-                    id="btn-galvanicas"
-                    class="tab-btn w-full text-left p-3 rounded-xl text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-3"
-                >
-                    <span>🚚</span>
-                    <span class="menu-text">Galvânicas Parceiras</span>
-                </button>
-
-                <button
-                    onclick="mudarAbaDinamica('produtos')"
-                    id="btn-produtos"
-                    class="tab-btn w-full text-left p-3 rounded-xl text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-3"
-                >
-                    <span>💍</span>
-                    <span class="menu-text">Gestão de Produtos</span>
-                </button>
-
-                <button
-                    onclick="mudarAbaDinamica('categorias')"
-                    id="btn-categorias"
-                    class="tab-btn w-full text-left p-3 rounded-xl text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-3"
-                >
-                    <span>📁</span>
-                    <span class="menu-text">Coleções / Categorias</span>
-                </button>
-
-                <button
-                    onclick="mudarAbaDinamica('config')"
-                    id="btn-config"
-                    class="tab-btn w-full text-left p-3 rounded-xl text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-3"
-                >
-                    <span>⚙️</span>
-                    <span class="menu-text">Configurações</span>
-                </button>
-
+                <button onclick="mudarAbaDinamica('pedidos')" id="btn-pedidos" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">📦 Pedidos Recebidos</button>
+                <button onclick="mudarAbaDinamica('editor')" id="btn-editor" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">⚡ Editor de Imagens</button>
+                <button onclick="mudarAbaDinamica('ofertas')" id="btn-ofertas" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">🏷️ Painel de Ofertas</button>
+                <button onclick="mudarAbaDinamica('galvanicas')" id="btn-galvanicas" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">🚚 Galvânicas Parceiras</button>
+                <button onclick="mudarAbaDinamica('produtos')" id="btn-produtos" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">💍 Gestão de Produtos</button>
+                <button onclick="mudarAbaDinamica('categorias')" id="btn-categorias" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">📁 Coleções / Categorias</button>
+                <button onclick="mudarAbaDinamica('config')" id="btn-config" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">⚙️ Configurações</button>
             </nav>
-
         </div>
-
-        <div class="p-4 border-t border-[#222] bg-black/30 text-center text-[10px] text-gray-600 font-mono shrink-0">
+        <div class="p-4 border-t border-[#222] bg-black/20 text-center text-[10px] text-gray-600 font-mono">
             v3.2.0 • Sistema Modular
         </div>
-
     </aside>
 
-    <main
-        id="conteudo-dinamico"
-        class="flex-1 overflow-y-auto overflow-x-hidden p-8 custom-scroll relative z-10 main-gradient module-transition"
-    >
-
-        <div
-            id="loading-admin"
-            class="flex flex-col items-center justify-center min-h-full text-zinc-500 gap-4"
-        >
-
-            <div class="w-10 h-10 border-2 border-[#333] border-t-[#caa85c] rounded-full animate-spin"></div>
-
-            <div class="text-xs uppercase tracking-[0.25em] text-zinc-600 font-semibold">
-                Carregando ecossistema operacional...
-            </div>
-
+    <main id="conteudo-dinamico" class="flex-1 overflow-y-auto p-8 custom-scroll relative z-10 bg-[#0b0b0b]">
+        <div class="flex items-center justify-center h-full text-zinc-600 italic text-xs">
+            Carregando ecossistema operacional...
         </div>
-
     </main>
 
-</div>
+    <div id="print-area" class="hidden"></div>
 
-<div id="print-area" class="hidden"></div>
-
-<div
-    id="editorPedido"
-    class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm items-center justify-center z-[99998] p-4 font-sans safe-modal"
->
-
-    <div class="bg-[#111] w-full max-w-5xl rounded-2xl p-6 overflow-y-auto max-h-[90vh] border border-[#222] custom-scroll space-y-6 shadow-2xl text-xs text-white">
-
-        <div class="flex justify-between items-center border-b border-[#222] pb-4">
-
+    <div id="editorPedido" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[99998] p-4 font-sans">
+        <div class="bg-[#111] w-full max-w-5xl rounded-2xl p-6 overflow-y-auto max-h-[90vh] border border-[#222] custom-scroll space-y-6 shadow-2xl text-xs text-white">
+            <div class="flex justify-between items-center border-b border-[#222] pb-4">
+                <div>
+                    <h2 class="text-[#caa85c] font-black uppercase tracking-tighter text-lg">Gerenciamento Avançado de Pedido</h2>
+                    <p class="text-[11px] text-gray-500 font-mono">Modificando ID: <span id="idPedidoInterno" class="text-zinc-400">#------</span></p>
+                </div>
+                <div id="totalPreview" class="text-[#caa85c] font-black text-2xl font-mono">R$ 0,00</div>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-black/40 p-4 border border-[#222] rounded-xl space-y-2">
+                    <p class="text-[10px] text-[#caa85c] uppercase font-bold tracking-widest">Dados do Comprador</p>
+                    <input id="edClienteNome" placeholder="Nome do Cliente" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
+                    <input id="edClienteTel" placeholder="WhatsApp" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
+                </div>
+                <div class="bg-black/40 p-4 border border-[#222] rounded-xl space-y-2">
+                    <p class="text-[10px] text-[#caa85c] uppercase font-bold tracking-widest">Destino da Entrega</p>
+                    <input id="edRua" placeholder="Rua, Número, Bairro" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
+                    <input id="edCidade" placeholder="Cidade / Estado" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
+                </div>
+            </div>
             <div>
-                <h2 class="text-[#caa85c] font-black uppercase tracking-tighter text-lg">
-                    Gerenciamento Avançado de Pedido
-                </h2>
-
-                <p class="text-[11px] text-gray-500 font-mono">
-                    Modificando ID:
-                    <span id="idPedidoInterno" class="text-zinc-400">
-                        #------
-                    </span>
-                </p>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-[#caa85c] font-bold text-sm uppercase italic tracking-wide">Produtos Vinculados</h3>
+                    <button class="bg-green-950 text-green-400 border border-green-800 hover:bg-green-900 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all" onclick="addItemEditor()">+ Inserir Peça (SKU)</button>
+                </div>
+                <div id="edItens" class="space-y-2 max-h-60 overflow-y-auto custom-scroll pr-1"></div>
             </div>
-
-            <div id="totalPreview" class="text-[#caa85c] font-black text-2xl font-mono">
-                R$ 0,00
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-[#1a1a1a] p-4 border border-[#222] rounded-xl">
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Desc. Campanha (R$)</label>
+                    <input id="edDescPromo" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Desc. Pix (R$)</label>
+                    <input id="edDescPix" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Frete Adicional (R$)</label>
+                    <input id="edFrete" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Total Unidades</label>
+                    <input id="edQtdTotal" type="number" readonly class="w-full bg-black/50 border border-[#333] p-2 rounded text-sm font-mono text-gray-400 cursor-not-allowed">
+                </div>
             </div>
-
+            <div class="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#222]">
+                <button class="bg-[#caa85c] text-black font-bold flex-grow py-3 rounded-lg text-sm uppercase tracking-wider hover:brightness-110 transition-all" onclick="salvarPedidoEditado()">SALVAR ALTERAÇÕES</button>
+                <button class="border border-[#333] text-gray-400 py-3 px-6 rounded-lg text-sm font-bold uppercase hover:bg-zinc-900 transition-all" onclick="fecharEditorPedido()">CANCELAR</button>
+            </div>
         </div>
-
-        <div class="grid md:grid-cols-2 gap-4">
-
-            <div class="bg-black/40 p-4 border border-[#222] rounded-xl space-y-2">
-
-                <p class="text-[10px] text-[#caa85c] uppercase font-bold tracking-widest">
-                    Dados do Comprador
-                </p>
-
-                <input
-                    id="edClienteNome"
-                    placeholder="Nome do Cliente"
-                    autocomplete="off"
-                    class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none"
-                >
-
-                <input
-                    id="edClienteTel"
-                    placeholder="WhatsApp"
-                    autocomplete="off"
-                    class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none"
-                >
-
-            </div>
-
-            <div class="bg-black/40 p-4 border border-[#222] rounded-xl space-y-2">
-
-                <p class="text-[10px] text-[#caa85c] uppercase font-bold tracking-widest">
-                    Destino da Entrega
-                </p>
-
-                <input
-                    id="edRua"
-                    placeholder="Rua, Número, Bairro"
-                    autocomplete="off"
-                    class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none"
-                >
-
-                <input
-                    id="edCidade"
-                    placeholder="Cidade / Estado"
-                    autocomplete="off"
-                    class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none"
-                >
-
-            </div>
-
-        </div>
-
-        <div>
-
-            <div class="flex justify-between items-center mb-2">
-
-                <h3 class="text-[#caa85c] font-bold text-sm uppercase italic tracking-wide">
-                    Produtos Vinculados
-                </h3>
-
-                <button
-                    class="bg-green-950 text-green-400 border border-green-800 hover:bg-green-900 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
-                    onclick="addItemEditor()"
-                >
-                    + Inserir Peça (SKU)
-                </button>
-
-            </div>
-
-            <div
-                id="edItens"
-                class="space-y-2 max-h-60 overflow-y-auto custom-scroll pr-1"
-            ></div>
-
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-[#1a1a1a] p-4 border border-[#222] rounded-xl">
-
-            <div>
-
-                <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">
-                    Desc. Campanha (R$)
-                </label>
-
-                <input
-                    id="edDescPromo"
-                    type="number"
-                    step="0.01"
-                    oninput="recalcularTotalEd()"
-                    class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none"
-                >
-
-            </div>
-
-            <div>
-
-                <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">
-                    Desc. Pix (R$)
-                </label>
-
-                <input
-                    id="edDescPix"
-                    type="number"
-                    step="0.01"
-                    oninput="recalcularTotalEd()"
-                    class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none"
-                >
-
-            </div>
-
-            <div>
-
-                <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">
-                    Frete Adicional (R$)
-                </label>
-
-                <input
-                    id="edFrete"
-                    type="number"
-                    step="0.01"
-                    oninput="recalcularTotalEd()"
-                    class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none"
-                >
-
-            </div>
-
-            <div>
-
-                <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">
-                    Total Unidades
-                </label>
-
-                <input
-                    id="edQtdTotal"
-                    type="number"
-                    readonly
-                    class="w-full bg-black/50 border border-[#333] p-2 rounded text-sm font-mono text-gray-400 cursor-not-allowed"
-                >
-
-            </div>
-
-        </div>
-
-        <div class="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#222]">
-
-            <button
-                class="bg-[#caa85c] text-black font-bold flex-grow py-3 rounded-lg text-sm uppercase tracking-wider hover:brightness-110 transition-all"
-                onclick="salvarPedidoEditado()"
-            >
-                SALVAR ALTERAÇÕES
-            </button>
-
-            <button
-                class="border border-[#333] text-gray-400 py-3 px-6 rounded-lg text-sm font-bold uppercase hover:bg-zinc-900 transition-all"
-                onclick="fecharEditorPedido()"
-            >
-                CANCELAR
-            </button>
-
-        </div>
-
     </div>
 
-</div>
-
-<div
-    id="previewRomaneio"
-    class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm items-center justify-center z-[99999] p-4 font-sans safe-modal"
->
-
-    <div class="bg-zinc-900 w-full max-w-4xl rounded-2xl border border-zinc-800 flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
-
-        <div class="bg-[#111] border-b border-zinc-800 p-4 flex justify-between items-center shrink-0">
-
-            <div>
-
-                <h3 class="text-[#caa85c] font-black uppercase text-sm tracking-wide flex items-center gap-2">
-                    👁️ Pré-visualização do Romaneio
-                </h3>
-
-                <p class="text-[10px] text-gray-500 font-mono">
-                    Verifique os dados antes da impressão física
-                </p>
-
+    <div id="previewRomaneio" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center z-[99999] p-4 font-sans">
+        <div class="bg-zinc-900 w-full max-w-4xl rounded-2xl border border-zinc-800 flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
+            <div class="bg-[#111] border-b border-zinc-800 p-4 flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-[#caa85c] font-black uppercase text-sm tracking-wide flex items-center gap-2">👁️ Pré-visualização do Romaneio</h3>
+                    <p class="text-[10px] text-gray-500 font-mono">Verifique os dados e o layout antes de enviar para a impressora física</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="confirmarImpressaoFisica()" class="bg-[#caa85c] text-black font-bold text-xs px-4 py-2 rounded-lg hover:brightness-110 transition-all uppercase tracking-wider flex items-center gap-1.5 shadow-md">🖨️ Confirmar e Imprimir</button>
+                    <button onclick="fecharPreviewRomaneio()" class="bg-zinc-800 hover:bg-zinc-700 text-gray-300 font-bold text-xs px-4 py-2 rounded-lg transition-all uppercase">Fechar</button>
+                </div>
             </div>
-
-            <div class="flex gap-2">
-
-                <button
-                    onclick="confirmarImpressaoFisica()"
-                    class="bg-[#caa85c] text-black font-bold text-xs px-4 py-2 rounded-lg hover:brightness-110 transition-all uppercase tracking-wider"
-                >
-                    🖨️ Confirmar e Imprimir
-                </button>
-
-                <button
-                    onclick="fecharPreviewRomaneio()"
-                    class="bg-zinc-800 hover:bg-zinc-700 text-gray-300 font-bold text-xs px-4 py-2 rounded-lg transition-all uppercase"
-                >
-                    Fechar
-                </button>
-
+            <div class="flex-1 overflow-y-auto p-6 bg-zinc-800/40 custom-scroll flex justify-center">
+                <div id="corpo-preview-a4" class="bg-white w-full max-w-[210mm] min-h-[297mm] p-8 shadow-xl text-black rounded-sm border border-gray-300 overflow-x-auto"></div>
             </div>
-
         </div>
-
-        <div class="flex-1 overflow-y-auto p-6 bg-zinc-800/40 custom-scroll flex justify-center">
-
-            <div
-                id="corpo-preview-a4"
-                class="bg-white w-full max-w-[210mm] min-h-[297mm] p-8 shadow-xl text-black rounded-sm border border-gray-300 overflow-x-auto"
-            ></div>
-
-        </div>
-
     </div>
 
-</div>
-
-<script src="admin-logic.js"></script>
-
+    <script type="module" src="admin-logic.js"></script>
 </body>
 </html>

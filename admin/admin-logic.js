@@ -10,19 +10,24 @@ window.todosPedidosLocal = {};
 // GLOBALIZAÇÃO CRÍTICA PARA OS SUBMÓDULOS HTML ENXERGAREM O BANCO
 window.db = firebaseDB; 
 
-// Garante que o atalho clássico do firebase também exista globalmente se disponível
-if (!window.firebase && window.firebaseDB && window.firebaseDB.app) {
-    window.firebase = window.firebaseDB.app;
-}
-
 // Sincronização em Tempo Real com a árvore de pedidos ("orders") no Firebase
 if (window.db) {
     console.log("🔥 [Firebase] Conexão estabelecida com sucesso no escopo global.");
+    
+    // Força uma leitura imediata para garantir que os dados existem antes do "on" ativo
+    window.db.ref('orders').once('value').then(snapshot => {
+        window.todosPedidosLocal = snapshot.val() || {};
+        console.log("📦 [Firebase] Pedidos iniciais carregados:", Object.keys(window.todosPedidosLocal).length);
+        if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
+            window.renderizarTabelaPedidosVisivel();
+        }
+    });
+
     window.db.ref('orders').on('value', function(snapshot) {
         window.todosPedidosLocal = snapshot.val() || {};
-        // Só força a renderização visual se o elemento container real já existir na DOM
-        if (document.getElementById('listaPedidos') && typeof window.renderizarTabelaPedidosVisivel === 'function') {
-            window.renderizarTabelaPedidosVisivel();
+        if (document.getElementById('tabela-pedidos-container') || document.getElementById('listaPedidos')) {
+            if (typeof window.renderizarTabelaPedidosVisivel === 'function') window.renderizarTabelaPedidosVisivel();
+            if (typeof window.carregarPedidos === "function") window.carregarPedidos();
         }
     });
 } else {
@@ -30,7 +35,7 @@ if (window.db) {
 }
 
 // =========================================================================
-// SISTEMA DE NAVEGAÇÃO INTERCEPTADOR E INJETADO NO ESCOPO GLOBAL (WINDOW)
+// SISTEMA DE NAVEGAÇÃO INTELIGENTE COM ROTA DE CONTINGÊNCIA (FALLBACK 404)
 // =========================================================================
 window.mudarAbaDinamica = function(aba) {
     const container = document.getElementById('conteudo-dinamico');
@@ -49,51 +54,51 @@ window.mudarAbaDinamica = function(aba) {
         btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
     }
 
-    // Mensagem de transição rápida
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-600 italic text-xs font-mono animate-pulse">Carregando módulo [${aba.toUpperCase()}]...</div>`;
 
-    // 2. Roteamento Avançado de Módulos (Garante caminhos absolutos corretos)
+    // Ajusta o nome do arquivo se necessário
+    const pathAba = (aba === 'categories') ? 'categorias' : aba;
+    
+    // Rota 1: Tentativa subindo um nível (caso esteja dentro da pasta admin/)
+    let urlTentativa1 = `../modulo/${pathAba}.html`;
+    // Rota 2: Tentativa partindo da raiz (fallback caso esteja na index principal)
+    let urlTentativa2 = `modulo/${pathAba}.html`;
+
     if (aba === 'editor') {
-        container.classList.remove('p-8'); 
-        carregarTemplateEditorIA(container);
+        container.classList.remove('p-8');
     } else {
         if(!container.classList.contains('p-8')) container.classList.add('p-8');
-        
-        // Determina a rota interna correta para os arquivos HTML parciais
-        const pathAba = (aba === 'categories') ? 'categorias' : aba;
-        
-        fetch(`../modulo/${pathAba}.html`)
-            .then(res => {
-                if(!res.ok) throw new Error(`Não foi possível carregar o arquivo: modulo/${pathAba}.html`);
-                return res.text();
-            })
-            .then(html => {
-                container.innerHTML = html;
-                // Executa o script de inicialização específico de cada aba com um delay seguro pós-renderização
-                setTimeout(() => {
-                    executarMapeamentoFallback(aba);
-                }, 60);
-            })
-            .catch(err => {
-                console.error(err);
-                container.innerHTML = `<div class="p-4 bg-red-950/30 border border-red-900 text-red-400 text-xs font-mono rounded-xl">❌ Falha ao injetar módulo: ${err.message}</div>`;
-            });
     }
+
+    fetch(urlTentativa1)
+        .then(res => {
+            if(!res.ok) return fetch(urlTentativa2); // Se a primeira rota falhar, tenta a segunda
+            return res;
+        })
+        .then(res => {
+            if(!res.ok) throw new Error(`Não foi possível localizar o arquivo HTML do módulo em nenhuma das rotas.`);
+            return res.text();
+        })
+        .then(html => {
+            container.innerHTML = html;
+            setTimeout(() => {
+                executarMapeamentoFallback(aba);
+            }, 80);
+        })
+        .catch(err => {
+            console.error(err);
+            container.innerHTML = `<div class="p-4 bg-red-950/30 border border-red-900 text-red-400 text-xs font-mono rounded-xl">
+                ❌ Erro ao renderizar interface: ${err.message}<br>Certifique-se de que o arquivo existe em <b>modulo/${pathAba}.html</b>
+            </div>`;
+        });
 };
 
-// =========================================================================
-// MAPEAMENTO DE CONTINGÊNCIA (EXECUÇÃO DE FUNÇÕES INTERNAS DE SCRIPT)
-// =========================================================================
 function executarMapeamentoFallback(aba) {
     switch(aba) {
         case 'pedidos':
-            if (typeof window.carregarPedidos === "function") {
-                window.carregarPedidos();
-            } else if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
-                window.renderizarTabelaPedidosVisivel();
-            } else if (typeof window.inicializarPainelPedidos === "function") {
-                window.inicializarPainelPedidos();
-            }
+            if (typeof window.carregarPedidos === "function") window.carregarPedidos();
+            else if (typeof window.renderizarTabelaPedidosVisivel === 'function') window.renderizarTabelaPedidosVisivel();
+            else if (typeof window.inicializarPainelPedidos === "function") window.inicializarPainelPedidos();
             break;
 
         case 'produtos':
@@ -117,38 +122,18 @@ function executarMapeamentoFallback(aba) {
         case 'config':
             if (typeof window.carregarConfiguracoes === "function") window.carregarConfiguracoes();
             break;
+            
+        case 'editor':
+            if (typeof window.inicializarMapeamentoLote === "function") window.inicializarMapeamentoLote();
+            break;
     }
 }
 
-// =========================================================================
-// INJETOR DO TEMPLATE NATIVO DO EDITOR MASTER IA
-// =========================================================================
-function carregarTemplateEditorIA(targetContainer) {
-    fetch('../modulo/image-editor.html')
-        .then(response => {
-            if(!response.ok) throw new Error("Módulo image-editor.html não localizado localmente.");
-            return response.text();
-        })
-        .then(html => {
-            targetContainer.innerHTML = html;
-            // Executa os ganchos internos do editor de lote se existirem
-            setTimeout(() => {
-                if (typeof window.inicializarMapeamentoLote === "function") {
-                    window.inicializarMapeamentoLote();
-                }
-            }, 60);
-        })
-        .catch(err => {
-            console.error(err);
-            targetContainer.innerHTML = `<div class="p-6 bg-red-950/20 border border-red-900 text-red-400 rounded-xl text-xs font-mono">
-                ❌ Falha crítica ao carregar interface do Editor: ${err.message}
-            </div>`;
-        });
-}
-
-// GATILHO DE FLUXO INICIAL ASSÍNCRONO
+// GATILHO DE FLUXO INICIAL ASSÍNCRONO CONECTADO AO READYSTATE
 if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => window.mudarAbaDinamica('pedidos'));
+    document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => window.mudarAbaDinamica('pedidos'), 200);
+    });
 } else {
-    window.mudarAbaDinamica('pedidos');
+    setTimeout(() => window.mudarAbaDinamica('pedidos'), 200);
 }

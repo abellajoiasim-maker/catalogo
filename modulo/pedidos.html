@@ -18,7 +18,7 @@
 
 <script>
     (function() {
-        // Verifica se o Firebase já está pronto na janela global, senão aguarda
+        // Garante que o Firebase está carregado antes de rodar o escopo
         if (typeof firebase === 'undefined' || !firebase.apps.length) {
             setTimeout(arguments.callee, 50);
             return;
@@ -27,7 +27,6 @@
         const db = firebase.database();
         let todosPedidosLocal = {};
         
-        // CORREÇÃO: Adicionado aspas em 'BRL' para não quebrar o script
         const fMoedaLocal = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
         window.carregarPedidos = function() {
@@ -48,7 +47,10 @@
                 let htmlStack = [];
                 let count = 0;
 
-                Object.keys(todosPedidosLocal).forEach(id => {
+                // Ordena os pedidos para que os mais novos fiquem no topo (usando o ID ou timestamp se houver)
+                const chavesPedidos = Object.keys(todosPedidosLocal).reverse();
+
+                chavesPedidos.forEach(id => {
                     const p = todosPedidosLocal[id];
                     const cliente = p.nome || p.cliente || 'Cliente Oculto';
                     if (busca && !cliente.toLowerCase().includes(busca)) return;
@@ -66,26 +68,29 @@
                     const totalExibivel = typeof rawTotal === 'number' ? fMoedaLocal(rawTotal) : (rawTotal || 'R$ 0,00');
                     const numeroPedido = id.slice(-6).toUpperCase();
 
-                    // Retorna exatamente o seu layout de Grid separado por cards com os botões internos
+                    // ESTRUTURA CORRETA DO CARD INDEPENDENTE DO GRID
                     htmlStack.push(`
-                        <div class="bg-[#111] border border-[#222] p-4 rounded-xl flex flex-col justify-between hover:border-zinc-700 transition-all text-xs space-y-3">
-                            <div class="space-y-1">
+                        <div class="bg-[#111] border border-[#222] p-4 rounded-xl flex flex-col justify-between hover:border-zinc-700 transition-all text-xs space-y-4">
+                            
+                            <div class="space-y-2">
                                 <div class="flex justify-between items-center text-gray-400 font-mono text-[11px]">
-                                    <span class="font-bold text-white">Pedido #${numeroPedido}</span>
+                                    <span class="font-bold text-white bg-zinc-800 px-2 py-0.5 rounded text-[10px]">Pedido #${numeroPedido}</span>
                                     <span>${p.data ? new Date(p.data).toLocaleString('pt-BR') : ''}</span>
                                 </div>
-                                <h4 class="text-base font-bold text-white uppercase">${cliente}</h4>
-                                <p class="text-xs text-gray-400 font-mono">📱 WhatsApp: ${p.whats || p.telefone || 'Não informado'}</p>
+                                <h4 class="text-base font-bold text-white uppercase tracking-tight pt-1">${cliente}</h4>
+                                <p class="text-xs text-gray-400 font-mono flex items-center gap-1">📱 <span>${p.whats || p.telefone || 'Não informado'}</span></p>
                                 <p class="text-xs text-zinc-400 font-mono">📦 Volume Total: <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span></p>
-                                <p class="text-xs text-zinc-500 truncate">📍 Endereço: ${p.rua || 'Retirada / Não informado'}</p>
-                                <div class="pt-1.5 flex justify-between items-center border-t border-zinc-900/50 mt-1">
+                                <p class="text-xs text-zinc-500 truncate" title="${p.rua || ''}">📍 Endereço: ${p.rua || 'Retirada / Não informado'}</p>
+                                
+                                <div class="pt-2 flex justify-between items-center border-t border-zinc-900/80 mt-2">
                                     <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
-                                    <span class="text-sm font-black text-[#caa85c] font-mono">${totalExibivel}</span>
+                                    <span class="text-base font-black text-[#caa85c] font-mono">${totalExibivel}</span>
                                 </div>
                             </div>
-                            <div class="bg-black/40 p-2 rounded-lg border border-zinc-900 space-y-1.5">
-                                <div class="flex gap-1.5">
-                                    <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1 rounded flex-1 outline-none">
+
+                            <div class="bg-black/60 p-2 rounded-lg border border-zinc-900 space-y-1.5">
+                                <div class="flex gap-2">
+                                    <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1.5 rounded flex-1 outline-none focus:border-[#caa85c]">
                                         <option value="1">1. Conferência de Separação</option>
                                         <option value="2">2. Financeiro e Faturamento</option>
                                         <option value="3">3. Vitrine (Conferência Fotográfica)</option>
@@ -93,18 +98,20 @@
                                         <option value="5">5. Grade Financeira Expandida</option>
                                         <option value="6">6. Grade Consolidada Total</option>
                                     </select>
-                                    <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; window.pedidoEditando = '${id}'; window.imprimirRomaneio(parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-2.5 py-1 rounded hover:brightness-110 uppercase tracking-wider">Imprimir</button>
+                                    <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; window.pedidoEditando = '${id}'; window.imprimirRomaneio(parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-3 py-1.5 rounded hover:brightness-110 uppercase tracking-wider transition-all shrink-0">Visualizar</button>
                                 </div>
                             </div>
+
                             <div class="flex gap-2 pt-2 border-t border-zinc-900">
-                                <button onclick="abrirEditorPedido('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-1 px-2 rounded transition-all text-center">⚙️ Gerenciar / Editar</button>
-                                <button onclick="excluirPedido('${id}')" class="bg-red-950/30 hover:bg-red-900/50 text-red-400 border border-red-900/30 py-1 px-2 rounded transition-all">🗑️ Excluir</button>
+                                <button onclick="abrirEditorPedido('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 px-2 rounded-lg transition-all text-center text-[11px]">⚙️ Gerenciar / Editar</button>
+                                <button onclick="excluirPedido('${id}')" class="bg-red-950/20 hover:bg-red-900/50 text-red-400 border border-red-900/40 py-2 px-3 rounded-lg transition-all">🗑️</button>
                             </div>
+
                         </div>
                     `);
                 });
 
-                container.innerHTML = htmlStack.length ? htmlStack.reverse().join('') : '<div class="text-center py-10 text-gray-600 italic col-span-full">Nenhum cliente correspondente.</div>';
+                container.innerHTML = htmlStack.length ? htmlStack.join('') : '<div class="text-center py-10 text-gray-600 italic col-span-full">Nenhum cliente correspondente.</div>';
                 if(badgeCount) badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
             }).catch(err => console.error("Erro ao carregar pedidos:", err));
         };

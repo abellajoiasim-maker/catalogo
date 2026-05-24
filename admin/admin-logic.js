@@ -4,22 +4,24 @@ import { db as firebaseDB } from '../images/js/firebase/firebase.js';
 // CACHES GLOBAIS DE OPERAÇÃO OPERACIONAL
 window.todosPedidosLocal = {};
 
-// GLOBALIZAÇÃO CRÍTICA PARA OS SUBMÓDULOS HTML ENXERGAREM O BANCO
+// GLOBALIZAÇÃO CRÍTICA DIRECIONADA PARA O NÓ 'ABELLA'
 window.db = firebaseDB; 
 
-// Sincronização em Tempo Real com a árvore de pedidos ("orders") no Firebase
+// Sincronização em Tempo Real com a árvore de pedidos mapeada em abella/orders
 if (window.db) {
-    console.log("🔥 [Firebase] Conexão estabelecida com sucesso no escopo global.");
+    console.log("🔥 [Firebase] Conexão estabelecida com sucesso na raiz '/abella'.");
     
-    // Leitura imediata para garantir carga inicial antes do gatilho 'on'
-    window.db.ref('orders').once('value').then(snapshot => {
+    // Leitura instantânea de segurança para carga inicial sob o novo nó estrutural
+    window.db.ref('abella/orders').once('value').then(snapshot => {
         window.todosPedidosLocal = snapshot.val() || {};
+        console.log("📦 [Abella] Pedidos iniciais carregados da subpasta:", Object.keys(window.todosPedidosLocal).length);
         if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
             window.renderizarTabelaPedidosVisivel();
         }
     });
 
-    window.db.ref('orders').on('value', function(snapshot) {
+    // Escuta ativa em tempo real para novos pedidos ou alterações de status
+    window.db.ref('abella/orders').on('value', function(snapshot) {
         window.todosPedidosLocal = snapshot.val() || {};
         if (document.getElementById('listaPedidos')) {
             if (typeof window.renderizarTabelaPedidosVisivel === 'function') window.renderizarTabelaPedidosVisivel();
@@ -52,7 +54,7 @@ window.mudarAbaDinamica = function(aba) {
 
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-600 italic text-xs font-mono animate-pulse">Carregando módulo [${aba.toUpperCase()}]...</div>`;
 
-    // Ajusta o mapeamento do nome do arquivo físico
+    // Mapeamento preciso do arquivo físico na pasta modulo/
     const pathAba = (aba === 'categories') ? 'categorias' : aba;
     
     // Rotas Dinâmicas para Prevenir Erros de Localização de Diretório
@@ -85,7 +87,7 @@ window.mudarAbaDinamica = function(aba) {
 // =========================================================================
 // MAPEAMENTO DE INICIALIZAÇÃO ESPECÍFICA DE CADA SUBMÓDULO
 // =========================================================================
-function ejecutarMapeamentoFallback(aba) {
+function executarMapeamentoFallback(aba) {
     switch(aba) {
         case 'pedidos':
             if (typeof window.carregarPedidos === "function") window.carregarPedidos();

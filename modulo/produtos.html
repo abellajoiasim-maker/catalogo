@@ -82,7 +82,7 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Variação</label>
-                <input type="text" id="prodVari TYPE" value="Lista" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-emerald-500 outline-none">
+                <input type="text" id="prodVariType" value="Lista" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-800 focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
             <div class="sm:col-span-2">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Opções Personalizadas</label>
@@ -204,6 +204,12 @@
             }
 
             var chaves = Object.keys(dados);
+            
+            // Remove o ID repetido da paginação anterior se aplicável
+            if (!resetarLista && chaves.length > 0) {
+                chaves.shift();
+            }
+
             if (chaves.length <= CONTROLE_PAGINA.limitePorBloco) {
                 CONTROLE_PAGINA.fimDosRegistros = true;
                 btnMais.classList.add('hidden');
@@ -222,33 +228,36 @@
 
     function carregarProximaPagina() { carregarBlocoProdutos(false); }
 
-   // RENDERIZAÇÃO LIMPA E TOTALMENTE CLICÁVEL (VISÃO ESPELHO COM PROMOÇÕES)
     function renderizarGridClean(produtos) {
         var grid = document.getElementById('grid-produtos');
         if (!grid) return;
+        
+        var chavesProds = Object.keys(produtos);
+        if (chavesProds.length === 0) {
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400">Nenhum produto atende aos filtros atuais.</div>';
+            return;
+        }
+        
         grid.innerHTML = '';
 
-        Object.keys(produtos).forEach(function(id) {
+        chavesProds.forEach(function(id) {
             var prod = produtos[id];
             var estaPausado = prod.paused === true;
             var fotoPadrao = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23ccc" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
             
-            // Verifica se o produto possui desconto ativo
             var temDesconto = prod.emOferta === true || (parseFloat(prod.porcentagemDesconto) > 0);
             
-            // Formatação inteligente dos Preços
             var precoOriginal = parseFloat(prod.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             var precoPromocional = temDesconto ? parseFloat(prod.precoPromocional || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
 
             var card = document.createElement('div');
-            // O CARD AGORA É TOTALMENTE CLICÁVEL (Chama editarProduto)
             card.className = `bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:shadow-md hover:border-gray-300 transition-all cursor-pointer flex flex-col justify-between ${estaPausado ? 'opacity-60' : ''}`;
             card.setAttribute('onclick', `editarProduto('${id}')`);
 
             card.innerHTML = `
                 <div>
                     <div class="w-full aspect-square bg-gray-50 relative overflow-hidden">
-                        <img src="${prod.image || fotoPadrao}" alt="${prod.name}" class="absolute inset-0 w-full h-full object-cover" onerror="this.src='${fotoPadrao}'">
+                        <img src="${prod.image || fotoPadrao}" alt="${prod.name || ''}" class="absolute inset-0 w-full h-full object-cover" onerror="this.src='${fotoPadrao}'">
                         
                         <div class="absolute top-3 left-3 z-20">
                             <button onclick="event.stopPropagation(); alternarStatusCard('${id}', ${estaPausado})" class="font-bold text-[10px] uppercase px-2.5 py-1 rounded-lg shadow-md transition-all ${estaPausado ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}">
@@ -296,6 +305,7 @@
             grid.appendChild(card);
         });
     }
+
     function filtrarLocalmente() {
         var termo = document.getElementById('buscaProduto').value.toLowerCase().trim();
         var status = document.getElementById('filtroStatus').value;
@@ -319,12 +329,12 @@
         document.getElementById('prodCategoria').value = "";
         document.getElementById('prodPeso').value = "";
         document.getElementById('prodPreco').value = "";
-        document.getElementById('prodVari TYPE').value = "Lista";
+        document.getElementById('prodVariType').value = "Lista";
         document.getElementById('prodOpcoes').value = "";
         document.getElementById('prodUrlImagem').value = "";
         document.getElementById('prodPreviewModal').classList.add('hidden');
         document.getElementById('prodPreviewPlaceholder').classList.remove('hidden');
-        document.getElementById('btnDeletarModal').classList.add('hidden'); // Oculta lixeira em novo cadastro
+        document.getElementById('btnDeletarModal').classList.add('hidden');
         document.getElementById('modalProduto').classList.remove('hidden');
     }
 
@@ -341,7 +351,7 @@
         document.getElementById('prodCategoria').value = prod.category || "";
         document.getElementById('prodPeso').value = prod.weight || "";
         document.getElementById('prodPreco').value = prod.price || "";
-        document.getElementById('prodVari TYPE').value = prod.variacaoTipo || "Lista";
+        document.getElementById('prodVariType').value = prod.variacaoTipo || "Lista";
         document.getElementById('prodOpcoes').value = prod.opcoesPersonalizadas || "";
         document.getElementById('prodUrlImagem').value = prod.image || "";
 
@@ -356,14 +366,13 @@
             placeholder.classList.remove('hidden');
         }
 
-        document.getElementById('btnDeletarModal').classList.remove('hidden'); // Exibe lixeira segura
+        document.getElementById('btnDeletarModal').classList.remove('hidden');
         document.getElementById('modalProduto').classList.remove('hidden');
     }
 
     function alternarStatusCard(id, estaPausadoAtualmente) {
         db.ref(`abella/products/${id}`).update({ paused: !estaPausadoAtualmente })
             .then(function() {
-                // Atualiza o cache local para refletir a mudança visual na hora
                 if(_PRODUTOS_EXIBIDOS[id]) _PRODUTOS_EXIBIDOS[id].paused = !estaPausadoAtualmente;
                 renderizarGridClean(_PRODUTOS_EXIBIDOS);
             });
@@ -374,8 +383,10 @@
         if(!id) return;
         if(confirm("⚠️ Deseja excluir permanentemente esta joia do seu banco de dados?")) {
             db.ref(`abella/products/${id}`).remove().then(function() {
-                alert("✅ Removido com sucesso!");
+                delete _PRODUTOS_EXIBIDOS[id];
                 fecharModalProduto();
+                renderizarGridClean(_PROTUR_EXIBIDOS);
+                carregarBlocoProdutos(true);
             });
         }
     }
@@ -387,7 +398,7 @@
         var category = document.getElementById('prodCategoria').value;
         var weight = document.getElementById('prodPeso').value.trim();
         var price = parseFloat(document.getElementById('prodPreco').value) || 0;
-        var variacaoTipo = document.getElementById('prodVari TYPE').value.trim();
+        var variacaoTipo = document.getElementById('prodVariType').value.trim();
         var opcoesPersonalizadas = document.getElementById('prodOpcoes').value.trim();
         var image = document.getElementById('prodUrlImagem').value.trim();
 
@@ -408,6 +419,7 @@
         function fecharLimpar() {
             fecharModalProduto();
             btn.disabled = false;
+            carregarBlocoProdutos(true);
         }
     }
 

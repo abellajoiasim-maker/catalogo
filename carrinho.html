@@ -132,14 +132,14 @@
                         <span>Total no Cartão:</span>
                         <span id="resTotalCartao" class="text-gray-300 font-bold font-mono">R$ 0,00</span>
                     </div>
-                    <div class="flex justify-between Residential items-center border-t border-zinc-900 pt-2 text-[10px] text-zinc-400 text-right font-mono w-full">
+                    <div class="flex justify-between items-center border-t border-zinc-900 pt-2 text-[10px] text-zinc-400 text-right font-mono w-full">
                         <span>Parcelas:</span>
                         <div id="resParcelasTexto" class="text-white font-bold">6x de R$ 0,00 sem juros</div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 pt-2">
-                    <button onclick="gerarPdfPedido(true)" class="border border-zinc-800 hover:bg-zinc-900 text-gray-300 py-2.5 rounded-xl text-[10px] uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-1">
+                    <button id="btnPdfFotos" onclick="gerarPdfPedido(true)" class="border border-zinc-800 hover:bg-zinc-900 text-gray-300 py-2.5 rounded-xl text-[10px] uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-1">
                         📄 Com Fotos
                     </button>
                     <button onclick="gerarPdfPedido(false)" class="border border-zinc-800 hover:bg-zinc-900 text-gray-300 py-2.5 rounded-xl text-[10px] uppercase font-bold tracking-wider transition-all flex items-center justify-center gap-1">
@@ -175,7 +175,6 @@
                     configGlobal.pixDesc = parseFloat(settings.pix || emp.pix || 5);
                     configGlobal.parcelasMax = parseInt(settings.parcelas || emp.parcelas || 6);
                     
-                    // Ajustado para ler o nó 'whats' unificado do novo banco limpo
                     const numWhats = settings.whats || settings.whatsapp || emp.whatsapp || "5519988207658";
                     configGlobal.whatsEmpresa = numWhats.replace(/\D/g, '');
                     
@@ -314,11 +313,10 @@
                 return;
             }
 
-            // GERAÇÃO E ENVIO SÍNCRONO DO PEDIDO PARA O REALTIME DATABASE
             const novoPedidoRef = db.ref('orders').push();
             let totalGeralPecas = carrinho.reduce((acc, curr) => acc + parseInt(curr.quantidade || 1), 0);
             let subtotalCalculado = 0;
-            let pesoTotalCalculado = 0;
+            let pesoTotalCalculado = 0; 
             
             let itensEstruturados = {};
             carrinho.forEach((item, idx) => {
@@ -326,21 +324,21 @@
                 const qtd = parseInt(item.quantidade || 1);
                 const ps = parseFloat(item.peso || item.weight || 0);
                 subtotalCalculado += (prc * qtd);
-                pesoTotalCalculated = (ps * qtd);
+                pesoTotalCalculado += (ps * qtd); // Correção do bug de soma aqui
                 
                 itensEstruturados[`item_${idx}`] = {
                     sku: item.sku || 'N/A',
                     nome: item.nome || item.name || '',
                     quantidade: qtd,
                     preco: prc,
-                    peso: ps
+                    peso: ps,
+                    image: item.image || ''
                 };
             });
 
             const descPix = subtotalCalculado * (configGlobal.pixDesc / 100);
             const finalTotal = pagamento === "PIX" ? (subtotalCalculado - descPix) : subtotalCalculado;
 
-            // Envia o payload limpo no formato exato esperado pelo admin
             novoPedidoRef.set({
                 cliente: nomeCli,
                 whats: whatsCli,
@@ -361,22 +359,45 @@
                 itens: itensEstruturados
             });
 
-           // GERAÇÃO DA MENSAGEM DO WHATSAPP (VERSÃO CURTA E DIRETAL)
-            const descPix = subtotalCalculado * (configGlobal.pixDesc / 100);
-            const valorLiquidoFinal = pagamento === "PIX" ? (subtotalCalculado - descPix) : subtotalCalculado;
-
             let msg = `*NOVO PEDIDO DE ATACADO - ABELLA JOIAS*\n\n`;
             msg += `*Dados do Cliente:* ${nomeCli} (${whatsCli}) - ${cidadeCli}\n`;
             msg += `*Local de Entrega:* ${entLocal} (${entCidade})\n`;
             msg += `*Opção de Pagamento:* ${pagamento}\n`;
-            msg += `*Valor Líquido:* *${fM(valorLiquidoFinal)}* (${totalGeralPecas} pçs | ${pesoTotalCalculado.toFixed(2)}g)\n\n`;
+            msg += `*Valor Líquido:* *${fM(finalTotal)}* (${totalGeralPecas} pçs | ${pesoTotalCalculado.toFixed(2)}g)\n\n`;
             msg += `_Estou aguardando o link definitivo para o pagamento para confirmação e o prazo de entrega._`;
 
             const urlWhats = `https://api.whatsapp.com/send?phone=${configGlobal.whatsEmpresa}&text=${encodeURIComponent(msg)}`;
             window.open(urlWhats, '_blank');
         }
 
-        function gerarPdfPedido(incluirFotos) {
+        // Função auxiliar robusta para carregar imagens e convertê-las para Base64 (Aceita Cross-Origin se permitido)
+        function carregarImagemBase64(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.setAttribute('crossOrigin', 'anonymous');
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = this.width;
+                    canvas.height = this.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(this, 0, 0);
+                    try {
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    } catch (e) {
+                        resolve(null); // Caso dê erro de CORS ou quebra de segurança, retorna nulo para não parar o fluxo
+                    }
+                };
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        }
+
+        async function gerarPdfPedido(incluirFotos) {
+            const btnOriginal = document.getElementById('btnPdfFotos').innerText;
+            if(incluirFotos) {
+                document.getElementById('btnPdfFotos').innerText = "⏳ PROCESSANDO...";
+            }
+
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
             
@@ -418,11 +439,21 @@
             let y = 68;
             pdf.setFont("Helvetica", "bold");
             pdf.setFontSize(9);
-            pdf.text("CÓD / SKU", 15, y);
-            pdf.text("DESCRIÇÃO DA JOIA NO BRUTO", 45, y);
-            pdf.text("QTD", 125, y);
-            pdf.text("PESO TOT", 140, y);
-            pdf.text("V. TOTAL", 165, y);
+            
+            // Ajuste dinâmico de colunas baseado na presença da foto
+            let colSku = 15;
+            let colFoto = 38;
+            let colDesc = incluirFotos ? 56 : 45;
+            let colQtd = 125;
+            let colPeso = 140;
+            let colTotal = 165;
+
+            pdf.text("CÓD / SKU", colSku, y);
+            if(incluirFotos) pdf.text("FOTO", colFoto, y);
+            pdf.text("DESCRIÇÃO DA JOIA NO BRUTO", colDesc, y);
+            pdf.text("QTD", colQtd, y);
+            pdf.text("PESO TOT", colPeso, y);
+            pdf.text("V. TOTAL", colTotal, y);
             
             pdf.setDrawColor(210, 210, 210);
             pdf.line(15, y + 2, 195, y + 2);
@@ -434,8 +465,12 @@
             pdf.setFont("Helvetica", "normal");
             pdf.setFontSize(9);
 
-            carrinho.forEach(item => {
-                if (y > 270) { pdf.addPage(); y = 20; }
+            for (let i = 0; i < carrinho.length; i++) {
+                const item = carrinho[i];
+                
+                // Altura dinâmica da linha dependendo se tem foto ou não para evitar sobreposição
+                let alturaLinha = incluirFotos ? 14 : 8;
+                if (y > (297 - alturaLinha - 30)) { pdf.addPage(); y = 20; }
 
                 const prc = parseFloat(item.precoFinal || item.price || 0);
                 const qtd = parseInt(item.quantidade || 1);
@@ -447,21 +482,35 @@
                 pesoTotal += pesoItem;
 
                 pdf.setFont("Helvetica", "bold");
-                pdf.text(item.sku || 'N/A', 15, y);
+                pdf.text(item.sku || 'N/A', colSku, y + (incluirFotos ? 4 : 0));
                 
+                // Lógica de Renderização Dinâmica de Imagem no PDF
+                if (incluirFotos) {
+                    const imgUrl = item.image || 'https://via.placeholder.com/150?text=Joia';
+                    const base64Img = await carregarImagemBase64(imgUrl);
+                    if (base64Img) {
+                        pdf.addImage(base64Img, 'JPEG', colFoto, y - 4, 12, 12);
+                    } else {
+                        pdf.setFontSize(7);
+                        pdf.text("[Sem foto]", colFoto, y + 4);
+                        pdf.setFontSize(9);
+                    }
+                }
+
                 pdf.setFont("Helvetica", "normal");
                 let txtNome = item.nome || item.name || '';
                 if(item.variacao) txtNome += ` (Var: ${item.variacao})`;
                 
-                if(txtNome.length > 42) txtNome = txtNome.substring(0, 39) + "...";
-                pdf.text(txtNome, 45, y);
+                let limiteCaracteres = incluirFotos ? 34 : 42;
+                if(txtNome.length > limiteCaracteres) txtNome = txtNome.substring(0, (limiteCaracteres - 3)) + "...";
+                pdf.text(txtNome, colDesc, y + (incluirFotos ? 4 : 0));
                 
-                pdf.text(qtd.toString(), 127, y);
-                pdf.text(`${pesoItem.toFixed(2)}g`, 140, y);
-                pdf.text(fM(subItem), 165, y);
+                pdf.text(qtd.toString(), colQtd, y + (incluirFotos ? 4 : 0));
+                pdf.text(`${pesoItem.toFixed(2)}g`, colPeso, y + (incluirFotos ? 4 : 0));
+                pdf.text(fM(subItem), colTotal, y + (incluirFotos ? 4 : 0));
 
-                y += 8;
-            });
+                y += alturaLinha;
+            }
 
             y += 4;
             if (y > 240) { pdf.addPage(); y = 20; }
@@ -487,6 +536,10 @@
             pdf.text(`LÍQUIDO À VISTA (PIX -${configGlobal.pixDesc}%): ${fM(subtotal - descPix)}`, 15, y);
             pdf.setFont("Helvetica", "normal");
             pdf.text(`Líquido no Cartão: ${fM(subtotal)} (ou ${configGlobal.parcelasMax}x de ${fM(subtotal/configGlobal.parcelasMax)})`, 110, y);
+
+            if(incluirFotos) {
+                document.getElementById('btnPdfFotos').innerText = btnOriginal;
+            }
 
             const blob = pdf.output('blob');
             const blobURL = URL.createObjectURL(blob);

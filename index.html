@@ -32,7 +32,7 @@
                 <p id="slogan" class="text-[9px] text-gray-400 uppercase tracking-widest">Carregando catálogo corporativo...</p>
             </div>
             <a href="carrinho.html" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2">
-                🛒 Carrinho (<span id="cart-count" class="gold font-bold">0</span>)
+                🛒 Carrinho (<span id="cart-count" class="gold font-bold">0</span>) <span id="cart-total" class="text-gray-400 font-normal ml-1">R$ 0,00</span>
             </a>
         </div>
     </header>
@@ -117,7 +117,7 @@
                 grid.innerHTML = '';
                 
                 if(!snap.exists()) {
-                    grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-10 italic">Nenhuma coleção ativa configurada no momento.</p>';
+                    grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-10 italic">Nenhuma coleção active configurada no momento.</p>';
                     return;
                 }
 
@@ -158,20 +158,31 @@
             atualizarCarrinho();
         }
 
-        // LÓGICA DO CARRINHO (Lê direto do LocalStorage, sem pesar o Firebase)
+        // LÓGICA DO CARRINHO (Processa corretamente a lista de objetos do LocalStorage)
         function atualizarCarrinho(){
-            // Garanta se está usando 'carrinho' ou 'carrinho_abella' de acordo com o seu checkout
             const cart = JSON.parse(localStorage.getItem('carrinho') || '[]');
             let totalPecas = 0;
+            let valorTotal = 0;
             
             cart.forEach(item => {
                 let qtd = parseInt(item.quantidade) || 1;
+                // Busca o preço final tratado de forma resiliente
+                let preco = parseFloat(item.precoFinal || item.preco || 0);
+                
                 totalPecas += qtd;
+                valorTotal += (preco * qtd);
             });
             
-            document.getElementById('cart-count').innerText = totalPecas;
+            // Injeta os valores reais calculados a partir dos objetos
+            const elCount = document.getElementById('cart-count');
+            const elTotal = document.getElementById('cart-total');
+            
+            if(elCount) elCount.innerText = totalPecas;
+            if(elTotal) elTotal.innerText = fM(valorTotal);
         }
 
+        // Escuta atualizações de página/foco para re-sincronizar imediatamente caso o usuário volte do carrinho
+        window.addEventListener('pageshow', atualizarCarrinho);
         window.onload = init;
     </script>
 </body>

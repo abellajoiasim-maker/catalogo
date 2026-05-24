@@ -142,7 +142,7 @@
     }, 200);
 
     function renderizarAbasCategorias() {
-        db.ref('categories').once('value', function(snapshot) {
+        db.ref('abella/categories').once('value', function(snapshot) {
             var dados = snapshot.val();
             var container = document.getElementById('abas-categorias');
             var selectForm = document.getElementById('prodCategoria');
@@ -182,7 +182,7 @@
         }
         if (CONTROLE_PAGINA.fimDosRegistros) return;
 
-        var consulta = db.ref('products');
+        var consulta = db.ref('abella/products');
         if (CONTROLE_PAGINA.categoriaAtual !== '') {
             consulta = consulta.orderByChild('category').equalTo(CONTROLE_PAGINA.categoriaAtual);
         } else {
@@ -361,7 +361,7 @@
     }
 
     function alternarStatusCard(id, estaPausadoAtualmente) {
-        db.ref(`products/${id}`).update({ paused: !estaPausadoAtualmente })
+        db.ref(`abella/products/${id}`).update({ paused: !estaPausadoAtualmente })
             .then(function() {
                 // Atualiza o cache local para refletir a mudança visual na hora
                 if(_PRODUTOS_EXIBIDOS[id]) _PRODUTOS_EXIBIDOS[id].paused = !estaPausadoAtualmente;
@@ -373,7 +373,7 @@
         var id = document.getElementById('prodId').value;
         if(!id) return;
         if(confirm("⚠️ Deseja excluir permanentemente esta joia do seu banco de dados?")) {
-            db.ref(`products/${id}`).remove().then(function() {
+            db.ref(`abella/products/${id}`).remove().then(function() {
                 alert("✅ Removido com sucesso!");
                 fecharModalProduto();
             });
@@ -399,10 +399,10 @@
         var dados = { name: name, sku: sku, category: category, weight: weight, peso: weight, price: price, precoFinal: price, variacaoTipo: variacaoTipo, opcoesPersonalizadas: opcoesPersonalizadas, image: image };
 
         if (id) {
-            db.ref(`products/${id}`).update(dados).then(function() { fecharLimpar(); });
+            db.ref(`abella/products/${id}`).update(dados).then(function() { fecharLimpar(); });
         } else {
             dados.paused = false;
-            db.ref('products').push(dados).then(function() { fecharLimpar(); });
+            db.ref('abella/products').push(dados).then(function() { fecharLimpar(); });
         }
 
         function fecharLimpar() {

@@ -138,7 +138,8 @@
                 return;
             }
 
-            db.ref('settings').once('value', snap => {
+            // AJUSTADO: Apontando para o nó isolado abella/settings
+            db.ref('abella/settings').once('value', snap => {
                 if(snap.exists()) {
                     const settings = snap.val() || {};
                     const emp = settings.empresa || {};
@@ -148,18 +149,20 @@
                 carregarProdutosDaColecao();
             });
 
-            atualizarCarrinho();
+            actualizarCarrinho();
         }
 
         function carregarProdutosDaColecao() {
-            db.ref(`categories/${categoriaId}`).once('value', snap => {
+            // AJUSTADO: Apontando para o nó isolado abella/categories
+            db.ref(`abella/categories/${categoriaId}`).once('value', snap => {
                 if(snap.exists()) {
                     const cat = snap.val();
                     document.getElementById('titulo-colecao').innerText = cat.name || cat.nome || categoriaId.replace(/-/g, ' ');
                 }
             });
 
-            db.ref('products').on('value', snap => {
+            // AJUSTADO: Apontando para o nó isolado abella/products
+            db.ref('abella/products').on('value', snap => {
                 const grid = document.getElementById('grid-produtos');
                 grid.innerHTML = '';
                 listaProdutosCache = [];
@@ -261,6 +264,7 @@
             document.getElementById('mdCompraImg').src = foto1;
             document.getElementById('mdCompraNome').innerText = produto.name || produto.nome || 'Peça Sem Nome';
             document.getElementById('mdCompraSku').innerText = "SKU: " + (produto.sku || 'N/A');
+            document.getElementById('mdCompraSku').innerText = "SKU: " + (produto.sku || 'N/A');
             document.getElementById('mdCompraPeso').innerText = "Peso Ref: " + (produto.peso || produto.weight || '0') + "g";
             
             const blocoVariacoes = document.getElementById('bloco-variacoes-painel');
@@ -308,12 +312,14 @@
             }
 
             const boxSeletores = document.getElementById('mdFotosSeletores');
-            boxSeletores.innerHTML = '';
-            if(foto2) {
-                boxSeletores.innerHTML = `
-                    <button onclick="mudeFotoModal('${foto1}')" class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[9px] uppercase font-bold text-gray-400 hover:text-white">Foto Real</button>
-                    <button onclick="mudeFotoModal('${foto2}')" class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[9px] uppercase font-bold text-gray-400 hover:text-white">📏 Medidas</button>
-                `;
+            if (boxSeletores) {
+                boxSeletores.innerHTML = '';
+                if(foto2) {
+                    boxSeletores.innerHTML = `
+                        <button onclick="mudeFotoModal('${foto1}')" class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[9px] uppercase font-bold text-gray-400 hover:text-white">Foto Real</button>
+                        <button onclick="mudeFotoModal('${foto2}')" class="px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded text-[9px] uppercase font-bold text-gray-400 hover:text-white">📏 Medidas</button>
+                    `;
+                }
             }
 
             document.getElementById('mdCompraQtd').value = 1;
@@ -359,8 +365,8 @@
 
         function ajustarQtdModal(fator) {
             let input = document.getElementById('mdCompraQtd');
-            let atual = parseInt(input.value) || 1;
-            let novo = atual + fator;
+            let mtUal = parseInt(input.value) || 1;
+            let novo = mtUal + fator;
             if (novo < 1) novo = 1;
             input.value = novo;
             recalcularPrecosModal();
@@ -397,7 +403,7 @@
                         } else {
                             localCarrinho.push({
                                 itemChave: chaveUnicaItem,
-                                sku: produtoSelecion0adoModal.sku || 'N/A',
+                                sku: produtoSelecionadoModal.sku || 'N/A', // CORRIGIDO: Typo consertado aqui
                                 nome: produtoSelecionadoModal.name || produtoSelecionadoModal.nome || 'Peça no Bruto',
                                 image: produtoSelecionadoModal.imagem || produtoSelecionadoModal.image || '',
                                 precoFinal: precoBaseUnitario,
@@ -439,19 +445,29 @@
             }
             
             localStorage.setItem('carrinho', JSON.stringify(localCarrinho));
-            atualizarCarrinho();
+            actualizarCarrinho();
             fecharModalCompra();
         }
 
         function actualizarCarrinho(){
             const cart = JSON.parse(localStorage.getItem('carrinho') || '[]');
             let total = 0;
+            let totalPecas = 0;
+            
             cart.forEach(item => {
                 let preco = parseFloat(item.precoFinal || item.price || 0);
                 let qtd = parseInt(item.quantidade) || 1;
                 total += (preco * qtd);
+                totalPecas += qtd;
             });
-            document.getElementById('cartTotal').innerText = fM(total);
+            
+            // Sincroniza o valor de subtotal no modal/checkout se existir
+            const cartTotalEl = document.getElementById('cartTotal');
+            if (cartTotalEl) cartTotalEl.innerText = fM(total);
+            
+            // Sincroniza o número de itens na sacola de compras no header principal
+            const cartCountEl = document.getElementById('cart-count');
+            if (cartCountEl) cartCountEl.innerText = totalPecas;
         }
 
         window.onload = init;

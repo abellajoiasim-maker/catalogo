@@ -158,9 +158,26 @@ window.orquestrarBindsSubmodulo = function(modulo) {
     console.log(`⚡ Conectando canais globais para o módulo ativo: [${modulo.toUpperCase()}]`);
 
     // ----------------------------------------------------------------------
-    // BINDS DO MÓDULO DE PEDIDOS
+    // BINDS DO MÓDULO DE PEDIDOS (CORRIGIDO PARA ABELLA JOIAS)
     // ----------------------------------------------------------------------
     if (modulo === 'pedidos') {
+        
+        // CONEXÃO AUTOMÁTICA COORDENADA COM O BANCO ISOLADO
+        if (window.db) {
+            window.todosPedidosLocal = window.todosPedidosLocal || {};
+            
+            // Força a escuta em tempo real direto na ramificação correta da Abella
+            window.db.ref('abella/orders').on('value', function(snapshot) {
+                window.todosPedidosLocal = snapshot.val() || {};
+                console.log("📦 Dados recebidos do barramento /abella/orders:", window.todosPedidosLocal);
+                
+                // Renderiza na hora os cartões na tela assim que o Firebase atualiza
+                window.renderizarTabelaPedidosVisivel();
+            }, function(error) {
+                console.error("Erro de permissão ou conexão na ramificação /abella/orders:", error);
+            });
+        }
+
         window.renderizarTabelaPedidosVisivel = function() {
             var container = document.getElementById('listaPedidos');
             if (!container) {
@@ -169,26 +186,29 @@ window.orquestrarBindsSubmodulo = function(modulo) {
             }
 
             container.innerHTML = '';
-            var chaves = Object.keys(window.todosPedidosLocal).reverse();
+            var chaves = Object.keys(window.todosPedidosLocal || {}).reverse();
 
-            if (window.filtroStatusPedidoAtual !== "Todos") {
+            if (window.filtroStatusPedidoAtual && window.filtroStatusPedidoAtual !== "Todos") {
                 chaves = chaves.filter(function(k) {
                     var p = window.todosPedidosLocal[k];
+                    if (!p) return false;
                     var statusReal = p.status || (p.resumo ? p.resumo.status : "Novo");
                     return statusReal.toLowerCase() === window.filtroStatusPedidoAtual.toLowerCase();
                 });
             }
 
             if (chaves.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-600 font-mono italic text-xs">Nenhum pedido localizado para a seleção [${window.filtroStatusPedidoAtual}].</div>`;
+                var statusTxt = window.filtroStatusPedidoAtual || "Todos";
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-600 font-mono italic text-xs">Nenhum pedido localizado para a seleção [${statusTxt}].</div>`;
                 return;
             }
 
             chaves.forEach(function(key) {
                 var p = window.todosPedidosLocal[key];
+                if (!p) return;
                 
                 var totalNum = p.total || (p.resumo ? p.resumo.total : 0);
-                var totalStr = window.formatarMoedaReal(totalNum);
+                var totalStr = window.formatarMoedaReal ? window.formatarMoedaReal(totalNum) : "R$ " + totalNum.toFixed(2);
                 var dataStr = p.data || "Sem Data";
                 var clienteNome = p.nome || p.cliente || (p.entrega ? p.entrega.nome : 'Cliente Abella');
                 var numeroPedido = key.slice(-6).toUpperCase();
@@ -213,7 +233,7 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                         <h4 class="text-base font-bold text-white uppercase tracking-tight pt-1 truncate" title="${clienteNome}">${clienteNome}</h4>
                         <p class="text-xs text-gray-400 font-mono">📱 ${p.whats || p.telefone || 'Não informado'}</p>
                         <p class="text-xs text-zinc-400 font-mono">📦 Volume Total: <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span></p>
-                        <p class="text-xs text-zinc-500 truncate" title="${p.rua || ''}">📍 ${p.rua || 'Retirada / Não informado'}</p>
+                        <p class="text-xs text-zinc-500 truncate" title="${p.rua || (p.entrega ? p.entrega.rua : '')}">📍 ${p.rua || (p.entrega ? p.entrega.rua : 'Retirada / Não informado')}</p>
                         
                         <div class="pt-2 flex justify-between items-center border-t border-zinc-900/80 mt-2">
                             <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
@@ -250,7 +270,9 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                 btn.classList.remove('bg-[#caa85c]', 'text-black');
                 btn.classList.add('bg-zinc-900', 'text-gray-400');
             });
-            var btnAtivo = document.getElementById(`filter-ped-${status.toLowerCase()}`);
+            // Tratamento extra caso o id termine diferente por conta de caracteres especiais
+            var idBotao = status.toLowerCase() === "em separação" ? "filter-ped-separacao" : `filter-ped-${status.toLowerCase()}`;
+            var btnAtivo = document.getElementById(idBotao);
             if (btnAtivo) {
                 btnAtivo.classList.remove('bg-zinc-900', 'text-gray-400');
                 btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
@@ -262,7 +284,7 @@ window.orquestrarBindsSubmodulo = function(modulo) {
             var pedido = window.todosPedidosLocal[id];
             if (!pedido) return;
             var numPecas = pedido.totalPecas || (pedido.resumo ? pedido.resumo.totalPecas : 0);
-            alert(`Lendo metadados de itens do comprador: ${pedido.nome || pedido.cliente || 'Cliente Abella'}\nTotal de Peças: ${numPecas}\nID: ${id}`);
+            alert(`Lendo metadados de itens do comprador: ${pedido.nome || p.cliente || pedido.cliente || 'Cliente Abella'}\nTotal de Peças: ${numPecas}\nID: ${id}`);
         };
 
         window.gerarPdfConferenciaPedido = function(id) {
@@ -276,6 +298,9 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                 });
             }
         };
+        
+        // Dispara uma renderização preventiva logo ao entrar
+        window.renderizarTabelaPedidosVisivel();
     }
 
     // ----------------------------------------------------------------------

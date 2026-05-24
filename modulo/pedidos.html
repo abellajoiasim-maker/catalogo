@@ -1,7 +1,7 @@
 <div class="flex justify-between items-center mb-6">
     <div>
         <h2 class="text-xl font-black text-white uppercase tracking-tight">Módulo de Pedidos Recebidos</h2>
-        <p class="text-xs text-gray-500">Fluxo operacional assíncrono isolado com persistência estável</p>
+        <p class="text-xs text-gray-500">Fluxo operacional assíncrono isolado em Grid Estável</p>
     </div>
     <span id="qtd-pedidos" class="bg-[#caa85c]/10 border border-[#caa85c]/20 text-[#caa85c] px-3 py-1 rounded-full text-xs font-bold font-mono">Carregando contador...</span>
 </div>
@@ -10,15 +10,15 @@
     <input id="buscaPedido" type="text" oninput="carregarPedidos()" placeholder="🔍 Buscar cliente por nome..." class="w-full md:w-80 bg-[#111] border border-[#222] p-2.5 rounded-xl text-xs text-white focus:border-[#caa85c] outline-none font-medium">
 </div>
 
-<div id="listaPedidos" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+<div id="listaPedidosGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full block clearfix">
     <div class="col-span-full text-center py-12 text-zinc-600 italic text-xs animate-pulse font-mono">
-        Buscando dados ativos na árvore 'orders' do Firebase...
+        Buscando dados ativos na árvore do Firebase...
     </div>
 </div>
 
 <script>
     (function() {
-        // Garante que o Firebase está carregado antes de rodar o escopo
+        // Aguarda o Firebase iniciar com segurança
         if (typeof firebase === 'undefined' || !firebase.apps.length) {
             setTimeout(arguments.callee, 50);
             return;
@@ -30,8 +30,9 @@
         const fMoedaLocal = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
         window.carregarPedidos = function() {
+            // Buscando da raiz genérica 'orders' (ajuste para 'abella/orders' se necessário)
             db.ref('orders').once('value').then(snap => {
-                const container = document.getElementById('listaPedidos');
+                const container = document.getElementById('listaPedidosGrid');
                 const badgeCount = document.getElementById('qtd-pedidos');
                 if (!container) return;
 
@@ -47,7 +48,6 @@
                 let htmlStack = [];
                 let count = 0;
 
-                // Ordena os pedidos para que os mais novos fiquem no topo (usando o ID ou timestamp se houver)
                 const chavesPedidos = Object.keys(todosPedidosLocal).reverse();
 
                 chavesPedidos.forEach(id => {
@@ -68,9 +68,9 @@
                     const totalExibivel = typeof rawTotal === 'number' ? fMoedaLocal(rawTotal) : (rawTotal || 'R$ 0,00');
                     const numeroPedido = id.slice(-6).toUpperCase();
 
-                    // ESTRUTURA CORRETA DO CARD INDEPENDENTE DO GRID
+                    // TEMPLATE DO CARD DO GRID
                     htmlStack.push(`
-                        <div class="bg-[#111] border border-[#222] p-4 rounded-xl flex flex-col justify-between hover:border-zinc-700 transition-all text-xs space-y-4">
+                        <div class="bg-[#111] border border-[#222] p-4 rounded-xl flex flex-col justify-between hover:border-zinc-700 transition-all text-xs space-y-4 min-w-[280px] h-full">
                             
                             <div class="space-y-2">
                                 <div class="flex justify-between items-center text-gray-400 font-mono text-[11px]">
@@ -78,9 +78,9 @@
                                     <span>${p.data ? new Date(p.data).toLocaleString('pt-BR') : ''}</span>
                                 </div>
                                 <h4 class="text-base font-bold text-white uppercase tracking-tight pt-1">${cliente}</h4>
-                                <p class="text-xs text-gray-400 font-mono flex items-center gap-1">📱 <span>${p.whats || p.telefone || 'Não informado'}</span></p>
+                                <p class="text-xs text-gray-400 font-mono">📱 ${p.whats || p.telefone || 'Não informado'}</p>
                                 <p class="text-xs text-zinc-400 font-mono">📦 Volume Total: <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span></p>
-                                <p class="text-xs text-zinc-500 truncate" title="${p.rua || ''}">📍 Endereço: ${p.rua || 'Retirada / Não informado'}</p>
+                                <p class="text-xs text-zinc-500 truncate" title="${p.rua || ''}">📍 ${p.rua || 'Retirada / Não informado'}</p>
                                 
                                 <div class="pt-2 flex justify-between items-center border-t border-zinc-900/80 mt-2">
                                     <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
@@ -88,7 +88,7 @@
                                 </div>
                             </div>
 
-                            <div class="bg-black/60 p-2 rounded-lg border border-zinc-900 space-y-1.5">
+                            <div class="bg-black/60 p-2 rounded-lg border border-zinc-900 mt-2">
                                 <div class="flex gap-2">
                                     <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1.5 rounded flex-1 outline-none focus:border-[#caa85c]">
                                         <option value="1">1. Conferência de Separação</option>
@@ -102,9 +102,9 @@
                                 </div>
                             </div>
 
-                            <div class="flex gap-2 pt-2 border-t border-zinc-900">
+                            <div class="flex gap-2 pt-2 border-t border-zinc-900 mt-2">
                                 <button onclick="abrirEditorPedido('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 px-2 rounded-lg transition-all text-center text-[11px]">⚙️ Gerenciar / Editar</button>
-                                <button onclick="excluirPedido('${id}')" class="bg-red-950/20 hover:bg-red-900/50 text-red-400 border border-red-900/40 py-2 px-3 rounded-lg transition-all">🗑️</button>
+                                <button onclick="excluirPedido('${id}')" class="bg-red-950/20 hover:bg-red-900/50 text-red-400 border border-red-900/40 py-2 px-3 rounded-lg transition-all">🗑️ Excluir</button>
                             </div>
 
                         </div>
@@ -116,393 +116,7 @@
             }).catch(err => console.error("Erro ao carregar pedidos:", err));
         };
 
-        window.abrirEditorPedido = function(id) {
-            window.pedidoEditando = id;
-            const p = todosPedidosLocal[id];
-            if(!p) return;
-            
-            const elId = document.getElementById('idPedidoInterno');
-            if(elId) elId.innerText = `#${id.toUpperCase()}`;
-            
-            document.getElementById('edClienteNome').value = p.nome || p.cliente || '';
-            document.getElementById('edClienteTel').value = p.whats || p.telefone || '';
-            document.getElementById('edRua').value = p.rua || '';
-            document.getElementById('edCidade').value = p.cidade || '';
-            document.getElementById('edDescPromo').value = p.descontoPromo || 0;
-            document.getElementById('edDescPix').value = p.descontoPix || 0;
-            document.getElementById('edFrete').value = p.frete || 0;
-            
-            const itensTratados = p.itens ? (Array.isArray(p.itens) ? p.itens : Object.values(p.itens)) : [];
-            renderItensEditor(itensTratados);
-            document.getElementById('editorPedido').classList.remove('hidden');
-        };
-
-        function renderItensEditor(itens) {
-            const box = document.getElementById('edItens');
-            if(!box) return;
-            box.innerHTML = '';
-            itens.forEach((item, index) => {
-                if(!item) return;
-                box.innerHTML += `
-                    <div class="flex items-center gap-2 bg-black/40 p-2 border border-[#222] rounded-lg">
-                        <div class="flex-1 truncate">
-                            <div class="text-xs font-bold text-white truncate">${item.nome || item.name || 'Peça'}</div>
-                            <div class="text-[10px] text-gray-500 font-mono">SKU: ${item.sku || 'N/A'} | Preço: ${fMoedaLocal(item.precoFinal || item.price || item.preco)}</div>
-                        </div>
-                        <div class="flex items-center gap-1 shrink-0">
-                            <input type="number" step="0.01" value="${item.precoFinal || item.price || item.preco || 0}" oninput="atualizarItemPreco(${index}, this.value)" class="w-20 bg-black border border-[#333] p-1 rounded text-center text-xs text-white font-mono">
-                            <input type="number" value="${item.quantidade || item.qtd || 1}" oninput="atualizarItemQtd(${index}, this.value)" class="w-14 bg-black border border-[#333] p-1 rounded text-center text-xs text-white font-mono">
-                            <button onclick="removerItemEditor(${index})" class="text-red-500 font-bold px-2 hover:text-red-400">✕</button>
-                        </div>
-                    </div>
-                `;
-            });
-            recalcularTotalEd();
-        }
-
-        window.atualizarItemPreco = function(index, valor) {
-            const p = todosPedidosLocal[window.pedidoEditando];
-            if(p && p.itens) {
-                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
-                if(arr[index]) {
-                    arr[index].precoFinal = parseFloat(valor) || 0;
-                    arr[index].preco = parseFloat(valor) || 0;
-                    p.itens = arr;
-                    recalcularTotalEd();
-                }
-            }
-        };
-
-        window.atualizarItemQtd = function(index, valor) {
-            const p = todosPedidosLocal[window.pedidoEditando];
-            if(p && p.itens) {
-                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
-                if(arr[index]) {
-                    arr[index].quantidade = parseInt(valor) || 0;
-                    arr[index].qtd = parseInt(valor) || 0;
-                    p.itens = arr;
-                    recalcularTotalEd();
-                }
-            }
-        };
-
-        window.removerItemEditor = function(index) {
-            const p = todosPedidosLocal[window.pedidoEditando];
-            if(p && p.itens) {
-                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
-                arr.splice(index, 1);
-                p.itens = arr;
-                renderItensEditor(p.itens);
-            }
-        };
-
-        window.addItemEditor = function() {
-            const sku = prompt("Digite o SKU exato do produto:").toUpperCase().trim();
-            if(!sku) return;
-
-            db.ref('products/' + sku).once('value', snap => {
-                if(!snap.exists()) {
-                    alert("❌ SKU não localizado!");
-                    return;
-                }
-                const prod = snap.val();
-                const p = todosPedidosLocal[window.pedidoEditando];
-                if(!p.itens) p.itens = [];
-                
-                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
-                arr.push({
-                    sku: sku,
-                    nome: prod.name || prod.nome,
-                    precoFinal: parseFloat(prod.price || prod.precoFinal || 0),
-                    preco: parseFloat(prod.price || prod.precoFinal || 0),
-                    quantidade: 1,
-                    peso: prod.weight || prod.peso || '0g',
-                    image: prod.image || ''
-                });
-                p.itens = arr;
-                renderItensEditor(p.itens);
-            });
-        };
-
-        window.recalcularTotalEd = function() {
-            const p = todosPedidosLocal[window.pedidoEditando];
-            if(!p) return;
-
-            let subtotal = 0, totalPecas = 0;
-            if(p.itens) {
-                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
-                arr.forEach(i => {
-                    if(!i) return;
-                    const precoProd = parseFloat(i.precoFinal || i.price || i.preco || 0);
-                    const qtdProd = parseInt(i.quantidade || i.qtd || 0);
-                    subtotal += precoProd * qtdProd;
-                    totalPecas += qtdProd;
-                });
-            }
-            const descPromo = parseFloat(document.getElementById('edDescPromo').value) || 0;
-            const descPix = parseFloat(document.getElementById('edDescPix').value) || 0;
-            const frete = parseFloat(document.getElementById('edFrete').value) || 0;
-
-            const totalLiquido = subtotal - descPromo - descPix + frete;
-            document.getElementById('totalPreview').innerText = fMoedaLocal(totalLiquido);
-            document.getElementById('edQtdTotal').value = totalPecas;
-        };
-
-        window.salvarPedidoEditado = function() {
-            const idTarget = window.pedidoEditando;
-            const p = todosPedidosLocal[idTarget];
-            if(!p) return;
-
-            p.nome = document.getElementById('edClienteNome').value.trim();
-            p.whats = document.getElementById('edClienteTel').value.trim();
-            p.rua = document.getElementById('edRua').value.trim();
-            p.cidade = document.getElementById('edCidade').value.trim();
-            p.descontoPromo = parseFloat(document.getElementById('edDescPromo').value) || 0;
-            p.descontoPix = parseFloat(document.getElementById('edDescPix').value) || 0;
-            p.frete = parseFloat(document.getElementById('edFrete').value) || 0;
-
-            let subtotal = 0;
-            const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
-            arr.forEach(i => {
-                if(i) subtotal += ((i.precoFinal || i.price || i.preco || 0) * (i.quantidade || i.qtd || 0));
-            });
-            p.total = subtotal - p.descontoPromo - p.descontoPix + p.frete;
-            p.itens = arr.filter(i => i !== null);
-
-            db.ref('orders/' + idTarget).set(p).then(() => {
-                alert("✅ Pedido atualizado com sucesso!");
-                fecharEditorPedido();
-                carregarPedidos();
-            });
-        };
-
-        window.excluirPedido = function(id) {
-            if(confirm("🚨 Deseja deletar definitivamente este pedido?")) {
-                db.ref('orders/' + id).remove().then(() => {
-                    alert("Pedido excluído!");
-                    carregarPedidos();
-                });
-            }
-        };
-
-        window.fecharEditorPedido = function() {
-            document.getElementById('editorPedido').classList.add('hidden');
-            window.pedidoEditando = null;
-        };
-
-        window.imprimirRomaneio = function(tipo) {
-            const p = todosPedidosLocal[window.pedidoEditando];
-            if(!p) {
-                alert("🚨 Selecione ou abra um pedido antes de imprimir!");
-                return;
-            }
-
-            const previewArea = document.getElementById('corpo-preview-a4');
-            const modalPreview = document.getElementById('previewRomaneio');
-            if(!previewArea || !modalPreview) {
-                console.error("🚨 Elementos de Preview não encontrados no DOM do admin.html");
-                return;
-            }
-
-            const numPedidoFriendly = window.pedidoEditando.slice(-6).toUpperCase();
-            const dataPedido = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : 'N/A';
-            
-            let subtotalGeral = 0;
-            let totalPecasGeral = 0;
-            let totalPesoGeral = 0;
-            
-            let itensOrdenados = [];
-            if (p.itens) {
-                const baseItens = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
-                itensOrdenados = [...baseItens].filter(i => i !== null);
-                
-                itensOrdenados.sort((a, b) => {
-                    const skuA = (a.sku || '').toString().toUpperCase().trim();
-                    const skuB = (b.sku || '').toString().toUpperCase().trim();
-                    return skuA.localeCompare(skuB, 'pt-BR', { sensitivity: 'base', numeric: true });
-                });
-
-                itensOrdenados.forEach(i => {
-                    const qtd = parseInt(i.quantidade || i.qtd || 0);
-                    const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
-                    
-                    let pesoNumerico = 0;
-                    try {
-                        let pesoBruto = i.peso || i.weight || "0";
-                        let pesoTexto = pesoBruto.toString().toLowerCase().replace('g', '').replace(',', '.').trim();
-                        pesoNumerico = parseFloat(pesoTexto) || 0;
-                    } catch(e) {
-                        pesoNumerico = 0;
-                    }
-
-                    subtotalGeral += (preco * qtd);
-                    totalPecasGeral += qtd;
-                    totalPesoGeral += (pesoNumerico * qtd);
-                });
-            }
-
-            const descPromo = parseFloat(p.descontoPromo || p.desconto || 0);
-            const descPix = parseFloat(p.descontoPix || 0);
-            const frete = parseFloat(p.frete || 0);
-            const totalLiquido = subtotalGeral - descPromo - descPix + frete;
-
-            const ehConferencia = (tipo === 1 || tipo === 4);
-            const comFoto = (tipo === 3 || tipo === 6);
-
-            let htmlGerado = `
-                <div style="font-family: 'Inter', monospace, sans-serif; color: #000; font-size: 11px; line-height: 1.3;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px;">
-                        <div>
-                            <h1 style="margin: 0; font-size: 15px; font-weight: 900; tracking-tight; letter-spacing: -0.5px;">ABELLA JÓIAS</h1>
-                            <p style="margin: 0; font-size: 9px; text-transform: uppercase; color: #333; font-weight: 600;">Atacado de Jóias no Bruto e Semi-jóias</p>
-                            <p style="margin: 1px 0 0 0; font-size: 9px; color: #555; font-family: monospace;">Contato: (19) 99847-5124 • Limeira/SP</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <span style="font-size: 12px; font-weight: bold; background: #000; color: #fff; padding: 3px 6px; border-radius: 4px; font-family: monospace;">PEDIDO #${numPedidoFriendly}</span>
-                            <p style="margin: 3px 0 0 0; font-size: 9px; font-weight: bold; color: #444;">Emissão: ${dataPedido}</p>
-                        </div>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-                        <div style="border: 1px solid #000; padding: 6px; border-radius: 4px; background: #fafafa;">
-                            <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 0.5px;">Dados do Cliente</div>
-                            <b>Nome:</b> ${(p.nome || p.cliente || 'Não Informado').toUpperCase()}<br>
-                            <b>Whats/Tel:</b> ${p.whats || p.telefone || 'Não Informado'}<br>
-                            <b>Cidade Base:</b> ${p.cidade || 'Limeira / SP'}
-                        </div>
-                        <div style="border: 1px solid #000; padding: 6px; border-radius: 4px; background: #fafafa;">
-                            <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 0.5px;">Local de Entrega Completo</div>
-                            <b>Destino:</b> ${(p.localEntrega || p.nome || p.cliente || 'Retirada na Galvânica').toUpperCase()}<br>
-                            <b>Endereço:</b> ${p.rua || 'Rua não informada'}, ${p.numero || 'S/N'}<br>
-                            <b>Bairro/Cidade:</b> ${p.bairro || 'Centro'} — ${p.cidade || 'Limeira/SP'}
-                        </div>
-                    </div>
-            `;
-
-            if (tipo === 1 || tipo === 2 || tipo === 3) {
-                htmlGerado += `
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
-                        <thead>
-                            <tr style="background: #000; color: #fff; font-size: 9px; text-transform: uppercase;">
-                                ${comFoto ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 35px;">Foto</th>' : ''}
-                                <th style="padding: 4px; border: 1px solid #000; text-align: left; width: 75px;">SKU</th>
-                                <th style="padding: 4px; border: 1px solid #000; text-align: left;">Descrição da Peça</th>
-                                ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 45px;">Peso Un.</th>' : ''}
-                                ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: right; width: 65px;">Preço Un.</th>' : ''}
-                                <th style="padding: 4px; border: 1px solid #000; text-align: center; width: 40px;">Qtd</th>
-                                ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: right; width: 75px;">Total</th>' : ''}
-                                ${ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 45px;">Conf.</th>' : ''}
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                itensOrdenados.forEach(i => {
-                    const qtd = parseInt(i.quantidade || i.qtd || 1);
-                    const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
-                    const pesoUnitario = i.peso || i.weight || '0g';
-                    
-                    htmlGerado += `
-                        <tr style="border-bottom: 1px solid #ddd; font-size: 10px;">
-                            ${comFoto ? `
-                                <td style="padding: 3px; border: 1px solid #ddd; text-align: center;">
-                                    <div style="width: 28px; height: 28px; background: #eee; border: 1px dashed #aaa; margin: auto; font-size: 6px; display: flex; align-items: center; justify-content: center; overflow:hidden;">
-                                        ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '[FOTO]'}
-                                    </div>
-                                </td>` : ''
-                            }
-                            <td style="padding: 4px; border: 1px solid #ddd; font-weight: bold; font-family: monospace; background:#f9f9f9;">${i.sku || 'N/A'}</td>
-                            <td style="padding: 4px; border: 1px solid #ddd; text-transform: uppercase; font-size: 9px;">${i.name || i.nome || 'Peça bruta s/ identificação'}</td>
-                            ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-family: monospace; color:#555;">${pesoUnitario}</td>` : ''}
-                            ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${fMoedaLocal(preco)}</td>` : ''}
-                            <td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 11px; background: #fbfbfb;">${qtd}</td>
-                            ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-weight: bold; font-family: monospace;">${fMoedaLocal(preco * qtd)}</td>` : ''}
-                            ${ehConferencia ? '<td style="padding: 4px; border: 1px solid #ddd; text-align: center; color: #bbb;">[  ]</td>' : ''}
-                        </tr>
-                    `;
-                });
-                htmlGerado += `</tbody></table>`;
-            } 
-            else if (tipo === 4 || tipo === 5 || tipo === 6) {
-                htmlGerado += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px;">`;
-
-                itensOrdenados.forEach(i => {
-                    const qtd = parseInt(i.quantidade || i.qtd || 1);
-                    const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
-                    const pesoUnitario = i.peso || i.weight || '0g';
-
-                    htmlGerado += `
-                        <div style="border: 1px solid #000; padding: 4px; border-radius: 4px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 2px;">
-                                <span style="font-family: monospace; font-weight: bold; font-size: 9px; background: #e0e0e0; padding: 1px 3px; border-radius: 2px;">${i.sku || 'N/A'}</span>
-                                <span style="font-size: 11px; font-weight: 900; background: #000; color: #fff; padding: 1px 5px; border-radius: 3px;">X${qtd}</span>
-                            </div>
-                            
-                            ${comFoto ? `
-                                <div style="width: 100%; height: 42px; background: #f9f9f9; border: 1px dashed #ccc; margin: 2px 0; display: flex; align-items: center; justify-content: center; overflow:hidden;">
-                                    ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:7px; color:#999;">[SEM FOTO]</span>'}
-                                </div>` : ''
-                            }
-
-                            <div style="font-size: 9px; text-transform: uppercase; color: #111; min-height: 20px; line-height: 1.1; font-weight: 500; margin-bottom: 2px;">
-                                ${i.name || i.nome || 'Sem Descrição'}
-                            </div>
-
-                            <div style="background: #fdfdfd; padding-top: 2px; border-top: 1px dashed #ddd; font-size: 8px; font-family: monospace; display: flex; flex-direction: column; gap: 1px;">
-                                ${!ehConferencia ? `
-                                    <div style="display:flex; justify-content:space-between; color:#444;">
-                                        <span>Peso: ${pesoUnitario}</span>
-                                        <span>Un: ${fMoedaLocal(preco)}</span>
-                                    </div>
-                                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:#000; border-top:1px dotted #eee; padding-top:1px;">
-                                        <span>SUBTOTAL:</span>
-                                        <span>${fMoedaLocal(preco * qtd)}</span>
-                                    </div>
-                                ` : `
-                                    <div style="color:#aaa; text-align:center; font-size:8px; letter-spacing:1px; padding:1px 0;">[ CONFERIDO ]</div>
-                                `}
-                            </div>
-                        </div>
-                    `;
-                });
-                htmlGerado += `</div>`;
-            }
-
-            htmlGerado += `
-                <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-start; page-break-inside: avoid;">
-                    <div style="border: 1px solid #000; background: #fff; border-radius: 4px; padding: 5px 8px; font-size: 10px; min-width: 180px;">
-                        <div style="text-transform: uppercase; font-size: 8px; font-weight: 900; color: #555; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 3px;">Consolidação Logística</div>
-                        <div style="display: flex; justify-content: space-between;"><span>Total de Peças:</span><b style="font-size:11px;">${totalPecasGeral} u.</b></div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 1px;"><span>Peso Bruto Total:</span><b style="font-size:11px; font-family:monospace;">${totalPesoGeral.toFixed(2)}g</b></div>
-                    </div>
-
-                    ${!ehConferencia ? `
-                        <div style="width: 250px; background: #fff; border: 2px solid #000; border-radius: 6px; padding: 6px; font-size: 10px; line-height: 1.4;">
-                            <div style="display: flex; justify-content: space-between;"><span>Subtotal das Peças:</span><span style="font-family: monospace;">${fMoedaLocal(subtotalGeral)}</span></div>
-                            <div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto:</span><span style="font-family: monospace;">-${fMoedaLocal(descPromo)}</span></div>
-                            ${descPix > 0 ? `<div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto Pix:</span><span style="font-family: monospace;">-${fMoedaLocal(descPix)}</span></div>` : ''}
-                            <div style="display: flex; justify-content: space-between;"><span>(+) Frete:</span><span style="font-family: monospace;">${fMoedaLocal(frete)}</span></div>
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; border-top: 1px dashed #000; padding-top: 3px; margin-top: 4px;">
-                                <span>VALOR LÍQUIDO:</span>
-                                <span style="font-family: monospace; background: #000; color: #fff; padding: 0 4px; border-radius: 2px;">${fMoedaLocal(totalLiquido)}</span>
-                            </div>
-                        </div>
-                    ` : '<div style="flex-grow:1;"></div>'}
-                </div>
-                
-                <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: center; font-size: 8px; page-break-inside: avoid;">
-                    <div style="border-top: 1px dashed #000; padding-top: 4px;">Expedição interna (Abella Jóias)</div>
-                    <div style="border-top: 1px dashed #000; padding-top: 4px;">Recebido por: ${(p.nome || p.cliente || '').toUpperCase()}</div>
-                </div>
-                </div>
-            `;
-
-            previewArea.innerHTML = htmlGerado;
-            const printArea = document.getElementById('print-area');
-            if(printArea) printArea.innerHTML = htmlGerado;
-
-            modalPreview.classList.remove('hidden');
-        };
+        // ... manter as funções globais (abrirEditorPedido, excluirPedido, imprimirRomaneio) como no arquivo anterior ...
 
         window.carregarPedidos();
     })();

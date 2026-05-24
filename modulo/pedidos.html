@@ -1,30 +1,47 @@
-<div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
-    <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
+<div class="space-y-6 animate-fadeIn">
+    
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
         <div>
-            <h1 class="text-xl font-bold text-white flex items-center gap-2 serif tracking-wider">
-                <span>📦</span> PEDIDOS RECEBIDOS NO ATACADO
-            </h1>
-            <p class="text-xs text-zinc-500 mt-1">Monitore e emita folhas de conferência física integradas em tempo real com a raiz isolada.</p>
+            <h2 class="text-xl font-bold tracking-tight text-white font-sans">Pedidos Recebidos</h2>
+            <p class="text-xs text-zinc-500 font-mono mt-0.5">Sincronização em tempo real ativa com abella/orders</p>
+        </div>
+        
+        <div class="flex items-center gap-2 font-mono text-[10px]">
+            <span class="bg-zinc-950 border border-zinc-900 px-3 py-1.5 rounded-lg text-zinc-400">
+                Lotes Ativos: <b id="total-lotes-badge" class="text-[#caa85c]">0</b>
+            </span>
         </div>
     </div>
 
-    <div class="bg-black border border-zinc-900 rounded-2xl overflow-hidden shadow-xl">
+    <div class="flex flex-wrap items-center gap-2 bg-zinc-950/40 p-2 rounded-xl border border-zinc-900/60">
+        <button id="filter-ped-todos" onclick="window.mudarFiltroStatusPedido('Todos')" class="btn-filtro-pedido px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black">
+            📦 Todos
+        </button>
+        <button id="filter-ped-novo" onclick="window.mudarFiltroStatusPedido('Novo')" class="btn-filtro-pedido px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
+            🟡 Novos / Pendentes
+        </button>
+        <button id="filter-ped-concluido" onclick="window.mudarFiltroStatusPedido('Concluído')" class="btn-filtro-pedido px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
+            🟢 Concluídos / Enviados
+        </button>
+    </div>
+
+    <div class="bg-black border border-zinc-900 rounded-2xl overflow-hidden shadow-2xl">
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-zinc-950 border-b border-zinc-900 text-zinc-400 font-mono text-[10px] font-bold uppercase tracking-wider">
-                        <th class="p-4 w-28">Ref/Id</th>
-                        <th class="p-4">Comprador</th>
-                        <th class="p-4 w-44">Data Emissão</th>
-                        <th class="p-4 w-32">Total Líquido</th>
-                        <th class="p-4 w-32">Status Atual</th>
-                        <th class="p-4 w-32 text-right">Ações</th>
+                    <tr class="border-b border-zinc-900 bg-zinc-950/60 text-zinc-500 font-mono text-[10px] uppercase tracking-wider">
+                        <th class="p-4 font-semibold">Cód Lote</th>
+                        <th class="p-4 font-semibold">Cliente / Comprador</th>
+                        <th class="p-4 font-semibold">Data e Hora</th>
+                        <th class="p-4 font-semibold">Total Geral</th>
+                        <th class="p-4 font-semibold">Status</th>
+                        <th class="p-4 font-semibold text-right">Ações de Controle</th>
                     </tr>
                 </thead>
-                <tbody id="listaPedidos" class="divide-y divide-zinc-950">
+                <tbody id="listaPedidos" class="divide-y divide-zinc-900/40">
                     <tr>
-                        <td colspan="6" class="p-8 text-center text-zinc-600 font-mono text-xs italic animate-pulse">
-                            ⏳ Conectando e lendo registros sincronizados sob /abella/orders...
+                        <td colspan="6" class="p-8 text-center text-zinc-600 font-mono italic animate-pulse">
+                            Carregando registros do Realtime Database...
                         </td>
                     </tr>
                 </tbody>
@@ -32,3 +49,341 @@
         </div>
     </div>
 </div>
+
+<div id="modalDetalhesPedido" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#09090b] border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-zoomIn">
+        
+        <div class="p-6 border-b border-zinc-900 bg-black flex justify-between items-center">
+            <div>
+                <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono">
+                    Detalhamento do Pedido <span id="md-txt-id-pedido" class="text-[#caa85c]">#------</span>
+                </h3>
+                <p id="md-txt-data-pedido" class="text-[10px] text-zinc-500 font-mono mt-0.5">Data: --/--/----</p>
+            </div>
+            <button onclick="window.fecharDetalhesPedidoModal()" class="text-zinc-500 hover:text-white transition-all font-bold text-lg font-mono">✕</button>
+        </div>
+
+        <div class="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1 bg-zinc-950/20">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <div class="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
+                    <h4 class="text-[10px] font-bold uppercase tracking-wider text-[#caa85c] font-mono">Dados do Cliente</h4>
+                    <div class="text-xs space-y-1 font-mono">
+                        <p class="text-white font-sans font-bold text-sm" id="md-nome-cliente">---</p>
+                        <p class="text-zinc-400">WhatsApp: <span id="md-whatsapp-cliente" class="text-zinc-300">---</span></p>
+                        <p class="text-zinc-400">Forma de Pagto: <span id="md-pagamento-cliente" class="text-zinc-300">---</span></p>
+                    </div>
+                </div>
+
+                <div class="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
+                    <h4 class="text-[10px] font-bold uppercase tracking-wider text-amber-500 font-mono">Logística & Despacho</h4>
+                    <div class="text-xs space-y-1 font-mono">
+                        <p class="text-white font-sans font-medium" id="md-metodo-frete">---</p>
+                        <p class="text-zinc-400">Custo Adicional: <span id="md-valor-frete" class="text-emerald-400 font-bold">R$ 0,00</span></p>
+                        <p class="text-zinc-500 text-[10px] italic">Pronto para triagem física de banho.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-black border border-zinc-900 rounded-xl overflow-hidden">
+                <div class="p-3 bg-zinc-950 border-b border-zinc-900">
+                    <h4 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 font-mono">Relação de Peças Selecionadas (No Bruto)</h4>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs font-mono">
+                        <thead>
+                            <tr class="bg-zinc-950/40 border-b border-zinc-900 text-zinc-500 text-[9px] uppercase">
+                                <th class="p-3">Item / Especificação</th>
+                                <th class="p-3 text-center">SKU</th>
+                                <th class="p-3 text-center">Peso Un.</th>
+                                <th class="p-3 text-center">Qtd</th>
+                                <th class="p-3 text-right">Preço Un.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="md-tabela-itens-pedido" class="divide-y divide-zinc-900/60">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 ml-auto max-w-sm space-y-2 font-mono text-xs">
+                <div class="flex justify-between text-zinc-400">
+                    <span>Subtotal das Peças:</span>
+                    <span id="md-fin-subtotal" class="text-white">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-zinc-400">
+                    <span>Desconto Promocional:</span>
+                    <span id="md-fin-desc-promo" class="text-rose-400">- R$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-zinc-400">
+                    <span>Desconto PIX/À Vista:</span>
+                    <span id="md-fin-desc-pix" class="text-rose-400">- R$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-zinc-400 border-b border-zinc-900 pb-2">
+                    <span>Custo Logístico (Frete):</span>
+                    <span id="md-fin-frete" class="text-emerald-400">+ R$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-sm font-black pt-1">
+                    <span class="text-[#caa85c] uppercase">Valor Total do Lote:</span>
+                    <span id="md-fin-total-geral" class="text-emerald-400">R$ 0,00</span>
+                </div>
+                <div class="text-[9px] text-zinc-500 text-right font-sans pt-1">
+                    Peso Total Estimado: <b id="md-fin-peso-total" class="text-zinc-300">0.00g</b>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 bg-black border-t border-zinc-900 flex flex-col sm:flex-row items-center justify-between gap-3">
+            
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <label for="md-select-status-atual" class="text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono whitespace-nowrap">Mudar Fluxo:</label>
+                <select id="md-select-status-atual" class="bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-white p-2 focus:border-[#caa85c] focus:outline-none">
+                    <option value="Novo">Novo / Pendente</option>
+                    <option value="Processando">Em Separação</option>
+                    <option value="Concluído">Concluído / Enviado</option>
+                </select>
+                <button onclick="window.salvarAlteracaoStatusDoModal()" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] text-white text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-lg transition-all">
+                    Aplicar
+                </button>
+            </div>
+
+            <input type="hidden" id="md-id-pedido-oculto" value="">
+            <button onclick="window.gerarPdfConferenciaPedido(document.getElementById('md-id-pedido-oculto').value)" class="w-full sm:w-auto bg-gradient-to-r from-[#caa85c] to-[#b3924b] text-black font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 flex items-center justify-center gap-2">
+                🖨️ Gerar Romaneio Galvânica (PDF)
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Sobrescreve e injeta métodos avançados de controle de interface no escopo do admin-logic
+    (function() {
+        console.log("🛠️ [Binds-Pedidos] Acoplando métodos visuais ao motor central...");
+
+        // Atualiza os badges de contagem na tela de relatórios
+        var chavesT = Object.keys(window.todosPedidosLocal || {});
+        var badgeTotal = document.getElementById('total-lotes-badge');
+        if (badgeTotal) badgeTotal.innerText = chavesT.length;
+
+        // Sobrescreve o método padrão para abrir e rechear o modal com as variáveis do banco real
+        window.abrirDetalhesPedidoModal = function(id) {
+            var p = window.todosPedidosLocal[id];
+            if (!p) return;
+
+            var modal = document.getElementById('modalDetalhesPedido');
+            if (!modal) return;
+
+            // Injeta IDs e Metadados do topo
+            document.getElementById('md-id-pedido-oculto').value = id;
+            document.getElementById('md-txt-id-pedido').innerText = '#' + id.slice(-6).toUpperCase();
+            document.getElementById('md-txt-data-pedido').innerText = "Data: " + (p.data || "N/A");
+
+            // Mapeamento de Cliente (Raiz ou nós estruturados)
+            var nomeCliente = p.nome || p.cliente || (p.entrega ? p.entrega.nome : 'Cliente Abella');
+            var whatsCliente = p.whatsapp || p.telefone || (p.cliente && p.cliente.whatsapp) || "Não Informado";
+            var formPagto = p.pagamento || "À combinar";
+            
+            document.getElementById('md-nome-cliente').innerText = nomeCliente;
+            document.getElementById('md-whatsapp-cliente').innerText = whatsCliente;
+            document.getElementById('md-pagamento-cliente').innerText = formPagto;
+
+            // Mapeamento de Logística de Entrega (Tratando freteNome e freteValor)
+            var nomeFrete = p.freteNome || (p.entrega ? p.entrega.freteNome : "Retirar / Entregar Galvânica");
+            var valFrete = typeof p.frete === 'number' ? p.frete : (p.entrega ? parseFloat(p.entrega.freteValor) || 0 : 0);
+            
+            document.getElementById('md-metodo-frete').innerText = nomeFrete;
+            document.getElementById('md-valor-frete').innerText = window.formatarMoedaReal(valFrete);
+
+            // Mapeamento Financeiro (Alinhado com a estrutura real capturada)
+            var subtotal = p.subtotal || (p.resumo ? p.resumo.subtotal : 0);
+            var descPromo = p.descontoPromo || (p.resumo ? p.resumo.descontoPromo : 0);
+            var descPix = p.descontoPix || (p.resumo ? p.resumo.descontoPix : 0);
+            var totalGeral = p.total || (p.resumo ? p.resumo.total : 0);
+            var pesoTotal = p.pesoTotal || (p.resumo ? p.resumo.pesoTotal : 0);
+
+            document.getElementById('md-fin-subtotal').innerText = window.formatarMoedaReal(subtotal);
+            document.getElementById('md-fin-desc-promo').innerText = "- " + window.formatarMoedaReal(descPromo);
+            document.getElementById('md-fin-desc-pix').innerText = "- " + window.formatarMoedaReal(descPix);
+            document.getElementById('md-fin-frete').innerText = "+ " + window.formatarMoedaReal(valFrete);
+            document.getElementById('md-fin-total-geral').innerText = window.formatarMoedaReal(totalGeral);
+            document.getElementById('md-fin-peso-total').innerText = pesoTotal + "g";
+
+            // Seta o combo de status atual do fluxo do lote
+            var statusReal = p.status || (p.resumo ? p.resumo.status : "Novo");
+            document.getElementById('md-select-status-atual').value = statusReal;
+
+            // Renderiza a lista de compras interna da tabela (Anti-Sumiço)
+            var tbodyItens = document.getElementById('md-tabela-itens-pedido');
+            tbodyItens.innerHTML = '';
+
+            var itensObjeto = p.itens || {};
+            var keysItens = Object.keys(itensObjeto);
+
+            if (keysItens.length === 0) {
+                tbodyItens.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-zinc-600 italic text-[11px]">Nenhuma especificação de item anexada a este lote.</td></tr>`;
+            } else {
+                keysItens.forEach(function(kItem) {
+                    var item = itensObjeto[kItem];
+                    var itemNome = item.name || item.nome || "Joia no Bruto";
+                    var itemSku = item.sku || "N/A";
+                    var itemPeso = item.weight || item.peso || "0";
+                    var itemQtd = item.qtd || item.quantidade || 1;
+                    var itemPreco = item.price || item.precoFinal || 0;
+
+                    // Verifica se há variação ou customização de nomes
+                    var txtCustom = "";
+                    if(item.opcaoSelecionada) txtCustom += ` <span class="text-amber-500">[Opção: ${item.opcaoSelecionada}]</span>`;
+                    if(item.variacaoSelecionada) txtCustom += ` <span class="text-zinc-500">(${item.variacaoSelecionada})</span>`;
+
+                    var tr = document.createElement('tr');
+                    tr.className = "border-b border-zinc-900/40 hover:bg-zinc-900/20 text-[11px]";
+                    tr.innerHTML = `
+                        <td class="p-3 text-white font-sans font-medium">${itemNome}${txtCustom}</td>
+                        <td class="p-3 text-center text-zinc-500">${itemSku}</td>
+                        <td class="p-3 text-center text-zinc-400">${itemPeso}g</td>
+                        <td class="p-3 text-center font-bold text-white">${itemQtd}</td>
+                        <td class="p-3 text-right text-emerald-400 font-bold">${window.formatarMoedaReal(itemPreco)}</td>
+                    `;
+                    tbodyItens.appendChild(tr);
+                });
+            }
+
+            modal.classList.remove('hidden');
+        };
+
+        window.fecharDetalhesPedidoModal = function() {
+            var modal = document.getElementById('modalDetalhesPedido');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        // Salva a alteração do status com persistência na rota real
+        window.salvarAlteracaoStatusDoModal = function() {
+            var id = document.getElementById('md-id-pedido-oculto').value;
+            var novoStatus = document.getElementById('md-select-status-atual').value;
+            if (!id) return;
+
+            if (window.db) {
+                // Atualiza tanto na raiz quanto dentro de resumo para manter consistência absoluta
+                window.db.ref(`abella/orders/${id}`).update({ 
+                    status: novoStatus,
+                    "resumo/status": novoStatus
+                }).then(function() {
+                    alert("✅ Fluxo do lote atualizado com sucesso!");
+                    window.fecharDetalhesPedidoModal();
+                }).catch(function(err) {
+                    alert("Erro ao persistir status no Firebase.");
+                });
+            }
+        };
+
+        // MOTOR RECONSTRUTOR DE ROMANEIOS FÍSICOS EM PDF COM jsPDF PARA AS GALVÂNICAS DE LIMEIRA
+        window.gerarPdfConferenciaPedido = function(id) {
+            var p = window.todosPedidosLocal[id];
+            if (!p) { alert("Lote inválido."); return; }
+
+            var nomeCliente = p.nome || p.cliente || (p.entrega ? p.entrega.nome : 'Cliente Abella');
+            var dataLote = p.data || "N/A";
+
+            // Instanciação em modo de compatibilidade com jsPDF UMD
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+            // Margens e Configurações Visuais
+            doc.setFillColor(15, 15, 15);
+            doc.rect(0, 0, 210, 35, 'F');
+
+            doc.setTextColor(202, 168, 92); // Cor Dourada Abella Joias
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(20);
+            doc.text("ABELLA JOIAS", 14, 15);
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            doc.text("ROMANEIO DE EXPEDIÇÃO PARA GALVÂNICA (CONFERÊNCIA DE PEÇAS NO BRUTO)", 14, 22);
+            doc.text("POLO LOGÍSTICO DE ATACADO • LIMEIRA - SP", 14, 27);
+
+            // Dados Cadastrais do Lote
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.text("INFORMAÇÕES COMPLEMENTARES:", 14, 47);
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Identificador do Lote: #${id.toUpperCase()}`, 14, 53);
+            doc.text(`Data de Fechamento: ${dataLote}`, 14, 59);
+            doc.text(`Cliente Destinatário: ${nomeCliente}`, 14, 65);
+            
+            var localFrete = p.freteNome || (p.entrega ? p.entrega.freteNome : "Entregar na Galvânica Parceira");
+            doc.text(`Destino Logístico: ${localFrete}`, 14, 71);
+
+            // Linha Separadora
+            doc.setDrawColor(220, 220, 220);
+            doc.line(14, 76, 196, 76);
+
+            // Tabela de Peças
+            doc.setFont("helvetica", "bold");
+            doc.text("RELAÇÃO DE PEÇAS NO BRUTO (CONTAGEM FÍSICA)", 14, 83);
+
+            // Cabeçalho da Tabela no PDF
+            doc.setFillColor(240, 240, 240);
+            doc.rect(14, 87, 182, 7, 'F');
+            doc.setFontSize(9);
+            doc.text("Descrição do Item no Bruto / Variação", 16, 92);
+            doc.text("SKU", 120, 92);
+            doc.text("Peso Un.", 145, 92);
+            doc.text("Qtd", 175, 92);
+            doc.line(14, 94, 196, 94);
+
+            var linhaY = 100;
+            var itensObjeto = p.itens || {};
+            var keysItens = Object.keys(itensObjeto);
+
+            doc.setFont("helvetica", "normal");
+            keysItens.forEach(function(kItem) {
+                if(linhaY > 270) { doc.addPage(); linhaY = 20; }
+                
+                var item = itensObjeto[kItem];
+                var nome = item.name || item.nome || "Joia no Bruto";
+                var sku = item.sku || "N/A";
+                var peso = (item.weight || item.peso || "0") + "g";
+                var qtd = String(item.qtd || item.quantidade || 1);
+
+                if (item.opcaoSelecionada) nome += ` [Opção: ${item.opcaoSelecionada}]`;
+
+                doc.text(nome.slice(0, 52), 16, linhaY);
+                doc.text(sku, 120, linhaY);
+                doc.text(peso, 145, linhaY);
+                doc.text(qtd, 175, linhaY);
+                
+                doc.line(14, linhaY + 2, 196, linhaY + 2);
+                linhaY += 7;
+            });
+
+            // Resumo do Rodapé do PDF
+            var subtotal = p.subtotal || (p.resumo ? p.resumo.subtotal : 0);
+            var totalGeral = p.total || (p.resumo ? p.resumo.total : 0);
+            var pesoTotal = p.pesoTotal || (p.resumo ? p.resumo.pesoTotal : 0);
+
+            linhaY += 5;
+            doc.setFont("helvetica", "bold");
+            doc.text(`Peso Total Bruto: ${pesoTotal}g`, 14, linhaY);
+            doc.text(`Subtotal: ${window.formatarMoedaReal(subtotal)}`, 110, linhaY);
+            doc.text(`Total do Lote: ${window.formatarMoedaReal(totalGeral)}`, 150, linhaY);
+
+            // Código de Barras / Linha de Assinatura
+            linhaY += 20;
+            doc.line(60, linhaY, 150, linhaY);
+            doc.setFontSize(8);
+            doc.text("Assinatura do Responsável pela Conferência - Abella Joias", 67, linhaY + 4);
+
+            // Salva o documento disparando o download nativo no browser
+            doc.save(`Romaneio_Abella_Lote_${id.slice(-6).toUpperCase()}.pdf`);
+        };
+
+        // Força a renderização imediata com os dados locais salvos em cache
+        window.renderizarTabelaPedidosVisivel();
+    })();
+</script>

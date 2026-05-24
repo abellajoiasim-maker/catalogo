@@ -339,12 +339,15 @@ function carregarItensCarrinho() {
             bairro: entBairro
         },
         itens: itensEstruturados
-    }).then(() => {
+}).then(() => {
         // SUCESSO: O pedido entrou no barramento Realtime do Painel!
         console.log("Pedido salvo com sucesso no painel!");
         
-        // Limpa o carrinho local para o cliente não duplicar o pedido sem querer
+        // 1. Limpa o armazenamento local do navegador
         localStorage.removeItem('carrinho');
+
+        // CORREÇÃO AQUI: Esvazia a variável global de memória antes de atualizar a tela
+        carrinho = []; 
 
         // Monta e envia a mensagem para o WhatsApp
         let msg = `*NOVO PEDIDO DE ATACADO - ABELLA JOIAS*\n\n`;
@@ -354,13 +357,12 @@ function carregarItensCarrinho() {
         msg += `*Valor Líquido:* *${fM(finalTotal)}* (${totalGeralPecas} pçs | ${pesoTotalCalculado.toFixed(2)}g)\n\n`;
         msg += `_Estou aguardando o link definitivo para o pagamento para confirmação e o prazo de entrega._`;
 
-        // Pega o número configurado dinamicamente ou define o seu padrão caso falhe
         const foneEmpresa = configGlobal.whatsEmpresa || "5519XXXXXXXXX"; 
         const urlWhats = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
         
         window.open(urlWhats, '_blank');
         
-        // Recarrega ou redireciona a página para exibir o estado de carrinho limpo
+        // 2. Agora sim atualiza a tela (vai identificar que o array está vazio e exibir "Carrinho Vazio")
         if (typeof carregarItensCarrinho === "function") {
             carregarItensCarrinho();
         }

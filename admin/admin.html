@@ -4,126 +4,72 @@
     <meta charset="UTF-8">
     <title>Painel Administrativo • Abella Joias</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Inter', sans-serif; background: #0b0b0b; color: #eee; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #caa85c; border-radius: 10px; }
-        @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f4f4f5; }
+        .serif { font-family: 'Cinzel', serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #09090b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #caa85c; }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden relative">
+<body class="min-screen bg-[#09090b] flex overflow-hidden h-screen select-none">
 
-    <aside class="w-64 bg-[#111] border-r border-[#222] flex flex-col justify-between shrink-0 z-20">
-        <div class="p-6 space-y-6">
-            <div class="flex items-center gap-3 border-b border-[#222] pb-4">
-                <div class="w-8 h-8 rounded-full bg-[#caa85c] flex items-center justify-center text-black font-black font-mono">A</div>
-                <div>
-                    <h1 class="text-sm font-bold text-white tracking-tight uppercase">Abella Joias</h1>
-                    <p class="text-[10px] text-gray-500 font-medium">Painel Administrativo</p>
-                </div>
+    <aside class="w-72 bg-black border-r border-zinc-900 flex flex-col justify-between shrink-0">
+        <div class="p-6 space-y-8">
+            <div class="space-y-1">
+                <h1 class="serif text-sm tracking-widest text-[#caa85c] uppercase font-black">Abella Joias</h1>
+                <p class="text-[9px] text-zinc-500 font-mono tracking-wider uppercase">Master Corporate Core • v2.4</p>
             </div>
-            <nav class="space-y-1" id="menu-navegacao">
-                <button onclick="mudarAbaDinamica('pedidos')" id="btn-pedidos" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">📦 Pedidos Recebidos</button>
-                <button onclick="mudarAbaDinamica('editor')" id="btn-editor" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">⚡ Editor de Imagens</button>
-                <button onclick="mudarAbaDinamica('ofertas')" id="btn-ofertas" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">🏷️ Painel de Ofertas</button>
-                <button onclick="mudarAbaDinamica('galvanicas')" id="btn-galvanicas" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">🚚 Galvânicas Parceiras</button>
-                <button onclick="mudarAbaDinamica('produtos')" id="btn-produtos" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">💍 Gestão de Produtos</button>
-                <button onclick="mudarAbaDinamica('categorias')" id="btn-categorias" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">📁 Coleções / Categorias</button>
-                <button onclick="mudarAbaDinamica('config')" id="btn-config" class="tab-btn w-full text-left p-3 rounded-lg text-xs font-semibold bg-zinc-900 text-gray-400 hover:text-white transition-all flex items-center gap-2">⚙️ Configurações</button>
+            
+            <nav id="menu-navegacao" class="space-y-1.5">
+                <button id="btn-pedidos" onclick="window.mudarAbaDinamica('pedidos')" class="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all bg-[#caa85c] text-black">
+                    <span class="text-base shrink-0">📦</span> Pedidos Recebidos
+                </button>
+                
+                <button id="btn-ofertas" onclick="window.mudarAbaDinamica('ofertas')" class="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all bg-zinc-900 text-gray-400 hover:text-white">
+                    <span class="text-base shrink-0">🏷️</span> Painel de Ofertas
+                </button>
+                
+                <button id="btn-galvanicas" onclick="window.mudarAbaDinamica('galvanicas')" class="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all bg-zinc-900 text-gray-400 hover:text-white">
+                    <span class="text-base shrink-0">🚚</span> Galvânicas Parceiras
+                </button>
+                
+                <button id="btn-produtos" onclick="window.mudarAbaDinamica('produtos')" class="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all bg-zinc-900 text-gray-400 hover:text-white">
+                    <span class="text-base shrink-0">💍</span> Gestão de Produtos
+                </button>
+                
+                <button id="btn-categories" onclick="window.mudarAbaDinamica('categories')" class="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all bg-zinc-900 text-gray-400 hover:text-white">
+                    <span class="text-base shrink-0">📁</span> Coleções / Categorias
+                </button>
+                
+                <button id="btn-config" onclick="window.mudarAbaDinamica('config')" class="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all bg-zinc-900 text-gray-400 hover:text-white">
+                    <span class="text-base shrink-0">⚙️</span> Configurações
+                </button>
             </nav>
         </div>
-        <div class="p-4 border-t border-[#222] bg-black/20 text-center text-[10px] text-gray-600 font-mono">
-            v3.2.0 • Sistema Modular
+        
+        <div class="p-6 border-t border-zinc-950 bg-zinc-950/40 text-center">
+            <a href="../index.html" class="inline-flex items-center gap-2 text-[10px] font-mono uppercase font-bold text-zinc-500 hover:text-[#caa85c] transition-all">
+                ← Voltar para a Vitrine
+            </a>
         </div>
     </aside>
 
-    <main id="conteudo-dinamico" class="flex-1 overflow-y-auto p-8 custom-scroll relative z-10 bg-[#0b0b0b]">
-        <div class="flex items-center justify-center h-full text-zinc-600 italic text-xs">
-            Carregando ecossistema operacional...
-        </div>
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <div id="conteudo-dinamico" class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            </div>
     </main>
-
-    <div id="print-area" class="hidden"></div>
-
-    <div id="editorPedido" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[99998] p-4 font-sans">
-        <div class="bg-[#111] w-full max-w-5xl rounded-2xl p-6 overflow-y-auto max-h-[90vh] border border-[#222] custom-scroll space-y-6 shadow-2xl text-xs text-white">
-            <div class="flex justify-between items-center border-b border-[#222] pb-4">
-                <div>
-                    <h2 class="text-[#caa85c] font-black uppercase tracking-tighter text-lg">Gerenciamento Avançado de Pedido</h2>
-                    <p class="text-[11px] text-gray-500 font-mono">Modificando ID: <span id="idPedidoInterno" class="text-zinc-400">#------</span></p>
-                </div>
-                <div id="totalPreview" class="text-[#caa85c] font-black text-2xl font-mono">R$ 0,00</div>
-            </div>
-            <div class="grid md:grid-cols-2 gap-4">
-                <div class="bg-black/40 p-4 border border-[#222] rounded-xl space-y-2">
-                    <p class="text-[10px] text-[#caa85c] uppercase font-bold tracking-widest">Dados do Comprador</p>
-                    <input id="edClienteNome" placeholder="Nome do Cliente" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
-                    <input id="edClienteTel" placeholder="WhatsApp" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
-                </div>
-                <div class="bg-black/40 p-4 border border-[#222] rounded-xl space-y-2">
-                    <p class="text-[10px] text-[#caa85c] uppercase font-bold tracking-widest">Destino da Entrega</p>
-                    <input id="edRua" placeholder="Rua, Número, Bairro" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
-                    <input id="edCidade" placeholder="Cidade / Estado" class="w-full bg-[#0b0b0b] border border-[#333] p-2 rounded text-sm text-white focus:border-[#caa85c] outline-none">
-                </div>
-            </div>
-            <div>
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-[#caa85c] font-bold text-sm uppercase italic tracking-wide">Produtos Vinculados</h3>
-                    <button class="bg-green-950 text-green-400 border border-green-800 hover:bg-green-900 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all" onclick="addItemEditor()">+ Inserir Peça (SKU)</button>
-                </div>
-                <div id="edItens" class="space-y-2 max-h-60 overflow-y-auto custom-scroll pr-1"></div>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-[#1a1a1a] p-4 border border-[#222] rounded-xl">
-                <div>
-                    <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Desc. Campanha (R$)</label>
-                    <input id="edDescPromo" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none">
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Desc. Pix (R$)</label>
-                    <input id="edDescPix" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none">
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Frete Adicional (R$)</label>
-                    <input id="edFrete" type="number" step="0.01" oninput="recalcularTotalEd()" class="w-full bg-black border border-[#333] p-2 rounded text-sm font-mono text-white focus:border-[#caa85c] outline-none">
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-400 uppercase font-bold block mb-1">Total Unidades</label>
-                    <input id="edQtdTotal" type="number" readonly class="w-full bg-black/50 border border-[#333] p-2 rounded text-sm font-mono text-gray-400 cursor-not-allowed">
-                </div>
-            </div>
-            <div class="flex flex-col md:flex-row gap-2 pt-4 border-t border-[#222]">
-                <button class="bg-[#caa85c] text-black font-bold flex-grow py-3 rounded-lg text-sm uppercase tracking-wider hover:brightness-110 transition-all" onclick="salvarPedidoEditado()">SALVAR ALTERAÇÕES</button>
-                <button class="border border-[#333] text-gray-400 py-3 px-6 rounded-lg text-sm font-bold uppercase hover:bg-zinc-900 transition-all" onclick="fecharEditorPedido()">CANCELAR</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="previewRomaneio" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center z-[99999] p-4 font-sans">
-        <div class="bg-zinc-900 w-full max-w-4xl rounded-2xl border border-zinc-800 flex flex-col max-h-[92vh] shadow-2xl overflow-hidden">
-            <div class="bg-[#111] border-b border-zinc-800 p-4 flex justify-between items-center shrink-0">
-                <div>
-                    <h3 class="text-[#caa85c] font-black uppercase text-sm tracking-wide flex items-center gap-2">👁️ Pré-visualização do Romaneio</h3>
-                    <p class="text-[10px] text-gray-500 font-mono">Verifique os dados e o layout antes de enviar para a impressora física</p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="confirmarImpressaoFisica()" class="bg-[#caa85c] text-black font-bold text-xs px-4 py-2 rounded-lg hover:brightness-110 transition-all uppercase tracking-wider flex items-center gap-1.5 shadow-md">🖨️ Confirmar e Imprimir</button>
-                    <button onclick="fecharPreviewRomaneio()" class="bg-zinc-800 hover:bg-zinc-700 text-gray-300 font-bold text-xs px-4 py-2 rounded-lg transition-all uppercase">Fechar</button>
-                </div>
-            </div>
-            <div class="flex-1 overflow-y-auto p-6 bg-zinc-800/40 custom-scroll flex justify-center">
-                <div id="corpo-preview-a4" class="bg-white w-full max-w-[210mm] min-h-[297mm] p-8 shadow-xl text-black rounded-sm border border-gray-300 overflow-x-auto"></div>
-            </div>
-        </div>
-    </div>
 
     <script type="module" src="admin-logic.js"></script>
 </body>

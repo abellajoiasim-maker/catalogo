@@ -158,11 +158,11 @@
     }, 300);
 
     function sincronizarCentralOfertas() {
-        db.ref('categories').once('value', function(snapshot) {
+        db.ref('abella/categories').once('value', function(snapshot) {
             var dados = snapshot.val();
             if (dados) { _CATEGORIAS_OFERTAS_CACHE = dados; renderizarDropdownsPromo(dados); }
             else {
-                db.ref('colecoes').once('value', function(sCol) {
+                db.ref('abella/colecoes').once('value', function(sCol) {
                     var dCol = sCol.val();
                     if(dCol) { _CATEGORIAS_OFERTAS_CACHE = dCol; renderizarDropdownsPromo(dCol); }
                 });
@@ -190,7 +190,7 @@
 
     // LISTAGEM DOS CUPONS INTELIGENTES NA TELA
     function escutarCuponsPromocionais() {
-        db.ref('coupons').on('value', function(snapshot) {
+        db.ref('abella/coupons').on('value', function(snapshot) {
             var dados = snapshot.val();
             var grid = document.getElementById('grid-cupons');
             if(!grid) return;
@@ -279,15 +279,15 @@
         if(!codigo) { alert("⚠️ Insira o código de ativação do cupom!"); return; }
 
         var dados = { codigo: codigo, tipo: tipo, valor: valor, minimoCompra: minimoCompra, descricao: descricao, active: true };
-        db.ref('coupons').push(dados).then(function() { fecharModalNovoCupom(); });
+        db.ref('abella/coupons').push(dados).then(function() { fecharModalNovoCupom(); });
     }
 
-    function alternarStatusCupom(id, statusAtual) { db.ref(`coupons/${id}`).update({ active: !statusAtual }); }
-    function deletarCupom(id) { if(confirm("Deseja deletar este cupom?")) db.ref(`coupons/${id}`).remove(); }
+    function alternarStatusCupom(id, statusAtual) { db.ref(`abella/coupons/${id}`).update({ active: !statusAtual }); }
+    function deletarCupom(id) { if(confirm("Deseja deletar este cupom?")) db.ref(`abella/coupons/${id}`).remove(); }
 
     // PARTE DE TARJETAS DE VITRINE (MANTIDA DO CÓDIGO ANTERIOR)
     function escutarTarjetasPromocionais() {
-        db.ref('promotions').on('value', function(snapshot) {
+        db.ref('abella/promotions').on('value', function(snapshot) {
             var dados = snapshot.val();
             var container = document.getElementById('grid-tarjetas');
             if(!container) return;
@@ -319,12 +319,12 @@
         var badge = document.getElementById('ofertaBadgeMassa').value;
         if(!categoryId) { alert("⚠️ Escolha uma coleção!"); return; }
         if(!confirm(`Deseja embutir ${porcentagem}% OFF e crachá "${badge}" nesta coleção?`)) return;
-        db.ref('products').orderByChild('category').equalTo(categoryId).once('value', function(snapshot) {
+        db.ref('abella/products').orderByChild('category').equalTo(categoryId).once('value', function(snapshot) {
             var prods = snapshot.val(); if(!prods) return;
             Object.keys(prods).forEach(function(id) {
                 var precoOrig = parseFloat(prods[id].price || 0);
                 var novoPreco = precoOrig - (precoOrig * (porcentagem / 100));
-                db.ref(`products/${id}`).update({ precoPromocional: novoPreco, porcentagemDesconto: porcentagem, crachaVisual: badge || null, emOferta: porcentagem > 0 });
+                db.ref(`abella/products/${id}`).update({ precoPromocional: novoPreco, porcentagemDesconto: porcentagem, crachaVisual: badge || null, emOferta: porcentagem > 0 });
             });
             alert("✅ Coleção atualizada no Firebase!");
         });
@@ -337,8 +337,8 @@
         var colorClass = document.getElementById('ofertaCor').value;
         var category = document.getElementById('ofertaModalCategoria').value;
         if(!name || !badgeText || !category) return;
-        db.ref('promotions').push({ name: name, badgeText: badgeText, colorClass: colorClass, category: category, active: true }).then(function() { fecharModalNovaOferta(); });
+        db.ref('abella/promotions').push({ name: name, badgeText: badgeText, colorClass: colorClass, category: category, active: true }).then(function() { fecharModalNovaOferta(); });
     }
-    function alternarStatusTarjeta(id, current) { db.ref(`promotions/${id}`).update({ active: !current }); }
-    function deletarTarjeta(id) { db.ref(`promotions/${id}`).remove(); }
+    function alternarStatusTarjeta(id, current) { db.ref(`abella/promotions/${id}`).update({ active: !current }); }
+    function deletarTarjeta(id) { db.ref(`abella/promotions/${id}`).remove(); }
 </script>

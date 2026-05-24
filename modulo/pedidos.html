@@ -35,7 +35,7 @@
     class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
 >
     <div class="col-span-full text-center py-14 text-zinc-600 italic text-xs animate-pulse font-mono">
-        Buscando dados ativos na árvore "orders" do Firebase...
+        Buscando dados ativos na árvore "abella/orders" do Firebase...
     </div>
 </div>
 
@@ -144,31 +144,6 @@
         return isNaN(qtd)
             ? 1
             : qtd;
-    };
-
-    const sanitizarImagem = (url = '') => {
-
-        try {
-
-            if (!url) return '';
-
-            const limpa = String(url).trim();
-
-            if (
-                limpa.startsWith('http://') ||
-                limpa.startsWith('https://') ||
-                limpa.startsWith('data:image/')
-            ) {
-
-                return limpa;
-            }
-
-            return '';
-
-        } catch {
-
-            return '';
-        }
     };
 
     // =========================================================================
@@ -540,7 +515,7 @@
     };
 
     // =========================================================================
-    // ADD ITEM SEGURO
+    // ADD ITEM SEGURO (Mapeado por Varredura de SKU Real)
     // =========================================================================
 
     window.addItemEditor = async function () {
@@ -553,25 +528,33 @@
 
             if (!entrada) return;
 
-            const sku = entrada
+            const skuAlvo = entrada
                 .toUpperCase()
                 .trim();
 
-            if (!sku) return;
+            if (!skuAlvo) return;
 
-            const snap = await firebase
+            // Alinhado para realizar varredura baseada em nós mapeados por ID único
+            const snapProdutos = await firebase
                 .database()
-                .ref(`abella/products/${sku}`)
+                .ref('abella/products')
                 .once('value');
 
-            if (!snap.exists()) {
+            let produtoEncontrado = null;
 
-                alert('SKU não localizado.');
+            snapProdutos.forEach(child => {
+                const p = child.val();
+                if (String(p.sku || '').toUpperCase().trim() === skuAlvo) {
+                    produtoEncontrado = p;
+                }
+            });
+
+            if (!produtoEncontrado) {
+
+                alert('SKU não localizado no catálogo Abella.');
 
                 return;
             }
-
-            const produto = snap.val();
 
             const pedido =
                 window.todosPedidosLocal?.[
@@ -589,15 +572,15 @@
                 pedido.itens = [];
             }
 
-            const preco = obterPrecoItem(produto);
+            const preco = obterPrecoItem(produtoEncontrado);
 
             pedido.itens.push({
 
-                sku,
+                sku: skuAlvo,
 
                 nome:
-                    produto.name ||
-                    produto.nome ||
+                    produtoEncontrado.name ||
+                    produtoEncontrado.nome ||
                     'Produto sem nome',
 
                 precoFinal: preco,
@@ -606,6 +589,13 @@
 
                 quantidade: 1
             });
+
+            // Recalcula o valor total acumulado do pedido dinamicamente
+            let novoTotal = 0;
+            pedido.itens.forEach(item => {
+                novoTotal += obterPrecoItem(item) * obterQuantidadeItem(item);
+            });
+            pedido.total = novoTotal;
 
             if (
                 typeof window.renderItensEditor ===

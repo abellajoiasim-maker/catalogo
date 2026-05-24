@@ -42,7 +42,7 @@
             <div class="bg-card rounded-2xl p-4">
                 <h2 class="serif gold text-base uppercase tracking-wider mb-4 border-b border-zinc-900 pb-2">Itens Selecionados</h2>
                 <div id="container-itens-carrinho" class="space-y-3 max-h-[60vh] overflow-y-auto pr-1 custom-scroll">
-                    </div>
+                </div>
             </div>
 
             <div class="bg-card rounded-2xl p-5 space-y-5">
@@ -132,8 +132,9 @@
                         <span>Total no Cartão:</span>
                         <span id="resTotalCartao" class="text-gray-300 font-bold font-mono">R$ 0,00</span>
                     </div>
-                    <div class="text-[10px] text-zinc-400 text-right font-mono">
-                        Ou em até <span id="resParcelasTexto" class="text-white font-bold">6x de R$ 0,00</span> sem juros
+                    <div class="flex justify-between Residential items-center border-t border-zinc-900 pt-2 text-[10px] text-zinc-400 text-right font-mono w-full">
+                        <span>Parcelas:</span>
+                        <div id="resParcelasTexto" class="text-white font-bold">6x de R$ 0,00 sem juros</div>
                     </div>
                 </div>
 
@@ -163,7 +164,7 @@
 
         const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-        let configGlobal = { pixDesc: 5, parcelasMax: 6, whatsEmpresa: "5519999999999" };
+        let configGlobal = { pixDesc: 5, parcelasMax: 6, whatsEmpresa: "5519988207658" };
         let carrinho = [];
 
         function init() {
@@ -173,7 +174,11 @@
                     const emp = settings.empresa || {};
                     configGlobal.pixDesc = parseFloat(settings.pix || emp.pix || 5);
                     configGlobal.parcelasMax = parseInt(settings.parcelas || emp.parcelas || 6);
-                    configGlobal.whatsEmpresa = (settings.whatsapp || emp.whatsapp || "5519999999999").replace(/\D/g, '');
+                    
+                    // Ajustado para ler o nó 'whats' unificado do novo banco limpo
+                    const numWhats = settings.whats || settings.whatsapp || emp.whatsapp || "5519988207658";
+                    configGlobal.whatsEmpresa = numWhats.replace(/\D/g, '');
+                    
                     document.getElementById('finPixPorcentagem').innerText = configGlobal.pixDesc;
                 }
                 carregarItensCarrinho();
@@ -201,9 +206,9 @@
             let pesoGeral = 0;
 
             carrinho.forEach((item, index) => {
-                const precoUnitario = parseFloat(item.precoFinal || 0);
+                const precoUnitario = parseFloat(item.precoFinal || item.price || 0);
                 const qtd = parseInt(item.quantidade || 1);
-                const pesoUnitario = parseFloat(item.peso || 0);
+                const pesoUnitario = parseFloat(item.peso || item.weight || 0);
 
                 const itemSubtotal = precoUnitario * qtd;
                 const itemPesoTotal = pesoUnitario * qtd;
@@ -218,9 +223,9 @@
                             <img src="${item.image || 'https://via.placeholder.com/150?text=Joia'}" class="w-full h-full object-cover">
                         </div>
                         <div class="flex-1 min-w-0 space-y-1">
-                            <h3 class="text-white text-xs font-bold whitespace-normal break-words leading-tight">${item.nome}</h3>
+                            <h3 class="text-white text-xs font-bold whitespace-normal break-words leading-tight">${item.nome || item.name}</h3>
                             <div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-gray-500">
-                                <span>SKU: <strong class="text-gray-300">${item.sku}</strong></span>
+                                <span>SKU: <strong class="text-gray-300">${item.sku || 'N/A'}</strong></span>
                                 <span>Ref: ${pesoUnitario.toFixed(2)}g</span>
                                 ${item.variacao ? `<span class="bg-[#caa85c]/10 text-[#caa85c] px-1.5 py-0.2 rounded font-sans font-bold">Var: ${item.variacao}</span>` : ''}
                             </div>
@@ -257,25 +262,25 @@
             
             document.getElementById('resTotalPix').innerText = fM(totalPix);
             document.getElementById('resTotalCartao').innerText = fM(subtotal);
-            document.getElementById('resParcelasTexto').innerText = `${configGlobal.parcelasMax}x de ${fM(parcelaValor)}`;
+            document.getElementById('resParcelasTexto').innerText = `${configGlobal.parcelasMax}x de ${fM(parcelaValor)} sem juros`;
         }
 
-        function mudarQtdItem(index, fator) {
+        function mudarQtdItem(index, f) {
             carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
             if(!carrinho[index]) return;
-            let novaQtd = (parseInt(carrinho[index].quantidade) || 1) + fator;
-            if(novaQtd < 1) novaQtd = 1;
-            carrinho[index].quantidade = novaQtd;
+            let nQ = (parseInt(carrinho[index].quantidade) || 1) + f;
+            if(nQ < 1) nQ = 1;
+            carrinho[index].quantidade = nQ;
             localStorage.setItem('carrinho', JSON.stringify(carrinho));
             carregarItensCarrinho();
         }
 
-        function editarQtdDireto(index, valor) {
+        function editarQtdDireto(index, val) {
             carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
             if(!carrinho[index]) return;
-            let novaQtd = parseInt(valor) || 1;
-            if(novaQtd < 1) novaQtd = 1;
-            carrinho[index].quantidade = novaQtd;
+            let nQ = parseInt(val) || 1;
+            if(nQ < 1) nQ = 1;
+            carrinho[index].quantidade = nQ;
             localStorage.setItem('carrinho', JSON.stringify(carrinho));
             carregarItensCarrinho();
         }
@@ -287,9 +292,6 @@
             carregarItensCarrinho();
         }
 
-        // =======================================================
-        // WHATSAPP: INCLUSÃO DA CIDADE DO COMPRADOR
-        // =======================================================
         function finalizarPedidoWhatsapp() {
             const nomeCli = document.getElementById('cliNome').value.trim();
             const whatsCli = document.getElementById('cliWhats').value.trim();
@@ -312,55 +314,68 @@
                 return;
             }
 
-            let msg = `*NOVO PEDIDO DE ATACADO - ABELLA JOIAS*\n`;
-            msg += `-------------------------------------------\n`;
-            msg += `*Cliente:* ${nomeCli}\n`;
-            msg += `*WhatsApp:* ${whatsCli}\n`;
-            msg += `*Cidade do Cliente:* ${cidadeCli}\n`; // Injetado no WhatsApp
-            msg += `*Pagamento:* ${pagamento}\n`;
-            msg += `-------------------------------------------\n`;
-            msg += `*LOCAL DE ENTREGA / DESTINO:*\n`;
-            msg += `• *Local / Destinatário:* ${entLocal}\n`;
-            msg += `• *Endereço:* ${entRua}, nº ${entNumero}\n`;
-            msg += `• *Bairro:* ${entBairro}\n`;
-            msg += `• *Cidade de Destino:* ${entCidade}\n`;
-            msg += `-------------------------------------------\n\n`;
-            msg += `*RELAÇÃO DE ITENS (BRUTO):*\n`;
-
-            let subtotal = 0;
-            let pesoTotal = 0;
-
-            carrinho.forEach(item => {
-                const subItem = item.precoFinal * item.quantidade;
-                const pesoItem = item.peso * item.quantidade;
-                subtotal += subItem;
-                pesoTotal += pesoItem;
-
-                msg += `• ${item.quantidade}x ${item.nome}\n`;
-                msg += `  [SKU: ${item.sku}] ${item.variacao ? `(Var: ${item.variacao})` : ''}\n`;
-                msg += `  Un: ${fM(item.precoFinal)} | Total: ${fM(subItem)} | ${pesoItem.toFixed(2)}g\n\n`;
+            // GERAÇÃO E ENVIO SÍNCRONO DO PEDIDO PARA O REALTIME DATABASE
+            const novoPedidoRef = db.ref('orders').push();
+            let totalGeralPecas = carrinho.reduce((acc, curr) => acc + parseInt(curr.quantidade || 1), 0);
+            let subtotalCalculado = 0;
+            let pesoTotalCalculado = 0;
+            
+            let itensEstruturados = {};
+            carrinho.forEach((item, idx) => {
+                const prc = parseFloat(item.precoFinal || item.price || 0);
+                const qtd = parseInt(item.quantidade || 1);
+                const ps = parseFloat(item.peso || item.weight || 0);
+                subtotalCalculado += (prc * qtd);
+                pesoTotalCalculated = (ps * qtd);
+                
+                itensEstruturados[`item_${idx}`] = {
+                    sku: item.sku || 'N/A',
+                    nome: item.nome || item.name || '',
+                    quantidade: qtd,
+                    preco: prc,
+                    peso: ps
+                };
             });
 
-            const descPix = subtotal * (configGlobal.pixDesc / 100);
-            const liqPix = subtotal - descPix;
+            const descPix = subtotalCalculado * (configGlobal.pixDesc / 100);
+            const finalTotal = pagamento === "PIX" ? (subtotalCalculado - descPix) : subtotalCalculado;
 
-            msg += `-------------------------------------------\n`;
-            msg += `*Resumo Geral do Bruto:*\n`;
-            msg += `• Total de Peças: ${carrinho.reduce((acc, curr) => acc + curr.quantidade, 0)} un\n`;
-            msg += `• Peso Total Acumulado: ${pesoTotal.toFixed(2)}g\n`;
-            msg += `• Subtotal Original: ${fM(subtotal)}\n`;
-            msg += `• Valor Líquido no PIX: *${fM(liqPix)}*\n`;
-            msg += `• Valor no Cartão: ${fM(subtotal)} (ou ${configGlobal.parcelasMax}x de ${fM(subtotal / configGlobal.parcelasMax)})\n`;
-            msg += `-------------------------------------------\n\n`;
-            msg += `_Estou aguardando o link definitivo para o pagamento e a confirmação do prazo final de entrega do lote._`;
+            // Envia o payload limpo no formato exato esperado pelo admin
+            novoPedidoRef.set({
+                cliente: nomeCli,
+                whats: whatsCli,
+                cidade: cidadeCli,
+                data: new Date().toISOString().split('T')[0],
+                formaPagamento: pagamento,
+                total: parseFloat(finalTotal.toFixed(2)),
+                totalPecas: totalGeralPecas,
+                pesoTotal: parseFloat(pesoTotalCalculado.toFixed(2)),
+                status: "Novo",
+                entrega: {
+                    local: entLocal,
+                    cidade: entCidade,
+                    rua: entRua,
+                    numero: entNumero,
+                    bairro: entBairro
+                },
+                itens: itensEstruturados
+            });
+
+           // GERAÇÃO DA MENSAGEM DO WHATSAPP (VERSÃO CURTA E DIRETAL)
+            const descPix = subtotalCalculado * (configGlobal.pixDesc / 100);
+            const valorLiquidoFinal = pagamento === "PIX" ? (subtotalCalculado - descPix) : subtotalCalculado;
+
+            let msg = `*NOVO PEDIDO DE ATACADO - ABELLA JOIAS*\n\n`;
+            msg += `*Dados do Cliente:* ${nomeCli} (${whatsCli}) - ${cidadeCli}\n`;
+            msg += `*Local de Entrega:* ${entLocal} (${entCidade})\n`;
+            msg += `*Opção de Pagamento:* ${pagamento}\n`;
+            msg += `*Valor Líquido:* *${fM(valorLiquidoFinal)}* (${totalGeralPecas} pçs | ${pesoTotalCalculado.toFixed(2)}g)\n\n`;
+            msg += `_Estou aguardando o link definitivo para o pagamento para confirmação e o prazo de entrega._`;
 
             const urlWhats = `https://api.whatsapp.com/send?phone=${configGlobal.whatsEmpresa}&text=${encodeURIComponent(msg)}`;
             window.open(urlWhats, '_blank');
         }
 
-        // =======================================================
-        // PRE-VISUALIZAÇÃO DO PDF COM INFOS DO COMPRADOR COMPLETAS
-        // =======================================================
         function gerarPdfPedido(incluirFotos) {
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
@@ -386,14 +401,13 @@
             pdf.setTextColor(90, 90, 90);
             pdf.text(`Emitido em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, 15, 23);
 
-            // Quadro Unificado Estendido para caber a nova linha da Cidade do Comprador
             pdf.setFillColor(248, 248, 248);
             pdf.rect(15, 26, 180, 32, "F");
             
             pdf.setFontSize(9);
             pdf.setFont("Helvetica", "bold");
             pdf.text(`Comprador: ${nomeCli}`, 18, 32);
-            pdf.text(`WhatsApp: ${whatsCli} (${cidadeCli})`, 18, 38); // Adicionado aqui
+            pdf.text(`WhatsApp: ${whatsCli} (${cidadeCli})`, 18, 38);
             pdf.text(`Condição: ${pagamento}`, 115, 32);
 
             pdf.setFont("Helvetica", "normal");
@@ -423,8 +437,12 @@
             carrinho.forEach(item => {
                 if (y > 270) { pdf.addPage(); y = 20; }
 
-                const subItem = item.precoFinal * item.quantidade;
-                const pesoItem = item.peso * item.quantidade;
+                const prc = parseFloat(item.precoFinal || item.price || 0);
+                const qtd = parseInt(item.quantidade || 1);
+                const ps = parseFloat(item.peso || item.weight || 0);
+
+                const subItem = prc * qtd;
+                const pesoItem = ps * qtd;
                 subtotal += subItem;
                 pesoTotal += pesoItem;
 
@@ -432,13 +450,13 @@
                 pdf.text(item.sku || 'N/A', 15, y);
                 
                 pdf.setFont("Helvetica", "normal");
-                let txtNome = item.nome;
+                let txtNome = item.nome || item.name || '';
                 if(item.variacao) txtNome += ` (Var: ${item.variacao})`;
                 
                 if(txtNome.length > 42) txtNome = txtNome.substring(0, 39) + "...";
                 pdf.text(txtNome, 45, y);
                 
-                pdf.text(item.quantidade.toString(), 127, y);
+                pdf.text(qtd.toString(), 127, y);
                 pdf.text(`${pesoItem.toFixed(2)}g`, 140, y);
                 pdf.text(fM(subItem), 165, y);
 

@@ -71,7 +71,8 @@
         </div>
     </div>
 
-   <script>
+    <script>
+        // ====== CONFIGURAÇÃO BANCO MESTRE ISOLADO ======
         const firebaseConfig = {
             apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
             databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
@@ -80,6 +81,9 @@
         const db = firebase.database();
         
         const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+        // Objeto em cache local para que o carrinho valide as informações estruturadas das joias instantaneamente
+        let dadosCatalogoLocal = {};
 
         async function init(){
             // 1. Sincronização dinâmica com o painel de configurações (Caminho Isolado)
@@ -111,7 +115,14 @@
                 }
             });
 
-            // 2. Renderização das Categorias Filtradas (Caminho Isolado)
+            // 2. Pré-carregamento e Sincronização dos produtos (Garante velocidade e consistência com o Carrinho)
+            db.ref('abella/products').on('value', snap => {
+                if(snap.exists()) {
+                    dadosCatalogoLocal = snap.val();
+                }
+            });
+
+            // 3. Renderização das Categorias Filtradas (Caminho Isolado)
             db.ref('abella/categories').on('value', snap => {
                 const grid = document.getElementById('grid');
                 grid.innerHTML = '';
@@ -158,6 +169,7 @@
             atualizarCarrinho();
         }
 
+        // LÓGICA DE ALINHAMENTO COM O SISTEMA DO CARRINHO
         function atualizarCarrinho(){
             const cart = JSON.parse(localStorage.getItem('carrinho') || '[]');
             let totalPecas = 0;

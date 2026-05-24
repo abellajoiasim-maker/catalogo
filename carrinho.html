@@ -167,21 +167,23 @@
         let configGlobal = { pixDesc: 5, parcelasMax: 6, whatsEmpresa: "5519988207658" };
         let carrinho = [];
 
-        function init() {
-            db.ref('settings').once('value', snap => {
-                if(snap.exists()){
-                    const settings = snap.val() || {};
-                    const emp = settings.empresa || {};
-                    configGlobal.pixDesc = parseFloat(settings.pix || emp.pix || 5);
-                    configGlobal.parcelasMax = parseInt(settings.parcelas || emp.parcelas || 6);
-                    
-                    const numWhats = settings.whats || settings.whatsapp || emp.whatsapp || "5519988207658";
-                    configGlobal.whatsEmpresa = numWhats.replace(/\D/g, '');
-                    
-                    document.getElementById('finPixPorcentagem').innerText = configGlobal.pixDesc;
-                }
-                carregarItensCarrinho();
-            });
+ // BUSQUE ESTE BLOCO NO SEU CARRINHO.HTML E AJUSTE O CAMINHO:
+db.ref('abella/settings').once('value', snap => {
+    if(snap.exists()) {
+        const settings = snap.val() || {};
+        const emp = settings.empresa || {};
+        
+        // Garante que pega os descontos do lugar correto
+        configGlobal.pixDesc = parseFloat(settings.pix || emp.pix || 5);
+        configGlobal.parcelasMax = parseInt(settings.parcelas || emp.parcelas || 6);
+    }
+    // Depois de carregar as configurações sem erro, ele chama a renderização do carrinho
+    renderizarItensCarrinho(); 
+}).catch(error => {
+    console.error("Erro ao carregar settings, usando padrões:", error);
+    // Segurança: se falhar o firebase, renderiza o carrinho mesmo assim com os padrões
+    renderizarItensCarrinho(); 
+});
         }
 
         function carregarItensCarrinho() {

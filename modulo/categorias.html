@@ -1,246 +1,40 @@
 <div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
-    <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+    <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <span>📁</span> Gestão de Categorias e Coleções
+            <h1 class="text-xl font-bold text-white flex items-center gap-2 serif tracking-wider">
+                <span>📁</span> GESTÃO DE COLEÇÕES E CATEGORIAS
             </h1>
-            <p class="text-sm text-gray-500 mt-1">Gerencie as divisões do seu catálogo, controle visibilidade e organize seus produtos.</p>
+            <p class="text-xs text-zinc-500 mt-1">Gerencie os nós divisores do catálogo público e links de filtragem.</p>
         </div>
-        <button onclick="abrirModalCategoria()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 text-sm">
+        <button onclick="window.abrirModalCategoria()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider">
             <span>➕</span> Nova Categoria
         </button>
     </div>
 
     <div id="grid-categorias" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <div class="col-span-full text-center py-12 text-gray-400 font-medium">
-            ⏳ Carregando coleções em tempo real...
+        <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs animate-pulse">
+            ⏳ Carregando coleções mapeadas no banco...
         </div>
     </div>
 </div>
 
-<div id="modalCategoria" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 relative">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h3 id="modalTitulo" class="text-lg font-bold text-gray-800">Nova Categoria</h3>
-            <button onclick="fecharModalCategoria()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+<div id="modalCategoria" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-zinc-950 border border-zinc-900 rounded-2xl max-w-md w-full p-6 space-y-4 relative text-left">
+        <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
+            <h3 class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">Nova Categoria</h3>
+            <button onclick="window.fecharModalCategoria()" class="text-zinc-500 hover:text-white transition-all text-xs font-bold">✕</button>
         </div>
         
-        <input type="hidden" id="catId">
-
-        <div class="space-y-3">
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">ID Único (Slug / Link)</label>
-                <input type="text" id="catSlug" placeholder="ex: brincos-pequenos" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 font-mono text-xs focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+        <div class="space-y-4 text-xs font-mono">
+            <div class="space-y-1">
+                <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome da Coleção:</label>
+                <input type="text" id="catNome" placeholder="Ex: Brincos de Argola" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nome da Categoria</label>
-                <input type="text" id="catNome" placeholder="Ex: Brincos Pequenos" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 font-medium focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
+            <div class="pt-2 grid grid-cols-2 gap-3">
+                <button onclick="window.fecharModalCategoria()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Cancelar</button>
+                <button onclick="window.salvarNovaCategoriaItem()" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Criar Categoria</button>
             </div>
-
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">URL da Imagem</label>
-                <input type="text" id="catUrlImagem" placeholder="https://linkdafoto.com/imagem.jpg" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-800 font-mono text-sm focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition-all">
-            </div>
-            
-            <div class="border border-dashed border-gray-200 rounded-xl p-2 bg-gray-50 flex items-center justify-center aspect-square overflow-hidden max-h-40 mx-auto">
-                <img id="catPreviewModal" src="" alt="Preview" class="hidden w-full h-full object-contain rounded-lg">
-                <span id="catPreviewPlaceholder" class="text-xs text-gray-400">Nenhuma imagem carregada</span>
-            </div>
-        </div>
-
-        <div class="flex items-center justify-end gap-3 border-top border-gray-50 pt-3">
-            <button onclick="fecharModalCategoria()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2 rounded-xl transition-all text-sm">Cancelar</button>
-            <button id="btnSalvarCategoria" onclick="salvarCategoriaFirebase()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2 rounded-xl transition-all text-sm">Salvar Registro</button>
         </div>
     </div>
 </div>
-
-<script>
-    (function inicializarModulo() {
-        if (typeof db !== "undefined") {
-            escutarCategoriasFirebase();
-            
-            document.getElementById('catUrlImagem').addEventListener('input', function(e) {
-                const img = document.getElementById('catPreviewModal');
-                const placeholder = document.getElementById('catPreviewPlaceholder');
-                if(e.target.value.trim() !== "") {
-                    img.src = e.target.value.trim();
-                    img.classList.remove('hidden');
-                    placeholder.classList.add('hidden');
-                } else {
-                    img.classList.add('hidden');
-                    placeholder.classList.remove('hidden');
-                }
-            });
-        } else {
-            console.error("Erro: Instância do Firebase (db) não encontrada.");
-        }
-    })();
-
-    // LEITURA DIRETA EM VELOCIDADE MÁXIMA
-    function escutarCategoriasFirebase() {
-        db.ref('categories').on('value', (snapshot) => {
-            const grid = document.getElementById('grid-categorias');
-            if (!grid) return;
-            
-            grid.innerHTML = '';
-            const dados = snapshot.val();
-
-            if (!dados) {
-                grid.innerHTML = `
-                    <div class="col-span-full text-center py-12 text-gray-400 border border-dashed border-gray-200 rounded-2xl bg-white">
-                        📦 Nenhuma categoria encontrada no nó 'categories'.
-                    </div>`;
-                return;
-            }
-
-            Object.keys(dados).forEach((id) => {
-                const cat = dados[id];
-                
-                // Mapeamento de segurança
-                const nomeCategoria = (cat.nome || cat.name || id).replace(/-/g, ' '); 
-                const imagemCategoria = cat.image || cat.urlImagem || '';
-                const estaPausado = cat.status === 'pausado' || cat.status === 'inactive';
-                
-                const fotoPadrao = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23ccc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
-
-                const card = document.createElement('div');
-                card.className = `bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs flex flex-col justify-between transition-all ${estaPausado ? 'opacity-60 grayscale' : ''}`;
-                
-                // CORREÇÃO EFETUADA AQUI: Estrutura HTML limpa e tags duplicadas removidas
-                card.innerHTML = `
-                    <div>
-                        <div class="w-full aspect-square bg-gray-50 relative border-b border-gray-100 overflow-hidden block">
-                            <img src="${imagemCategoria || fotoPadrao}" alt="${nomeCategoria}" class="absolute inset-0 w-full h-full object-cover object-center m-0 p-0" onerror="this.src='${fotoPadrao}'">
-                            <div class="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
-                                ${estaPausado ? '<span class="bg-amber-500 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-md shadow-sm">⏸️ Pausada</span>' : '<span class="bg-emerald-500 text-white font-bold text-[10px] uppercase px-2.5 py-1 rounded-md shadow-sm">🟢 Ativa</span>'}
-                            </div>
-                        </div>
-                        
-                        <div class="p-4">
-                            <h3 class="font-bold text-gray-800 truncate text-lg capitalize mb-2">${nomeCategoria}</h3>
-                            <p class="text-[10px] text-gray-400 font-mono mt-1 bg-gray-50 p-1.5 rounded-md border border-gray-100 truncate" title="${id}">slug: ${id}</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-3 border-t border-gray-100 bg-gray-50 divide-x divide-gray-100 mt-auto">
-                        <button onclick="editarCategoria('${id}', '${nomeCategoria.replace(/'/g, "\\'")}', '${imagemCategoria}')" class="py-3 text-xs font-semibold text-blue-600 hover:bg-blue-50/50 transition-all flex items-center justify-center gap-1.5">
-                            ✏️ Editar
-                        </button>
-                        <button onclick="alternarStatusCategoria('${id}', '${cat.status || 'ativo'}')" class="py-3 text-xs font-semibold ${estaPausado ? 'text-emerald-600 hover:bg-emerald-50/50' : 'text-amber-600 hover:bg-emerald-50/50'} transition-all flex items-center justify-center gap-1.5">
-                            ${estaPausado ? '▶️ Ativar' : '⏸️ Pausar'}
-                        </button>
-                        <button onclick="deletarCategoria('${id}')" class="py-3 text-xs font-semibold text-rose-600 hover:bg-rose-50/50 transition-all flex items-center justify-center gap-1.5">
-                            🗑️ Excluir
-                        </button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        });
-    }
-
-    function abrirModalCategoria() {
-        document.getElementById('modalTitulo').innerText = "Nova Categoria";
-        document.getElementById('catId').value = "";
-        document.getElementById('catSlug').value = "";
-        document.getElementById('catSlug').disabled = false;
-        document.getElementById('catNome').value = "";
-        document.getElementById('catUrlImagem').value = "";
-        document.getElementById('catPreviewModal').classList.add('hidden');
-        document.getElementById('catPreviewPlaceholder').classList.remove('hidden');
-        document.getElementById('modalCategoria').classList.remove('hidden');
-    }
-
-    function fecharModalCategoria() {
-        document.getElementById('modalCategoria').classList.add('hidden');
-    }
-
-    function salvarCategoriaFirebase() {
-        const idExistente = document.getElementById('catId').value;
-        const slugInformado = document.getElementById('catSlug').value.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-');
-        const nome = document.getElementById('catNome').value.trim();
-        const urlImagem = document.getElementById('catUrlImagem').value.trim();
-
-        if (!nome) {
-            alert("⚠️ Insira o nome da categoria!");
-            return;
-        }
-
-        let idFinal = idExistente || slugInformado || nome.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
-
-        const btn = document.getElementById('btnSalvarCategoria');
-        btn.disabled = true;
-        btn.innerText = "⏳ Gravando...";
-
-        const dados = {
-            nome: nome,
-            name: nome,
-            image: urlImagem,
-            urlImagem: urlImagem
-        };
-
-        if (idExistente) {
-            db.ref(`categories/${idExistente}`).update(dados)
-                .then(() => fecharEAlertar("Categoria updated com sucesso!"))
-                .catch(erro => tratarErro(erro));
-        } else {
-            dados.status = "ativo";
-            db.ref(`categories/${idFinal}`).set(dados)
-                .then(() => fecharEAlertar("Nova categoria adicionada!"))
-                .catch(erro => tratarErro(erro));
-        }
-
-        function fecharEAlertar(msg) {
-            alert(`✅ ${msg}`);
-            fecharModalCategoria();
-            btn.disabled = false;
-            btn.innerHTML = "Salvar Registro";
-        }
-
-        function tratarErro(e) {
-            alert("❌ Erro ao salvar dados.");
-            console.error(e);
-            btn.disabled = false;
-            btn.innerHTML = "Salvar Registro";
-        }
-    }
-
-    function editarCategoria(id, nome, urlImagem) {
-        document.getElementById('modalTitulo').innerText = "Editar Categoria";
-        document.getElementById('catId').value = id;
-        document.getElementById('catSlug').value = id;
-        document.getElementById('catSlug').disabled = true;
-        document.getElementById('catNome').value = nome;
-        document.getElementById('catUrlImagem').value = urlImagem;
-
-        const img = document.getElementById('catPreviewModal');
-        const placeholder = document.getElementById('catPreviewPlaceholder');
-        
-        if (urlImagem && urlImagem !== 'undefined') {
-            img.src = urlImagem;
-            img.classList.remove('hidden');
-            placeholder.classList.add('hidden');
-        } else {
-            img.classList.add('hidden');
-            placeholder.classList.remove('hidden');
-        }
-
-        document.getElementById('modalCategoria').classList.remove('hidden');
-    }
-
-    function alternarStatusCategoria(id, statusAtual) {
-        const novoStatus = (statusAtual === 'ativo' || statusAtual === 'active') ? 'pausado' : 'ativo';
-        db.ref(`categories/${id}`).update({ status: novoStatus })
-            .catch(erro => console.error("Erro ao alternar status:", erro));
-    }
-
-    function deletarCategoria(id) {
-        if (confirm(`⚠️ Deseja mesmo excluir permanentemente a categoria '${id}'?\nIsto pode remover a visualização dos produtos associados a ela.`)) {
-            db.ref(`categories/${id}`).remove()
-                .then(() => alert("✅ Categoria removida."))
-                .catch(erro => console.error("Erro ao remover:", erro));
-        }
-    }
-</script>

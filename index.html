@@ -71,7 +71,7 @@
         </div>
     </div>
 
-    <script>
+   <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
             databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
@@ -82,8 +82,8 @@
         const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
         async function init(){
-            // 1. Sincronização dinâmica com o painel de configurações
-            db.ref('settings').on('value', snap => {
+            // 1. Sincronização dinâmica com o painel de configurações (Caminho Isolado)
+            db.ref('abella/settings').on('value', snap => {
                 if(!snap.exists()) return;
                 const settingsGerais = snap.val() || {};
                 const emp = settingsGerais.empresa || {};
@@ -111,8 +111,8 @@
                 }
             });
 
-            // 2. Renderização das Categorias Filtradas por Marca (Abella Joias)
-            db.ref('categories').on('value', snap => {
+            // 2. Renderização das Categorias Filtradas (Caminho Isolado)
+            db.ref('abella/categories').on('value', snap => {
                 const grid = document.getElementById('grid');
                 grid.innerHTML = '';
                 
@@ -127,18 +127,13 @@
                     const id = child.key;
                     const cat = child.val() || {};
 
-                    // Proteção Multi-loja: Garante o isolamento completo da Abella Joias
-                    if(cat.loja === "luary" || cat.projeto === "luary" || id.toLowerCase().includes("luary")) return;
-                    if(cat.loja === "marcinha" || cat.projeto === "marcinha" || id.toLowerCase().includes("marcinha")) return;
                     if(cat.paused === true || cat.paused === "true") return;
 
                     totalItensRenderizados++;
                     
-                    // Tratamento flexível de chaves de promoção do banco
                     const isPromo = cat.promoAtiva === true || cat.promoAtiva === "true";
                     const promoTag = isPromo ? `<span class="badge" style="background:${cat.promoColor || '#caa85c'}">${cat.promoTag || 'OFERTA'}</span>` : '';
                     
-                    // Fallback seguro de imagem (imagem ou image)
                     const urlImagem = cat.imagem || cat.image || 'https://via.placeholder.com/400?text=Abella+Joias';
 
                     grid.innerHTML += `
@@ -172,7 +167,6 @@
                 totalPecas += qtd;
             });
             
-            // Atualiza o contador visual de peças no topo do cabeçalho
             document.getElementById('cart-count').innerText = totalPecas;
         }
 

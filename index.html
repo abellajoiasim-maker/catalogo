@@ -82,11 +82,8 @@
         
         const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-        // Objeto em cache local para que o carrinho valide as informações estruturadas das joias instantaneamente
-        let dadosCatalogoLocal = {};
-
         async function init(){
-            // 1. Sincronização dinâmica com o painel de configurações (Caminho Isolado)
+            // 1. Sincronização dinâmica com o painel de configurações (Apenas dados leves da empresa)
             db.ref('abella/settings').on('value', snap => {
                 if(!snap.exists()) return;
                 const settingsGerais = snap.val() || {};
@@ -95,7 +92,6 @@
                 document.getElementById("nome").innerText = settingsGerais.name || emp.nome || "Abella Joias";
                 document.getElementById("slogan").innerText = settingsGerais.slogan || emp.slogan || "Atacado de Joias no Bruto";
                 
-                // Banner promocional dinâmico do Admin
                 if(settingsGerais.bannerAtivo || emp.bannerAtivo) {
                     document.getElementById("bannerTexto").innerText = settingsGerais.bannerTexto || emp.bannerTexto || "";
                     document.getElementById("banner").classList.remove("hidden");
@@ -115,14 +111,7 @@
                 }
             });
 
-            // 2. Pré-carregamento e Sincronização dos produtos (Garante velocidade e consistência com o Carrinho)
-            db.ref('abella/products').on('value', snap => {
-                if(snap.exists()) {
-                    dadosCatalogoLocal = snap.val();
-                }
-            });
-
-            // 3. Renderização das Categorias Filtradas (Caminho Isolado)
+            // 2. Renderização das Categorias (Apenas carregar as coleções - Ultra rápido e leve)
             db.ref('abella/categories').on('value', snap => {
                 const grid = document.getElementById('grid');
                 grid.innerHTML = '';
@@ -169,8 +158,9 @@
             atualizarCarrinho();
         }
 
-        // LÓGICA DE ALINHAMENTO COM O SISTEMA DO CARRINHO
+        // LÓGICA DO CARRINHO (Lê direto do LocalStorage, sem pesar o Firebase)
         function atualizarCarrinho(){
+            // Garanta se está usando 'carrinho' ou 'carrinho_abella' de acordo com o seu checkout
             const cart = JSON.parse(localStorage.getItem('carrinho') || '[]');
             let totalPecas = 0;
             

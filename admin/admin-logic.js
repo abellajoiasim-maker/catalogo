@@ -48,7 +48,6 @@ if (window.db) {
     // 1. Escuta contínua de Pedidos (Nó: abella/orders)
     window.db.ref('abella/orders').on('value', function(snapshot) {
         var dadosBrutos = snapshot.val() || {};
-        // Limpeza preventiva: remove nós que não são pedidos de fato
         var pedidosFiltrados = {};
         Object.keys(dadosBrutos).forEach(function(key) {
             if (key !== 'products' && key !== 'settings' && key !== 'categories' && key !== 'galvanicas') {
@@ -127,36 +126,51 @@ window.mudarAbaDinamica = function(aba) {
             return res.text();
         })
         .then(function(html) {
+            // 1. Injeta o HTML primeiro
             container.innerHTML = html;
+            
+            // 2. Registra e prepara as funções do submódulo
             window.orquestrarBindsSubmodulo(pathAba);
+            
+            // 3. GATILHO DE SEGURANÇA: Garante que os dados locais salvos do Firebase apareçam na tela imediatamente
+            if (pathAba === 'pedidos' && typeof window.renderizarTabelaPedidosVisivel === 'function') {
+                setTimeout(function() { window.renderizarTabelaPedidosVisivel(); }, 50);
+            } else if (pathAba === 'produtos' && typeof window.carregarBlocoProdutos === 'function') {
+                setTimeout(function() { window.carregarBlocoProdutos(true); }, 50);
+            } else if (pathAba === 'categorias' && typeof window.carregarBlocoCategorias === 'function') {
+                setTimeout(function() { window.carregarBlocoCategorias(); }, 50);
+            }
         })
         .catch(function(err) {
+            console.error("Erro ao carregar aba assíncrona:", err);
             container.innerHTML = `
                 <div class="p-6 bg-red-950/20 border border-red-900 text-red-400 text-xs font-mono rounded-2xl max-w-lg mx-auto mt-12 text-center shadow-xl">
-                    ⚠️ Erro de carregamento assíncrono: Módulo <b>modulo/${pathAba}.html</b> indisponível ou inacessível no GitHub.
+                    ⚠️ Erro de carregamento assíncrono: Módulo <b>modulo/${pathAba}.html</b> indisponível ou inacessível.
                 </div>
             `;
         });
 };
 
 // ==========================================================================
-// ORQUESTRAÇÃO DE BINDS E MÉTODOS DOS SUBMÓDULOS (ALINHADO COM SEU REALTIME)
+// ORQUESTRAÇÃO DE BINDS E MÉTODOS DOS SUBMÓDULOS
 // ==========================================================================
 window.orquestrarBindsSubmodulo = function(modulo) {
     console.log(`⚡ Conectando canais globais para o módulo ativo: [${modulo.toUpperCase()}]`);
 
     // ----------------------------------------------------------------------
-    // BINDS DO MÓDULO DE PEDIDOS (CARDS EM GRID DE ALTA PERFORMANCE)
+    // BINDS DO MÓDULO DE PEDIDOS
     // ----------------------------------------------------------------------
     if (modulo === 'pedidos') {
         window.renderizarTabelaPedidosVisivel = function() {
             var container = document.getElementById('listaPedidos');
-            if (!container) return;
+            if (!container) {
+                console.warn("⚠️ Elemento #listaPedidos ainda não foi encontrado no DOM.");
+                return;
+            }
 
             container.innerHTML = '';
             var chaves = Object.keys(window.todosPedidosLocal).reverse();
 
-            // Mapeia filtro por status
             if (window.filtroStatusPedidoAtual !== "Todos") {
                 chaves = chaves.filter(function(k) {
                     var p = window.todosPedidosLocal[k];
@@ -177,10 +191,8 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                 var totalStr = window.formatarMoedaReal(totalNum);
                 var dataStr = p.data || "Sem Data";
                 var clienteNome = p.nome || p.cliente || (p.entrega ? p.entrega.nome : 'Cliente Abella');
-                var statusReal = p.status || (p.resumo ? p.resumo.status : "Novo");
                 var numeroPedido = key.slice(-6).toUpperCase();
 
-                // Processa o volume total físico de itens contidos no pedido
                 let totalPecas = p.totalPecas || (p.resumo ? p.resumo.totalPecas : 0);
                 if (!totalPecas && p.itens) {
                     const itensArray = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
@@ -264,8 +276,6 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                 });
             }
         };
-
-        window.renderizarTabelaPedidosVisivel();
     }
 
     // ----------------------------------------------------------------------
@@ -399,8 +409,6 @@ window.orquestrarBindsSubmodulo = function(modulo) {
         window.alternarPausaProduto = function(id, statusAtual) {
             window.db.ref(`abella/products/${id}`).update({ paused: !statusAtual });
         };
-
-        window.carregarBlocoProdutos(true);
     }
 
     // ----------------------------------------------------------------------
@@ -514,8 +522,6 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                 window.db.ref(`abella/categories/${id}`).remove();
             }
         };
-
-        window.carregarBlocoCategorias();
     }
 };
 
@@ -531,5 +537,5 @@ if (document.readyState === "complete" || document.readyState === "interactive")
         if (window.mudarAbaDinamica && !document.getElementById('listaPedidos')) {
             window.mudarAbaDinamica('pedidos');
         }
-    }, 100);
+    }, 150);
 }

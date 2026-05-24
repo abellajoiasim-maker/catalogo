@@ -1,123 +1,31 @@
-<div class="flex justify-between items-center mb-6">
-    <div>
-        <h2 class="text-xl font-black text-white uppercase tracking-tight">Módulo de Pedidos Recebidos</h2>
-        <p class="text-xs text-gray-500">Fluxo operacional assíncrono isolado em Grid Estável</p>
-    </div>
-    <span id="qtd-pedidos" class="bg-[#caa85c]/10 border border-[#caa85c]/20 text-[#caa85c] px-3 py-1 rounded-full text-xs font-bold font-mono">Carregando contador...</span>
-</div>
-
-<div class="mb-4">
-    <input id="buscaPedido" type="text" oninput="carregarPedidos()" placeholder="🔍 Buscar cliente por nome..." class="w-full md:w-80 bg-[#111] border border-[#222] p-2.5 rounded-xl text-xs text-white focus:border-[#caa85c] outline-none font-medium">
-</div>
-
-<div id="listaPedidosGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full block clearfix">
-    <div class="col-span-full text-center py-12 text-zinc-600 italic text-xs animate-pulse font-mono">
-        Buscando dados ativos na árvore do Firebase...
-    </div>
-</div>
-
-<script>
-    (function() {
-        // Aguarda o Firebase iniciar com segurança
-        if (typeof firebase === 'undefined' || !firebase.apps.length) {
-            setTimeout(arguments.callee, 50);
-            return;
-        }
-
-        const db = firebase.database();
-        let todosPedidosLocal = {};
+<div class="space-y-6 animate-fadeIn text-left p-2">
+    <div class="flex flex-wrap items-center justify-between gap-4 bg-[#0a0a0a] border border-zinc-900 p-4 rounded-2xl">
+        <div>
+            <h2 class="text-lg font-black text-white uppercase tracking-tight font-sans flex items-center gap-2">
+                📦 Painel de Pedidos <span class="text-xs text-[#caa85c] font-mono font-normal lowercase">(/abella/orders)</span>
+            </h2>
+            <p class="text-zinc-500 text-[11px] font-mono mt-0.5">Gestão unificada de fluxo físico e romaneios para Limeira</p>
+        </div>
         
-        const fMoedaLocal = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+        <div class="flex flex-wrap gap-2" id="botoes-filtro-pedidos">
+            <button id="filter-ped-todos" onclick="window.mudarFiltroStatusPedido('Todos')" class="btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black">
+                Todos
+            </button>
+            <button id="filter-ped-novo" onclick="window.mudarFiltroStatusPedido('Novo')" class="btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
+                Novos
+            </button>
+            <button id="filter-ped-separacao" onclick="window.mudarFiltroStatusPedido('Separação')" class="btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
+                Em Separação
+            </button>
+            <button id="filter-ped-faturado" onclick="window.mudarFiltroStatusPedido('Faturado')" class="btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
+                Faturados
+            </button>
+        </div>
+    </div>
 
-        window.carregarPedidos = function() {
-            // Buscando da raiz genérica 'orders' (ajuste para 'abella/orders' se necessário)
-            db.ref('orders').once('value').then(snap => {
-                const container = document.getElementById('listaPedidosGrid');
-                const badgeCount = document.getElementById('qtd-pedidos');
-                if (!container) return;
-
-                if (!snap.exists()) {
-                    container.innerHTML = '<div class="text-center py-10 text-gray-600 italic col-span-full">Nenhum pedido localizado na base de dados.</div>';
-                    if(badgeCount) badgeCount.innerText = "0 pedidos";
-                    return;
-                }
-
-                todosPedidosLocal = snap.val();
-                const buscaElemento = document.getElementById('buscaPedido');
-                const busca = buscaElemento ? buscaElemento.value.toLowerCase().trim() : '';
-                let htmlStack = [];
-                let count = 0;
-
-                const chavesPedidos = Object.keys(todosPedidosLocal).reverse();
-
-                chavesPedidos.forEach(id => {
-                    const p = todosPedidosLocal[id];
-                    const cliente = p.nome || p.cliente || 'Cliente Oculto';
-                    if (busca && !cliente.toLowerCase().includes(busca)) return;
-                    
-                    count++;
-                    let totalPecas = 0;
-                    if (p.itens) {
-                        const itensArray = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
-                        itensArray.forEach(i => {
-                            if (i) totalPecas += (parseInt(i.quantidade || i.qtd) || 1);
-                        });
-                    }
-
-                    const rawTotal = p.total;
-                    const totalExibivel = typeof rawTotal === 'number' ? fMoedaLocal(rawTotal) : (rawTotal || 'R$ 0,00');
-                    const numeroPedido = id.slice(-6).toUpperCase();
-
-                    // TEMPLATE DO CARD DO GRID
-                    htmlStack.push(`
-                        <div class="bg-[#111] border border-[#222] p-4 rounded-xl flex flex-col justify-between hover:border-zinc-700 transition-all text-xs space-y-4 min-w-[280px] h-full">
-                            
-                            <div class="space-y-2">
-                                <div class="flex justify-between items-center text-gray-400 font-mono text-[11px]">
-                                    <span class="font-bold text-white bg-zinc-800 px-2 py-0.5 rounded text-[10px]">Pedido #${numeroPedido}</span>
-                                    <span>${p.data ? new Date(p.data).toLocaleString('pt-BR') : ''}</span>
-                                </div>
-                                <h4 class="text-base font-bold text-white uppercase tracking-tight pt-1">${cliente}</h4>
-                                <p class="text-xs text-gray-400 font-mono">📱 ${p.whats || p.telefone || 'Não informado'}</p>
-                                <p class="text-xs text-zinc-400 font-mono">📦 Volume Total: <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span></p>
-                                <p class="text-xs text-zinc-500 truncate" title="${p.rua || ''}">📍 ${p.rua || 'Retirada / Não informado'}</p>
-                                
-                                <div class="pt-2 flex justify-between items-center border-t border-zinc-900/80 mt-2">
-                                    <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
-                                    <span class="text-base font-black text-[#caa85c] font-mono">${totalExibivel}</span>
-                                </div>
-                            </div>
-
-                            <div class="bg-black/60 p-2 rounded-lg border border-zinc-900 mt-2">
-                                <div class="flex gap-2">
-                                    <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1.5 rounded flex-1 outline-none focus:border-[#caa85c]">
-                                        <option value="1">1. Conferência de Separação</option>
-                                        <option value="2">2. Financeiro e Faturamento</option>
-                                        <option value="3">3. Vitrine (Conferência Fotográfica)</option>
-                                        <option value="4">4. Grade Comparativa Conf.</option>
-                                        <option value="5">5. Grade Financeira Expandida</option>
-                                        <option value="6">6. Grade Consolidada Total</option>
-                                    </select>
-                                    <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; window.pedidoEditando = '${id}'; window.imprimirRomaneio(parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-3 py-1.5 rounded hover:brightness-110 uppercase tracking-wider transition-all shrink-0">Visualizar</button>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-2 pt-2 border-t border-zinc-900 mt-2">
-                                <button onclick="abrirEditorPedido('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 px-2 rounded-lg transition-all text-center text-[11px]">⚙️ Gerenciar / Editar</button>
-                                <button onclick="excluirPedido('${id}')" class="bg-red-950/20 hover:bg-red-900/50 text-red-400 border border-red-900/40 py-2 px-3 rounded-lg transition-all">🗑️ Excluir</button>
-                            </div>
-
-                        </div>
-                    `);
-                });
-
-                container.innerHTML = htmlStack.length ? htmlStack.join('') : '<div class="text-center py-10 text-gray-600 italic col-span-full">Nenhum cliente correspondente.</div>';
-                if(badgeCount) badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
-            }).catch(err => console.error("Erro ao carregar pedidos:", err));
-        };
-
-        // ... manter as funções globais (abrirEditorPedido, excluirPedido, imprimirRomaneio) como no arquivo anterior ...
-
-        window.carregarPedidos();
-    })();
-</script>
+    <div id="listaPedidos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div class="col-span-full text-center py-12 text-zinc-600 font-mono italic text-xs animate-pulse">
+            A aguardar resposta do barramento Realtime...
+        </div>
+    </div>
+</div>

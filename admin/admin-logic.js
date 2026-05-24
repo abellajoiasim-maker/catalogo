@@ -1,10 +1,7 @@
 // IMPORTAÇÃO CONECTIVA DO FIREBASE CENTRAL
 import { db as firebaseDB } from '../images/js/firebase/firebase.js';
 
-// CACHES GLOBAIS DE OPERAÇÃO DO EDITOR IA
-window._PRODUTOS_LOTE_CACHE = {};
-window._FILA_PROCESSAMENTO = [];
-window._INDICE_ATUAL_FILA = 0;
+// CACHES GLOBAIS DE OPERAÇÃO OPERACIONAL
 window.todosPedidosLocal = {};
 
 // GLOBALIZAÇÃO CRÍTICA PARA OS SUBMÓDULOS HTML ENXERGAREM O BANCO
@@ -14,10 +11,9 @@ window.db = firebaseDB;
 if (window.db) {
     console.log("🔥 [Firebase] Conexão estabelecida com sucesso no escopo global.");
     
-    // Força uma leitura imediata para garantir que os dados existem antes do "on" ativo
+    // Leitura imediata para garantir carga inicial antes do gatilho 'on'
     window.db.ref('orders').once('value').then(snapshot => {
         window.todosPedidosLocal = snapshot.val() || {};
-        console.log("📦 [Firebase] Pedidos iniciais carregados:", Object.keys(window.todosPedidosLocal).length);
         if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
             window.renderizarTabelaPedidosVisivel();
         }
@@ -25,7 +21,7 @@ if (window.db) {
 
     window.db.ref('orders').on('value', function(snapshot) {
         window.todosPedidosLocal = snapshot.val() || {};
-        if (document.getElementById('tabela-pedidos-container') || document.getElementById('listaPedidos')) {
+        if (document.getElementById('listaPedidos')) {
             if (typeof window.renderizarTabelaPedidosVisivel === 'function') window.renderizarTabelaPedidosVisivel();
             if (typeof window.carregarPedidos === "function") window.carregarPedidos();
         }
@@ -56,27 +52,20 @@ window.mudarAbaDinamica = function(aba) {
 
     container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-600 italic text-xs font-mono animate-pulse">Carregando módulo [${aba.toUpperCase()}]...</div>`;
 
-    // Ajusta o nome do arquivo se necessário
+    // Ajusta o mapeamento do nome do arquivo físico
     const pathAba = (aba === 'categories') ? 'categorias' : aba;
     
-    // Rota 1: Tentativa subindo um nível (caso esteja dentro da pasta admin/)
+    // Rotas Dinâmicas para Prevenir Erros de Localização de Diretório
     let urlTentativa1 = `../modulo/${pathAba}.html`;
-    // Rota 2: Tentativa partindo da raiz (fallback caso esteja na index principal)
     let urlTentativa2 = `modulo/${pathAba}.html`;
-
-    if (aba === 'editor') {
-        container.classList.remove('p-8');
-    } else {
-        if(!container.classList.contains('p-8')) container.classList.add('p-8');
-    }
 
     fetch(urlTentativa1)
         .then(res => {
-            if(!res.ok) return fetch(urlTentativa2); // Se a primeira rota falhar, tenta a segunda
+            if(!res.ok) return fetch(urlTentativa2);
             return res;
         })
         .then(res => {
-            if(!res.ok) throw new Error(`Não foi possível localizar o arquivo HTML do módulo em nenhuma das rotas.`);
+            if(!res.ok) throw new Error(`Não foi possível localizar o arquivo HTML do módulo.`);
             return res.text();
         })
         .then(html => {
@@ -93,7 +82,10 @@ window.mudarAbaDinamica = function(aba) {
         });
 };
 
-function executarMapeamentoFallback(aba) {
+// =========================================================================
+// MAPEAMENTO DE INICIALIZAÇÃO ESPECÍFICA DE CADA SUBMÓDULO
+// =========================================================================
+function ejecutarMapeamentoFallback(aba) {
     switch(aba) {
         case 'pedidos':
             if (typeof window.carregarPedidos === "function") window.carregarPedidos();
@@ -122,14 +114,10 @@ function executarMapeamentoFallback(aba) {
         case 'config':
             if (typeof window.carregarConfiguracoes === "function") window.carregarConfiguracoes();
             break;
-            
-        case 'editor':
-            if (typeof window.inicializarMapeamentoLote === "function") window.inicializarMapeamentoLote();
-            break;
     }
 }
 
-// GATILHO DE FLUXO INICIAL ASSÍNCRONO CONECTADO AO READYSTATE
+// GATILHO DE INICIALIZAÇÃO (PADRÃO: ABA PEDIDOS RECEBIDOS)
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => window.mudarAbaDinamica('pedidos'), 200);

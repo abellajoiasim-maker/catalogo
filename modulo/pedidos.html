@@ -1,389 +1,519 @@
-<div class="space-y-6 animate-fadeIn">
-    
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
-        <div>
-            <h2 class="text-xl font-bold tracking-tight text-white font-sans">Pedidos Recebidos</h2>
-            <p class="text-xs text-zinc-500 font-mono mt-0.5">Sincronização em tempo real ativa com abella/orders</p>
-        </div>
-        
-        <div class="flex items-center gap-2 font-mono text-[10px]">
-            <span class="bg-zinc-950 border border-zinc-900 px-3 py-1.5 rounded-lg text-zinc-400">
-                Lotes Ativos: <b id="total-lotes-badge" class="text-[#caa85c]">0</b>
-            </span>
-        </div>
+<div class="flex justify-between items-center mb-6 animate-fadeIn">
+    <div>
+        <h2 class="text-xl font-black text-white uppercase tracking-tight">Módulo de Pedidos Recebidos</h2>
+        <p class="text-xs text-gray-500">Fluxo operacional assíncrono isolado com persistência estável</p>
     </div>
-
-    <div class="flex flex-wrap items-center gap-2 bg-zinc-950/40 p-2 rounded-xl border border-zinc-900/60">
-        <button id="filter-ped-todos" onclick="window.mudarFiltroStatusPedido('Todos')" class="btn-filtro-pedido px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black">
-            📦 Todos
-        </button>
-        <button id="filter-ped-novo" onclick="window.mudarFiltroStatusPedido('Novo')" class="btn-filtro-pedido px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
-            🟡 Novos / Pendentes
-        </button>
-        <button id="filter-ped-concluido" onclick="window.mudarFiltroStatusPedido('Concluído')" class="btn-filtro-pedido px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
-            🟢 Concluídos / Enviados
-        </button>
-    </div>
-
-    <div class="bg-black border border-zinc-900 rounded-2xl overflow-hidden shadow-2xl">
-        <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="border-b border-zinc-900 bg-zinc-950/60 text-zinc-500 font-mono text-[10px] uppercase tracking-wider">
-                        <th class="p-4 font-semibold">Cód Lote</th>
-                        <th class="p-4 font-semibold">Cliente / Comprador</th>
-                        <th class="p-4 font-semibold">Data e Hora</th>
-                        <th class="p-4 font-semibold">Total Geral</th>
-                        <th class="p-4 font-semibold">Status</th>
-                        <th class="p-4 font-semibold text-right">Ações de Controle</th>
-                    </tr>
-                </thead>
-                <tbody id="listaPedidos" class="divide-y divide-zinc-900/40">
-                    <tr>
-                        <td colspan="6" class="p-8 text-center text-zinc-600 font-mono italic animate-pulse">
-                            Carregando registros do Realtime Database...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <span id="qtd-pedidos" class="bg-[#caa85c]/10 border border-[#caa85c]/20 text-[#caa85c] px-3 py-1 rounded-full text-xs font-bold font-mono">Carregando contador...</span>
 </div>
 
-<div id="modalDetalhesPedido" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-[#09090b] border border-zinc-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-zoomIn">
-        
-        <div class="p-6 border-b border-zinc-900 bg-black flex justify-between items-center">
-            <div>
-                <h3 class="text-sm font-bold uppercase tracking-wider text-white font-mono">
-                    Detalhamento do Pedido <span id="md-txt-id-pedido" class="text-[#caa85c]">#------</span>
-                </h3>
-                <p id="md-txt-data-pedido" class="text-[10px] text-zinc-500 font-mono mt-0.5">Data: --/--/----</p>
-            </div>
-            <button onclick="window.fecharDetalhesPedidoModal()" class="text-zinc-500 hover:text-white transition-all font-bold text-lg font-mono">✕</button>
-        </div>
+<div class="mb-4">
+    <input id="buscaPedido" type="text" oninput="window.carregarPedidos()" placeholder="🔍 Buscar cliente por nome..." class="w-full md:w-80 bg-[#111] border border-[#222] p-2.5 rounded-xl text-xs text-white focus:border-[#caa85c] outline-none font-medium">
+</div>
 
-        <div class="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1 bg-zinc-950/20">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                <div class="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
-                    <h4 class="text-[10px] font-bold uppercase tracking-wider text-[#caa85c] font-mono">Dados do Cliente</h4>
-                    <div class="text-xs space-y-1 font-mono">
-                        <p class="text-white font-sans font-bold text-sm" id="md-nome-cliente">---</p>
-                        <p class="text-zinc-400">WhatsApp: <span id="md-whatsapp-cliente" class="text-zinc-300">---</span></p>
-                        <p class="text-zinc-400">Forma de Pagto: <span id="md-pagamento-cliente" class="text-zinc-300">---</span></p>
-                    </div>
-                </div>
-
-                <div class="bg-black border border-zinc-900 rounded-xl p-4 space-y-2">
-                    <h4 class="text-[10px] font-bold uppercase tracking-wider text-amber-500 font-mono">Logística & Despacho</h4>
-                    <div class="text-xs space-y-1 font-mono">
-                        <p class="text-white font-sans font-medium" id="md-metodo-frete">---</p>
-                        <p class="text-zinc-400">Custo Adicional: <span id="md-valor-frete" class="text-emerald-400 font-bold">R$ 0,00</span></p>
-                        <p class="text-zinc-500 text-[10px] italic">Pronto para triagem física de banho.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-black border border-zinc-900 rounded-xl overflow-hidden">
-                <div class="p-3 bg-zinc-950 border-b border-zinc-900">
-                    <h4 class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 font-mono">Relação de Peças Selecionadas (No Bruto)</h4>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-xs font-mono">
-                        <thead>
-                            <tr class="bg-zinc-950/40 border-b border-zinc-900 text-zinc-500 text-[9px] uppercase">
-                                <th class="p-3">Item / Especificação</th>
-                                <th class="p-3 text-center">SKU</th>
-                                <th class="p-3 text-center">Peso Un.</th>
-                                <th class="p-3 text-center">Qtd</th>
-                                <th class="p-3 text-right">Preço Un.</th>
-                            </tr>
-                        </thead>
-                        <tbody id="md-tabela-itens-pedido" class="divide-y divide-zinc-900/60">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 ml-auto max-w-sm space-y-2 font-mono text-xs">
-                <div class="flex justify-between text-zinc-400">
-                    <span>Subtotal das Peças:</span>
-                    <span id="md-fin-subtotal" class="text-white">R$ 0,00</span>
-                </div>
-                <div class="flex justify-between text-zinc-400">
-                    <span>Desconto Promocional:</span>
-                    <span id="md-fin-desc-promo" class="text-rose-400">- R$ 0,00</span>
-                </div>
-                <div class="flex justify-between text-zinc-400">
-                    <span>Desconto PIX/À Vista:</span>
-                    <span id="md-fin-desc-pix" class="text-rose-400">- R$ 0,00</span>
-                </div>
-                <div class="flex justify-between text-zinc-400 border-b border-zinc-900 pb-2">
-                    <span>Custo Logístico (Frete):</span>
-                    <span id="md-fin-frete" class="text-emerald-400">+ R$ 0,00</span>
-                </div>
-                <div class="flex justify-between text-sm font-black pt-1">
-                    <span class="text-[#caa85c] uppercase">Valor Total do Lote:</span>
-                    <span id="md-fin-total-geral" class="text-emerald-400">R$ 0,00</span>
-                </div>
-                <div class="text-[9px] text-zinc-500 text-right font-sans pt-1">
-                    Peso Total Estimado: <b id="md-fin-peso-total" class="text-zinc-300">0.00g</b>
-                </div>
-            </div>
-        </div>
-
-        <div class="p-4 bg-black border-t border-zinc-900 flex flex-col sm:flex-row items-center justify-between gap-3">
-            
-            <div class="flex items-center gap-2 w-full sm:w-auto">
-                <label for="md-select-status-atual" class="text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono whitespace-nowrap">Mudar Fluxo:</label>
-                <select id="md-select-status-atual" class="bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-mono text-white p-2 focus:border-[#caa85c] focus:outline-none">
-                    <option value="Novo">Novo / Pendente</option>
-                    <option value="Processando">Em Separação</option>
-                    <option value="Concluído">Concluído / Enviado</option>
-                </select>
-                <button onclick="window.salvarAlteracaoStatusDoModal()" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] text-white text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-lg transition-all">
-                    Aplicar
-                </button>
-            </div>
-
-            <input type="hidden" id="md-id-pedido-oculto" value="">
-            <button onclick="window.gerarPdfConferenciaPedido(document.getElementById('md-id-pedido-oculto').value)" class="w-full sm:w-auto bg-gradient-to-r from-[#caa85c] to-[#b3924b] text-black font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 flex items-center justify-center gap-2">
-                🖨️ Gerar Romaneio Galvânica (PDF)
-            </button>
-        </div>
+<div id="listaPedidos" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+    <div class="col-span-full text-center py-12 text-zinc-600 italic text-xs animate-pulse font-mono">
+        Buscando dados ativos na árvore 'orders' do Firebase...
     </div>
 </div>
 
 <script>
-    // Sobrescreve e injeta métodos avançados de controle de interface no escopo do admin-logic
     (function() {
-        console.log("🛠️ [Binds-Pedidos] Acoplando métodos visuais ao motor central...");
+        // Verifica se o Firebase já está pronto na janela global, senão aguarda
+        if (typeof firebase === 'undefined' || !firebase.apps.length) {
+            setTimeout(arguments.callee, 50);
+            return;
+        }
 
-        // Atualiza os badges de contagem na tela de relatórios
-        var chavesT = Object.keys(window.todosPedidosLocal || {});
-        var badgeTotal = document.getElementById('total-lotes-badge');
-        if (badgeTotal) badgeTotal.innerText = chavesT.length;
+        const db = firebase.database();
+        let todosPedidosLocal = {};
+        
+        // Formatação monetária padronizada com aspas explícitas na moeda BR
+        const fMoedaLocal = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-        // Sobrescreve o método padrão para abrir e rechear o modal com as variáveis do banco real
-        window.abrirDetalhesPedidoModal = function(id) {
-            var p = window.todosPedidosLocal[id];
-            if (!p) return;
+        window.carregarPedidos = function() {
+            db.ref('orders').once('value').then(snap => {
+                const container = document.getElementById('listaPedidos');
+                const badgeCount = document.getElementById('qtd-pedidos');
+                if (!container) return;
 
-            var modal = document.getElementById('modalDetalhesPedido');
-            if (!modal) return;
+                if (!snap.exists()) {
+                    container.innerHTML = '<div class="text-center py-10 text-gray-600 italic col-span-full">Nenhum pedido localizado na base de dados.</div>';
+                    if(badgeCount) badgeCount.innerText = "0 pedidos";
+                    return;
+                }
 
-            // Injeta IDs e Metadados do topo
-            document.getElementById('md-id-pedido-oculto').value = id;
-            document.getElementById('md-txt-id-pedido').innerText = '#' + id.slice(-6).toUpperCase();
-            document.getElementById('md-txt-data-pedido').innerText = "Data: " + (p.data || "N/A");
+                todosPedidosLocal = snap.val();
+                const buscaElemento = document.getElementById('buscaPedido');
+                const busca = buscaElemento ? buscaElemento.value.toLowerCase().trim() : '';
+                let htmlStack = [];
+                let count = 0;
 
-            // Mapeamento de Cliente (Raiz ou nós estruturados)
-            var nomeCliente = p.nome || p.cliente || (p.entrega ? p.entrega.nome : 'Cliente Abella');
-            var whatsCliente = p.whatsapp || p.telefone || (p.cliente && p.cliente.whatsapp) || "Não Informado";
-            var formPagto = p.pagamento || "À combinar";
-            
-            document.getElementById('md-nome-cliente').innerText = nomeCliente;
-            document.getElementById('md-whatsapp-cliente').innerText = whatsCliente;
-            document.getElementById('md-pagamento-cliente').innerText = formPagto;
+                Object.keys(todosPedidosLocal).forEach(id => {
+                    const p = todosPedidosLocal[id];
+                    const cliente = p.nome || p.cliente || 'Cliente Oculto';
+                    if (busca && !cliente.toLowerCase().includes(busca)) return;
+                    
+                    count++;
+                    let totalPecas = 0;
 
-            // Mapeamento de Logística de Entrega (Tratando freteNome e freteValor)
-            var nomeFrete = p.freteNome || (p.entrega ? p.entrega.freteNome : "Retirar / Entregar Galvânica");
-            var valFrete = typeof p.frete === 'number' ? p.frete : (p.entrega ? parseFloat(p.entrega.freteValor) || 0 : 0);
-            
-            document.getElementById('md-metodo-frete').innerText = nomeFrete;
-            document.getElementById('md-valor-frete').innerText = window.formatarMoedaReal(valFrete);
+                    // Normalização e contagem de volumes protegendo contra objetos/arrays vazios
+                    if (p.itens) {
+                        const itensArray = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+                        itensArray.forEach(i => {
+                            if (i) totalPecas += (parseInt(i.quantidade || i.qtd) || 1);
+                        });
+                    }
 
-            // Mapeamento Financeiro (Alinhado com a estrutura real capturada)
-            var subtotal = p.subtotal || (p.resumo ? p.resumo.subtotal : 0);
-            var descPromo = p.descontoPromo || (p.resumo ? p.resumo.descontoPromo : 0);
-            var descPix = p.descontoPix || (p.resumo ? p.resumo.descontoPix : 0);
-            var totalGeral = p.total || (p.resumo ? p.resumo.total : 0);
-            var pesoTotal = p.pesoTotal || (p.resumo ? p.resumo.pesoTotal : 0);
+                    const rawTotal = p.total;
+                    const totalExibivel = typeof rawTotal === 'number' ? fMoedaLocal(rawTotal) : (rawTotal || 'R$ 0,00');
+                    const numeroPedido = id.slice(-6).toUpperCase();
 
-            document.getElementById('md-fin-subtotal').innerText = window.formatarMoedaReal(subtotal);
-            document.getElementById('md-fin-desc-promo').innerText = "- " + window.formatarMoedaReal(descPromo);
-            document.getElementById('md-fin-desc-pix').innerText = "- " + window.formatarMoedaReal(descPix);
-            document.getElementById('md-fin-frete').innerText = "+ " + window.formatarMoedaReal(valFrete);
-            document.getElementById('md-fin-total-geral').innerText = window.formatarMoedaReal(totalGeral);
-            document.getElementById('md-fin-peso-total').innerText = pesoTotal + "g";
-
-            // Seta o combo de status atual do fluxo do lote
-            var statusReal = p.status || (p.resumo ? p.resumo.status : "Novo");
-            document.getElementById('md-select-status-atual').value = statusReal;
-
-            // Renderiza a lista de compras interna da tabela (Anti-Sumiço)
-            var tbodyItens = document.getElementById('md-tabela-itens-pedido');
-            tbodyItens.innerHTML = '';
-
-            var itensObjeto = p.itens || {};
-            var keysItens = Object.keys(itensObjeto);
-
-            if (keysItens.length === 0) {
-                tbodyItens.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-zinc-600 italic text-[11px]">Nenhuma especificação de item anexada a este lote.</td></tr>`;
-            } else {
-                keysItens.forEach(function(kItem) {
-                    var item = itensObjeto[kItem];
-                    var itemNome = item.name || item.nome || "Joia no Bruto";
-                    var itemSku = item.sku || "N/A";
-                    var itemPeso = item.weight || item.peso || "0";
-                    var itemQtd = item.qtd || item.quantidade || 1;
-                    var itemPreco = item.price || item.precoFinal || 0;
-
-                    // Verifica se há variação ou customização de nomes
-                    var txtCustom = "";
-                    if(item.opcaoSelecionada) txtCustom += ` <span class="text-amber-500">[Opção: ${item.opcaoSelecionada}]</span>`;
-                    if(item.variacaoSelecionada) txtCustom += ` <span class="text-zinc-500">(${item.variacaoSelecionada})</span>`;
-
-                    var tr = document.createElement('tr');
-                    tr.className = "border-b border-zinc-900/40 hover:bg-zinc-900/20 text-[11px]";
-                    tr.innerHTML = `
-                        <td class="p-3 text-white font-sans font-medium">${itemNome}${txtCustom}</td>
-                        <td class="p-3 text-center text-zinc-500">${itemSku}</td>
-                        <td class="p-3 text-center text-zinc-400">${itemPeso}g</td>
-                        <td class="p-3 text-center font-bold text-white">${itemQtd}</td>
-                        <td class="p-3 text-right text-emerald-400 font-bold">${window.formatarMoedaReal(itemPreco)}</td>
-                    `;
-                    tbodyItens.appendChild(tr);
+                    htmlStack.push(`
+                        <div class="bg-[#111] border border-zinc-800 hover:border-zinc-700 p-4 rounded-xl flex flex-col justify-between transition-all text-xs space-y-3">
+                            <div class="space-y-1">
+                                <div class="flex justify-between items-center text-gray-400 font-mono text-[11px]">
+                                    <span class="font-bold text-white">Pedido #${numeroPedido}</span>
+                                    <span>${p.data ? new Date(p.data).toLocaleString('pt-BR') : ''}</span>
+                                </div>
+                                <h4 class="text-base font-bold text-white uppercase">${cliente}</h4>
+                                <p class="text-xs text-gray-400 font-mono">📱 WhatsApp: ${p.whats || p.telefone || 'Não informado'}</p>
+                                <p class="text-xs text-zinc-400 font-mono">📦 Volume Total: <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span></p>
+                                <p class="text-xs text-zinc-500 truncate">📍 Endereço: ${p.rua || 'Retirada / Não informado'}</p>
+                                <div class="pt-1.5 flex justify-between items-center border-t border-zinc-900/50 mt-1">
+                                    <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
+                                    <span class="text-sm font-black text-[#caa85c] font-mono">${totalExibivel}</span>
+                                </div>
+                            </div>
+                            <div class="bg-black/40 p-2 rounded-lg border border-zinc-900 space-y-1.5">
+                                <div class="flex gap-1.5">
+                                    <select id="select-romaneio-${id}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1 rounded flex-1 outline-none">
+                                        <option value="1">1. Conferência de Separação</option>
+                                        <option value="2">2. Financeiro e Faturamento</option>
+                                        <option value="3">3. Vitrine (Conferência Fotográfica)</option>
+                                        <option value="4">4. Grade Comparativa Conf.</option>
+                                        <option value="5">5. Grade Financeira Expandida</option>
+                                        <option value="6">6. Grade Consolidada Total</option>
+                                    </select>
+                                    <button onclick="const tipo = document.getElementById('select-romaneio-${id}').value; window.abrirEditorPedido('${id}'); window.imprimirRomaneio(parseInt(tipo));" class="bg-[#caa85c] text-black font-bold text-[10px] px-2.5 py-1 rounded hover:brightness-110 uppercase tracking-wider">Imprimir</button>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 pt-2 border-t border-zinc-900">
+                                <button onclick="window.abrirEditorPedido('${id}')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-1 px-2 rounded transition-all text-center">⚙️ Gerenciar / Editar</button>
+                                <button onclick="window.excluirPedido('${id}')" class="bg-red-950/30 hover:bg-red-900/50 text-red-400 border border-red-900/30 py-1 px-2 rounded transition-all">🗑️ Excluir</button>
+                            </div>
+                        </div>
+                    `);
                 });
-            }
 
-            modal.classList.remove('hidden');
+                container.innerHTML = htmlStack.length ? htmlStack.reverse().join('') : '<div class="text-center py-10 text-gray-600 italic col-span-full">Nenhum cliente correspondente.</div>';
+                if(badgeCount) badgeCount.innerText = `${count} ${count === 1 ? 'pedido' : 'pedidos'}`;
+            }).catch(err => console.error("Erro ao carregar pedidos:", err));
         };
 
-        window.fecharDetalhesPedidoModal = function() {
-            var modal = document.getElementById('modalDetalhesPedido');
-            if (modal) modal.classList.add('hidden');
-        };
-
-        // Salva a alteração do status com persistência na rota real
-        window.salvarAlteracaoStatusDoModal = function() {
-            var id = document.getElementById('md-id-pedido-oculto').value;
-            var novoStatus = document.getElementById('md-select-status-atual').value;
-            if (!id) return;
-
-            if (window.db) {
-                // Atualiza tanto na raiz quanto dentro de resumo para manter consistência absoluta
-                window.db.ref(`abella/orders/${id}`).update({ 
-                    status: novoStatus,
-                    "resumo/status": novoStatus
-                }).then(function() {
-                    alert("✅ Fluxo do lote atualizado com sucesso!");
-                    window.fecharDetalhesPedidoModal();
-                }).catch(function(err) {
-                    alert("Erro ao persistir status no Firebase.");
-                });
-            }
-        };
-
-        // MOTOR RECONSTRUTOR DE ROMANEIOS FÍSICOS EM PDF COM jsPDF PARA AS GALVÂNICAS DE LIMEIRA
-        window.gerarPdfConferenciaPedido = function(id) {
-            var p = window.todosPedidosLocal[id];
-            if (!p) { alert("Lote inválido."); return; }
-
-            var nomeCliente = p.nome || p.cliente || (p.entrega ? p.entrega.nome : 'Cliente Abella');
-            var dataLote = p.data || "N/A";
-
-            // Instanciação em modo de compatibilidade com jsPDF UMD
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-            // Margens e Configurações Visuais
-            doc.setFillColor(15, 15, 15);
-            doc.rect(0, 0, 210, 35, 'F');
-
-            doc.setTextColor(202, 168, 92); // Cor Dourada Abella Joias
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(20);
-            doc.text("ABELLA JOIAS", 14, 15);
-
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(9);
-            doc.setFont("helvetica", "normal");
-            doc.text("ROMANEIO DE EXPEDIÇÃO PARA GALVÂNICA (CONFERÊNCIA DE PEÇAS NO BRUTO)", 14, 22);
-            doc.text("POLO LOGÍSTICO DE ATACADO • LIMEIRA - SP", 14, 27);
-
-            // Dados Cadastrais do Lote
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(11);
-            doc.setFont("helvetica", "bold");
-            doc.text("INFORMAÇÕES COMPLEMENTARES:", 14, 47);
-
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            doc.text(`Identificador do Lote: #${id.toUpperCase()}`, 14, 53);
-            doc.text(`Data de Fechamento: ${dataLote}`, 14, 59);
-            doc.text(`Cliente Destinatário: ${nomeCliente}`, 14, 65);
+        window.abrirEditorPedido = function(id) {
+            window.pedidoEditando = id;
+            const p = todosPedidosLocal[id];
+            if(!p) return;
             
-            var localFrete = p.freteNome || (p.entrega ? p.entrega.freteNome : "Entregar na Galvânica Parceira");
-            doc.text(`Destino Logístico: ${localFrete}`, 14, 71);
+            const elId = document.getElementById('idPedidoInterno');
+            if(elId) elId.innerText = `#${id.toUpperCase()}`;
+            
+            if(document.getElementById('edClienteNome')) document.getElementById('edClienteNome').value = p.nome || p.cliente || '';
+            if(document.getElementById('edClienteTel')) document.getElementById('edClienteTel').value = p.whats || p.telefone || '';
+            if(document.getElementById('edRua')) document.getElementById('edRua').value = p.rua || '';
+            if(document.getElementById('edCidade')) document.getElementById('edCidade').value = p.cidade || '';
+            if(document.getElementById('edDescPromo')) document.getElementById('edDescPromo').value = p.descontoPromo || 0;
+            if(document.getElementById('edDescPix')) document.getElementById('edDescPix').value = p.descontoPix || 0;
+            if(document.getElementById('edFrete')) document.getElementById('edFrete').value = p.frete || 0;
+            
+            // Aceita estrutura de itens salvos como array ou sub-objeto
+            const itensTratados = p.itens ? (Array.isArray(p.itens) ? p.itens : Object.values(p.itens)) : [];
+            renderItensEditor(itensTratados);
+            
+            const editorModal = document.getElementById('editorPedido');
+            if(editorModal) editorModal.classList.remove('hidden');
+        };
 
-            // Linha Separadora
-            doc.setDrawColor(220, 220, 220);
-            doc.line(14, 76, 196, 76);
-
-            // Tabela de Peças
-            doc.setFont("helvetica", "bold");
-            doc.text("RELAÇÃO DE PEÇAS NO BRUTO (CONTAGEM FÍSICA)", 14, 83);
-
-            // Cabeçalho da Tabela no PDF
-            doc.setFillColor(240, 240, 240);
-            doc.rect(14, 87, 182, 7, 'F');
-            doc.setFontSize(9);
-            doc.text("Descrição do Item no Bruto / Variação", 16, 92);
-            doc.text("SKU", 120, 92);
-            doc.text("Peso Un.", 145, 92);
-            doc.text("Qtd", 175, 92);
-            doc.line(14, 94, 196, 94);
-
-            var linhaY = 100;
-            var itensObjeto = p.itens || {};
-            var keysItens = Object.keys(itensObjeto);
-
-            doc.setFont("helvetica", "normal");
-            keysItens.forEach(function(kItem) {
-                if(linhaY > 270) { doc.addPage(); linhaY = 20; }
-                
-                var item = itensObjeto[kItem];
-                var nome = item.name || item.nome || "Joia no Bruto";
-                var sku = item.sku || "N/A";
-                var peso = (item.weight || item.peso || "0") + "g";
-                var qtd = String(item.qtd || item.quantidade || 1);
-
-                if (item.opcaoSelecionada) nome += ` [Opção: ${item.opcaoSelecionada}]`;
-
-                doc.text(nome.slice(0, 52), 16, linhaY);
-                doc.text(sku, 120, linhaY);
-                doc.text(peso, 145, linhaY);
-                doc.text(qtd, 175, linhaY);
-                
-                doc.line(14, linhaY + 2, 196, linhaY + 2);
-                linhaY += 7;
+        function renderItensEditor(itens) {
+            const box = document.getElementById('edItens');
+            if(!box) return;
+            box.innerHTML = '';
+            itens.forEach((item, index) => {
+                if(!item) return;
+                box.innerHTML += `
+                    <div class="flex items-center gap-2 bg-black/40 p-2 border border-[#222] rounded-lg">
+                        <div class="flex-1 truncate">
+                            <div class="text-xs font-bold text-white truncate">${item.nome || item.name || 'Joia no Bruto'}</div>
+                            <div class="text-[10px] text-gray-500 font-mono">SKU: ${item.sku || 'N/A'} | Preço: ${fMoedaLocal(item.precoFinal || item.price || item.preco)}</div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <input type="number" step="0.01" value="${item.precoFinal || item.price || item.preco || 0}" oninput="window.atualizarItemPreco(${index}, this.value)" class="w-20 bg-black border border-[#333] p-1 rounded text-center text-xs text-white font-mono">
+                            <input type="number" value="${item.quantidade || item.qtd || 1}" oninput="window.atualizarItemQtd(${index}, this.value)" class="w-14 bg-black border border-[#333] p-1 rounded text-center text-xs text-white font-mono">
+                            <button onclick="window.removerItemEditor(${index})" class="text-red-500 font-bold px-2 hover:text-red-400">✕</button>
+                        </div>
+                    </div>
+                `;
             });
+            window.recalcularTotalEd();
+        }
 
-            // Resumo do Rodapé do PDF
-            var subtotal = p.subtotal || (p.resumo ? p.resumo.subtotal : 0);
-            var totalGeral = p.total || (p.resumo ? p.resumo.total : 0);
-            var pesoTotal = p.pesoTotal || (p.resumo ? p.resumo.pesoTotal : 0);
-
-            linhaY += 5;
-            doc.setFont("helvetica", "bold");
-            doc.text(`Peso Total Bruto: ${pesoTotal}g`, 14, linhaY);
-            doc.text(`Subtotal: ${window.formatarMoedaReal(subtotal)}`, 110, linhaY);
-            doc.text(`Total do Lote: ${window.formatarMoedaReal(totalGeral)}`, 150, linhaY);
-
-            // Código de Barras / Linha de Assinatura
-            linhaY += 20;
-            doc.line(60, linhaY, 150, linhaY);
-            doc.setFontSize(8);
-            doc.text("Assinatura do Responsável pela Conferência - Abella Joias", 67, linhaY + 4);
-
-            // Salva o documento disparando o download nativo no browser
-            doc.save(`Romaneio_Abella_Lote_${id.slice(-6).toUpperCase()}.pdf`);
+        window.atualizarItemPreco = function(index, valor) {
+            const p = todosPedidosLocal[window.pedidoEditando];
+            if(p && p.itens) {
+                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+                if(arr[index]) {
+                    arr[index].precoFinal = parseFloat(valor) || 0;
+                    arr[index].preco = parseFloat(valor) || 0;
+                    p.itens = arr; // Resalva estrutura flat
+                    window.recalcularTotalEd();
+                }
+            }
         };
 
-        // Força a renderização imediata com os dados locais salvos em cache
-        window.renderizarTabelaPedidosVisivel();
+        window.atualizarItemQtd = function(index, valor) {
+            const p = todosPedidosLocal[window.pedidoEditando];
+            if(p && p.itens) {
+                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+                if(arr[index]) {
+                    arr[index].quantidade = parseInt(valor) || 0;
+                    arr[index].qtd = parseInt(valor) || 0;
+                    p.itens = arr;
+                    window.recalcularTotalEd();
+                }
+            }
+        };
+
+        window.removerItemEditor = function(index) {
+            const p = todosPedidosLocal[window.pedidoEditando];
+            if(p && p.itens) {
+                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+                arr.splice(index, 1);
+                p.itens = arr;
+                renderItensEditor(p.itens);
+            }
+        };
+
+        window.addItemEditor = function() {
+            const sku = prompt("Digite o SKU exato do produto:").toUpperCase().trim();
+            if(!sku) return;
+
+            // Busca na árvore global de produtos do catálogo da Abella
+            db.ref('products/' + sku).once('value', snap => {
+                if(!snap.exists()) {
+                    alert("❌ SKU não localizado na árvore global!");
+                    return;
+                }
+                const prod = snap.val();
+                const p = todosPedidosLocal[window.pedidoEditando];
+                if(!p.itens) p.itens = [];
+                
+                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+                arr.push({
+                    sku: sku,
+                    nome: prod.name || prod.nome || 'Joia no Bruto',
+                    precoFinal: parseFloat(prod.price || prod.precoFinal || 0),
+                    preco: parseFloat(prod.price || prod.precoFinal || 0),
+                    quantidade: 1,
+                    peso: prod.weight || prod.peso || '0g',
+                    image: prod.image || ''
+                });
+                
+                p.itens = arr;
+                renderItensEditor(p.itens);
+            });
+        };
+
+        window.recalcularTotalEd = function() {
+            const p = todosPedidosLocal[window.pedidoEditando];
+            if(!p) return;
+
+            let subtotal = 0, totalPecas = 0;
+            if(p.itens) {
+                const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+                arr.forEach(i => {
+                    if(!i) return;
+                    const precoProd = parseFloat(i.precoFinal || i.price || i.preco || 0);
+                    const qtdProd = parseInt(i.quantidade || i.qtd || 0);
+                    subtotal += precoProd * qtdProd;
+                    totalPecas += qtdProd;
+                });
+            }
+            
+            const elDescPromo = document.getElementById('edDescPromo');
+            const elDescPix = document.getElementById('edDescPix');
+            const elFrete = document.getElementById('edFrete');
+
+            const descPromo = elDescPromo ? (parseFloat(elDescPromo.value) || 0) : 0;
+            const descPix = elDescPix ? (parseFloat(elDescPix.value) || 0) : 0;
+            const frete = elFrete ? (parseFloat(elFrete.value) || 0) : 0;
+
+            const totalLiquido = subtotal - descPromo - descPix + frete;
+            
+            if(document.getElementById('totalPreview')) document.getElementById('totalPreview').innerText = fMoedaLocal(totalLiquido);
+            if(document.getElementById('edQtdTotal')) document.getElementById('edQtdTotal').value = totalPecas;
+        };
+
+        window.salvarPedidoEditado = function() {
+            const idTarget = window.pedidoEditando;
+            const p = todosPedidosLocal[idTarget];
+            if(!p) return;
+
+            p.nome = document.getElementById('edClienteNome').value.trim();
+            p.whats = document.getElementById('edClienteTel').value.trim();
+            p.rua = document.getElementById('edRua').value.trim();
+            p.cidade = document.getElementById('edCidade').value.trim();
+            p.descontoPromo = parseFloat(document.getElementById('edDescPromo').value) || 0;
+            p.descontoPix = parseFloat(document.getElementById('edDescPix').value) || 0;
+            p.frete = parseFloat(document.getElementById('edFrete').value) || 0;
+
+            let subtotal = 0;
+            const arr = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+            arr.forEach(i => {
+                if(i) subtotal += ((i.precoFinal || i.price || i.preco || 0) * (i.quantidade || i.qtd || 0));
+            });
+            p.total = subtotal - p.descontoPromo - p.descontoPix + p.frete;
+
+            // Mantém estrutura arr flat limpa antes de submeter o set
+            p.itens = arr.filter(i => i !== null);
+
+            db.ref('orders/' + idTarget).set(p).then(() => {
+                alert("✅ Pedido atualizado com sucesso!");
+                window.fecharEditorPedido();
+                window.carregarPedidos();
+            }).catch(err => alert("Erro ao salvar alterações no Firebase."));
+        };
+
+        window.excluirPedido = function(id) {
+            if(confirm("🚨 Deseja deletar definitivamente este pedido?")) {
+                db.ref('orders/' + id).remove().then(() => {
+                    alert("Pedido excluído!");
+                    window.carregarPedidos();
+                });
+            }
+        };
+
+        window.fecharEditorPedido = function() {
+            const editorModal = document.getElementById('editorPedido');
+            if(editorModal) editorModal.classList.add('hidden');
+            window.pedidoEditando = null;
+        };
+
+        window.imprimirRomaneio = function(tipo) {
+            const p = todosPedidosLocal[window.pedidoEditando];
+            if(!p) {
+                alert("🚨 Selecione ou abra um pedido antes de imprimir!");
+                return;
+            }
+
+            const previewArea = document.getElementById('corpo-preview-a4');
+            const modalPreview = document.getElementById('previewRomaneio');
+            if(!previewArea || !modalPreview) {
+                console.error("🚨 Elementos de Preview não encontrados no DOM do admin.html");
+                return;
+            }
+
+            const numPedidoFriendly = window.pedidoEditando.slice(-6).toUpperCase();
+            const dataPedido = p.data ? new Date(p.data).toLocaleDateString('pt-BR') : 'N/A';
+            
+            let subtotalGeral = 0;
+            let totalPecasGeral = 0;
+            let totalPesoGeral = 0;
+            
+            let itensOrdenados = [];
+            if (p.itens) {
+                const baseItens = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+                itensOrdenados = [...baseItens].filter(i => i !== null);
+                
+                // Ordenação Alfabética Rígida por SKU (A-Z) para as galvânicas de Limeira
+                itensOrdenados.sort((a, b) => {
+                    const skuA = (a.sku || '').toString().toUpperCase().trim();
+                    const skuB = (b.sku || '').toString().toUpperCase().trim();
+                    return skuA.localeCompare(skuB, 'pt-BR', { sensitivity: 'base', numeric: true });
+                });
+
+                itensOrdenados.forEach(i => {
+                    const qtd = parseInt(i.quantidade || i.qtd || 0);
+                    const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+                    
+                    let pesoNumerico = 0;
+                    try {
+                        let pesoBruto = i.peso || i.weight || "0";
+                        let pesoTexto = pesoBruto.toString().toLowerCase().replace('g', '').replace(',', '.').trim();
+                        pesoNumerico = parseFloat(pesoTexto) || 0;
+                    } catch(e) {
+                        pesoNumerico = 0;
+                    }
+
+                    subtotalGeral += (preco * qtd);
+                    totalPecasGeral += qtd;
+                    totalPesoGeral += (pesoNumerico * qtd);
+                });
+            }
+
+            const descPromo = parseFloat(p.descontoPromo || p.desconto || 0);
+            const descPix = parseFloat(p.descontoPix || 0);
+            const frete = parseFloat(p.frete || 0);
+            const totalLiquido = subtotalGeral - descPromo - descPix + frete;
+
+            const ehConferencia = (tipo === 1 || tipo === 4);
+            const comFoto = (tipo === 3 || tipo === 6);
+
+            let htmlGerado = `
+                <div style="font-family: 'Inter', monospace, sans-serif; color: #000; font-size: 11px; line-height: 1.3; padding: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 10px;">
+                        <div>
+                            <h1 style="margin: 0; font-size: 15px; font-weight: 900; tracking-tight; letter-spacing: -0.5px;">ABELLA JÓIAS</h1>
+                            <p style="margin: 0; font-size: 9px; text-transform: uppercase; color: #333; font-weight: 600;">Atacado de Jóias no Bruto e Semi-jóias</p>
+                            <p style="margin: 1px 0 0 0; font-size: 9px; color: #555; font-family: monospace;">Contato: (19) 99847-5124 • Limeira/SP</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 12px; font-weight: bold; background: #000; color: #fff; padding: 3px 6px; border-radius: 4px; font-family: monospace;">PEDIDO #${numPedidoFriendly}</span>
+                            <p style="margin: 3px 0 0 0; font-size: 9px; font-weight: bold; color: #444;">Emissão: ${dataPedido}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div style="border: 1px solid #000; padding: 6px; border-radius: 4px; background: #fafafa;">
+                            <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 0.5px;">Dados do Cliente</div>
+                            <b>Nome:</b> ${(p.nome || p.cliente || 'Não Informado').toUpperCase()}<br>
+                            <b>Whats/Tel:</b> ${p.whats || p.telefone || 'Não Informado'}<br>
+                            <b>Cidade Base:</b> ${p.cidade || 'Limeira / SP'}
+                        </div>
+                        <div style="border: 1px solid #000; padding: 6px; border-radius: 4px; background: #fafafa;">
+                            <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 0.5px;">Local de Entrega Completo</div>
+                            <b>Destino:</b> ${(p.localEntrega || p.nome || p.cliente || 'Retirada na Galvânica').toUpperCase()}<br>
+                            <b>Endereço:</b> ${p.rua || 'Rua não informada'}, ${p.numero || 'S/N'}<br>
+                            <b>Bairro/Cidade:</b> ${p.bairro || 'Centro'} — ${p.cidade || 'Limeira/SP'}
+                        </div>
+                    </div>
+            `;
+
+            if (tipo === 1 || tipo === 2 || tipo === 3) {
+                htmlGerado += `
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+                        <thead>
+                            <tr style="background: #000; color: #fff; font-size: 9px; text-transform: uppercase;">
+                                ${comFoto ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 35px;">Foto</th>' : ''}
+                                <th style="padding: 4px; border: 1px solid #000; text-align: left; width: 75px;">SKU</th>
+                                <th style="padding: 4px; border: 1px solid #000; text-align: left;">Descrição da Peça</th>
+                                ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 45px;">Peso Un.</th>' : ''}
+                                ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: right; width: 65px;">Preço Un.</th>' : ''}
+                                <th style="padding: 4px; border: 1px solid #000; text-align: center; width: 40px;">Qtd</th>
+                                ${!ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: right; width: 75px;">Total</th>' : ''}
+                                ${ehConferencia ? '<th style="padding: 4px; border: 1px solid #000; text-align: center; width: 45px;">Conf.</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                itensOrdenados.forEach(i => {
+                    const qtd = parseInt(i.quantidade || i.qtd || 1);
+                    const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+                    const pesoUnitario = i.peso || i.weight || '0g';
+                    
+                    htmlGerado += `
+                        <tr style="border-bottom: 1px solid #ddd; font-size: 10px;">
+                            ${comFoto ? `
+                                <td style="padding: 3px; border: 1px solid #ddd; text-align: center;">
+                                    <div style="width: 28px; height: 28px; background: #eee; border: 1px dashed #aaa; margin: auto; font-size: 6px; display: flex; align-items: center; justify-content: center; overflow:hidden;">
+                                        ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '[FOTO]'}
+                                    </div>
+                                </td>` : ''
+                            }
+                            <td style="padding: 4px; border: 1px solid #ddd; font-weight: bold; font-family: monospace; background:#f9f9f9;">${i.sku || 'N/A'}</td>
+                            <td style="padding: 4px; border: 1px solid #ddd; text-transform: uppercase; font-size: 9px;">${i.name || i.nome || 'Peça bruta s/ identificação'}</td>
+                            ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-family: monospace; color:#555;">${pesoUnitario}</td>` : ''}
+                            ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${fMoedaLocal(preco)}</td>` : ''}
+                            <td style="padding: 4px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 11px; background: #fbfbfb;">${qtd}</td>
+                            ${!ehConferencia ? `<td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-weight: bold; font-family: monospace;">${fMoedaLocal(preco * qtd)}</td>` : ''}
+                            ${ehConferencia ? '<td style="padding: 4px; border: 1px solid #ddd; text-align: center; color: #bbb;">[  ]</td>' : ''}
+                        </tr>
+                    `;
+                });
+                htmlGerado += `</tbody></table>`;
+            } 
+            else if (tipo === 4 || tipo === 5 || tipo === 6) {
+                htmlGerado += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px;">`;
+
+                itensOrdenados.forEach(i => {
+                    const qtd = parseInt(i.quantidade || i.qtd || 1);
+                    const preco = parseFloat(i.precoFinal || i.price || i.preco || 0);
+                    const pesoUnitario = i.peso || i.weight || '0g';
+
+                    htmlGerado += `
+                        <div style="border: 1px solid #000; padding: 4px; border-radius: 4px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 2px;">
+                                <span style="font-family: monospace; font-weight: bold; font-size: 9px; background: #e0e0e0; padding: 1px 3px; border-radius: 2px;">${i.sku || 'N/A'}</span>
+                                <span style="font-size: 11px; font-weight: 900; background: #000; color: #fff; padding: 1px 5px; border-radius: 3px;">X${qtd}</span>
+                            </div>
+                            
+                            ${comFoto ? `
+                                <div style="width: 100%; height: 42px; background: #f9f9f9; border: 1px dashed #ccc; margin: 2px 0; display: flex; align-items: center; justify-content: center; overflow:hidden;">
+                                    ${i.image ? `<img src="${i.image}" style="width:100%; height:100%; object-fit:cover;">` : '<span style="font-size:7px; color:#999;">[SEM FOTO]</span>'}
+                                </div>` : ''
+                            }
+
+                            <div style="font-size: 9px; text-transform: uppercase; color: #111; min-height: 20px; line-height: 1.1; font-weight: 500; margin-bottom: 2px;">
+                                ${i.name || i.nome || 'Sem Descrição'}
+                            </div>
+
+                            <div style="background: #fdfdfd; padding-top: 2px; border-top: 1px dashed #ddd; font-size: 8px; font-family: monospace; display: flex; flex-direction: column; gap: 1px;">
+                                ${!ehConferencia ? `
+                                    <div style="display:flex; justify-content:space-between; color:#444;">
+                                        <span>Peso: ${pesoUnitario}</span>
+                                        <span>Un: ${fMoedaLocal(preco)}</span>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between; font-weight:bold; color:#000; border-top:1px dotted #eee; padding-top:1px;">
+                                        <span>SUBTOTAL:</span>
+                                        <span>${fMoedaLocal(preco * qtd)}</span>
+                                    </div>
+                                ` : `
+                                    <div style="color:#aaa; text-align:center; font-size:8px; letter-spacing:1px; padding:1px 0;">[ CONFERIDO ]</div>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                });
+                htmlGerado += `</div>`;
+            }
+
+            htmlGerado += `
+                <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-start; page-break-inside: avoid;">
+                    <div style="border: 1px solid #000; background: #fff; border-radius: 4px; padding: 5px 8px; font-size: 10px; min-width: 180px;">
+                        <div style="text-transform: uppercase; font-size: 8px; font-weight: 900; color: #555; border-bottom: 1px solid #eee; padding-bottom: 2px; margin-bottom: 3px;">Consolidação Logística</div>
+                        <div style="display: flex; justify-content: space-between;"><span>Total de Peças:</span><b style="font-size:11px;">${totalPecasGeral} u.</b></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 1px;"><span>Peso Bruto Total:</span><b style="font-size:11px; font-family:monospace;">${totalPesoGeral.toFixed(2)}g</b></div>
+                    </div>
+
+                    ${!ehConferencia ? `
+                        <div style="width: 250px; background: #fff; border: 2px solid #000; border-radius: 6px; padding: 6px; font-size: 10px; line-height: 1.4;">
+                            <div style="display: flex; justify-content: space-between;"><span>Subtotal das Peças:</span><span style="font-family: monospace;">${fMoedaLocal(subtotalGeral)}</span></div>
+                            <div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto:</span><span style="font-family: monospace;">-${fMoedaLocal(descPromo)}</span></div>
+                            ${descPix > 0 ? `<div style="display: flex; justify-content: space-between; color: #aa0000;"><span>(-) Desconto Pix:</span><span style="font-family: monospace;">-${fMoedaLocal(descPix)}</span></div>` : ''}
+                            <div style="display: flex; justify-content: space-between;"><span>(+) Frete:</span><span style="font-family: monospace;">${fMoedaLocal(frete)}</span></div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; border-top: 1px dashed #000; padding-top: 3px; margin-top: 4px;">
+                                <span>VALOR LÍQUIDO:</span>
+                                <span style="font-family: monospace; background: #000; color: #fff; padding: 0 4px; border-radius: 2px;">${fMoedaLocal(totalLiquido)}</span>
+                            </div>
+                        </div>
+                    ` : '<div style="flex-grow:1;"></div>'}
+                </div>
+                
+                <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: center; font-size: 8px; page-break-inside: avoid;">
+                    <div style="border-top: 1px dashed #000; padding-top: 4px;">Expedição interna (Abella Jóias)</div>
+                    <div style="border-top: 1px dashed #000; padding-top: 4px;">Recebido por: ${(p.nome || p.cliente || '').toUpperCase()}</div>
+                </div>
+                </div>
+            `;
+
+            previewArea.innerHTML = htmlGerado;
+            const printArea = document.getElementById('print-area');
+            if(printArea) printArea.innerHTML = htmlGerado;
+
+            modalPreview.classList.remove('hidden');
+        };
+
+        // Dispara o carregamento inicial de forma assíncrona assim que o módulo acoplar
+        window.carregarPedidos();
     })();
 </script>

@@ -270,109 +270,105 @@ function carregarItensCarrinho() {
 
         function mudarQtdItem(index, f) {
             carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            if(!carrinho[index]) return;
-            let nQ = (parseInt(carrinho[index].quantidade) || 1) + f;
-            if(nQ < 1) nQ = 1;
-            carrinho[index].quantidade = nQ;
-            localStorage.setItem('carrinho', JSON.stringify(carrinho));
+       function finalizarPedidoWhatsapp() {
+    const nomeCli = document.getElementById('cliNome').value.trim();
+    const whatsCli = document.getElementById('cliWhats').value.trim();
+    const cidadeCli = document.getElementById('cliCidade').value.trim() || "Não informada";
+    const pagamento = document.getElementById('cliPagamento').value;
+
+    const entLocal = document.getElementById('entLocal').value.trim() || "Não informado";
+    const entCidade = document.getElementById('entCidade').value.trim() || "Não informada";
+    const entRua = document.getElementById('entRua').value.trim() || "Não informada";
+    const entNumero = document.getElementById('entNumero').value.trim() || "S/N";
+    const entBairro = document.getElementById('entBairro').value.trim() || "Não informado";
+
+    if(!nomeCli || !whatsCli) {
+        alert("Por favor, preencha seu Nome e WhatsApp de contato antes de finalizar.");
+        return;
+    }
+
+    if(carrinho.length === 0) {
+        alert("Seu carrinho está vazio.");
+        return;
+    }
+
+    // CORRIGIDO: Agora aponta para o nó isolado correto da Abella Joias
+    const novoPedidoRef = db.ref('abella/orders').push();
+    
+    let totalGeralPecas = carrinho.reduce((acc, curr) => acc + parseInt(curr.quantidade || 1), 0);
+    let subtotalCalculado = 0;
+    let pesoTotalCalculado = 0; 
+    
+    let itensEstruturados = {};
+    carrinho.forEach((item, idx) => {
+        const prc = parseFloat(item.precoFinal || item.price || 0);
+        const qtd = parseInt(item.quantidade || 1);
+        const ps = parseFloat(item.peso || item.weight || 0);
+        subtotalCalculado += (prc * qtd);
+        pesoTotalCalculado += (ps * qtd); 
+        
+        itensEstruturados[`item_${idx}`] = {
+            sku: item.sku || 'N/A',
+            nome: item.nome || item.name || '',
+            quantidade: qtd,
+            preco: prc,
+            peso: ps,
+            image: item.image || ''
+        };
+    });
+
+    const descPix = subtotalCalculado * (configGlobal.pixDesc / 100);
+    const finalTotal = pagamento === "PIX" ? (subtotalCalculado - descPix) : subtotalCalculado;
+
+    // CORRIGIDO: Adicionado tratamento de promessa (.then) para garantir o salvamento imediato
+    novoPedidoRef.set({
+        cliente: nomeCli,
+        whats: whatsCli,
+        cidade: cidadeCli,
+        data: new Date().toISOString().split('T')[0],
+        formaPagamento: pagamento,
+        total: parseFloat(finalTotal.toFixed(2)),
+        totalPecas: totalGeralPecas,
+        pesoTotal: parseFloat(pesoTotalCalculado.toFixed(2)),
+        status: "Novo",
+        entrega: {
+            local: entLocal,
+            cidade: entCidade,
+            rua: entRua,
+            numero: entNumero,
+            bairro: entBairro
+        },
+        itens: itensEstruturados
+    }).then(() => {
+        // SUCESSO: O pedido entrou no barramento Realtime do Painel!
+        console.log("Pedido salvo com sucesso no painel!");
+        
+        // Limpa o carrinho local para o cliente não duplicar o pedido sem querer
+        localStorage.removeItem('carrinho');
+
+        // Monta e envia a mensagem para o WhatsApp
+        let msg = `*NOVO PEDIDO DE ATACADO - ABELLA JOIAS*\n\n`;
+        msg += `*Dados do Cliente:* ${nomeCli} (${whatsCli}) - ${cidadeCli}\n`;
+        msg += `*Local de Entrega:* ${entLocal} (${entCidade})\n`;
+        msg += `*Opção de Pagamento:* ${pagamento}\n`;
+        msg += `*Valor Líquido:* *${fM(finalTotal)}* (${totalGeralPecas} pçs | ${pesoTotalCalculado.toFixed(2)}g)\n\n`;
+        msg += `_Estou aguardando o link definitivo para o pagamento para confirmação e o prazo de entrega._`;
+
+        // Pega o número configurado dinamicamente ou define o seu padrão caso falhe
+        const foneEmpresa = configGlobal.whatsEmpresa || "5519XXXXXXXXX"; 
+        const urlWhats = `https://api.whatsapp.com/send?phone=${foneEmpresa}&text=${encodeURIComponent(msg)}`;
+        
+        window.open(urlWhats, '_blank');
+        
+        // Recarrega ou redireciona a página para exibir o estado de carrinho limpo
+        if (typeof carregarItensCarrinho === "function") {
             carregarItensCarrinho();
         }
-
-        function editarQtdDireto(index, val) {
-            carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            if(!carrinho[index]) return;
-            let nQ = parseInt(val) || 1;
-            if(nQ < 1) nQ = 1;
-            carrinho[index].quantidade = nQ;
-            localStorage.setItem('carrinho', JSON.stringify(carrinho));
-            carregarItensCarrinho();
-        }
-
-        function removerItemCarrinho(index) {
-            carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            carrinho.splice(index, 1);
-            localStorage.setItem('carrinho', JSON.stringify(carrinho));
-            carregarItensCarrinho();
-        }
-
-        function finalizarPedidoWhatsapp() {
-            const nomeCli = document.getElementById('cliNome').value.trim();
-            const whatsCli = document.getElementById('cliWhats').value.trim();
-            const cidadeCli = document.getElementById('cliCidade').value.trim() || "Não informada";
-            const pagamento = document.getElementById('cliPagamento').value;
-
-            const entLocal = document.getElementById('entLocal').value.trim() || "Não informado";
-            const entCidade = document.getElementById('entCidade').value.trim() || "Não informada";
-            const entRua = document.getElementById('entRua').value.trim() || "Não informada";
-            const entNumero = document.getElementById('entNumero').value.trim() || "S/N";
-            const entBairro = document.getElementById('entBairro').value.trim() || "Não informado";
-
-            if(!nomeCli || !whatsCli) {
-                alert("Por favor, preencha seu Nome e WhatsApp de contato antes de finalizar.");
-                return;
-            }
-
-            if(carrinho.length === 0) {
-                alert("Seu carrinho está vazio.");
-                return;
-            }
-
-            const novoPedidoRef = db.ref('orders').push();
-            let totalGeralPecas = carrinho.reduce((acc, curr) => acc + parseInt(curr.quantidade || 1), 0);
-            let subtotalCalculado = 0;
-            let pesoTotalCalculado = 0; 
-            
-            let itensEstruturados = {};
-            carrinho.forEach((item, idx) => {
-                const prc = parseFloat(item.precoFinal || item.price || 0);
-                const qtd = parseInt(item.quantidade || 1);
-                const ps = parseFloat(item.peso || item.weight || 0);
-                subtotalCalculado += (prc * qtd);
-                pesoTotalCalculado += (ps * qtd); // Correção do bug de soma aqui
-                
-                itensEstruturados[`item_${idx}`] = {
-                    sku: item.sku || 'N/A',
-                    nome: item.nome || item.name || '',
-                    quantidade: qtd,
-                    preco: prc,
-                    peso: ps,
-                    image: item.image || ''
-                };
-            });
-
-            const descPix = subtotalCalculado * (configGlobal.pixDesc / 100);
-            const finalTotal = pagamento === "PIX" ? (subtotalCalculado - descPix) : subtotalCalculado;
-
-            novoPedidoRef.set({
-                cliente: nomeCli,
-                whats: whatsCli,
-                cidade: cidadeCli,
-                data: new Date().toISOString().split('T')[0],
-                formaPagamento: pagamento,
-                total: parseFloat(finalTotal.toFixed(2)),
-                totalPecas: totalGeralPecas,
-                pesoTotal: parseFloat(pesoTotalCalculado.toFixed(2)),
-                status: "Novo",
-                entrega: {
-                    local: entLocal,
-                    cidade: entCidade,
-                    rua: entRua,
-                    numero: entNumero,
-                    bairro: entBairro
-                },
-                itens: itensEstruturados
-            });
-
-            let msg = `*NOVO PEDIDO DE ATACADO - ABELLA JOIAS*\n\n`;
-            msg += `*Dados do Cliente:* ${nomeCli} (${whatsCli}) - ${cidadeCli}\n`;
-            msg += `*Local de Entrega:* ${entLocal} (${entCidade})\n`;
-            msg += `*Opção de Pagamento:* ${pagamento}\n`;
-            msg += `*Valor Líquido:* *${fM(finalTotal)}* (${totalGeralPecas} pçs | ${pesoTotalCalculado.toFixed(2)}g)\n\n`;
-            msg += `_Estou aguardando o link definitivo para o pagamento para confirmação e o prazo de entrega._`;
-
-            const urlWhats = `https://api.whatsapp.com/send?phone=${configGlobal.whatsEmpresa}&text=${encodeURIComponent(msg)}`;
-            window.open(urlWhats, '_blank');
-        }
+    }).catch((error) => {
+        console.error("Erro crítico ao salvar pedido no Firebase:", error);
+        alert("Ocorreu um erro ao salvar seu pedido no sistema. Por favor, tente novamente.");
+    });
+}
 
         // Função auxiliar robusta para carregar imagens e convertê-las para Base64 (Aceita Cross-Origin se permitido)
         function carregarImagemBase64(url) {

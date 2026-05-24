@@ -145,7 +145,129 @@ window.mudarAbaDinamica = function(aba) {
 window.orquestrarBindsSubmodulo = function(modulo) {
     console.log(`⚡ Conectando canais globais para o módulo ativo: [${modulo.toUpperCase()}]`);
 
-   if (modulo
+    // ----------------------------------------------------------------------
+    // BINDS DO MÓDULO DE PEDIDOS (CARDS EM GRID DE ALTA PERFORMANCE)
+    // ----------------------------------------------------------------------
+    if (modulo === 'pedidos') {
+        window.renderizarTabelaPedidosVisivel = function() {
+            var container = document.getElementById('listaPedidos');
+            if (!container) return;
+
+            container.innerHTML = '';
+            var chaves = Object.keys(window.todosPedidosLocal).reverse();
+
+            // Mapeia filtro por status
+            if (window.filtroStatusPedidoAtual !== "Todos") {
+                chaves = chaves.filter(function(k) {
+                    var p = window.todosPedidosLocal[k];
+                    var statusReal = p.status || (p.resumo ? p.resumo.status : "Novo");
+                    return statusReal.toLowerCase() === window.filtroStatusPedidoAtual.toLowerCase();
+                });
+            }
+
+            if (chaves.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-600 font-mono italic text-xs">Nenhum pedido localizado para a seleção [${window.filtroStatusPedidoAtual}].</div>`;
+                return;
+            }
+
+            chaves.forEach(function(key) {
+                var p = window.todosPedidosLocal[key];
+                
+                var totalNum = p.total || (p.resumo ? p.resumo.total : 0);
+                var totalStr = window.formatarMoedaReal(totalNum);
+                var dataStr = p.data || "Sem Data";
+                var clienteNome = p.nome || p.cliente || (p.entrega ? p.entrega.nome : 'Cliente Abella');
+                var statusReal = p.status || (p.resumo ? p.resumo.status : "Novo");
+                var numeroPedido = key.slice(-6).toUpperCase();
+
+                // Processa o volume total físico de itens contidos no pedido
+                let totalPecas = p.totalPecas || (p.resumo ? p.resumo.totalPecas : 0);
+                if (!totalPecas && p.itens) {
+                    const itensArray = Array.isArray(p.itens) ? p.itens : Object.values(p.itens);
+                    itensArray.forEach(i => {
+                        if (i) totalPecas += (parseInt(i.quantidade || i.qtd) || 1);
+                    });
+                }
+
+                var divCard = document.createElement('div');
+                divCard.className = "bg-[#111] border border-zinc-900 p-4 rounded-xl flex flex-col justify-between hover:border-zinc-800 transition-all text-xs space-y-4 text-left h-full";
+                
+                divCard.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center text-gray-400 font-mono text-[11px]">
+                            <span class="font-bold text-white bg-zinc-800 px-2 py-0.5 rounded text-[10px]">Pedido #${numeroPedido}</span>
+                            <span>${dataStr}</span>
+                        </div>
+                        <h4 class="text-base font-bold text-white uppercase tracking-tight pt-1 truncate" title="${clienteNome}">${clienteNome}</h4>
+                        <p class="text-xs text-gray-400 font-mono">📱 ${p.whats || p.telefone || 'Não informado'}</p>
+                        <p class="text-xs text-zinc-400 font-mono">📦 Volume Total: <span class="text-[#caa85c] font-bold">${totalPecas} pçs</span></p>
+                        <p class="text-xs text-zinc-500 truncate" title="${p.rua || ''}">📍 ${p.rua || 'Retirada / Não informado'}</p>
+                        
+                        <div class="pt-2 flex justify-between items-center border-t border-zinc-900/80 mt-2">
+                            <span class="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Líquido</span>
+                            <span class="text-base font-black text-[#caa85c] font-mono">${totalStr}</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-black/60 p-2 rounded-lg border border-zinc-900 mt-2">
+                        <div class="flex gap-2">
+                            <select id="select-romaneio-${key}" class="bg-zinc-900 border border-zinc-800 text-[11px] text-white p-1.5 rounded flex-1 outline-none focus:border-[#caa85c]">
+                                <option value="1">1. Conferência de Separação</option>
+                                <option value="2">2. Financeiro e Faturamento</option>
+                                <option value="3">3. Vitrine (Conferência Fotográfica)</option>
+                                <option value="4">4. Grade Comparativa Conf.</option>
+                                <option value="5">5. Grade Financeira Expandida</option>
+                                <option value="6">6. Grade Consolidada Total</option>
+                            </select>
+                            <button onclick="const tipo = document.getElementById('select-romaneio-${key}').value; window.pedidoEditando = '${key}'; window.imprimirRomaneio ? window.imprimirRomaneio(parseInt(tipo)) : window.gerarPdfConferenciaPedido('${key}');" class="bg-[#caa85c] text-black font-bold text-[10px] px-3 py-1.5 rounded hover:brightness-110 uppercase tracking-wider transition-all shrink-0">Visualizar</button>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-2 border-t border-zinc-900 mt-2">
+                        <button onclick="window.abrirDetalhesPedidoModal('${key}')" class="flex-1 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-white font-bold py-2 px-2 rounded-lg transition-all text-center text-[11px]">⚙️ Gerenciar / Editar</button>
+                        <button onclick="window.excluirPedidoAcao('${key}')" class="bg-red-950/20 hover:bg-red-900/50 text-red-400 border border-red-900/40 py-2 px-3 rounded-lg transition-all">🗑️</button>
+                    </div>
+                `;
+                container.appendChild(divCard);
+            });
+        };
+
+        window.mudarFiltroStatusPedido = function(status) {
+            window.filtroStatusPedidoAtual = status;
+            document.querySelectorAll('.btn-filtro-pedido').forEach(function(btn) {
+                btn.classList.remove('bg-[#caa85c]', 'text-black');
+                btn.classList.add('bg-zinc-900', 'text-gray-400');
+            });
+            var btnAtivo = document.getElementById(`filter-ped-${status.toLowerCase()}`);
+            if (btnAtivo) {
+                btnAtivo.classList.remove('bg-zinc-900', 'text-gray-400');
+                btnAtivo.classList.add('bg-[#caa85c]', 'text-black');
+            }
+            window.renderizarTabelaPedidosVisivel();
+        };
+
+        window.abrirDetalhesPedidoModal = function(id) {
+            var pedido = window.todosPedidosLocal[id];
+            if (!pedido) return;
+            var numPecas = pedido.totalPecas || (pedido.resumo ? pedido.resumo.totalPecas : 0);
+            alert(`Lendo metadados de itens do comprador: ${pedido.nome || pedido.cliente || 'Cliente Abella'}\nTotal de Peças: ${numPecas}\nID: ${id}`);
+        };
+
+        window.gerarPdfConferenciaPedido = function(id) {
+            alert(`Iniciando romaneio de expedição física para as galvânicas de Limeira. ID: ${id}`);
+        };
+
+        window.excluirPedidoAcao = function(id) {
+            if(confirm("🚨 Deseja deletar definitivamente este pedido na ramificação /abella?")) {
+                window.db.ref('abella/orders/' + id).remove().then(function() {
+                    alert("Pedido excluído com sucesso!");
+                });
+            }
+        };
+
+        window.renderizarTabelaPedidosVisivel();
+    }
+
     // ----------------------------------------------------------------------
     // BINDS DO MÓDULO DE PRODUTOS
     // ----------------------------------------------------------------------
@@ -282,7 +404,7 @@ window.orquestrarBindsSubmodulo = function(modulo) {
     }
 
     // ----------------------------------------------------------------------
-    // BINDS DO MÓDULO DE CATEGORIAS / DESCONTOS (ALINHADO COM SEU BANCO REAL)
+    // BINDS DO MÓDULO DE CATEGORIAS / DESCONTOS
     // ----------------------------------------------------------------------
     if (modulo === 'categorias') {
         window.carregarBlocoCategorias = function() {
@@ -302,7 +424,6 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                 var div = document.createElement('div');
                 div.className = "bg-zinc-950 border border-zinc-900 rounded-xl p-5 space-y-4 text-left relative";
                 
-                // Trata as variáveis reais do seu banco: promoStatus, promoPct, promoName
                 var isPromoAtiva = cat.promoStatus === "ATIVA" || cat.promoAtiva === true;
                 var pctDesconto = cat.promoPct || cat.discount || 0;
 

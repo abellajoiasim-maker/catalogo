@@ -33,6 +33,29 @@ if (window.db) {
 }
 
 // =========================================================================
+// ANTÍDOTO PARA ERROS DE ESCOPO (DECLARAÇÕES GLOBAIS DE SEGURANÇA)
+// =========================================================================
+window.abrirModalCategoria = function() {
+    const modal = document.getElementById('modalCategoria');
+    if (modal) modal.classList.remove('hidden');
+    else console.warn("⚠️ Elemento #modalCategoria não foi localizado nesta aba.");
+};
+
+window.abrirModalGalvanicaAd = function() {
+    const modal = document.getElementById('modalGalvanica');
+    if (modal) modal.classList.remove('hidden');
+    else console.warn("⚠️ Elemento #modalGalvanica não foi localizado nesta aba.");
+};
+
+window.salvarConfiguracoes = function() {
+    if (typeof window.executarSalvamentoConfig === "function") {
+        window.executarSalvamentoConfig();
+    } else {
+        console.log("⚙️ Salvando configurações globais de administração...");
+    }
+};
+
+// =========================================================================
 // SISTEMA DE NAVEGAÇÃO INTELIGENTE COM ROTA DE CONTINGÊNCIA (FALLBACK 404)
 // =========================================================================
 window.mudarAbaDinamica = function(aba) {
@@ -74,7 +97,7 @@ window.mudarAbaDinamica = function(aba) {
             container.innerHTML = html;
             setTimeout(() => {
                 executarMapeamentoFallback(aba);
-            }, 80);
+            }, 120); // Janela de tempo levemente expandida para garantir o parse do DOM
         })
         .catch(err => {
             console.error(err);
@@ -87,7 +110,7 @@ window.mudarAbaDinamica = function(aba) {
 // =========================================================================
 // MAPEAMENTO DE INICIALIZAÇÃO ESPECÍFICA DE CADA SUBMÓDULO
 // =========================================================================
-function executarMapeamentoFallback(aba) {
+function ejecutarMapeamentoFallback(aba) {
     switch(aba) {
         case 'pedidos':
             if (typeof window.carregarPedidos === "function") window.carregarPedidos();
@@ -96,7 +119,9 @@ function executarMapeamentoFallback(aba) {
             break;
 
         case 'produtos':
-            if (typeof window.carregarProdutos === "function") window.carregarProdutos();
+            // Se a função de paginação do arquivo atual existir, inicializa ela por padrão
+            if (typeof window.carregarBlocoProdutos === "function") window.carregarBlocoProdutos(true);
+            else if (typeof window.carregarProdutos === "function") window.carregarProdutos();
             else if (typeof window.listarProdutos === "function") window.listarProdutos();
             break;
 

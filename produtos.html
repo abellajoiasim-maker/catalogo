@@ -34,8 +34,8 @@
             <a href="index.html" class="text-xs text-gray-400 hover:text-white transition-all flex items-center gap-1">
                 ← Voltar para as Coleções
             </a>
-            <a href="carrinho.html" class="border border-[#caa85c]/30 px-4 py-2 rounded-xl text-sm flex items-center gap-2 hover:bg-zinc-900 transition-all">
-                🛒 <span id="cartTotal" class="font-bold text-white font-mono">R$ 0,00</span>
+            <a href="carrinho.html" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2">
+                🛒 Carrinho (<span id="cart-count" class="gold font-bold">0</span>) <span id="cartTotal" class="text-gray-400 font-normal ml-1">R$ 0,00</span>
             </a>
         </div>
     </header>
@@ -47,7 +47,7 @@
         </div>
 
         <div id="grid-produtos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <div class="text-center py-12 text-gray-600 italic col-span-full">Buscando modelos no banco de dados...</div>
+            <div class="text-center py-12 text-gray-600 italic col-span-full">Buscando models no banco de dados...</div>
         </div>
     </main>
 
@@ -71,9 +71,7 @@
 
             <div id="bloco-variacoes-painel" class="space-y-2 text-left hidden">
                 <label id="label-variacao-dinamica" class="text-[10px] text-[#caa85c] font-bold uppercase tracking-wider block mb-1">Opções Disponíveis:</label>
-                
-                <div id="wrapper-input-dinamico" class="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1 custom-scroll">
-                    </div>
+                <div id="wrapper-input-dinamico" class="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1 custom-scroll"></div>
             </div>
 
             <div id="bloco-qtd-padrao" class="space-y-2">
@@ -138,7 +136,6 @@
                 return;
             }
 
-            // AJUSTADO: Apontando para o nó isolado abella/settings
             db.ref('abella/settings').once('value', snap => {
                 if(snap.exists()) {
                     const settings = snap.val() || {};
@@ -149,11 +146,10 @@
                 carregarProdutosDaColecao();
             });
 
-            actualizarCarrinho();
+            atualizarCarrinho();
         }
 
         function carregarProdutosDaColecao() {
-            // AJUSTADO: Apontando para o nó isolado abella/categories
             db.ref(`abella/categories/${categoriaId}`).once('value', snap => {
                 if(snap.exists()) {
                     const cat = snap.val();
@@ -161,7 +157,6 @@
                 }
             });
 
-            // AJUSTADO: Apontando para o nó isolado abella/products
             db.ref('abella/products').on('value', snap => {
                 const grid = document.getElementById('grid-produtos');
                 grid.innerHTML = '';
@@ -208,7 +203,6 @@
                     grid.innerHTML += `
                         <div class="card flex flex-col justify-between p-3.5 space-y-2.5 animate-fade-in relative border border-zinc-900">
                             ${badgePromo}
-                            
                             <div>
                                 <div class="overflow-hidden aspect-square w-full bg-zinc-950 flex items-center justify-center rounded-xl relative border border-zinc-900/80">
                                     <img id="img-vitrine-${prodId}" src="${foto1}" class="w-full h-full object-cover" loading="lazy">
@@ -216,20 +210,17 @@
                                 </div>
                                 ${htmlSeletoresFoto}
                             </div>
-                            
                             <div class="space-y-1.5 flex-1 flex flex-col justify-between">
                                 <div>
                                     <h3 class="font-bold text-xs text-white uppercase tracking-wider whitespace-normal break-words line-clamp-2 leading-tight min-h-[2rem]">${prod.name || prod.nome || 'Peça no Bruto'}</h3>
                                     <p class="text-[9px] text-gray-500 font-mono mt-1">⚖️ Peso Ref: ${prod.peso || prod.weight || '0'}g</p>
                                 </div>
-                                
                                 <div class="bg-zinc-950/60 p-2.5 rounded-xl border border-zinc-900/50 space-y-1">
                                     <p class="text-[10px] text-gray-500 font-mono">Cartão: <span class="text-gray-300 font-bold">${fM(precoCheio)}</span></p>
                                     <p class="gold font-black text-sm font-mono">${fM(precoPix)} <span class="text-[9px] font-medium text-emerald-500 uppercase">no PIX</span></p>
                                     <p class="text-[9px] text-zinc-400 font-mono">Ou ${configGlobal.parcelasMax}x de <span class="text-white">${fM(valorParcela)}</span></p>
                                 </div>
                             </div>
-                            
                             <button onclick="abrirModalCompra('${prodId}')" class="w-full bg-[#caa85c] hover:bg-[#bda152] text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all">
                                 Comprar
                             </button>
@@ -263,7 +254,6 @@
 
             document.getElementById('mdCompraImg').src = foto1;
             document.getElementById('mdCompraNome').innerText = produto.name || produto.nome || 'Peça Sem Nome';
-            document.getElementById('mdCompraSku').innerText = "SKU: " + (produto.sku || 'N/A');
             document.getElementById('mdCompraSku').innerText = "SKU: " + (produto.sku || 'N/A');
             document.getElementById('mdCompraPeso').innerText = "Peso Ref: " + (produto.peso || produto.weight || '0') + "g";
             
@@ -366,7 +356,7 @@
         function ajustarQtdModal(fator) {
             let input = document.getElementById('mdCompraQtd');
             let mtUal = parseInt(input.value) || 1;
-            let novo = mtUal + fator;
+            let novo = mtUal + factor;
             if (novo < 1) novo = 1;
             input.value = novo;
             recalcularPrecosModal();
@@ -403,7 +393,7 @@
                         } else {
                             localCarrinho.push({
                                 itemChave: chaveUnicaItem,
-                                sku: produtoSelecionadoModal.sku || 'N/A', // CORRIGIDO: Typo consertado aqui
+                                sku: produtoSelecionadoModal.sku || 'N/A',
                                 nome: produtoSelecionadoModal.name || produtoSelecionadoModal.nome || 'Peça no Bruto',
                                 image: produtoSelecionadoModal.imagem || produtoSelecionadoModal.image || '',
                                 precoFinal: precoBaseUnitario,
@@ -445,31 +435,31 @@
             }
             
             localStorage.setItem('carrinho', JSON.stringify(localCarrinho));
-            actualizarCarrinho();
+            atualizarCarrinho();
             fecharModalCompra();
         }
 
-        function actualizarCarrinho(){
+        function atualizarCarrinho(){
             const cart = JSON.parse(localStorage.getItem('carrinho') || '[]');
             let total = 0;
             let totalPecas = 0;
             
             cart.forEach(item => {
-                let preco = parseFloat(item.precoFinal || item.price || 0);
+                let preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
                 let qtd = parseInt(item.quantidade) || 1;
                 total += (preco * qtd);
                 totalPecas += qtd;
             });
             
-            // Sincroniza o valor de subtotal no modal/checkout se existir
             const cartTotalEl = document.getElementById('cartTotal');
             if (cartTotalEl) cartTotalEl.innerText = fM(total);
             
-            // Sincroniza o número de itens na sacola de compras no header principal
             const cartCountEl = document.getElementById('cart-count');
             if (cartCountEl) cartCountEl.innerText = totalPecas;
         }
 
+        // Garante recarga imediata dos valores se o usuário navegar usando botões de voltar do navegador
+        window.addEventListener('pageshow', atualizarCarrinho);
         window.onload = init;
     </script>
 </body>

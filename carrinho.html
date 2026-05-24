@@ -167,7 +167,8 @@
         let configGlobal = { pixDesc: 5, parcelasMax: 6, whatsEmpresa: "5519988207658" };
         let carrinho = [];
 
- // BUSQUE ESTE BLOCO NO SEU CARRINHO.HTML E AJUSTE O CAMINHO:
+ // ==================== TRECHO CORRIGIDO (LINHA 170 ATÉ O FINAL DO BLOCO) ====================
+
 db.ref('abella/settings').once('value', snap => {
     if(snap.exists()) {
         const settings = snap.val() || {};
@@ -177,79 +178,80 @@ db.ref('abella/settings').once('value', snap => {
         configGlobal.pixDesc = parseFloat(settings.pix || emp.pix || 5);
         configGlobal.parcelasMax = parseInt(settings.parcelas || emp.parcelas || 6);
     }
-    // Depois de carregar as configurações sem erro, ele chama a renderização do carrinho
-    renderizarItensCarrinho(); 
+    // CORRIGIDO: Alinhado o nome para chamar a função correta declarada abaixo
+    carregarItensCarrinho(); 
 }).catch(error => {
     console.error("Erro ao carregar settings, usando padrões:", error);
     // Segurança: se falhar o firebase, renderiza o carrinho mesmo assim com os padrões
-    renderizarItensCarrinho(); 
+    carregarItensCarrinho(); 
 });
-        }
 
-        function carregarItensCarrinho() {
-            carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            const container = document.getElementById('container-itens-carrinho');
-            container.innerHTML = '';
+// CORRIGIDO: Removida a chave '}' órfã que estava quebrando o script aqui
 
-            if (carrinho.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 text-zinc-500 space-y-3">
-                        <p class="text-xs italic">Seu carrinho de compras está vazio.</p>
-                        <a href="index.html" class="inline-block bg-[#caa85c]/10 border border-[#caa85c]/30 text-[#caa85c] px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider">Voltar à Vitrine</a>
+function carregarItensCarrinho() {
+    carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+    const container = document.getElementById('container-itens-carrinho');
+    container.innerHTML = '';
+
+    if (carrinho.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12 text-zinc-500 space-y-3">
+                <p class="text-xs italic">Seu carrinho de compras está vazio.</p>
+                <a href="index.html" class="inline-block bg-[#caa85c]/10 border border-[#caa85c]/30 text-[#caa85c] px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider">Voltar à Vitrine</a>
+            </div>
+        `;
+        atualizarResumoFinanceiro(0, 0, 0);
+        return;
+    }
+
+    let subtotalGeral = 0;
+    let totalPecas = 0;
+    let pesoGeral = 0;
+
+    carrinho.forEach((item, index) => {
+        const precoUnitario = parseFloat(item.precoFinal || item.price || 0);
+        const qtd = parseInt(item.quantidade || 1);
+        const pesoUnitario = parseFloat(item.peso || item.weight || 0);
+
+        const itemSubtotal = precoUnitario * qtd;
+        const itemPesoTotal = pesoUnitario * qtd;
+
+        subtotalGeral += itemSubtotal;
+        totalPecas += qtd;
+        pesoGeral += itemPesoTotal;
+
+        container.innerHTML += `
+            <div class="flex items-start gap-4 bg-zinc-950 p-3 rounded-xl border border-zinc-900 text-left">
+                <div class="w-16 h-16 bg-black rounded-lg border border-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+                    <img src="${item.image || 'https://via.placeholder.com/150?text=Joia'}" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1 min-w-0 space-y-1">
+                    <h3 class="text-white text-xs font-bold whitespace-normal break-words leading-tight">${item.nome || item.name}</h3>
+                    <div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-gray-500">
+                        <span>SKU: <strong class="text-gray-300">${item.sku || 'N/A'}</strong></span>
+                        <span>Ref: ${pesoUnitario.toFixed(2)}g</span>
+                        ${item.variacao ? `<span class="bg-[#caa85c]/10 text-[#caa85c] px-1.5 py-0.2 rounded font-sans font-bold">Var: ${item.variacao}</span>` : ''}
                     </div>
-                `;
-                atualizarResumoFinanceiro(0, 0, 0);
-                return;
-            }
-
-            let subtotalGeral = 0;
-            let totalPecas = 0;
-            let pesoGeral = 0;
-
-            carrinho.forEach((item, index) => {
-                const precoUnitario = parseFloat(item.precoFinal || item.price || 0);
-                const qtd = parseInt(item.quantidade || 1);
-                const pesoUnitario = parseFloat(item.peso || item.weight || 0);
-
-                const itemSubtotal = precoUnitario * qtd;
-                const itemPesoTotal = pesoUnitario * qtd;
-
-                subtotalGeral += itemSubtotal;
-                totalPecas += qtd;
-                pesoGeral += itemPesoTotal;
-
-                container.innerHTML += `
-                    <div class="flex items-start gap-4 bg-zinc-950 p-3 rounded-xl border border-zinc-900 text-left">
-                        <div class="w-16 h-16 bg-black rounded-lg border border-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
-                            <img src="${item.image || 'https://via.placeholder.com/150?text=Joia'}" class="w-full h-full object-cover">
+                    <div class="flex justify-between items-center pt-1.5 border-t border-zinc-900/80">
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="mudarQtdItem(${index}, -1)" class="w-6 h-6 bg-zinc-900 border border-zinc-800 text-gray-400 hover:text-white rounded flex items-center justify-center font-bold text-xs">-</button>
+                            <input type="number" value="${qtd}" min="1" onchange="editarQtdDireto(${index}, this.value)" class="w-10 bg-black text-center font-mono text-white text-xs font-bold border border-zinc-800 rounded py-0.5 outline-none">
+                            <button onclick="mudarQtdItem(${index}, 1)" class="w-6 h-6 bg-zinc-900 border border-zinc-800 text-gray-400 hover:text-white rounded flex items-center justify-center font-bold text-xs">+</button>
                         </div>
-                        <div class="flex-1 min-w-0 space-y-1">
-                            <h3 class="text-white text-xs font-bold whitespace-normal break-words leading-tight">${item.nome || item.name}</h3>
-                            <div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-gray-500">
-                                <span>SKU: <strong class="text-gray-300">${item.sku || 'N/A'}</strong></span>
-                                <span>Ref: ${pesoUnitario.toFixed(2)}g</span>
-                                ${item.variacao ? `<span class="bg-[#caa85c]/10 text-[#caa85c] px-1.5 py-0.2 rounded font-sans font-bold">Var: ${item.variacao}</span>` : ''}
-                            </div>
-                            <div class="flex justify-between items-center pt-1.5 border-t border-zinc-900/80">
-                                <div class="flex items-center gap-1.5">
-                                    <button onclick="mudarQtdItem(${index}, -1)" class="w-6 h-6 bg-zinc-900 border border-zinc-800 text-gray-400 hover:text-white rounded flex items-center justify-center font-bold text-xs">-</button>
-                                    <input type="number" value="${qtd}" min="1" onchange="editarQtdDireto(${index}, this.value)" class="w-10 bg-black text-center font-mono text-white text-xs font-bold border border-zinc-800 rounded py-0.5 outline-none">
-                                    <button onclick="mudarQtdItem(${index}, 1)" class="w-6 h-6 bg-zinc-900 border border-zinc-800 text-gray-400 hover:text-white rounded flex items-center justify-center font-bold text-xs">+</button>
-                                </div>
-                                <div class="text-right font-mono">
-                                    <p class="text-[10px] text-gray-500">${qtd}x ${fM(precoUnitario)}</p>
-                                    <p class="text-white font-bold text-xs">${fM(itemSubtotal)}</p>
-                                    <p class="text-[9px] gold">⚖️ ${itemPesoTotal.toFixed(2)}g</p>
-                                </div>
-                            </div>
+                        <div class="text-right font-mono">
+                            <p class="text-[10px] text-gray-500">${qtd}x ${fM(precoUnitario)}</p>
+                            <p class="text-white font-bold text-xs">${fM(itemSubtotal)}</p>
+                            <p class="text-[9px] gold">⚖️ ${itemPesoTotal.toFixed(2)}g</p>
                         </div>
-                        <button onclick="removerItemCarrinho(${index})" class="text-zinc-600 hover:text-red-500 text-sm font-bold pl-1 transition-all">✕</button>
                     </div>
-                `;
-            });
+                </div>
+                <button onclick="removerItemCarrinho(${index})" class="text-zinc-600 hover:text-red-500 text-sm font-bold pl-1 transition-all">✕</button>
+            </div>
+        `;
+    });
 
-            atualizarResumoFinanceiro(subtotalGeral, totalPecas, pesoGeral);
-        }
+    atualizarResumoFinanceiro(subtotalGeral, totalPecas, pesoGeral);
+}
 
         function atualizarResumoFinanceiro(subtotal, qtd, peso) {
             const descontoPix = subtotal * (configGlobal.pixDesc / 100);

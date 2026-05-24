@@ -13,7 +13,6 @@ window.configuracoesGlobaisLocal = {};
 
 // Cache operacional interno para filtros de visualização
 window.filtroStatusPedidoAtual = "Todos";
-window.filtroCategoriaProdutoAtual = "Todas";
 
 // ==========================================================================
 // UTILS GLOBAIS DE CONVERSÃO E INTERCEPTAÇÃO DE PROTOCOLOS E MOEDAS
@@ -46,15 +45,23 @@ window.formatarMoedaReal = function(valor) {
 if (window.db) {
     console.log("🔥 [Firebase Core] Conexão estabelecida e ativa no nó unificado /abella.");
 
-    // 1. Escuta contínua de Pedidos
+    // 1. Escuta contínua de Pedidos (Nó: abella/orders)
     window.db.ref('abella/orders').on('value', function(snapshot) {
-        window.todosPedidosLocal = snapshot.val() || {};
+        var dadosBrutos = snapshot.val() || {};
+        // Limpeza preventiva: remove nós que não são pedidos de fato
+        var pedidosFiltrados = {};
+        Object.keys(dadosBrutos).forEach(function(key) {
+            if (key !== 'products' && key !== 'settings' && key !== 'categories' && key !== 'galvanicas') {
+                pedidosFiltrados[key] = dadosBrutos[key];
+            }
+        });
+        window.todosPedidosLocal = pedidosFiltrados;
         if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
             window.renderizarTabelaPedidosVisivel();
         }
     });
 
-    // 2. Escuta contínua de Produtos
+    // 2. Escuta contínua de Produtos (Nó: abella/products)
     window.db.ref('abella/products').on('value', function(snapshot) {
         window.todosProdutosLocal = snapshot.val() || {};
         if (typeof window.carregarBlocoProdutos === 'function') {
@@ -62,7 +69,7 @@ if (window.db) {
         }
     });
 
-    // 3. Escuta contínua de Categorias
+    // 3. Escuta contínua de Categorias (Nó: abella/categories)
     window.db.ref('abella/categories').on('value', function(snapshot) {
         window.todasCategoriasLocal = snapshot.val() || {};
         if (typeof window.carregarBlocoCategorias === 'function') {
@@ -70,7 +77,7 @@ if (window.db) {
         }
     });
 
-    // 4. Escuta contínua de Galvânicas
+    // 4. Escuta contínua de Galvânicas (Nó: abella/galvanicas)
     window.db.ref('abella/galvanicas').on('value', function(snapshot) {
         window.todasGalvanicasLocal = snapshot.val() || {};
         if (typeof window.carregarBlocoGalvanicas === 'function') {
@@ -78,8 +85,8 @@ if (window.db) {
         }
     });
 
-    // 5. Escuta contínua de Parâmetros / Configurações
-    window.db.ref('abella/config').on('value', function(snapshot) {
+    // 5. Escuta contínua de Parâmetros / Configurações (Nó: abella/settings)
+    window.db.ref('abella/settings').on('value', function(snapshot) {
         window.configuracoesGlobaisLocal = snapshot.val() || {};
         if (typeof window.renderizarCamposConfiguracao === 'function') {
             window.renderizarCamposConfiguracao();
@@ -121,7 +128,6 @@ window.mudarAbaDinamica = function(aba) {
         })
         .then(function(html) {
             container.innerHTML = html;
-            // Invoca a amarração e binds lógicos imediatamente após a injeção do HTML no DOM
             window.orquestrarBindsSubmodulo(pathAba);
         })
         .catch(function(err) {
@@ -134,7 +140,7 @@ window.mudarAbaDinamica = function(aba) {
 };
 
 // ==========================================================================
-// ORQUESTRAÇÃO DE BINDS E MÉTODOS DOS SUBMÓDULOS (ANTI-QUEBRA DE ESCOPO)
+// ORQUESTRAÇÃO DE BINDS E MÉTODOS DOS SUBMÓDULOS (ALINHADO COM SEU REALTIME)
 // ==========================================================================
 window.orquestrarBindsSubmodulo = function(modulo) {
     console.log(`⚡ Conectando canais globais para o módulo ativo: [${modulo.toUpperCase()}]`);
@@ -150,10 +156,12 @@ window.orquestrarBindsSubmodulo = function(modulo) {
             tbody.innerHTML = '';
             var chaves = Object.keys(window.todosPedidosLocal).reverse();
 
-            // Aplicação prática de filtros por status
+            // Mapeia filtro por status (tratando maiúsculo/minúsculo conforme seu banco que usa "Novo")
             if (window.filtroStatusPedidoAtual !== "Todos") {
                 chaves = chaves.filter(function(k) {
-                    return window.todosPedidosLocal[k].status === window.filtroStatusPedidoAtual;
+                    var p = window.todosPedidosLocal[k];
+                    var statusReal = p.status || (p.resumo ? p.resumo.status : "Novo");
+                    return statusReal.toLowerCase() === window.filtroStatusPedidoAtual.toLowerCase();
                 });
             }
 
@@ -164,19 +172,24 @@ window.orquestrarBindsSubmodulo = function(modulo) {
 
             chaves.forEach(function(key) {
                 var p = window.todosPedidosLocal[key];
-                var totalStr = typeof p.total === 'number' ? window.formatarMoedaReal(p.total) : (p.total || window.formatarMoedaReal(0));
-                var dataStr = p.data ? new Date(p.data).toLocaleString('pt-BR') : 'N/A';
+                
+                // Mapeamento baseado nos dados reais enviados (p.resumo ou raiz)
+                var totalNum = p.total || (p.resumo ? p.resumo.total : 0);
+                var totalStr = window.formatarMoedaReal(totalNum);
+                var dataStr = p.data || "Sem Data";
+                var clienteNome = p.nome || p.cliente || (p.entrega ? p.entrega.nome : 'Cliente Abella');
+                var statusReal = p.status || (p.resumo ? p.resumo.status : "Novo");
 
                 var tr = document.createElement('tr');
                 tr.className = "border-b border-zinc-900 hover:bg-zinc-950/40 transition-all font-mono text-xs";
                 tr.innerHTML = `
                     <td class="p-4 font-bold text-[#caa85c]">#${key.slice(-6).toUpperCase()}</td>
-                    <td class="p-4 font-sans font-medium text-white">${p.nome || p.cliente || 'Consumidor'}</td>
+                    <td class="p-4 font-sans font-medium text-white">${clienteNome}</td>
                     <td class="p-4 text-zinc-500">${dataStr}</td>
                     <td class="p-4 text-emerald-400 font-bold">${totalStr}</td>
                     <td class="p-4">
-                        <span class="px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${p.status === 'Concluído' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/40' : 'bg-amber-950/40 text-amber-400 border border-amber-900/40'}">
-                            ${p.status || 'Pendente'}
+                        <span class="px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${statusReal === 'Concluído' || statusReal === 'Finalizado' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-900/40' : 'bg-amber-950/40 text-amber-400 border border-amber-900/40'}">
+                            ${statusReal}
                         </span>
                     </td>
                     <td class="p-4 text-right">
@@ -204,7 +217,8 @@ window.orquestrarBindsSubmodulo = function(modulo) {
         window.abrirDetalhesPedidoModal = function(id) {
             var pedido = window.todosPedidosLocal[id];
             if (!pedido) return;
-            alert(`Lendo metadados de itens do comprador: ${pedido.nome || 'Abella Cliente'}\nID: ${id}`);
+            var numPecas = pedido.totalPecas || (pedido.resumo ? pedido.resumo.totalPecas : 0);
+            alert(`Lendo metadados de itens do comprador: ${pedido.nome || pedido.cliente || 'Cliente Abella'}\nTotal de Peças: ${numPecas}\nID: ${id}`);
         };
 
         window.gerarPdfConferenciaPedido = function(id) {
@@ -291,6 +305,57 @@ window.orquestrarBindsSubmodulo = function(modulo) {
             if(document.getElementById('prodOpcoes')) document.getElementById('prodOpcoes').value = prod.opcoesPersonalizadas || '';
         };
 
+        window.salvarProdutoFirebase = function() {
+            var id = document.getElementById('prodId').value;
+            var name = document.getElementById('prodNome').value.trim();
+            var sku = document.getElementById('prodSku').value.trim();
+            var category = document.getElementById('prodCategoria').value.trim();
+            var weight = document.getElementById('prodPeso').value.trim();
+            var price = parseFloat(document.getElementById('prodPreco').value) || 0;
+            var variacaoTipo = document.getElementById('prodVariType') ? document.getElementById('prodVariType').value.trim() : 'Lista';
+            var opcoesPersonalizadas = document.getElementById('prodOpcoes') ? document.getElementById('prodOpcoes').value.trim() : '';
+            var image = document.getElementById('prodUrlImagem').value.trim();
+
+            if (!name) { alert("⚠️ O nome é obrigatório!"); return; }
+
+            var btn = document.getElementById('btnSalvarProduto');
+            if (btn) btn.disabled = true;
+
+            var dados = { 
+                name: name, 
+                sku: sku, 
+                category: category, 
+                weight: weight, 
+                peso: weight, 
+                price: price, 
+                precoFinal: price, 
+                variacaoTipo: variacaoTipo, 
+                opcoesPersonalizadas: opcoesPersonalizadas, 
+                image: image 
+            };
+
+            if (id) {
+                window.db.ref(`abella/products/${id}`).update(dados).then(function() { fecharLimpar(); });
+            } else {
+                dados.paused = false;
+                window.db.ref('abella/products').push(dados).then(function() { fecharLimpar(); });
+            }
+
+            function fecharLimpar() {
+                window.fecharModalProduto();
+                if (btn) btn.disabled = false;
+                window.carregarBlocoProdutos(true);
+            }
+        };
+
+        window.irParaEditorIA = function() {
+            var idProduto = document.getElementById('prodId').value;
+            var urlImagem = encodeURIComponent(document.getElementById('prodUrlImagem').value.trim());
+            if(confirm("✨ Deseja abrir o Editor Full Master para tratar fotos com IA?")) {
+                window.location.href = `../edit/editor.html?id=${idProduto}&img=${urlImagem}`;
+            }
+        };
+
         window.alternarPausaProduto = function(id, statusAtual) {
             window.db.ref(`abella/products/${id}`).update({ paused: !statusAtual });
         };
@@ -299,7 +364,7 @@ window.orquestrarBindsSubmodulo = function(modulo) {
     }
 
     // ----------------------------------------------------------------------
-    // BINDS DO MÓDULO DE CATEGORIAS / DESCONTOS
+    // BINDS DO MÓDULO DE CATEGORIAS / DESCONTOS (ALINHADO COM SEU BANCO REAL)
     // ----------------------------------------------------------------------
     if (modulo === 'categorias') {
         window.carregarBlocoCategorias = function() {
@@ -319,21 +384,25 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                 var div = document.createElement('div');
                 div.className = "bg-zinc-950 border border-zinc-900 rounded-xl p-5 space-y-4 text-left relative";
                 
-                var statusPromo = cat.promoAtiva ? 
-                    `<span class="bg-emerald-950/60 text-emerald-400 border border-emerald-900 px-2 py-0.5 rounded text-[9px] font-bold uppercase font-mono">Promoção Ativa (-${cat.promoPorcentagem}%)</span>` : 
+                // Trata as variáveis reais do seu banco: promoStatus, promoPct, promoName
+                var isPromoAtiva = cat.promoStatus === "ATIVA" || cat.promoAtiva === true;
+                var pctDesconto = cat.promoPct || cat.discount || 0;
+
+                var statusPromo = isPromoAtiva ? 
+                    `<span class="bg-emerald-950/60 text-emerald-400 border border-emerald-900 px-2 py-0.5 rounded text-[9px] font-bold uppercase font-mono">Promoção Ativa (-${pctDesconto}%)</span>` : 
                     `<span class="bg-zinc-900 text-zinc-500 border border-zinc-800 px-2 py-0.5 rounded text-[9px] font-bold uppercase font-mono">Sem Desconto Coletivo</span>`;
 
                 div.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div>
-                            <h4 class="text-white text-sm font-bold font-sans">${cat.nome || cat.name}</h4>
-                            <p class="text-[10px] text-zinc-500 font-mono mt-0.5">Nó ID: ${key}</p>
+                            <h4 class="text-white text-sm font-bold font-sans">${cat.name || cat.nome}</h4>
+                            <p class="text-[10px] text-zinc-500 font-mono mt-0.5">Slug ID: ${key}</p>
                         </div>
                         <button onclick="window.excluirCategoriaItem('${key}')" class="text-zinc-600 hover:text-rose-500 font-bold transition-all text-xs">✕</button>
                     </div>
                     <div class="border-t border-zinc-900/60 pt-3 space-y-2">
                         <div class="flex items-center gap-2">${statusPromo}</div>
-                        ${cat.promoNome ? `<p class="text-[10px] text-zinc-400 font-mono truncate">Etiqueta: <b class="text-amber-400">${cat.promoNome}</b></p>` : ''}
+                        ${cat.promoName ? `<p class="text-[10px] text-zinc-400 font-mono truncate">Etiqueta: <b class="text-amber-400">${cat.promoName}</b></p>` : ''}
                     </div>
                     <button onclick="window.abrirConfiguracaoDescontoCategoria('${key}')" class="w-full bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-wider text-center transition-all">Configurar Descontos</button>
                 `;
@@ -347,9 +416,10 @@ window.orquestrarBindsSubmodulo = function(modulo) {
                 modal.classList.remove('hidden');
                 document.getElementById('catId').value = '';
                 document.getElementById('catNome').value = '';
-                document.getElementById('catPromoAtiva').value = 'false';
+                document.getElementById('catPromoAtiva').value = 'INATIVA';
                 document.getElementById('catPromoPorcentagem').value = '0';
                 document.getElementById('catPromoNome').value = '';
+                document.getElementById('catOpcoesPersonalizadas').value = '';
             }
         };
 
@@ -364,19 +434,48 @@ window.orquestrarBindsSubmodulo = function(modulo) {
 
             window.abrirModalCategoria();
             document.getElementById('catId').value = id;
-            document.getElementById('catNome').value = cat.nome || cat.name || '';
-            document.getElementById('catPromoAtiva').value = cat.promoAtiva ? 'true' : 'false';
-            document.getElementById('catPromoPorcentagem').value = cat.promoPorcentagem || '0';
-            document.getElementById('catPromoNome').value = cat.promoNome || '';
+            document.getElementById('catNome').value = cat.name || cat.nome || '';
+            document.getElementById('catPromoAtiva').value = cat.promoStatus || (cat.promoAtiva ? 'ATIVA' : 'INATIVA');
+            document.getElementById('catPromoPorcentagem').value = cat.promoPct || cat.discount || '0';
+            document.getElementById('catPromoNome').value = cat.promoName || '';
+            document.getElementById('catOpcoesPersonalizadas').value = cat.opcoesPersonalizadas || '';
+        };
+
+        window.salvarCategoriaFirebase = function() {
+            var id = document.getElementById('catId').value.trim();
+            var name = document.getElementById('catNome').value.trim();
+            var promoStatus = document.getElementById('catPromoAtiva').value;
+            var promoPct = parseInt(document.getElementById('catPromoPorcentagem').value) || 0;
+            var promoName = document.getElementById('catPromoNome').value.trim();
+            var opcoes = document.getElementById('catOpcoesPersonalizadas').value.trim();
+
+            if (!name) { alert("⚠️ Nome é obrigatório!"); return; }
+
+            var slug = id ? id : name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "-");
+
+            var dados = {
+                name: name,
+                slug: slug,
+                promoStatus: promoStatus,
+                promoAtiva: promoStatus === "ATIVA",
+                promoPct: promoPct,
+                discount: promoPct,
+                promoName: promoName,
+                opcoesPersonalizadas: opcoes
+            };
+
+            window.db.ref(`abella/categories/${slug}`).update(dados).then(function() {
+                window.fecharModalCategoria();
+                window.carregarBlocoCategorias();
+            });
         };
 
         window.excluirCategoriaItem = function(id) {
-            if (confirm(`⚠️ Tem certeza de que deseja remover a categoria [${id}]?\nIsso removerá as regras de desconto em lote.`)) {
+            if (confirm(`⚠️ Deseja remover a categoria [${id}]?`)) {
                 window.db.ref(`abella/categories/${id}`).remove();
             }
         };
 
-        window.carregarBclocoCategorias = function() { window.carregarBlocoCategorias(); };
         window.carregarBlocoCategorias();
     }
 };

@@ -65,60 +65,112 @@ async function buscarFoto(sku) {
 
 async function importarTudo() {
     const file = document.getElementById('csv').files[0];
-    if(!file) return alert("Selecione o arquivo CSV limpo primeiro.");
-    if(!confirm("⚠️ Confirmar importação na ramificação /abella/products?")) return;
+    if(!file) return alert("Selecione o arquivo CSV do WooCommerce primeiro.");
+    if(!confirm("⚠️ Confirmar importação direta do WooCommerce na ramificação /abella/products?")) return;
 
     const log = document.getElementById('log');
     const btn = document.getElementById('btn');
     btn.disabled = true;
-    log.innerHTML = "🚀 Iniciando processamento de planilha otimizada...<br>";
+    log.innerHTML = "🚀 Lendo estrutura nativa do WooCommerce...<br>";
 
     try {
         const text = await file.text();
-        const linhas = text.trim().replace(/^\uFEFF/, '').split(/\r?\n/);
+        // Divide o arquivo por linhas
+        const linhas = text.split(/\r?\n/);
         
         let totalProd = 0;
         let categorias = new Set();
 
-        // Pula o cabeçalho (i = 1)
+        // Função para dividir a linha por vírgulas, mas ignorando vírgulas dentro de aspas
+        function dividirLinhaWoo(linha) {
+            const arr = [];
+            let dentroDeAspas = false;
+            let token = '';
+            for (let i = 0; i < linha.length; i++) {
+                let char = linha[i];
+                if (char === '"') {
+                    dentroDeAspas = !dentroDeAspas;
+                } else if (char === ',' && !dentroDeAspas) {
+                    arr.push(token.trim());
+                    token = '';
+                } else {
+                    token += char;
+                }
+            }
+            arr.push(token.trim());
+            return arr;
+        }
+
+        // Ler a primeira linha (cabeçalho) para achar a posição exata de cada coluna dinamicamente
+        const cabecalho = dividirLinhaWoo(linhas[0]);
+        const idxSKU = cabecalho.findIndex(c => c.toLowerCase() === 'sku');
+        const idxNome = cabecalho.findIndex(c => c.toLowerCase() === 'nome');
+        const idxPreco = cabecalho.findIndex(c => c.toLowerCase() === 'preço' || c.toLowerCase() === 'preco');
+        const idxPeso = cabecalho.findIndex(c => c.toLowerCase() === 'peso (g)');
+        const idxCat = cabecalho.findIndex(c => c.toLowerCase() === 'categorias');
+        const idxImg = cabecalho.findIndex(c => c.toLowerCase() === 'imagens');
+
+        log.innerHTML += `<span style="color:#caa85c">Mapeamento de colunas concluído. Processando produtos...</span><br>`;
+
+        // Começa em 1 para pular o cabeçalho
         for(let i = 1; i < linhas.length; i++) {
-            if(!linhas[i]) continue;
+            if(!linhas[i].trim()) continue;
 
-            // Divide estritamente por ponto e vírgula
-            const col = linhas[i].split(';');
-            if(col.length < 5) continue;
-
-            const nome = col[0].trim();
-            const skuOriginal = col[1].trim();
-            const nomeCategoria = col[2].trim() || "Geral";
-            const preco = parseFloat(col[3]) || 0;
-            const peso = parseFloat(col[4]) || 0;
-            const urlImagem = col[5] ? col[5].trim() : "";
-
-            // Se não tiver SKU ou Nome, pula para não quebrar o banco
-            if(!skuOriginal || !nome) continue;
+            const col = dividirLinhaWoo(linhas[i]);
+            
+            // Pega os dados com base nos índices encontrados
+            const skuOriginal = col[idxSKU] || "";
+            const nome = col[idxNome] || "";
+            
+            // Pula linhas sem SKU ou sem Nome (como linhas vazias ou variações secundárias)
+            if(!skuOriginal || !nome || skuOriginal.toLowerCase() === "sku") continue;
 
             const skuID = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
-            const catSlug = gerarSlug(nomeCategoria);
+            
+            // Trata a Categoria (se houver hierarquia com '>', pega a última subcategoria)
+            let catBruta = col[idxCat] || "Geral";
+            if (catBruta.includes('>')) {
+                const partes = catBruta.split('>');
+                catBruta = partes[partes.length - 1].trim();
+            }
+            // Se vier múltipla categoria separada por vírgula, pega a primeira
+            catBruta = catBruta.split(',')[0].trim();
+            const catSlug = gerarSlug(catBruta);
+
+            // Trata o Preço (Troca formato BR para formato americano de banco de dados)
+            let precoCru = col[idxPreco] || "0";
+            precoCru = precoCru.replace('R$', '').replace('.', '').replace(',', '.').trim();
+            const preco = parseFloat(precoCru) || 0;
+
+            // Trata o Peso
+            let pesoCru = col[idxPeso] || "0";
+            pesoCru = pesoCru.replace('g', '').replace('r', '').replace('.', '').replace(',', '.').trim();
+            const peso = parseFloat(pesoCru) || 0;
+
+            // Trata a Imagem (Pega o primeiro link do WordPress caso haja mais de um separado por vírgula)
+            let urlImagem = col[idxImg] || "";
+            if (urlImagem.includes(',')) {
+                urlImagem = urlImagem.split(',')[0].trim();
+            }
 
             log.innerHTML += `> Gravando SKU: ${skuOriginal}... `;
 
             try {
-                // 1. Garante a categoria na rota certa
+                // 1. Garante a categoria na ramificação /abella/
                 await db.ref('abella/categories/' + catSlug).update({
-                    name: nomeCategoria,
+                    name: catBruta,
                     slug: catSlug,
                     paused: false
                 });
-                categorias.add(nomeCategoria);
+                categorias.add(catBruta);
 
-                // 2. Grava o produto com os dados numéricos limpos
+                // 2. Grava o produto com o preço líquido e imagem direta do WordPress
                 await db.ref('abella/products/' + skuID).set({
                     name: nome,
                     sku: skuOriginal,
                     category: catSlug,
-                    price: preco,
-                    weight: peso,
+                    price: parseFloat(preco.toFixed(2)),
+                    weight: parseFloat(peso.toFixed(2)),
                     image: urlImagem,
                     paused: false,
                     promo: 0
@@ -132,8 +184,8 @@ async function importarTudo() {
             log.scrollTop = log.scrollHeight;
         }
 
-        log.innerHTML += `<br>✅ <b>FINALIZADO!</b><br>Produtos salvos: ${totalProd}<br>Categorias: ${categorias.size}`;
-        alert("Importação concluída com sucesso!");
+        log.innerHTML += `<br>✅ <b>IMPORTAÇÃO CONCLUÍDA!</b><br>Produtos enviados: ${totalProd}<br>Categorias: ${categorias.size}`;
+        alert(`Sucesso! ${totalProd} produtos foram catalogados na ramificação Abella.`);
 
     } catch (err) {
         log.innerHTML += `<span class="error">ERRO CRÍTICO: ${err.message}</span><br>`;

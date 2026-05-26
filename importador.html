@@ -65,106 +65,74 @@ async function buscarFoto(sku) {
 
 async function importarTudo() {
     const file = document.getElementById('csv').files[0];
-    if(!file) return alert("Selecione o arquivo CSV do WooCommerce primeiro.");
-    if(!confirm("⚠️ Confirmar importação direta do WooCommerce na ramificação /abella/products?")) return;
+    if(!file) return alert("Selecione o arquivo CSV limpo primeiro.");
+    
+    // Alerta duplo para segurança antes de apagar
+    if(!confirm("⚠️ ATENÇÃO: Isso vai APAGAR TODOS os produtos e categorias atuais da Abella do sistema para entrar a nova planilha. Deseja continuar?")) return;
 
     const log = document.getElementById('log');
     const btn = document.getElementById('btn');
     btn.disabled = true;
-    log.innerHTML = "🚀 Lendo estrutura nativa do WooCommerce...<br>";
+    log.innerHTML = "🗑️ Limpando catálogo antigo da ramificação /abella...<br>";
 
     try {
+        // 1. Deleta tudo da Abella antes de começar o processo
+        await db.ref('abella/products').remove();
+        await db.ref('abella/categories').remove();
+        log.innerHTML += "<span class='success'>✅ Banco de dados zerado com sucesso!</span><br>🚀 Processando nova planilha otimizada...<br>";
+
         const text = await file.text();
-        // Divide o arquivo por linhas
-        const linhas = text.split(/\r?\n/);
+        // Divide o arquivo por linhas e remove o caractere invisível BOM se houver
+        const linhas = text.trim().replace(/^\uFEFF/, '').split(/\r?\n/);
         
         let totalProd = 0;
         let categorias = new Set();
 
-        // Função para dividir a linha por vírgulas, mas ignorando vírgulas dentro de aspas
-        function dividirLinhaWoo(linha) {
-            const arr = [];
-            let dentroDeAspas = false;
-            let token = '';
-            for (let i = 0; i < linha.length; i++) {
-                let char = linha[i];
-                if (char === '"') {
-                    dentroDeAspas = !dentroDeAspas;
-                } else if (char === ',' && !dentroDeAspas) {
-                    arr.push(token.trim());
-                    token = '';
-                } else {
-                    token += char;
-                }
-            }
-            arr.push(token.trim());
-            return arr;
-        }
-
-        // Ler a primeira linha (cabeçalho) para achar a posição exata de cada coluna dinamicamente
-        const cabecalho = dividirLinhaWoo(linhas[0]);
-        const idxSKU = cabecalho.findIndex(c => c.toLowerCase() === 'sku');
-        const idxNome = cabecalho.findIndex(c => c.toLowerCase() === 'nome');
-        const idxPreco = cabecalho.findIndex(c => c.toLowerCase() === 'preço' || c.toLowerCase() === 'preco');
-        const idxPeso = cabecalho.findIndex(c => c.toLowerCase() === 'peso (g)');
-        const idxCat = cabecalho.findIndex(c => c.toLowerCase() === 'categorias');
-        const idxImg = cabecalho.findIndex(c => c.toLowerCase() === 'imagens');
-
-        log.innerHTML += `<span style="color:#caa85c">Mapeamento de colunas concluído. Processando produtos...</span><br>`;
-
-        // Começa em 1 para pular o cabeçalho
+        // Começa em i = 1 para pular a linha de títulos (cabeçalho)
         for(let i = 1; i < linhas.length; i++) {
             if(!linhas[i].trim()) continue;
 
-            const col = dividirLinhaWoo(linhas[i]);
-            
-            // Pega os dados com base nos índices encontrados
-            const skuOriginal = col[idxSKU] || "";
-            const nome = col[idxNome] || "";
-            
-            // Pula linhas sem SKU ou sem Nome (como linhas vazias ou variações secundárias)
-            if(!skuOriginal || !nome || skuOriginal.toLowerCase() === "sku") continue;
+            // Divide a linha estritamente por ponto e vírgula (;)
+            const col = linhas[i].split(';');
+            if(col.length < 5) continue;
 
-            const skuID = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
+            // Captura as 6 colunas na ordem exata da nova planilha
+            const nome = col[0] ? col[0].replace(/"/g, '').trim() : "";
+            const skuOriginal = col[1] ? col[1].replace(/"/g, '').trim() : "";
+            const nomeCategoria = col[2] ? col[2].replace(/"/g, '').trim() : "Geral";
             
-            // Trata a Categoria (se houver hierarquia com '>', pega a última subcategoria)
-            let catBruta = col[idxCat] || "Geral";
-            if (catBruta.includes('>')) {
-                const partes = catBruta.split('>');
-                catBruta = partes[partes.length - 1].trim();
-            }
-            // Se vier múltipla categoria separada por vírgula, pega a primeira
-            catBruta = catBruta.split(',')[0].trim();
-            const catSlug = gerarSlug(catBruta);
-
-            // Trata o Preço (Troca formato BR para formato americano de banco de dados)
-            let precoCru = col[idxPreco] || "0";
-            precoCru = precoCru.replace('R$', '').replace('.', '').replace(',', '.').trim();
+            // Trata o preço (garante formato americano com ponto decimal)
+            let precoCru = col[3] ? col[3].replace(/"/g, '').replace('R$', '').trim() : "0";
+            precoCru = precoCru.replace(',', '.');
             const preco = parseFloat(precoCru) || 0;
 
-            // Trata o Peso
-            let pesoCru = col[idxPeso] || "0";
-            pesoCru = pesoCru.replace('g', '').replace('r', '').replace('.', '').replace(',', '.').trim();
+            // Trata o peso (garante formato americano com ponto decimal)
+            let pesoCru = col[4] ? col[4].replace(/"/g, '').toLowerCase().replace('g', '').trim() : "0";
+            pesoCru = pesoCru.replace(',', '.');
             const peso = parseFloat(pesoCru) || 0;
 
-            // Trata a Imagem (Pega o primeiro link do WordPress caso haja mais de um separado por vírgula)
-            let urlImagem = col[idxImg] || "";
-            if (urlImagem.includes(',')) {
-                urlImagem = urlImagem.split(',')[0].trim();
-            }
+            // Link da imagem
+            const urlImagem = col[5] ? col[5].replace(/"/g, '').trim() : "";
+
+            // Se não tiver SKU ou Nome válido, pula a linha para não quebrar o app
+            if(!skuOriginal || !nome || skuOriginal.toLowerCase() === "sku") continue;
+
+            // Higieniza o SKU para virar um ID válido no Firebase
+            const skuID = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
+            const catSlug = gerarSlug(nomeCategoria);
 
             log.innerHTML += `> Gravando SKU: ${skuOriginal}... `;
 
             try {
-                // 1. Garante a categoria na ramificação /abella/
+                // 2. Cria/Garante a categoria limpa
                 await db.ref('abella/categories/' + catSlug).update({
-                    name: catBruta,
+                    name: nomeCategoria,
                     slug: catSlug,
                     paused: false
                 });
-                categorias.add(catBruta);
+                categorias.add(nomeCategoria);
 
-                // 2. Grava o produto com o preço líquido e imagem direta do WordPress
+                // 3. Grava o produto na nova estrutura limpa
                 await db.ref('abella/products/' + skuID).set({
                     name: nome,
                     sku: skuOriginal,
@@ -184,11 +152,11 @@ async function importarTudo() {
             log.scrollTop = log.scrollHeight;
         }
 
-        log.innerHTML += `<br>✅ <b>IMPORTAÇÃO CONCLUÍDA!</b><br>Produtos enviados: ${totalProd}<br>Categorias: ${categorias.size}`;
-        alert(`Sucesso! ${totalProd} produtos foram catalogados na ramificação Abella.`);
+        log.innerHTML += `<br>✅ <b>PROCESSO CONCLUÍDO!</b><br>Produtos catalogados: ${totalProd}<br>Categorias criadas: ${categorias.size}`;
+        alert("O catálogo antigo foi apagado e a nova planilha foi importada com sucesso!");
 
     } catch (err) {
-        log.innerHTML += `<span class="error">ERRO CRÍTICO: ${err.message}</span><br>`;
+        log.innerHTML += `<span class="error">ERRO CRÍTICO NO ARQUIVO: ${err.message}</span><br>`;
     } finally {
         btn.disabled = false;
     }

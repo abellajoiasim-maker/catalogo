@@ -134,7 +134,12 @@ async function importarTudo() {
             // Tratamento do Peso (Coluna 19 do seu CSV)
             let pesoCru = col[19] ? col[19].replace(/"/g, '').trim() : "0";
             pesoCru = pesoCru.replace('.', '').replace(',', '.');
-            const weight = parseFloat(pesoCru) || 0;
+          // CORREÇÃO: Ajusta o peso caso ele venha sem a vírgula das duas casas decimais
+let pesoNum = parseFloat(pesoCru) || 0;
+if (pesoNum > 0) {
+    pesoNum = pesoNum / 100; // Transforma 134 em 1.34
+}
+const weight = pesoNum;
 
             // Link de Imagem Direto do WooCommerce (Coluna 30 do seu CSV)
             // Se houver mais de uma imagem separada por vírgula, pega a primeira

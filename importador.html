@@ -65,87 +65,120 @@ async function buscarFoto(sku) {
 
 async function importarTudo() {
     const file = document.getElementById('csv').files[0];
-    if(!file) return alert("Selecione o arquivo CSV primeiro.");
-    if(!confirm("⚠️ ATENÇÃO: Isto irá sobrescrever os produtos atuais da ramificação /abella. Deseja continuar?")) return;
+    if(!file) return alert("Selecione o arquivo CSV do WooCommerce primeiro.");
+    if(!confirm("⚠️ ATENÇÃO: Isto irá ler o padrão WooCommerce e sobrescrever os produtos atuais da Abella Joias. Continuar?")) return;
 
     const log = document.getElementById('log');
     const btn = document.getElementById('btn');
     btn.disabled = true;
-    log.innerHTML = "🚀 Conectando ao barramento Realtime da Abella...<br>";
+    log.innerHTML = "🚀 Iniciando leitura de estrutura WooCommerce...<br>";
 
     try {
         const text = await file.text();
-        // Remove caracteres invisíveis (BOM) comuns em arquivos vindos do Excel/Google Sheets
-        const linhas = text.trim().replace(/^\uFEFF/, '').split(/\r?\n/);
+        // Divide o arquivo por linhas, respeitando quebras normais
+        const linhas = text.split(/\r?\n/);
         
         let totalProd = 0;
         let categorias = new Set();
 
-        // Processamento linha por linha
-        for(let i = 1; i < linhas.length; i++) {
-            if(!linhas[i]) continue;
-
-            // Suporta separadores por ponto-e-vírgula (Padrão Excel BR) ou vírgula
-            let col = linhas[i].split(';');
-            if (col.length < 2) col = linhas[i].split(',');
-            if (!col[0] || !col[1]) continue;
-
-            const nome = col[0].replace(/"/g, '').trim();
-            const skuOriginal = col[1].replace(/"/g, '').trim();
-            // Higieniza chaves de ID para evitar quebra de nós no Firebase
-            const skuID = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
-            const nomeCategoria = col[2] ? col[2].replace(/"/g, '').trim() : "Geral";
-            const catSlug = gerarSlug(nomeCategoria);
+        // Função interna inteligente para separar colunas por vírgula ignorando as que estão dentro de aspas
+        function dividirLinhaCSV(linha) {
+            const resultado = [];
+            let dentroDeAspas = false;
+            let colunaAtual = '';
             
-            // CORREÇÃO: Limpa formatações de moeda BR (troca vírgula por ponto)
-            let precoCru = col[3] ? col[3].replace(/"/g, '').replace('R$', '').trim() : "0";
+            for (let i = 0; i < linha.length; i++) {
+                let caractere = linha[i];
+                if (caractere === '"') {
+                    dentroDeAspas = !dentroDeAspas; // Inverte o estado
+                } else if (caractere === ',' && !dentroDeAspas) {
+                    resultado.push(colunaAtual.trim());
+                    colunaAtual = '';
+                } else {
+                    colunaAtual += caractere;
+                }
+            }
+            resultado.push(colunaAtual.trim());
+            return resultado;
+        }
+
+        // Começa em i = 1 para pular o cabeçalho (ID, Tipo, SKU...)
+        for(let i = 1; i < linhas.length; i++) {
+            if(!linhas[i].trim()) continue;
+
+            // Processa a linha usando o divisor inteligente
+            let col = dividirLinhaCSV(linhas[i]);
+            
+            // Mapeamento exato das posições do WooCommerce do seu arquivo:
+            const skuOriginal = col[2] ? col[2].replace(/"/g, '').trim() : "";
+            const nome = col[4] ? col[4].replace(/"/g, '').trim() : "";
+            
+            // Pula linhas de teste ou variações sem SKU preenchido
+            if (!skuOriginal || !nome) continue;
+
+            const skuID = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
+            
+            // Tratamento de Categoria do WooCommerce (Pega a última subcategoria se houver '>')
+            let categoriaBruta = col[27] ? col[27].replace(/"/g, '').split(',')[0].trim() : "Geral";
+            if (categoriaBruta.includes('>')) {
+                const partes = categoriaBruta.split('>');
+                categoriaBruta = partes[partes.length - 1].trim(); // Foca na categoria final (ex: "Retangular Pequena")
+            }
+            const catSlug = gerarSlug(categoriaBruta);
+
+            // Tratamento do Preço (Coluna 26 do seu CSV)
+            let precoCru = col[26] ? col[26].replace(/"/g, '').trim() : "0";
             precoCru = precoCru.replace('.', '').replace(',', '.');
-            const preco = parseFloat(precoCru) || 0;
+            const price = parseFloat(precoCru) || 0;
 
-            // CORREÇÃO: Limpa sufixos de peso (como 'g' ou 'gr') para manter o tipo numérico puro
-            let pesoCru = col[4] ? col[4].replace(/"/g, '').toLowerCase().replace('g', '').replace('r', '').trim() : "0";
-            pesoCru = pesoCru.replace(',', '.');
-            const peso = parseFloat(pesoCru) || 0;
+            // Tratamento do Peso (Coluna 19 do seu CSV)
+            let pesoCru = col[19] ? col[19].replace(/"/g, '').trim() : "0";
+            pesoCru = pesoCru.replace('.', '').replace(',', '.');
+            const weight = parseFloat(pesoCru) || 0;
 
-            log.innerHTML += `> Analisando SKU: ${skuOriginal}... `;
+            // Link de Imagem Direto do WooCommerce (Coluna 30 do seu CSV)
+            // Se houver mais de uma imagem separada por vírgula, pega a primeira
+            let urlImagem = col[30] ? col[30].replace(/"/g, '').split(',')[0].trim() : "";
 
-            // 1. Busca automática da URL de download da imagem no Storage
-            const urlImagem = await buscarFoto(skuOriginal);
+            log.innerHTML += `> Mapeando SKU: ${skuOriginal}... `;
 
             try {
-                // 2. Garante a categoria isolada na rota /abella/categories/
+                // 1. Atualiza/Garante a categoria na rota isolada /abella
                 await db.ref('abella/categories/' + catSlug).update({
-                    name: nomeCategoria,
+                    name: categoriaBruta,
                     slug: catSlug,
                     paused: false
                 });
-                categorias.add(nomeCategoria);
+                categorias.add(categoriaBruta);
 
-                // 3. Grava o produto isolado na rota /abella/products/
+                // 2. Grava o produto com o preço líquido e imagem direta do site
                 await db.ref('abella/products/' + skuID).set({
                     name: nome,
                     sku: skuOriginal,
                     category: catSlug,
-                    price: parseFloat(preco.toFixed(2)),
-                    weight: parseFloat(peso.toFixed(2)),
-                    image: urlImagem, // Salva a URL pública resolvida do storage ou vazio se não achar
+                    price: parseFloat(price.toFixed(2)),
+                    weight: parseFloat(weight.toFixed(2)),
+                    image: urlImagem, // Já grava a URL de alta resolução salva no WordPress!
                     paused: false,
                     promo: 0
                 });
 
-                log.innerHTML += `<span class="success">OK ${urlImagem ? '📸' : '❌ sem foto'}</span><br>`;
+                log.innerHTML += `<span class="success">OK 💎</span><br>`;
                 totalProd++;
             } catch (e) {
                 log.innerHTML += `<span class="error">FALHA: ${e.message}</span><br>`;
             }
+            
+            // Auto-scroll do log
             log.scrollTop = log.scrollHeight;
         }
 
-        log.innerHTML += `<br>✅ <b>PROCESSO CONCLUÍDO COM SUCESSO!</b><br>Produtos catalogados: ${totalProd}<br>Categorias mapeadas: ${categorias.size}`;
-        alert("Importação de dados concluída com sucesso!");
+        log.innerHTML += `<br>✅ <b>IMPORTAÇÃO DO WOOCOMMERCE CONCLUÍDA!</b><br>Produtos enviados: ${totalProd}<br>Categorias criadas: ${categorias.size}`;
+        alert("Catálogo Abella Joias atualizado com sucesso direto do WooCommerce!");
 
     } catch (err) {
-        log.innerHTML += `<span class="error">ERRO CRÍTICO DE ARQUIVO: ${err.message}</span><br>`;
+        log.innerHTML += `<span class="error">ERRO CRÍTICO NO ARQUIVO: ${err.message}</span><br>`;
+        console.error(err);
     } finally {
         btn.disabled = false;
     }

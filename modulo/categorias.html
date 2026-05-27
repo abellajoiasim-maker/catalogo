@@ -1,40 +1,51 @@
-<div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
-    <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
-        <div>
-            <h1 class="text-xl font-bold text-white flex items-center gap-2 serif tracking-wider">
-                <span>📁</span> GESTÃO DE COLEÇÕES E CATEGORIAS
-            </h1>
-            <p class="text-xs text-zinc-500 mt-1">Gerencie os nós divisores do catálogo público e links de filtragem.</p>
-        </div>
-        <button onclick="window.abrirModalCategoria()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider">
-            <span>➕</span> Nova Categoria
-        </button>
+<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-left space-y-4">
+    <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider font-mono">Gerenciador de Categorias / Coleções</h3>
     </div>
-
-    <div id="grid-categorias" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs animate-pulse">
-            ⏳ Carregando coleções mapeadas no banco...
+    
+    <div class="space-y-3">
+        <div class="space-y-1">
+            <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome de Exibição da Categoria:</label>
+            <input type="text" id="catNome" placeholder="Ex: Brincos de Argola" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
         </div>
-    </div>
-</div>
-
-<div id="modalCategoria" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-zinc-950 border border-zinc-900 rounded-2xl max-w-md w-full p-6 space-y-4 relative text-left">
-        <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">Nova Categoria</h3>
-            <button onclick="window.fecharModalCategoria()" class="text-zinc-500 hover:text-white transition-all text-xs font-bold">✕</button>
+        <div class="space-y-1">
+            <label class="text-[10px] text-zinc-400 uppercase font-bold">Ordem Numérica de Ordenação (Index):</label>
+            <input type="number" id="catOrdem" placeholder="0" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
         </div>
         
-        <div class="space-y-4 text-xs font-mono">
-            <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome da Coleção:</label>
-                <input type="text" id="catNome" placeholder="Ex: Brincos de Argola" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-            </div>
-
-            <div class="pt-2 grid grid-cols-2 gap-3">
-                <button onclick="window.fecharModalCategoria()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Cancelar</button>
-                <button onclick="window.salvarNovaCategoriaItem()" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Criar Categoria</button>
-            </div>
+        <div class="pt-2 grid grid-cols-2 gap-3">
+            <button type="button" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Limpar</button>
+            <button type="button" onclick="window.salvarNovaCategoriaItem()" class="bg-[#caa85c] hover:bg-[#bda152] text-black py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all text-center">Criar Categoria</button>
         </div>
     </div>
 </div>
+
+<script>
+    window.salvarCategoriaFirebase = function() {
+        var nome = document.getElementById('catNome').value.trim();
+        var ordem = document.getElementById('catOrdem').value || 0;
+        
+        if(!nome) {
+            alert("Por favor, preencha o título da categoria.");
+            return;
+        }
+        
+        var slugId = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
+        
+        window.db.ref('abella/categories/' + slugId).set({
+            id: slugId,
+            nome: nome,
+            ordem: parseInt(ordem)
+        }).then(function() {
+            alert("Categoria de produtos catalogada com sucesso!");
+            document.getElementById('catNome').value = "";
+            document.getElementById('catOrdem').value = "";
+        }).catch(function(err) {
+            console.error("Falha ao salvar categoria:", err);
+        });
+    };
+
+    window.carregarBlocoCategorias = function() {
+        console.log("Categorias lidas em segundo plano.");
+    };
+</script>

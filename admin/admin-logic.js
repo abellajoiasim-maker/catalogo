@@ -1,18 +1,18 @@
 // FILE: admin/admin-logic.js
 
-// CONFIGURAÇÃO DO AMBIENTE CORE DO FIREBASE
+// CENTRALIZAÇÃO DA CONFIGURAÇÃO DO AMBIENTE CORE DO FIREBASE
 const firebaseConfig = {
     apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
     databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
 };
 
-// Inicialização segura sem duplicação de instâncias
+// Inicialização única e blindada de instâncias do Firebase Compat
 if (!window.firebase.apps.length) {
     window.firebase.initializeApp(firebaseConfig);
 }
 const firebaseDB = window.firebase.database();
 
-// EXPOSIÇÃO GLOBAL DOS RECURSOS DA ARQUITETURA
+// EXPOSIÇÃO OPERACIONAL EM ESCOPO GLOBAL (WINDOW)
 window.db = firebaseDB;
 window.todosPedidosLocal = {};
 window.todosProdutosLocal = {};
@@ -21,7 +21,7 @@ window.todasGalvanicasLocal = {};
 window.configuracoesGlobaisLocal = {};
 window.filtroStatusPedidoAtual = "Todos";
 
-// UTILITÁRIOS OPERACIONAIS DE FORMATTAÇÃO
+// AUXILIARES DE TRATAMENTO DE DADOS
 window.resolverUrlImagem = function(urlStr) {
     if (!urlStr) return 'https://via.placeholder.com/250?text=Sem+Imagem+Abella';
     if (typeof urlStr === 'string' && urlStr.startsWith('gs://')) {
@@ -33,7 +33,7 @@ window.resolverUrlImagem = function(urlStr) {
             var caminhoCodificado = encodeURIComponent(caminhoArquivo);
             return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${caminhoCodificado}?alt=media`;
         } catch (e) {
-            console.error("Falha ao interceptar URI do Storage:", e);
+            console.error("Falha ao tratar URI do Storage do Firebase:", e);
             return urlStr;
         }
     }
@@ -44,17 +44,12 @@ window.formatarMoedaReal = function(valor) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
 };
 
-// SINCRONIZADORES EM TEMPO REAL (REALTIME SYNC BACKGROUND)
+// ESCUTAS EM TEMPO REAL SRE (REALTIME DATA SYNC BACKGROUND)
 if (window.db) {
-    console.log("🔥 [Firebase Core Master] Sincronização ativa no nó unificado /abella.");
+    console.log("🔥 [Firebase Core Master] Conectado e escutando o nó /abella em tempo real.");
     
     window.db.ref('abella/orders').on('value', function(snapshot) {
-        var dadosBrutos = snapshot.val() || {};
-        var pedidosFiltrados = {};
-        Object.keys(dadosBrutos).forEach(function(key) {
-            pedidosFiltrados[key] = dadosBrutos[key];
-        });
-        window.todosPedidosLocal = pedidosFiltrados;
+        window.todosPedidosLocal = snapshot.val() || {};
         if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
             window.renderizarTabelaPedidosVisivel();
         }
@@ -89,11 +84,12 @@ if (window.db) {
     });
 }
 
-// ROTEAMENTO ASSÍNCRONO DE FRAGMENTOS HTML
+// INJETOR DINÂMICO E ROTEADOR DE FRAGMENTOS OPERACIONAIS (SPA)
 window.mudarAbaDinamica = function(aba) {
     var container = document.getElementById('conteudo-dinamico');
     if (!container) return;
 
+    // Atualização estética do menu lateral de navegação
     document.querySelectorAll('#menu-navegacao button').forEach(function(btn) {
         btn.className = "w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all bg-zinc-900 text-gray-400 hover:text-white";
     });
@@ -104,7 +100,7 @@ window.mudarAbaDinamica = function(aba) {
         btnAtivo.className = "w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all bg-[#caa85c] text-black";
     }
 
-    container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-600 italic text-xs font-mono animate-pulse">Sincronizando fragmento operacional [${aba.toUpperCase()}]...</div>`;
+    container.innerHTML = `<div class="flex items-center justify-center h-full text-zinc-600 italic text-xs font-mono animate-pulse">Buscando fragmento assíncrono [${aba.toUpperCase()}]...</div>`;
 
     var pathAba = (aba === 'categories') ? 'categorias' : aba;
     var tentativa1 = `../modulo/${pathAba}.html`;
@@ -112,18 +108,18 @@ window.mudarAbaDinamica = function(aba) {
 
     fetch(tentativa1)
         .then(function(res) { if (!res.ok) return fetch(tentativa2); return res; })
-        .then(function(res) { if (!res.ok) throw new Error("Não foi possível encontrar a rota do fragmento."); return res.text(); })
+        .then(function(res) { if (!res.ok) throw new Error("Não foi possível localizar o caminho físico da rota."); return res.text(); })
         .then(function(html) {
             container.innerHTML = html;
             window.orquestrarBindsSubmodulo(pathAba);
         })
         .catch(function(err) {
             console.error(err);
-            container.innerHTML = `<div class="p-8 text-center text-red-500 font-mono text-xs">Erro ao renderizar fragmento dinâmico.</div>`;
+            container.innerHTML = `<div class="p-8 text-center text-red-500 font-mono text-xs">Erro 404: Fragmento de visualização inacessível.</div>`;
         });
 };
 
-// ORQUESTRADOR DE EVENTOS E FUNÇÕES DOS SUBMÓDULOS (BINDS)
+// ORQUESTRADOR DE VINCULAÇÃO E EXECUÇÃO DE CALLBACKS (BINDS)
 window.orquestrarBindsSubmodulo = function(aba) {
     if (aba === 'pedidos') {
         window.renderizarTabelaPedidosVisivel();
@@ -138,12 +134,12 @@ window.orquestrarBindsSubmodulo = function(aba) {
     }
 };
 
-// CORREÇÃO DOS GAPS DE CONCLUSÃO: IMPLEMENTAÇÃO DOS ALIASES DE ACESSO VIA WINDOW
+// CORREÇÃO CRÍTICA DO GAP: RETROCOMPATIBILIDADE E ALIASES INJETADOS VIA WINDOW
 window.salvarDadosProdutoDoForm = function() {
     if (typeof window.salvarProdutoFirebase === 'function') {
         window.salvarProdutoFirebase();
     } else {
-        console.error("Função salvarProdutoFirebase não carregada no escopo.");
+        console.error("Critical: Função 'salvarProdutoFirebase' ainda não instanciada no escopo.");
     }
 };
 
@@ -151,35 +147,36 @@ window.salvarNovaCategoriaItem = function() {
     if (typeof window.salvarCategoriaFirebase === 'function') {
         window.salvarCategoriaFirebase();
     } else {
-        console.error("Função salvarCategoriaFirebase não carregada no escopo.");
+        console.error("Critical: Função 'salvarCategoriaFirebase' não registrada no contexto global.");
     }
 };
 
-// OPERAÇÕES COMPLEMENTARES CORRIGIDAS (Exemplo: Modal Detalhes do Pedido)
+// EXIBIÇÃO DE DETALHES DE PEDIDOS (CORREÇÃO DA VARIÁVEL 'p' INEXISTENTE)
 window.abrirDetalhesPedidoModal = function(idPedido) {
     var pedido = window.todosPedidosLocal[idPedido];
     if (!pedido) return;
     
-    // CORRIGIDO: Removida a referência à variável inexistente 'p'
-    var clienteNome = pedido.nome || pedido.cliente || "Não Identificado";
-    document.getElementById('modalDetalheCliente').innerText = clienteNome;
+    // CORRIGIDO: Removido por completo o 'p.cliente' que quebrava o script, utilizando o mapeamento robusto do nó 'pedido'
+    var nomeFinalDoCliente = pedido.nome || pedido.cliente || "Cliente Não Informado";
     
-    // Lógica interna de exibição do modal...
+    var elCliente = document.getElementById('modalDetalheCliente');
+    if (elCliente) elCliente.innerText = nomeFinalDoCliente;
+    
     var modal = document.getElementById('modalDetalhesPedido');
     if (modal) modal.classList.remove('hidden');
 };
 
-// INICIALIZAÇÃO CONTROLADA UNIFICADA (PROTEÇÃO DE DUPLO BOOTSTRAP)
-let _appInicializado = false;
-function initApp() {
-    if (_appInicializado) return;
-    _appInicializado = true;
-    console.log("🚀 Sistema Operacional Base Inicializado com Sucesso.");
+// ANTI-DUPLO BOOTSTRAP (INITIALIZATION SHIELD GUARD)
+let _painelBootstrapCarregado = false;
+function inicializarPainelAdmin() {
+    if (_painelBootstrapCarregado) return;
+    _painelBootstrapCarregado = true;
+    console.log("⚙️ Master Core do Admin inicializado com proteção de concorrência.");
     window.mudarAbaDinamica('pedidos');
 }
 
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initApp();
+    inicializarPainelAdmin();
 } else {
-    document.addEventListener('DOMContentLoaded', initApp);
+    document.addEventListener('DOMContentLoaded', inicializarPainelAdmin);
 }

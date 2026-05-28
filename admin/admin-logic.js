@@ -1,24 +1,44 @@
 // ==========================================================================
 // ARQUIVO: admin/admin-logic.js
 // CORREÇÕES APLICADAS:
-// 1. Removido o import ES6 quebrado. O firebase.js (compat) já inicializa
-//    window.db via CDN antes deste script. O script agora consome window.db
-//    diretamente, eliminando a dependência circular.
+// 1. CRÍTICO: Script agora inicializa o Firebase ele mesmo (auto-suficiente).
+//    O admin.html carregava este arquivo como type="module", que tem escopo
+//    isolado e não garante acesso ao window.firebase dos CDN scripts.
+//    Solução: inicialização própria aqui + remoção do type="module" no HTML.
 // 2. Corrigido: abrirDetalhesPedidoModal usava variável 'p' inexistente
 //    (deveria ser 'pedido').
-// 3. Adicionado: alias window.salvarDadosProdutoDoForm apontando para
-//    window.salvarProdutoFirebase — o botão do modulo/produtos.html
-//    chamava o nome errado e quebrava o save de produtos.
-// 4. Adicionado: alias window.salvarNovaCategoriaItem apontando para
-//    window.salvarCategoriaFirebase — mesmo problema no modulo/categorias.html.
+// 3. Adicionado: alias window.salvarDadosProdutoDoForm → window.salvarProdutoFirebase
+// 4. Adicionado: alias window.salvarNovaCategoriaItem → window.salvarCategoriaFirebase
+// 5. Bootstrap duplo eliminado (usava DOMContentLoaded + readyState simultâneos)
 // ==========================================================================
 
-// CORRIGIDO: Removido o import ES6 inválido.
-// O Firebase compat (carregado via CDN no admin.html) já popula window.db
-// antes deste script ser executado. Não é necessário importar.
+// CORRIGIDO: O Firebase é inicializado aqui, dentro do próprio script.
+// Isso elimina a dependência de ordem de carregamento e torna o arquivo
+// totalmente independente do type="module" do admin.html.
+(function inicializarFirebaseAdmin() {
+    var firebaseConfig = {
+        apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+        authDomain: "catalogo-abella-joias.firebaseapp.com",
+        databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
+        projectId: "catalogo-abella-joias",
+        storageBucket: "catalogo-abella-joias.firebasestorage.app",
+        messagingSenderId: "727568435294",
+        appId: "1:727568435294:web:442c0179ecf0686dff4ccf"
+    };
+
+    // Guard: não inicializa duas vezes se outro script já o fez
+    if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        window.db = firebase.database();
+    } else {
+        console.error("❌ [Admin] SDK do Firebase não encontrado. Verifique os scripts CDN no admin.html.");
+    }
+})();
 
 // INSTANCIAÇÃO E MAPEAMENTO DE ESCOPO GLOBAL ABSOLUTO
-window.db = window.db || (window.firebase ? window.firebase.database() : null);
+// window.db já foi definido acima pela IIFE de inicialização
 window.todosPedidosLocal = {};
 window.todosProdutosLocal = {};
 window.todasCategoriasLocal = {};

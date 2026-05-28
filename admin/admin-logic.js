@@ -575,3 +575,105 @@ if (document.readyState === 'loading') {
     // DOM já carregado (script carregou tarde, mas o DOM está pronto)
     bootstrapAdmin();
 }
+
+// =========================================================================
+// MOTOR DE INTEGRAÇÃO DO MÓDULO DE CONFIGURAÇÕES (ABELLA JOIAS)
+// =========================================================================
+
+// Função global para carregar os dados do Firebase para a tela de configurações
+window.buscarConfiguracoesFirebase = function() {
+    // Captura a conexão ativa que o admin-logic.js já possui
+    const database = window.db || (typeof db !== "undefined" ? db : null);
+    
+    if (!database) {
+        console.warn("⚠️ Banco de dados não disponível no barramento principal.");
+        return;
+    }
+
+    console.log("💎 Lendo configurações em abella/settings...");
+    database.ref('abella/settings').once('value').then((snapshot) => {
+        const config = snapshot.val();
+        
+        if (!config) {
+            if (document.getElementById('cfgUltimaAtualizacao')) {
+                document.getElementById('cfgUltimaAtualizacao').innerText = "Banco conectado (Nó vazio)";
+            }
+            return;
+        }
+
+        // Preenche os campos se eles existirem na tela atual
+        if (document.getElementById('cfgNome')) document.getElementById('cfgNome').value = config.name || "Abella Joias";
+        if (document.getElementById('cfgSlogan')) document.getElementById('cfgSlogan').value = config.slogan || "Atacado de Joias no Bruto";
+        if (document.getElementById('cfgWhatsapp')) document.getElementById('cfgWhatsapp').value = config.whatsapp || "";
+        if (document.getElementById('cfgDescPix')) document.getElementById('cfgDescPix').value = config.pix !== undefined ? config.pix : 5;
+        if (document.getElementById('cfgParcelas')) document.getElementById('cfgParcelas').value = config.parcelas || 6;
+        if (document.getElementById('cfgValorMinimo')) document.getElementById('cfgValorMinimo').value = config.pedidoMinimo || 0;
+        if (document.getElementById('cfgFreteFixo')) document.getElementById('cfgFreteFixo').value = config.freteFixo || 0;
+        if (document.getElementById('cfgFreteGratisAlvo')) document.getElementById('cfgFreteGratisAlvo').value = config.freteGratisAlvo !== undefined ? config.freteGratisAlvo : 100;
+        if (document.getElementById('cfgStatusLoja')) document.getElementById('cfgStatusLoja').value = config.statusLoja || 'aberto';
+        if (document.getElementById('cfgTextoAviso')) document.getElementById('cfgTextoAviso').value = config.bannerTexto || "";
+        if (document.getElementById('cfgAtivarAviso')) document.getElementById('cfgAtivarAviso').checked = !!config.bannerAtivo;
+
+        if (document.getElementById('cfgUltimaAtualizacao')) {
+            document.getElementById('cfgUltimaAtualizacao').innerText = config.ultimaAtualizacao ? `Sincronizado: ${config.ultimaAtualizacao}` : "Sincronizado";
+        }
+    }).catch(err => {
+        console.error("Erro na leitura do nó abella/settings:", err);
+    });
+};
+
+// Função global disparada pelo clique do botão Salvar
+window.salvarConfiguracoes = function() {
+    const btn = document.getElementById('btnSalvarConfig');
+    const nomeValidado = document.getElementById('cfgNome') ? document.getElementById('cfgNome').value.trim() : "Abella Joias";
+
+    if (btn) { btn.disabled = true; btn.innerText = "⏳ SALVANDO NO FIREBASE..."; }
+
+    const database = window.db || (typeof db !== "undefined" ? db : null);
+    if (!database) {
+        alert("❌ Erro: O barramento do Firebase está inacessível.");
+        if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Criar no Firebase"; }
+        return;
+    }
+
+    const dataHoraAtual = new Date().toLocaleString('pt-BR');
+    
+    const pacoteDados = {
+        name: nomeValidado,
+        slogan: document.getElementById('cfgSlogan') ? document.getElementById('cfgSlogan').value.trim() : "",
+        whatsapp: document.getElementById('cfgWhatsapp') ? document.getElementById('cfgWhatsapp').value.trim() : "",
+        pix: document.getElementById('cfgDescPix') ? (parseFloat(document.getElementById('cfgDescPix').value) || 0) : 0,
+        parcelas: document.getElementById('cfgParcelas') ? (parseInt(document.getElementById('cfgParcelas').value) || 1) : 1,
+        pedidoMinimo: document.getElementById('cfgValorMinimo') ? (parseFloat(document.getElementById('cfgValorMinimo').value) || 0) : 0,
+        freteFixo: document.getElementById('cfgFreteFixo') ? (parseFloat(document.getElementById('cfgFreteFixo').value) || 0) : 0,
+        freteGratisAlvo: document.getElementById('cfgFreteGratisAlvo') ? (parseFloat(document.getElementById('cfgFreteGratisAlvo').value) || 0) : 0,
+        statusLoja: document.getElementById('cfgStatusLoja') ? document.getElementById('cfgStatusLoja').value : "aberto",
+        bannerTexto: document.getElementById('cfgTextoAviso') ? document.getElementById('cfgTextoAviso').value.trim() : "",
+        bannerAtivo: document.getElementById('cfgAtivarAviso') ? document.getElementById('cfgAtivarAviso').checked : false,
+        ultimaAtualizacao: dataHoraAtual
+    };
+
+    // Salva direto no nó liberado pelas Regras do Realtime Database
+    database.ref('abella/settings').update(pacoteDados)
+        .then(() => {
+            if (document.getElementById('cfgUltimaAtualizacao')) {
+                document.getElementById('cfgUltimaAtualizacao').innerText = `Salvo: ${dataHoraAtual}`;
+            }
+            alert("💎 Sucesso! Configurações salvas e aplicadas na nuvem!");
+        })
+        .catch(erro => {
+            console.error("Erro ao salvar:", erro);
+            alert("Erro de gravação: " + erro.message);
+        })
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Criar no Firebase"; }
+        });
+};
+
+// Observador reativo: Toda vez que o painel mudar de aba e injetar a tela de config, executa a leitura automática dos dados
+const observerConfig = new MutationObserver((mutations) => {
+    if (document.getElementById('cfgNome') && document.getElementById('cfgUltimaAtualizacao') && document.getElementById('cfgUltimaAtualizacao').innerText === "Conectando ao banco...") {
+        window.buscarConfiguracoesFirebase();
+    }
+});
+observerConfig.observe(document.body, { childList: true, subtree: true });

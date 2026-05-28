@@ -1,24 +1,23 @@
 <!-- 
     ARQUIVO: modulo/categorias.html
-    CORRIGIDO: O botão "Criar Categoria" chamava window.salvarNovaCategoriaItem()
-    que não existia no admin-logic.js. O alias foi adicionado no admin-logic.js,
-    portanto este HTML não precisa de mais alterações.
-    O modal também foi simplificado para ter apenas os campos que o admin-logic.js
-    efetivamente utiliza (nome e id), evitando referências a elementos ausentes.
+    ATUALIZADO: v3.5 - Adicionado suporte a imagens 1:1 nas categorias.
+    Implementados botões de ação rápidos nos cards (Editar, Pausar e Excluir).
+    O modal foi expandido para capturar a URL da imagem e o estado de pausa.
 -->
 <div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
-    <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-900 pb-4 gap-4">
         <div>
             <h1 class="text-xl font-bold text-white flex items-center gap-2 serif tracking-wider">
                 <span>📁</span> GESTÃO DE COLEÇÕES E CATEGORIAS
             </h1>
-            <p class="text-xs text-zinc-500 mt-1">Gerencie os nós divisores do catálogo público e links de filtragem.</p>
+            <p class="text-xs text-zinc-500 mt-1">Gerencie os nós divisores do catálogo público, imagens de capa e links de filtragem.</p>
         </div>
-        <button onclick="window.abrirModalCategoria()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider">
+        <button onclick="window.abrirModalCategoria()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider self-start sm:self-auto">
             <span>➕</span> Nova Categoria
         </button>
     </div>
 
+    <!-- GRID DE CATEGORIAS -->
     <div id="grid-categorias" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs animate-pulse">
             ⏳ Carregando coleções mapeadas no banco...
@@ -26,10 +25,11 @@
     </div>
 </div>
 
+<!-- MODAL DE CADASTRO E EDIÇÃO DE CATEGORIAS -->
 <div id="modalCategoria" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-zinc-950 border border-zinc-900 rounded-2xl max-w-md w-full p-6 space-y-4 relative text-left">
         <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">Nova Categoria</h3>
+            <h3 id="modalCategoriaTitulo" class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">Nova Categoria</h3>
             <button onclick="window.fecharModalCategoria()" class="text-zinc-500 hover:text-white transition-all text-xs font-bold">✕</button>
         </div>
         
@@ -37,17 +37,68 @@
             <!-- Campo hidden para o ID ao editar uma categoria existente -->
             <input type="hidden" id="catId">
             
+            <!-- Campo de Nome -->
             <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome da Coleção:</label>
+                <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome da Coleção *</label>
                 <input type="text" id="catNome" placeholder="Ex: Brincos de Argola" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
+            </div>
+
+            <!-- NOVO: Campo de URL da Imagem -->
+            <div class="space-y-1">
+                <label class="text-[10px] text-zinc-400 uppercase font-bold">URL da Imagem da Capa (1:1)</label>
+                <input type="text" id="catImagem" placeholder="Cole o link https://... ou gs:// da foto" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
+            </div>
+
+            <!-- NOVO: Opção de Pausar Categoria -->
+            <div class="flex items-center justify-between bg-zinc-900/40 p-3 rounded-xl border border-zinc-900">
+                <div class="space-y-0.5">
+                    <label class="text-[10px] text-zinc-300 uppercase font-bold cursor-pointer" for="catPausado">Ocultar Categoria</label>
+                    <p class="text-[9px] text-zinc-500">Pausa todas as joias desta categoria na vitrine.</p>
+                </div>
+                <input type="checkbox" id="catPausado" class="w-4 h-4 accent-[#caa85c] cursor-pointer">
             </div>
 
             <div class="pt-2 grid grid-cols-2 gap-3">
                 <button onclick="window.fecharModalCategoria()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Cancelar</button>
-                <!-- CORRIGIDO: O alias window.salvarNovaCategoriaItem foi criado no admin-logic.js
-                     apontando para window.salvarCategoriaFirebase para resolver o ReferenceError -->
-                <button onclick="window.salvarNovaCategoriaItem()" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Criar Categoria</button>
+                <button onclick="window.salvarNovaCategoriaItem()" id="btnSalvarCategoria" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Criar Categoria</button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- DOCUMENTAÇÃO INTERNA PARA IMPLEMENTAÇÃO NO SEU ADMIN-LOGIC.JS -->
+<script>
+    /**
+     * DICA DE IMPLEMENTAÇÃO PARA O RENDERIZADOR NO SEU 'admin-logic.js':
+     * Ao varrer o nó 'abella/categories' no Firebase, monte o HTML de cada card 
+     * dentro do '#grid-categorias' usando a seguinte estrutura modelo abaixo:
+     * 
+     * const urlCapa = cat.image || 'https://via.placeholder.com/300?text=Sem+Foto';
+     * const cardOpacity = cat.paused ? 'opacity-40 border-red-900/40' : 'border-zinc-900';
+     * 
+     * item.innerHTML = `
+     * <div class="bg-zinc-950 border ${cardOpacity} rounded-2xl overflow-hidden shadow-xl flex flex-col group transition-all duration-300 hover:border-zinc-800">
+     *     <!-- Container de Imagem Quadrada (Aspect 1:1) -->
+     *     <div class="w-full aspect-square bg-zinc-900 relative overflow-hidden border-b border-zinc-900">
+     *         <img src="${urlCapa}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src='https://via.placeholder.com/300?text=Erro+Imagem'">
+     *         ${cat.paused ? `<span class="absolute top-2 right-2 bg-red-950 border border-red-800 text-red-400 font-mono text-[9px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta</span>` : ''}
+     *     </div>
+     *     
+     *     <!-- Dados e Ações -->
+     *     <div class="p-4 flex-1 flex flex-col justify-between gap-3">
+     *         <div>
+     *             <span class="text-[9px] font-mono text-zinc-600 uppercase">ID: ${id}</span>
+     *             <h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">${cat.name}</h4>
+     *         </div>
+     *         
+     *         <!-- Botões de Controle Rápido -->
+     *         <div class="grid grid-cols-3 gap-1.5 border-t border-zinc-900 pt-3">
+     *             <button onclick="window.editarCategoriaItem('${id}')" title="Editar" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-1.5 rounded-lg text-[10px] font-bold transition-all flex justify-center items-center">✏️</button>
+     *             <button onclick="window.togglePausaCategoria('${id}')" title="${cat.paused ? 'Ativar' : 'Pausar'}" class="${cat.paused ? 'bg-emerald-950/40 border-emerald-900 text-emerald-400' : 'bg-amber-950/40 border-amber-900 text-amber-400'} border py-1.5 rounded-lg text-[10px] font-bold transition-all flex justify-center items-center">⏸️</button>
+     *             <button onclick="window.excluirCategoriaItem('${id}')" title="Excluir" class="bg-zinc-900 hover:bg-red-950/60 border border-zinc-800 hover:border-red-900 text-zinc-400 hover:text-red-400 py-1.5 rounded-lg text-[10px] font-bold transition-all flex justify-center items-center">🗑️</button>
+     *         </div>
+     *     </div>
+     * </div>
+     * `;
+     */
+</script>

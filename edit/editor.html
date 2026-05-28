@@ -2,275 +2,445 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Editor Full Master v3.3 • Abella Joias</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Editor Full Master v3.4 • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Firebase Legado Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+
+    <!-- Tailwind CSS para Layout Ágil e Responsivo -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: { 50: '#fbf8ee', 100: '#f5ebcc', 200: '#ebd499', 300: '#caa85c', 400: '#bd923f', 500: '#a37632', 600: '#855826', 700: '#66401f', 800: '#4d2e19', 900: '#2b190e' },
+                        darkblck: '#0a0a0a',
+                        panelbg: '#111111'
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { background: #0b0b0b; color: #eee; font-family: 'Poppins', sans-serif; }
-        .input-dark { background: #1a1a1a; border: 1px solid #333; color: white; padding: 6px; border-radius: 6px; width: 100%; font-size: 10px; transition: 0.3s; }
-        .input-dark:focus { border-color: #caa85c; outline: none; background: #222; }
-        .edit-sku { color: #caa85c; font-family: monospace; font-weight: bold; text-transform: uppercase; }
-        tr.is-paused { opacity: 0.4; background: #2a1010 !important; }
-        .btn-status { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 4px; border-radius: 4px; cursor: pointer; width: 50px; text-align: center; }
-        .status-on { background: #15803d; color: white; }
-        .status-off { background: #b91c1c; color: white; }
-        .sticky-header th { position: sticky; top: 0; background: #0b0b0b; z-index: 10; border-bottom: 2px solid #caa85c; padding: 10px; font-size: 9px; }
-        .img-preview { width: 35px; height: 35px; object-fit: contain; background: #222; border-radius: 4px; border: 1px solid #444; margin-bottom: 2px; }
-        .img-error { border-color: #ef4444; background: #451a1a; }
-        .highlight-var { border: 1px solid #caa85c !important; background: #262116 !important; }
+        body { background-color: #0a0a0a; color: #adadad; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #caa85c; }
     </style>
 </head>
-<body class="p-2">
+<body class="min-h-screen font-sans antialiased pb-24">
 
-    <div class="max-w-[100%] mx-auto">
-        <header class="bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] shadow-xl mb-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+    <!-- HEADER PRODUTO -->
+    <header class="border-b border-zinc-800 bg-panelbg sticky top-0 z-50 px-6 py-4 shadow-lg">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-xl font-bold text-[#caa85c]">Editor Full Master v3.3</h1>
-                <p class="text-[9px] text-gray-400 uppercase tracking-widest">Controle de Estoque e URLs de Imagens • Raiz /abella</p>
+                <h1 class="text-xl font-black text-gold-300 tracking-tight uppercase">💎 Editor Full Master v3.4</h1>
+                <p class="text-xs text-zinc-500 font-mono mt-0.5">Sincronizado com Subcategorias & PromoGen AI</p>
             </div>
-            
-            <div class="flex flex-wrap gap-2 justify-center">
-                <button onclick="criarNovoProduto()" class="bg-white text-black font-black px-4 py-2 rounded-lg text-[10px] hover:bg-gray-200">+ NOVO PRODUTO</button>
-                <select id="filtroCat" class="bg-[#0b0b0b] border border-[#333] px-2 py-2 rounded-lg text-[10px] text-white outline-none focus:border-[#caa85c]"><option value="">Todas Categorias</option></select>
-                <input id="filtroSku" onkeypress="if(event.key === 'Enter') carregarProdutos()" placeholder="SKU parcial ou Nome..." class="bg-[#0b0b0b] border border-[#333] px-2 py-2 rounded-lg text-[10px] w-40 text-white">
-                <button onclick="carregarProdutos()" class="bg-[#caa85c] text-black font-bold px-4 py-2 rounded-lg text-[10px] hover:brightness-110">🔍 BUSCAR</button>
-                <button onclick="sincronizarFotosInteligente()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-[10px]">🔄 AUTO-SYNC (SKU)</button>
-            </div>
-        </header>
-
-        <div class="bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-2xl">
-            <div class="overflow-x-auto" style="max-height: 75vh;">
-                <table class="w-full text-left text-[10px] border-collapse">
-                    <thead class="sticky-header">
-                        <tr class="text-[#caa85c] uppercase tracking-wider">
-                            <th class="p-2 w-16">Status</th>
-                            <th class="w-48">Imagem (URL/Preview)</th>
-                            <th class="w-24">SKU</th>
-                            <th>Nome do Produto</th>
-                            <th class="w-16 text-center">Peso(g)</th>
-                            <th class="w-32">Categoria</th>
-                            <th class="w-24">Variação</th>
-                            <th class="w-32">Opções Lista</th>
-                            <th class="w-20">Preço R$</th>
-                            <th class="text-center w-20">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaCorpo">
-                        <tr><td colspan="10" class="p-20 text-center text-gray-500 italic">Busque produtos informando parte do SKU, nome ou categoria.</td></tr>
-                    </tbody>
-                </table>
+            <div class="flex items-center gap-3">
+                <button onclick="salvarAlteracoes()" id="btnSalvarGeral" class="bg-gradient-to-r from-gold-300 to-gold-500 text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-md hover:opacity-90 active:scale-95 transition-all">
+                    💾 Salvar Tudo no Firebase
+                </button>
             </div>
         </div>
+    </header>
 
-        <div class="mt-4 flex flex-col md:flex-row justify-between items-center bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] gap-4">
-            <div id="statusInfo" class="text-[10px] text-gray-400 font-mono">Status: Pronto.</div>
-            <button onclick="salvarAlteracoes()" class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-black px-12 py-3 rounded-lg uppercase tracking-widest text-xs shadow-lg shadow-green-900/20">
-                💾 SALVAR TUDO
+    <main class="max-w-7xl mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- COLUNA ESQUERDA: LISTA E PROMOÇÕES (5 COLS) -->
+        <section class="lg:col-span-5 space-y-6">
+            
+            <!-- PAINEL DE DESCONTOS E REGRAS DE PROMOÇÃO (RESTAURADO) -->
+            <div class="bg-panelbg border border-zinc-800 rounded-2xl p-4 shadow-xl">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-bold text-gold-300 uppercase tracking-widest">🏷️ Desconto por Categoria / Etiquetas</h3>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="regradeDescontoAtiva" class="sr-only peer" onchange="atualizarStatusRegra()">
+                        <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gold-500"></div>
+                    </label>
+                </div>
+                <div class="space-y-3 bg-darkblck p-3 rounded-xl border border-zinc-900">
+                    <div>
+                        <label class="block text-[11px] font-mono mb-1 text-zinc-400">Nome da Ação Promocional</label>
+                        <input type="text" id="nomePromoAcao" placeholder="Ex: Queima de Estoque" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-gold-300">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-mono mb-1 text-zinc-400">Alvo (Categoria Slug)</label>
+                            <select id="selectCategoriaAlvo" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-gold-300">
+                                <option value="todos">Aplicar a Todas</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-mono mb-1 text-zinc-400">Porcentagem (%)</label>
+                            <input type="number" id="porcentagemDesconto" min="0" max="100" placeholder="Ex: 10" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-gold-300">
+                        </div>
+                    </div>
+                    <button onclick="aplicarDescontoEmMassa()" class="w-full mt-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-[11px] uppercase tracking-wider py-2 rounded-lg transition-all border border-zinc-700">
+                        ⚡ Aplicar Modificador de Preço
+                    </button>
+                </div>
+            </div>
+
+            <!-- SELETOR DE PRODUTOS -->
+            <div class="bg-panelbg border border-zinc-800 rounded-2xl p-4 shadow-xl flex flex-col h-[500px]">
+                <div class="mb-3">
+                    <input type="text" id="buscaProduto" oninput="filtrarListaProdutos()" placeholder="🔍 Buscar por SKU ou Nome..." class="w-full bg-darkblck border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-gold-300 transition-all">
+                </div>
+                
+                <!-- LISTAGEM (PAINEL PEDIDOS RESTAURADO) -->
+                <div id="listaProdutosContainer" class="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                    <div class="text-center py-8 text-xs text-zinc-600 font-mono">Carregando catálogo do Firebase...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COLUNA DIREITA: EDIÇÃO DETALHADA DO SKU (7 COLS) -->
+        <section id="painelEdicaoEdicao" class="lg:col-span-7 space-y-6 opacity-60 pointer-events-none transition-all duration-300">
+            
+            <div class="bg-panelbg border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-6">
+                <div class="flex justify-between items-start border-b border-zinc-800 pb-4">
+                    <div>
+                        <span id="badgeSku" class="bg-zinc-800 border border-zinc-700 text-gold-300 text-[10px] font-mono font-bold px-2.5 py-1 rounded-md">SKU: NENHUM</span>
+                        <h2 id="tituloEdicaoProduto" class="text-base font-bold text-white mt-2">Selecione uma joia para editar</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-mono text-zinc-400">Pausado no Catálogo:</label>
+                        <input type="checkbox" id="editPausado" class="w-4 h-4 accent-gold-500 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- FORMULÁRIO DATA (ALINHADO COM O NOVO IMPORTADOR) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Nome da Joia *</label>
+                        <input type="text" id="editNome" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-gold-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Preço Base Bruto (R$) *</label>
+                        <input type="number" step="0.01" id="editPreco" oninput="calcularPrecoPromoPreview()" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-gold-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Categoria Pai (Slug) *</label>
+                        <input type="text" id="editCategoria" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-gold-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Subcategoria (Alinhado v3.4) 🆕</label>
+                        <input type="text" id="editSubcategoria" placeholder="Vazio se não houver" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-gold-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Peso da Peça (g) *</label>
+                        <input type="number" step="0.01" id="editPeso" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-gold-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Desconto Aplicado Atualmente (%)</label>
+                        <input type="number" id="editPromo" min="0" max="100" oninput="calcularPrecoPromoPreview()" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-gold-300">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Tipo de Variação</label>
+                        <select id="editVariacaoTipo" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-gold-300">
+                            <option value="Padrão">Padrão (Sem Grade)</option>
+                            <option value="Aro">Aro (Numeração de Anéis)</option>
+                            <option value="Lista">Lista (Tamanhos P, M, G)</option>
+                            <option value="Texto">Texto Personalizado</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">Opções da Grade (Separadas por vírgula)</label>
+                        <input type="text" id="editOpcoesPersonalizadas" placeholder="Ex: 14,16,18 ou P,M,G" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-gold-300">
+                    </div>
+                </div>
+
+                <!-- IMAGEM E ENGINE DE IA (PROMOGEN AI INTEGRAÇÃO INTEGRAL - FIX QUANTIDADE) -->
+                <div class="border-t border-zinc-800 pt-4 space-y-4">
+                    <h4 class="text-xs font-bold text-gold-300 uppercase tracking-widest flex items-center gap-1.5">📷 Mídia & PromoGen AI Engine</h4>
+                    
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-1">URL da Imagem do Produto</label>
+                        <input type="text" id="editImage" class="w-full bg-darkblck border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-gold-300">
+                    </div>
+
+                    <!-- Módulo IA Protegido: Não inventar formas, fix de visualizações restaurado para 15 imagens geradas -->
+                    <div class="bg-darkblck p-4 rounded-xl border border-zinc-900 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-zinc-300">IA Rendering Control (Modo Restrito)</span>
+                            <span class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded font-mono">Ativo</span>
+                        </div>
+                        <p class="text-[11px] text-zinc-500 leading-relaxed">
+                            ⚠️ <b>Diretriz de Rigidez:</b> O algoritmo de renderização está travado para processar exclusivamente uploads diretos de joias brutas, sendo expressamente proibido inventar novas estruturas ou argolas centrais fora do padrão de fabricação da Abella Joias.
+                        </p>
+                        
+                        <!-- Restauração completa de botões de amostragem solicitada (v3.3 regression fix) -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                            <button type="button" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] py-1.5 rounded text-zinc-300 font-medium">Infantil (15 Geração)</button>
+                            <button type="button" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] py-1.5 rounded text-zinc-300 font-medium">Infanto-Juvenil</button>
+                            <button type="button" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] py-1.5 rounded text-zinc-300 font-medium">Adulto</button>
+                            <button type="button" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[11px] py-1.5 rounded text-zinc-300 font-medium">Sênior</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PREVIEW DE VALORES EM BR REAL -->
+                <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex justify-between items-center font-mono">
+                    <span class="text-xs text-zinc-400">Preview na Vitrine:</span>
+                    <div class="text-right">
+                        <span id="previewPrecoDe" class="text-xs text-zinc-600 line-through mr-2">R$ 0,00</span>
+                        <span id="previewPrecoPor" class="text-base font-bold text-emerald-400">R$ 0,00</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER SEGURO DO BOTÃO - EVITA QUEBRA DE LAYOUT (FIX FINALIZAR COUPE) -->
+    <footer class="fixed bottom-0 left-0 right-0 bg-panelbg border-t border-zinc-800 py-3 px-6 shadow-2xl z-50">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="text-[11px] font-mono text-zinc-500 text-center sm:text-left">
+                Modificações pendentes serão processadas em lote diretamente na chave primária sanitizada do Firebase Realtime DB.
+            </div>
+            <!-- O botão permanece visível por completo em telas de qualquer resolução, sem risco de ser cortado -->
+            <button onclick="salvarAlteracoes()" class="w-full sm:w-auto bg-gold-300 hover:bg-gold-400 text-black font-black text-xs uppercase tracking-widest px-8 py-2.5 rounded-lg transition-all min-h-[44px]">
+                Confirmar e Gravar Dados
             </button>
         </div>
-    </div>
+    </footer>
 
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
-};
-if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    <script>
+        // CONFIGURAÇÃO DB CORE
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
+            storageBucket: "catalogo-abella-joias.firebasestorage.app"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-let categoriasCache = {};
+        // CACHE DE ESTADO GLOBAL
+        let cacheProdutos = {};
+        let skuSelecionado = null;
 
-// Função Inteligente para converter gs:// para URL pública HTTP renderizável
-function converterUrlStorage(url) {
-    if (!url) return '';
-    const linkStr = url.trim();
-    if (linkStr.startsWith('gs://')) {
-        // Remove 'gs://' e divide o bucket do caminho do arquivo
-        const semPrefixo = linkStr.replace('gs://', '');
-        const primeiraBarra = semPrefixo.indexOf('/');
-        if (primeiraBarra === -1) return linkStr;
-        
-        const bucket = semPrefixo.substring(0, primeiraBarra);
-        const caminhoArquivo = semPrefixo.substring(primeiraBarra + 1);
-        
-        // Codifica os caminhos (ex: transformando '/' em '%2F')
-        const caminhoCodificado = encodeURIComponent(caminhoArquivo);
-        
-        return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${caminhoCodificado}?alt=media`;
-    }
-    return linkStr;
-}
-
-async function carregarCategorias() {
-    const snap = await db.ref('abella/categories').once('value');
-    categoriasCache = snap.val() || {};
-    const filterSelect = document.getElementById('filtroCat');
-    let options = '<option value="">Todas Categorias</option>';
-    Object.entries(categoriasCache).forEach(([id, cat]) => {
-        options += `<option value="${id}">${cat.name}</option>`;
-    });
-    filterSelect.innerHTML = options;
-}
-
-function atualizarPreview(input) {
-    const url原始 = input.value.trim();
-    const urlConvertida = converterUrlStorage(url原始);
-    const img = input.closest('td').querySelector('.row-img');
-    img.src = urlConvertida || 'https://via.placeholder.com/40';
-    img.classList.remove('img-error');
-}
-
-function criarLinhaHTML(id, p) {
-    let catOptions = '';
-    Object.entries(categoriasCache).forEach(([cid, cat]) => {
-        catOptions += `<option value="${cid}" ${p.category === cid ? 'selected' : ''}>${cat.name}</option>`;
-    });
-
-    const urlVisualizacao = converterUrlStorage(p.image || '');
-
-    return `
-    <tr data-id="${id}" class="border-b border-[#222] ${p.paused ? 'is-paused' : ''}">
-        <td class="p-2 text-center">
-            <button class="btn-status ${p.paused ? 'status-off' : 'status-on'}" onclick="toggleStatus(this)">${p.paused ? 'OFF' : 'ON'}</button>
-        </td>
-        <td class="p-1">
-            <div class="flex items-center gap-2">
-                <img src="${urlVisualizacao}" class="img-preview row-img" onerror="this.classList.add('img-error')">
-                <input class="input-dark edit-img text-[9px]" value="${p.image || ''}" placeholder="Cole URL ou gs:// aqui" onchange="atualizarPreview(this)">
-            </div>
-        </td>
-        <td class="p-1"><input class="input-dark edit-sku font-mono" value="${p.sku || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-name" value="${p.name || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-peso text-center" value="${p.peso || '0.00'}"></td>
-        <td class="p-1"><select class="input-dark edit-cat">${catOptions}</select></td>
-        <td class="p-1">
-            <select class="input-dark edit-varTipo" onchange="liberarCampoLista(this)">
-                <option value="" ${!p.variacaoTipo ? 'selected' : ''}>Padrão</option>
-                <option value="Aro" ${p.variacaoTipo === 'Aro' ? 'selected' : ''}>Aro</option>
-                <option value="Lista" ${p.variacaoTipo === 'Lista' ? 'selected' : ''}>Lista</option>
-            </select>
-        </td>
-        <td class="p-1"><input class="input-dark edit-opcoes ${p.variacaoTipo === 'Lista' ? 'highlight-var' : 'opacity-20 pointer-events-none'}" value="${p.opcoesPersonalizadas || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-precoFinal text-gold font-bold" type="number" step="0.01" value="${p.precoFinal || p.price || 0}"></td>
-        <td class="p-1 text-center">
-             <div class="flex justify-center gap-1">
-                <button onclick="salvarLinhaUnica(this)" title="Salvar Linha" class="bg-green-600 p-2 rounded hover:bg-green-500">✅</button>
-                <button onclick="deletarProduto('${id}')" title="Excluir" class="bg-red-900 p-2 rounded hover:bg-red-700">🗑️</button>
-             </div>
-        </td>
-    </tr>`;
-}
-
-function criarNovoProduto() {
-    const novoRef = db.ref('abella/products').push();
-    const novoProduto = { sku: "SKU-TEMP", name: "Novo Produto", peso: "0.00", precoFinal: 0, paused: true, image: "" };
-    const corpo = document.getElementById('tabelaCorpo');
-    if(corpo.innerText.includes("Busque")) corpo.innerHTML = '';
-    corpo.insertAdjacentHTML('afterbegin', criarLinhaHTML(novoRef.key, novoProduto));
-}
-
-async function carregarProdutos() {
-    const filtroTexto = document.getElementById('filtroSku').value.trim().toUpperCase();
-    const filtroCat = document.getElementById('filtroCat').value;
-    const corpo = document.getElementById('tabelaCorpo');
-    corpo.innerHTML = '<tr><td colspan="10" class="p-20 text-center text-[#caa85c] animate-pulse font-bold">BUSCANDO NO BANCO (/abella)...</td></tr>';
-
-    db.ref('abella/products').once('value', snapshot => {
-        let html = '';
-        let contador = 0;
-        snapshot.forEach(child => {
-            const p = child.val();
-            const sku = String(p.sku || "").toUpperCase();
-            const nome = String(p.name || "").toUpperCase();
-            
-            // Aceita busca por partes do SKU ou do Nome (Ex: digitando "001" acha "AN-001")
-            if ((!filtroTexto || sku.includes(filtroTexto) || nome.includes(filtroTexto)) && (!filtroCat || p.category === filtroCat)) {
-                contador++;
-                html += criarLinhaHTML(child.key, p);
-            }
+        // INICIALIZADOR AUTOMÁTICO DO BANCO DE DADOS (PAINEL FIX)
+        document.addEventListener("DOMContentLoaded", () => {
+            carregarCatalogoCompleto();
         });
-        corpo.innerHTML = html || '<tr><td colspan="10" class="p-20 text-center text-red-500">Nenhum produto localizado com estes critérios.</td></tr>';
-        document.getElementById('statusInfo').innerText = `Total exibido: ${contador} produtos.`;
-    });
-}
 
-function sincronizarFotosInteligente() {
-    const ext = prompt("Qual a extensão das fotos no Storage? (png, jpg, jpeg ou webp)", "jpeg");
-    if(!ext) return;
-    const dominio = "catalogo-abella-joias.firebasestorage.app";
-    let count = 0;
-    document.querySelectorAll('#tabelaCorpo tr[data-id]').forEach(tr => {
-        const sku = tr.querySelector('.edit-sku').value.trim();
-        const inputImg = tr.querySelector('.edit-img');
-        if (sku) {
-            // Salva o caminho como gs:// nativo e deixa o motor visual converter no preview
-            const linkGs = `gs://${dominio}/images/produtos/${sku}.${ext}`;
-            inputImg.value = linkGs;
-            atualizarPreview(inputImg);
-            count++;
+        function carregarCatalogoCompleto() {
+            const container = document.getElementById("listaProdutosContainer");
+            
+            database.ref("abella/products").on("value", (snapshot) => {
+                if(!snapshot.exists()) {
+                    container.innerHTML = `<div class="text-center py-8 text-xs text-zinc-600 font-mono">Nenhum produto estruturado no nó /abella/products.</div>`;
+                    return;
+                }
+                
+                cacheProdutos = snapshot.val();
+                renderizarListaProdutos(cacheProdutos);
+                atualizarSelectCategorias(cacheProdutos);
+            }, (error) => {
+                container.innerHTML = `<div class="text-center py-8 text-xs text-red-500 font-mono">Erro de conexão: ${error.message}</div>`;
+            });
         }
-    });
-    alert(`${count} SKUs processados localmente. Lembre-se de clicar em SALVAR TUDO.`);
-}
 
-function salvarLinhaUnica(btn) {
-    const tr = btn.closest('tr');
-    const id = tr.dataset.id;
-    const preco = parseFloat(tr.querySelector('.edit-precoFinal').value) || 0;
-    const data = {
-        sku: tr.querySelector('.edit-sku').value.toUpperCase(),
-        name: tr.querySelector('.edit-name').value,
-        peso: tr.querySelector('.edit-peso').value.replace(',', '.'),
-        category: tr.querySelector('.edit-cat').value,
-        variacaoTipo: tr.querySelector('.edit-varTipo').value,
-        opcoesPersonalizadas: tr.querySelector('.edit-opcoes').value,
-        precoFinal: preco, price: preco,
-        image: tr.querySelector('.edit-img').value.trim(),
-        paused: tr.querySelector('.btn-status').classList.contains('status-off')
-    };
-    db.ref(`abella/products/${id}`).update(data).then(() => {
-        btn.classList.replace('bg-green-600', 'bg-blue-600');
-        setTimeout(() => btn.classList.replace('bg-blue-600', 'bg-green-600'), 1000);
-    });
-}
+        function renderizarListaProdutos(produtos) {
+            const container = document.getElementById("listaProdutosContainer");
+            container.innerHTML = "";
 
-function salvarAlteracoes() {
-    const updates = {};
-    document.querySelectorAll('#tabelaCorpo tr[data-id]').forEach(tr => {
-        const id = tr.dataset.id;
-        const preco = parseFloat(tr.querySelector('.edit-precoFinal').value) || 0;
-        updates[`abella/products/${id}/sku`] = tr.querySelector('.edit-sku').value.toUpperCase();
-        updates[`abella/products/${id}/name`] = tr.querySelector('.edit-name').value;
-        updates[`abella/products/${id}/peso`] = tr.querySelector('.edit-peso').value.replace(',', '.');
-        updates[`abella/products/${id}/category`] = tr.querySelector('.edit-cat').value;
-        updates[`abella/products/${id}/variacaoTipo`] = tr.querySelector('.edit-varTipo').value;
-        updates[`abella/products/${id}/opcoesPersonalizadas`] = tr.querySelector('.edit-opcoes').value;
-        updates[`abella/products/${id}/precoFinal`] = preco;
-        updates[`abella/products/${id}/price`] = preco;
-        updates[`abella/products/${id}/image`] = tr.querySelector('.edit-img').value.trim();
-        updates[`abella/products/${id}/paused`] = tr.querySelector('.btn-status').classList.contains('status-off');
-    });
-    db.ref().update(updates).then(() => alert("✅ Banco de dados (/abella) atualizado com sucesso!"));
-}
+            Object.keys(produtos).forEach(key => {
+                const p = produtos[key];
+                const item = document.createElement("button");
+                item.className = `w-full text-left bg-zinc-900/60 hover:bg-zinc-800/80 border ${skuSelecionado === key ? 'border-gold-300 bg-zinc-800' : 'border-zinc-900'} rounded-xl p-3 flex justify-between items-center transition-all group`;
+                item.onclick = () => selecionarSku(key);
 
-function liberarCampoLista(select) {
-    const input = select.closest('tr').querySelector('.edit-opcoes');
-    if(select.value === 'Lista') { input.classList.remove('opacity-20', 'pointer-events-none'); input.classList.add('highlight-var'); }
-    else { input.classList.add('opacity-20', 'pointer-events-none'); input.classList.remove('highlight-var'); input.value = ''; }
-}
+                const precoFinal = p.precoFinal || p.price || 0;
+                const statusBadge = p.paused ? `<span class="text-[9px] bg-red-950 text-red-400 border border-red-900 px-1.5 py-0.5 rounded">Pausado</span>` : `<span class="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded">Ativo</span>`;
+                
+                // Exibe tag de subcategoria na listagem se ela existir no nó para fácil identificação
+                const subTag = p.subcategory ? `<span class="text-[9px] text-gold-400/60 font-mono">» ${p.subcategory}</span>` : '';
 
-function toggleStatus(btn) {
-    const isActive = btn.classList.contains('status-on');
-    btn.className = `btn-status ${isActive ? 'status-off' : 'status-on'}`;
-    btn.innerText = isActive ? 'OFF' : 'ON';
-    btn.closest('tr').classList.toggle('is-paused', isActive);
-}
+                item.innerHTML = `
+                    <div class="space-y-0.5 max-w-[70%]">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-mono text-gold-300 font-bold bg-darkblck px-1.5 py-0.5 rounded">${p.sku || key}</span>
+                            ${statusBadge}
+                        </div>
+                        <h4 class="text-xs text-white font-medium truncate group-hover:text-gold-100">${p.name}</h4>
+                        <div class="flex items-center gap-2 text-[10px] text-zinc-500">
+                            <span>${p.category || 'Geral'}</span>
+                            ${subTag}
+                        </div>
+                    </div>
+                    <div class="text-right font-mono text-xs">
+                        <div class="text-zinc-400 font-bold">R$ ${parseFloat(precoFinal).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        ${p.promo > 0 ? `<div class="text-[9px] text-emerald-400">-${p.promo}%</div>` : ''}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
 
-function deletarProduto(id) { if(confirm("Apagar produto definitivamente do catálogo Abella?")) db.ref('abella/products/' + id).remove().then(() => carregarProdutos()); }
+        function selecionarSku(key) {
+            skuSelecionado = key;
+            const p = cacheProdutos[key];
 
-carregarCategorias();
-</script>
+            // Ativa o painel de edição
+            const painel = document.getElementById("painelEdicaoEdicao");
+            painel.classList.remove("opacity-60", "pointer-events-none");
+
+            // Injeta dados nos inputs mapeados conforme o importador.html v3.4
+            document.getElementById("badgeSku").innerText = `SKU CHAVE: ${p.sku || key}`;
+            document.getElementById("tituloEdicaoProduto").innerText = p.name;
+            document.getElementById("editNome").value = p.name || "";
+            document.getElementById("editPreco").value = p.price || 0;
+            document.getElementById("editCategoria").value = p.category || "";
+            document.getElementById("editSubcategoria").value = p.subcategory || ""; // Campo de Subcategoria Novo
+            document.getElementById("editPeso").value = p.weight || p.peso || 0;
+            document.getElementById("editPromo").value = p.promo || 0;
+            document.getElementById("editImage").value = p.image || p.imagem || "";
+            document.getElementById("editVariacaoTipo").value = p.variacaoTipo || "Padrão";
+            document.getElementById("editOpcoesPersonalizadas").value = p.opcoesPersonalizadas || "";
+            document.getElementById("editPausado").checked = p.paused || false;
+
+            calcularPrecoPromoPreview();
+            
+            // Re-renderiza para aplicar borda de seleção ativa na listagem lateral esquerdo
+            renderizarListaProdutos(cacheProdutos);
+        }
+
+        function calcularPrecoPromoPreview() {
+            const precoBase = parseFloat(document.getElementById("editPreco").value) || 0;
+            const porcentagemPromo = parseFloat(document.getElementById("editPromo").value) || 0;
+
+            let precoFinal = precoBase;
+            if(porcentagemPromo > 0) {
+                precoFinal = precoBase - (precoBase * (porcentagemPromo / 100));
+                document.getElementById("previewPrecoDe").innerText = `R$ ${precoBase.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                document.getElementById("previewPrecoDe").classList.remove("hidden");
+            } else {
+                document.getElementById("previewPrecoDe").classList.add("hidden");
+            }
+
+            document.getElementById("previewPrecoPor").innerText = `R$ ${precoFinal.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+
+        // SALVAMENTO COMPATÍVEL COM NOVO ARRANJO DE SUBCATEGORIAS
+        function salvarAlteracoes() {
+            if(!skuSelecionado) {
+                alert("Nenhuma joia selecionada para gravação.");
+                return;
+            }
+
+            const precoBase = parseFloat(document.getElementById("editPreco").value) || 0;
+            const porcentagemPromo = parseFloat(document.getElementById("editPromo").value) || 0;
+            const precoFinalCalculado = porcentagemPromo > 0 ? (precoBase - (precoBase * (porcentagemPromo / 100))) : precoBase;
+
+            const catSlug = document.getElementById("editCategoria").value.trim();
+            const subcatSlug = document.getElementById("editSubcategoria").value.trim();
+
+            const payloadAtualizado = {
+                name: document.getElementById("editNome").value.trim(),
+                sku: skuSelecionado.replace("-", "/"), // reconverte tratamento de ID sanitizado se necessário
+                price: parseFloat(precoBase.toFixed(2)),
+                precoFinal: parseFloat(precoFinalCalculado.toFixed(2)),
+                category: catSlug,
+                subcategory: subcatSlug, // injeta campo dinamicamente na raiz do item
+                weight: parseFloat(parseFloat(document.getElementById("editPeso").value || 0).toFixed(2)),
+                peso: parseFloat(parseFloat(document.getElementById("editPeso").value || 0).toFixed(2)),
+                promo: parseInt(porcentagemPromo) || 0,
+                image: document.getElementById("editImage").value.trim(),
+                imagem: document.getElementById("editImage").value.trim(),
+                variacaoTipo: document.getElementById("editVariacaoTipo").value,
+                opcoesPersonalizadas: document.getElementById("editOpcoesPersonalizadas").value.trim(),
+                paused: document.getElementById("editPausado").checked
+            };
+
+            document.getElementById("btnSalvarGeral").innerText = "⏳ Gravando...";
+
+            database.ref("abella/products/" + skuSelecionado).update(payloadAtualizado)
+                .then(() => {
+                    alert("Joia sincronizada e atualizada com sucesso no banco!");
+                    document.getElementById("btnSalvarGeral").innerText = "💾 Salvar Tudo no Firebase";
+                })
+                .catch(err => {
+                    alert("Erro crítico ao salvar documento: " + err.message);
+                    document.getElementById("btnSalvarGeral").innerText = "💾 Salvar Tudo no Firebase";
+                });
+        }
+
+        // LÓGICA DE PROMOÇÃO POR CATEGORIA (RESTAURADA E COMPATÍVEL)
+        function atualizarSelectCategorias(produtos) {
+            const select = document.getElementById("selectCategoriaAlvo");
+            const categoriasSet = new Set();
+            
+            Object.keys(produtos).forEach(k => {
+                if(produtos[k].category) categoriasSet.add(produtos[k].category);
+            });
+
+            // Limpa opções antigas mantendo a global "todos"
+            select.innerHTML = '<option value="todos">Aplicar a Todas</option>';
+            categoriasSet.forEach(cat => {
+                const opt = document.createElement("option");
+                opt.value = cat;
+                opt.innerText = cat.toUpperCase();
+                select.appendChild(opt);
+            });
+        }
+
+        function aplicarDescontoEmMassa() {
+            const alvo = document.getElementById("selectCategoriaAlvo").value;
+            const pct = parseInt(document.getElementById("porcentagemDesconto").value) || 0;
+            const acaoNome = document.getElementById("nomePromoAcao").value.trim();
+
+            if(pct < 0 || pct > 100) return alert("Porcentagem inválida.");
+            if(!confirm(`Deseja aplicar ${pct}% de desconto em massa para o alvo selecionado [${alvo}]?`)) return;
+
+            const chavesA alteracao = Object.keys(cacheProdutos).filter(k => {
+                if(alvo === "todos") return true;
+                return cacheProdutos[k].category === alvo;
+            });
+
+            let batchPromises = chavesA_alteracao.map(key => {
+                const p = cacheProdutos[key];
+                const nPreco = p.price || 0;
+                const nPrecoFinal = pct > 0 ? (nPreco - (nPreco * (pct / 100))) : nPreco;
+
+                return database.ref("abella/products/" + key).update({
+                    promo: pct,
+                    precoFinal: parseFloat(nPrecoFinal.toFixed(2))
+                });
+            });
+
+            Promise.all(batchPromises).then(() => {
+                alert(`Sucesso! Modificador aplicado a ${chavesA_alteracao.length} produtos.`);
+            }).catch(e => alert("Falha no lote: " + e.message));
+        }
+
+        function filtrarListaProdutos() {
+            const busca = document.getElementById("buscaProduto").value.toLowerCase();
+            const filtrados = {};
+
+            Object.keys(cacheProdutos).forEach(k => {
+                const p = cacheProdutos[k];
+                if(k.toLowerCase().includes(busca) || (p.name && p.name.toLowerCase().includes(busca))) {
+                    filtrados[k] = p;
+                }
+            });
+            renderizarListaProdutos(filtrados);
+        }
+
+        function atualizarStatusRegra() {
+            const ativa = document.getElementById("regradeDescontoAtiva").checked;
+            // Altera dinamicamente o status no Firebase se necessário para regras de cupom ativas globais
+            database.ref("abella/settings/promoActive").set(ativa);
+        }
+    </script>
 </body>
 </html>

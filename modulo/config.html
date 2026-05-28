@@ -127,18 +127,25 @@
 </div>
 
 <script>
-    // Vincula explicitamente as funções principais ao objeto global window para não sumirem no escopo da aplicação
+    // Força a existência de uma referência segura ao banco de dados global
+    function obterBancoDeDados() {
+        if (typeof window.db !== "undefined" && window.db !== null) return window.db;
+        if (typeof db !== "undefined" && db !== null) return db;
+        return null;
+    }
+
+    // Função global de leitura amarrada à janela (window)
     window.buscarConfiguracoesFirebase = function() {
-        var database = window.db || (typeof db !== "undefined" ? db : null);
+        const database = obterBancoDeDados();
         if (!database) {
-            console.error("Erro: Banco de dados (db) não localizado no escopo.");
+            console.warn("⚠️ Banco de dados não inicializado ainda. Tentando novamente...");
             return;
         }
 
         database.ref('abella/settings').once('value').then((snapshot) => {
+            // Se o nó não existir no banco, ele assume valores padrão seguros ao invés de quebrar
             const config = snapshot.val() || {};
 
-            // Verificação de segurança preventiva para garantir que os inputs existam na tela antes de preencher
             if (document.getElementById('cfgNome')) document.getElementById('cfgNome').value = config.name || '';
             if (document.getElementById('cfgSlogan')) document.getElementById('cfgSlogan').value = config.slogan || '';
             if (document.getElementById('cfgWhatsapp')) document.getElementById('cfgWhatsapp').value = config.whatsapp || '';
@@ -154,9 +161,10 @@
             if (config.ultimaAtualizacao && document.getElementById('cfgUltimaAtualizacao')) {
                 document.getElementById('cfgUltimaAtualizacao').innerText = `Última alteração: ${config.ultimaAtualizacao}`;
             }
-        }).catch(erro => console.error("Erro ao carregar configurações:", erro));
+        }).catch(erro => console.error("❌ Erro ao buscar dados do Firebase:", erro));
     };
 
+    // Função global de escrita amarrada à janela (window)
     window.salvarConfiguracoes = function() {
         const btn = document.getElementById('btnSalvarConfig');
         if (btn) {
@@ -164,9 +172,16 @@
             btn.innerText = "⏳ Salvando...";
         }
 
+        const database = obterBancoDeDados();
+        if (!database) {
+            alert("❌ Conexão com o Firebase indisponível no momento.");
+            if (btn) { btn.disabled = false; btn.innerHTML = "<span>💾</span> Salvar Alterações"; }
+            return;
+        }
+
         const dataHoraAtual = new Date().toLocaleString('pt-BR');
 
-        // Captura e higieniza com segurança todos os valores preenchidos na tela
+        // Mapeia os dados com exatidão usando a nomenclatura correta consumida pelo index.html / produtos.html
         const dadosNovos = {
             name: document.getElementById('cfgNome') ? document.getElementById('cfgNome').value.trim() : "",
             slogan: document.getElementById('cfgSlogan') ? document.getElementById('cfgSlogan').value.trim() : "",
@@ -182,26 +197,16 @@
             ultimaAtualizacao: dataHoraAtual
         };
 
-        var database = window.db || (typeof db !== "undefined" ? db : null);
-        if (!database) {
-            alert("❌ Erro: Conexão com o Firebase não encontrada.");
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = "<span>💾</span> Salvar Alterações";
-            }
-            return;
-        }
-
-        // Salva diretamente na rota correta consumida pelo catálogo público
+        // Grava na ramificação centralizada /settings consumida pelo catálogo público
         database.ref('abella/settings').update(dadosNovos)
             .then(() => {
                 if (document.getElementById('cfgUltimaAtualizacao')) {
                     document.getElementById('cfgUltimaAtualizacao').innerText = `Última alteração: ${dataHoraAtual}`;
                 }
-                alert("✅ Configurações salvas e aplicadas ao catálogo público com sucesso!");
+                alert("✅ Configurações salvas e publicadas no catálogo com sucesso!");
             })
             .catch(erro => {
-                alert("❌ Erro ao salvar configurações.");
+                alert("❌ Erro ao salvar dados no banco.");
                 console.error(erro);
             })
             .finally(() => {
@@ -212,20 +217,13 @@
             });
     };
 
-    // Inicialização protegida por temporizador para aguardar a montagem dos inputs na árvore do HTML
+    // Execução controlada: Executa após 150ms para dar tempo do HTML renderizar os IDs na tela
     setTimeout(function() {
-        if (typeof db !== "undefined" || typeof window.db !== "undefined") {
+        if (obterBancoDeDados()) {
             window.buscarConfiguracoesFirebase();
         } else {
-            console.warn("Aguardando carregamento da instância global do banco de dados...");
-            // Segunda tentativa de contingência em 1 segundo
-            setTimeout(function() {
-                if (typeof db !== "undefined" || typeof window.db !== "undefined") {
-                    window.buscarConfiguracoesFirebase();
-                } else {
-                    console.error("Erro crítico: Variável de banco de dados indetectável.");
-                }
-            }, 1000);
+            // Segunda tentativa de contingência caso o painel demore a carregar o script do banco
+            setTimeout(window.buscarConfiguracoesFirebase, 1000);
         }
-    }, 100);
+    }, 150);
 </script>

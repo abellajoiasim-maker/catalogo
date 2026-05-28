@@ -1,46 +1,53 @@
-// FILE: js/utils/storage.js
+// ==========================================================================
+// ARQUIVO: js/utils/storage.js
+// CRIADO: Este arquivo estava AUSENTE no projeto original.
+// O carrinhoService.js importava este módulo mas ele nunca existiu,
+// causando falha total na inicialização do serviço de carrinho.
+// ==========================================================================
 
 /**
- * Utilitário de gerenciamento e persistência de estado local protegido.
+ * Utilitário seguro de abstração sobre o localStorage.
+ * Encapsula JSON.parse/stringify e captura erros silenciosamente.
  */
 export const storage = {
     /**
-     * Recupera um item convertido em objeto do localStorage.
-     * @param {string} chave - Identificador do recurso no armazenamento.
-     * @returns {any|null} Dados desserializados ou null.
+     * Recupera um item do localStorage e faz o parse do JSON de forma segura.
+     * @param {string} key - Chave de armazenamento.
+     * @returns {any|null} O valor parseado, ou null em caso de erro/ausência.
      */
-    get(chave) {
+    get(key) {
         try {
-            const dado = localStorage.getItem(chave);
-            return dado ? JSON.parse(dado) : null;
+            const item = localStorage.getItem(key);
+            if (item === null) return null;
+            return JSON.parse(item);
         } catch (error) {
-            console.error(`[Storage Error] Falha na leitura da chave ${chave}:`, error);
+            console.error(`[Storage] Erro ao ler a chave "${key}":`, error);
             return null;
         }
     },
 
     /**
-     * Persiste dados serializados no localStorage.
-     * @param {string} chave - Identificador do recurso.
-     * @param {any} valor - Objeto ou dado primitivo a ser armazenado.
+     * Salva um valor no localStorage convertendo para JSON.
+     * @param {string} key - Chave de armazenamento.
+     * @param {any} value - Valor a ser serializado e salvo.
      */
-    set(chave, valor) {
+    set(key, value) {
         try {
-            localStorage.setItem(chave, JSON.stringify(valor));
+            localStorage.setItem(key, JSON.stringify(value));
         } catch (error) {
-            console.error(`[Storage Error] Falha na escrita da chave ${chave}:`, error);
+            console.error(`[Storage] Erro ao salvar a chave "${key}":`, error);
         }
     },
 
     /**
-     * Remove um registro do armazenamento local.
-     * @param {string} chave - Identificador do recurso.
+     * Remove um item do localStorage pelo nome da chave.
+     * @param {string} key - Chave a ser removida.
      */
-    remove(chave) {
+    remove(key) {
         try {
-            localStorage.removeItem(chave);
+            localStorage.removeItem(key);
         } catch (error) {
-            console.error(`[Storage Error] Falha na remoção da chave ${chave}:`, error);
+            console.error(`[Storage] Erro ao remover a chave "${key}":`, error);
         }
     }
 };

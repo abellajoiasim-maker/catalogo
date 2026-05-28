@@ -2,164 +2,577 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Super Importador Abella Joias</title>
+    <title>Super Importador • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+
     <style>
-        body { font-family: sans-serif; background: #0a0a0a; padding: 40px; color: #adadad; }
-        .box { max-width: 700px; margin: auto; background: #111; padding: 30px; border: 1px solid #zinc-900; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        h2 { color: #caa85c; text-align: center; font-family: sans-serif; font-weight: 900; letter-spacing: -0.05em; text-transform: uppercase; }
-        button { background: #caa85c; color: #000; padding: 14px; width: 100%; margin-top: 15px; font-weight: bold; border: none; cursor: pointer; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.2s; }
-        button:hover { brightness: 110%; }
-        button:disabled { background: #222; color: #555; cursor: not-allowed; }
-        #log { margin-top: 20px; background: #000; color: #adadad; padding: 15px; font-size: 11px; height: 350px; overflow: auto; border-radius: 8px; font-family: monospace; border: 1px solid #222; }
-        .success { color: #4caf50; font-weight: bold; } .warn { color: #ff9800; } .error { color: #f44336; font-weight: bold; }
-        input[type="file"] { background: #1a1a1a; padding: 10px; width: 100%; border-radius: 8px; border: 1px solid #222; box-sizing: border-box; color: #fff; margin-top: 5px;}
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 16px 60px;
+            color: #adadad;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 780px;
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 20px;
+            padding: 36px 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.7);
+        }
+
+        /* HEADER */
+        .header { text-align: center; margin-bottom: 28px; }
+        .header h1 {
+            font-size: 22px;
+            font-weight: 900;
+            color: #caa85c;
+            letter-spacing: -0.03em;
+            text-transform: uppercase;
+        }
+        .header p {
+            margin-top: 6px;
+            font-size: 11px;
+            font-family: monospace;
+            color: #555;
+        }
+        .header p span { color: #caa85c; }
+
+        /* AVISO DE COLUNAS */
+        .col-map {
+            background: #0d0d0d;
+            border: 1px solid #1e1e1e;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 22px;
+            font-size: 11px;
+            font-family: monospace;
+            line-height: 1.9;
+        }
+        .col-map strong {
+            display: block;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #caa85c;
+            margin-bottom: 6px;
+        }
+        .col-map .col-row { display: flex; gap: 8px; align-items: baseline; }
+        .col-map .badge {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 10px;
+            color: #caa85c;
+            white-space: nowrap;
+            min-width: 28px;
+            text-align: center;
+        }
+        .col-map .req { color: #f44336; font-size: 9px; }
+        .col-map .opt { color: #555; font-size: 9px; }
+
+        /* UPLOAD */
+        .upload-area {
+            border: 2px dashed #2a2a2a;
+            border-radius: 14px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .25s, background .25s;
+            margin-bottom: 16px;
+            background: #0d0d0d;
+            position: relative;
+        }
+        .upload-area:hover, .upload-area.drag-over {
+            border-color: #caa85c;
+            background: #161208;
+        }
+        .upload-area input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
+        .upload-icon { font-size: 32px; margin-bottom: 8px; }
+        .upload-area p { font-size: 12px; color: #666; }
+        .upload-area .file-name {
+            margin-top: 8px;
+            font-size: 12px;
+            font-family: monospace;
+            color: #caa85c;
+            font-weight: bold;
+        }
+
+        /* OPÇÕES */
+        .options-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .option-card {
+            flex: 1;
+            min-width: 200px;
+            background: #0d0d0d;
+            border: 1px solid #1e1e1e;
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+        .option-card label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            color: #ccc;
+        }
+        .option-card input[type="checkbox"] {
+            width: 16px; height: 16px; accent-color: #caa85c; cursor: pointer;
+        }
+        .option-card small {
+            display: block;
+            margin-top: 4px;
+            font-size: 10px;
+            color: #555;
+            line-height: 1.5;
+            padding-left: 26px;
+        }
+
+        /* BOTÃO */
+        #btn {
+            width: 100%;
+            background: linear-gradient(135deg, #caa85c, #8c6a1e);
+            color: #000;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: opacity .2s, transform .15s;
+            margin-bottom: 18px;
+        }
+        #btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+        #btn:disabled { background: #222; color: #555; cursor: not-allowed; transform: none; }
+
+        /* PROGRESSO */
+        .progress-wrap { margin-bottom: 12px; display: none; }
+        .progress-bar-bg {
+            background: #1a1a1a;
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #caa85c, #f0c060);
+            border-radius: 8px;
+            width: 0%;
+            transition: width .3s;
+        }
+        .progress-label {
+            font-size: 10px;
+            font-family: monospace;
+            color: #666;
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        /* LOG */
+        #log {
+            background: #000;
+            border: 1px solid #1e1e1e;
+            border-radius: 12px;
+            padding: 16px;
+            height: 320px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+            line-height: 1.7;
+            color: #adadad;
+        }
+        #log::-webkit-scrollbar { width: 5px; }
+        #log::-webkit-scrollbar-track { background: #000; }
+        #log::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+        #log::-webkit-scrollbar-thumb:hover { background: #caa85c; }
+
+        .success { color: #4caf50; font-weight: bold; }
+        .warn    { color: #ff9800; }
+        .error   { color: #f44336; font-weight: bold; }
+        .info    { color: #64b5f6; }
+        .gold    { color: #caa85c; font-weight: bold; }
+
+        /* SUMÁRIO FINAL */
+        #sumario {
+            display: none;
+            margin-top: 16px;
+            background: #0d0d0d;
+            border: 1px solid #1e1e1e;
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-size: 12px;
+        }
+        #sumario h3 { color: #caa85c; font-size: 13px; margin-bottom: 10px; }
+        #sumario .sum-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #1a1a1a; }
+        #sumario .sum-row:last-child { border-bottom: none; }
+        #sumario .sum-val { font-weight: bold; font-family: monospace; color: #fff; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <h2>📦 Super Importador Abella Joias</h2>
-    <p style="font-size: 12px; text-align: center; font-family: monospace; color: #555;">Destino Realtime: <span style="color: #caa85c;">/abella/products</span></p>
-    
-    <div style="margin-top: 15px;">
-        <label style="font-size: 11px; font-weight: bold; text-transform: uppercase; font-family: monospace;">Selecione o Arquivo CSV:</label>
-        <input type="file" id="csv" accept=".csv">
+
+    <!-- HEADER -->
+    <div class="header">
+        <h1>📦 Super Importador Abella Joias</h1>
+        <p>Destino: <span>/abella/products</span> &amp; <span>/abella/categories</span> &nbsp;•&nbsp; Firebase Realtime Database</p>
     </div>
-    
-    <button id="btn" onclick="importarTudo()">Limpar e Importar para o Catálogo</button>
-    <div id="log">Pronto para processamento...</div>
-</div>
+
+    <!-- MAPEAMENTO DE COLUNAS -->
+    <div class="col-map">
+        <strong>📋 Ordem exata das colunas no CSV (separador: ponto-e-vírgula)</strong>
+        <div class="col-row"><span class="badge">A</span> <b>Nome da Joia</b> &nbsp;<span class="req">obrigatório</span></div>
+        <div class="col-row"><span class="badge">B</span> <b>SKU / Código</b> &nbsp;<span class="req">obrigatório — deve ser único</span></div>
+        <div class="col-row"><span class="badge">C</span> <b>Categoria</b> &nbsp;<span class="req">obrigatório</span></div>
+        <div class="col-row"><span class="badge">D</span> <b>Preço (R$)</b> &nbsp;<span class="req">obrigatório — use ponto decimal: 49.90</span></div>
+        <div class="col-row"><span class="badge">E</span> <b>Peso (g)</b> &nbsp;<span class="req">obrigatório — ex: 4.50</span></div>
+        <div class="col-row"><span class="badge">F</span> <b>URL Imagem</b> &nbsp;<span class="opt">opcional — https://... ou gs://...</span></div>
+        <div class="col-row"><span class="badge">G</span> <b>Variação</b> &nbsp;<span class="opt">opcional — Padrão | Aro | Lista | Texto</span></div>
+        <div class="col-row"><span class="badge">H</span> <b>Opções (Lista/Aro)</b> &nbsp;<span class="opt">opcional — ex: P,M,G,GG ou 14,15,16,17</span></div>
+        <div class="col-row"><span class="badge">I</span> <b>Pausado</b> &nbsp;<span class="opt">opcional — TRUE | FALSE (padrão: FALSE)</span></div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="upload-area" id="dropZone">
+        <input type="file" id="csv" accept=".csv" onchange="onFileSelect(this)">
+        <div class="upload-icon">📂</div>
+        <p>Arraste o arquivo CSV aqui ou clique para selecionar</p>
+        <div class="file-name" id="fileName">Nenhum arquivo selecionado</div>
+    </div>
+
+    <!-- OPÇÕES -->
+    <div class="options-row">
+        <div class="option-card">
+            <label>
+                <input type="checkbox" id="optMantCateg">
+                Manter categorias existentes
+            </label>
+            <small>Se marcado, não apaga as categorias já cadastradas — apenas adiciona/atualiza.</small>
+        </div>
+        <div class="option-card">
+            <label>
+                <input type="checkbox" id="optSoAddUpd">
+                Modo incremental (não apaga produtos)
+            </label>
+            <small>Se marcado, adiciona e atualiza sem apagar o catálogo inteiro. Útil para importações parciais.</small>
+        </div>
+    </div>
+
+    <!-- BARRA DE PROGRESSO -->
+    <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-label" id="progressLabel">0 / 0</div>
+    </div>
+
+    <!-- BOTÃO -->
+    <button id="btn" onclick="importarTudo()">🚀 Importar para o Catálogo</button>
+
+    <!-- LOG -->
+    <div id="log">Pronto para processamento. Selecione um arquivo CSV e clique em Importar...</div>
+
+    <!-- SUMÁRIO FINAL -->
+    <div id="sumario">
+        <h3>✅ Importação Concluída</h3>
+        <div class="sum-row"><span>Produtos importados:</span><span class="sum-val" id="sumProd">0</span></div>
+        <div class="sum-row"><span>Categorias criadas/atualizadas:</span><span class="sum-val" id="sumCat">0</span></div>
+        <div class="sum-row"><span>Linhas com erro:</span><span class="sum-val" id="sumErr">0</span></div>
+        <div class="sum-row"><span>Linhas ignoradas (vazias/inválidas):</span><span class="sum-val" id="sumSkip">0</span></div>
+    </div>
+
+</div><!-- /box -->
 
 <script>
-// ATENÇÃO: Confirme se estas credenciais batem com o seu Firebase ativo
+// ─────────────────────────────────────────────────────────────────────────────
+// FIREBASE — CORRIGIDO: guard para não duplicar inicialização
+// ─────────────────────────────────────────────────────────────────────────────
 const firebaseConfig = {
     apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
     databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
     storageBucket: "catalogo-abella-joias.firebasestorage.app"
 };
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db      = firebase.database();
 const storage = firebase.storage();
 
-function gerarSlug(txt) {
-    if(!txt) return "geral";
-    return txt.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
-}
-
-async function buscarFoto(sku) {
-    // Alinhado com as extensões que você costuma gerar nos apps de fotos
-    const extensoes = ['.png', '.jpg', '.jpeg', '.PNG', '.JPG'];
-    for (const ext of extensoes) {
-        try {
-            // Varre o Storage na pasta /produtos/
-            const ref = storage.ref().child('produtos/' + sku + ext);
-            return await ref.getDownloadURL();
-        } catch (e) { continue; }
+// ─────────────────────────────────────────────────────────────────────────────
+// UI — DRAG & DROP
+// ─────────────────────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+        document.getElementById('csv').files; // readonly — usa dataTransfer
+        window._droppedFile = file;
+        document.getElementById('fileName').textContent = '📄 ' + file.name;
+    } else {
+        alert('Selecione um arquivo .csv válido.');
     }
-    return "";
+});
+
+function onFileSelect(input) {
+    window._droppedFile = null;
+    const f = input.files[0];
+    document.getElementById('fileName').textContent = f ? '📄 ' + f.name : 'Nenhum arquivo selecionado';
 }
 
-async function importarTudo() {
-    const file = document.getElementById('csv').files[0];
-    if(!file) return alert("Selecione o arquivo CSV limpo primeiro.");
-    
-    // Alerta duplo para segurança antes de apagar
-    if(!confirm("⚠️ ATENÇÃO: Isso vai APAGAR TODOS os produtos e categorias atuais da Abella do sistema para entrar a nova planilha. Deseja continuar?")) return;
+function getFile() {
+    return window._droppedFile || document.getElementById('csv').files[0];
+}
 
-    const log = document.getElementById('log');
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILITÁRIOS
+// ─────────────────────────────────────────────────────────────────────────────
+function gerarSlug(txt) {
+    if (!txt) return "geral";
+    return txt.toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+}
+
+function limpar(str) {
+    return (str || "").replace(/"/g, "").trim();
+}
+
+function parseNum(str) {
+    // Aceita vírgula ou ponto como decimal; remove R$, g, espaços
+    const s = limpar(str).replace('R$', '').replace('g', '').replace(',', '.').trim();
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+}
+
+function parseBool(str) {
+    const s = limpar(str).toLowerCase();
+    return s === 'true' || s === '1' || s === 'sim' || s === 'yes';
+}
+
+function log(msg) {
+    const el = document.getElementById('log');
+    el.innerHTML += msg + '<br>';
+    el.scrollTop = el.scrollHeight;
+}
+
+function setProgress(atual, total) {
+    const pct = total > 0 ? Math.round((atual / total) * 100) : 0;
+    document.getElementById('progressFill').style.width  = pct + '%';
+    document.getElementById('progressLabel').textContent = `${atual} / ${total} (${pct}%)`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMPORTAÇÃO PRINCIPAL
+// ─────────────────────────────────────────────────────────────────────────────
+async function importarTudo() {
+    const file = getFile();
+    if (!file) return alert("Selecione o arquivo CSV primeiro.");
+
+    const modoIncremental = document.getElementById('optSoAddUpd').checked;
+    const manterCategorias = document.getElementById('optMantCateg').checked;
+
+    const avisoApagar = modoIncremental
+        ? "Modo INCREMENTAL: os produtos existentes NÃO serão apagados.\nApenas os SKUs do arquivo serão adicionados/atualizados. Confirmar?"
+        : "⚠ ATENÇÃO: Isso vai APAGAR TODOS os produtos (e categorias, se não marcado) do banco antes de importar.\n\nDeseja continuar?";
+
+    if (!confirm(avisoApagar)) return;
+
+    // Setup UI
     const btn = document.getElementById('btn');
+    const logEl = document.getElementById('log');
     btn.disabled = true;
-    log.innerHTML = "🗑️ Limpando catálogo antigo da ramificação /abella...<br>";
+    logEl.innerHTML = '';
+    document.getElementById('sumario').style.display = 'none';
+    document.getElementById('progressWrap').style.display = 'block';
+    setProgress(0, 1);
+
+    let totalProd = 0, totalErros = 0, totalSkip = 0;
+    const categoriasSet = new Set();
 
     try {
-        // 1. Deleta tudo da Abella antes de começar o processo
-        await db.ref('abella/products').remove();
-        await db.ref('abella/categories').remove();
-        log.innerHTML += "<span class='success'>✅ Banco de dados zerado com sucesso!</span><br>🚀 Processando nova planilha otimizada...<br>";
+        // 1. Apagar dados antigos (se não for modo incremental)
+        if (!modoIncremental) {
+            log("🗑️ Limpando catálogo antigo...");
+            await db.ref('abella/products').remove();
+            if (!manterCategorias) {
+                await db.ref('abella/categories').remove();
+                log("<span class='success'>✅ Produtos e categorias zerados.</span>");
+            } else {
+                log("<span class='success'>✅ Produtos zerados. Categorias mantidas.</span>");
+            }
+        } else {
+            log("<span class='info'>ℹ Modo incremental — nenhum dado será apagado.</span>");
+        }
 
+        // 2. Ler e parsear CSV
         const text = await file.text();
-        // Divide o arquivo por linhas e remove o caractere invisível BOM se houver
+        // Remove BOM invisível (UTF-8 BOM: \uFEFF)
         const linhas = text.trim().replace(/^\uFEFF/, '').split(/\r?\n/);
-        
-        let totalProd = 0;
-        let categorias = new Set();
 
-        // Começa em i = 1 para pular a linha de títulos (cabeçalho)
-        for(let i = 1; i < linhas.length; i++) {
-            if(!linhas[i].trim()) continue;
+        // Detecta separador automaticamente (;  ou  ,)
+        const separador = linhas[0].includes(';') ? ';' : ',';
+        log(`<span class='info'>ℹ Separador detectado: "${separador === ';' ? 'ponto-e-vírgula' : 'vírgula'}" &nbsp;|&nbsp; Total de linhas no arquivo: ${linhas.length - 1}</span>`);
 
-            // Divide a linha estritamente por ponto e vírgula (;)
-            const col = linhas[i].split(';');
-            if(col.length < 5) continue;
+        // Filtra linhas vazias e pula cabeçalho (linha 0)
+        const linhasDados = linhas.slice(1).filter(l => l.trim());
+        const total = linhasDados.length;
 
-            // Captura as 6 colunas na ordem exata da nova planilha
-            const nome = col[0] ? col[0].replace(/"/g, '').trim() : "";
-            const skuOriginal = col[1] ? col[1].replace(/"/g, '').trim() : "";
-            const nomeCategoria = col[2] ? col[2].replace(/"/g, '').trim() : "Geral";
-            
-            // Trata o preço (garante formato americano com ponto decimal)
-            let precoCru = col[3] ? col[3].replace(/"/g, '').replace('R$', '').trim() : "0";
-            precoCru = precoCru.replace(',', '.');
-            const preco = parseFloat(precoCru) || 0;
+        log(`🚀 Processando <b class='gold'>${total}</b> linhas de dados...<br>`);
 
-            // Trata o peso (garante formato americano com ponto decimal)
-            let pesoCru = col[4] ? col[4].replace(/"/g, '').toLowerCase().replace('g', '').trim() : "0";
-            pesoCru = pesoCru.replace(',', '.');
-            const peso = parseFloat(pesoCru) || 0;
+        for (let i = 0; i < linhasDados.length; i++) {
+            const linha = linhasDados[i];
+            setProgress(i + 1, total);
 
-            // Link da imagem
-            const urlImagem = col[5] ? col[5].replace(/"/g, '').trim() : "";
+            // Divide respeitando campos entre aspas (ex: "Nome com, vírgula")
+            const col = splitCSVLine(linha, separador);
 
-            // Se não tiver SKU ou Nome válido, pula a linha para não quebrar o app
-            if(!skuOriginal || !nome || skuOriginal.toLowerCase() === "sku") continue;
+            // ── COLUNAS OBRIGATÓRIAS ──────────────────────────────────────────
+            const nome         = limpar(col[0] || "");
+            const skuOriginal  = limpar(col[1] || "");
+            const nomeCategoria= limpar(col[2] || "") || "Geral";
+            const preco        = parseNum(col[3]);
+            const peso         = parseNum(col[4]);
 
-            // Higieniza o SKU para virar um ID válido no Firebase
-            const skuID = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
+            // Ignora se não tiver SKU ou Nome (linha de cabeçalho duplicada ou vazia)
+            if (!skuOriginal || !nome || skuOriginal.toLowerCase() === "sku") {
+                totalSkip++;
+                continue;
+            }
+
+            // ── COLUNAS OPCIONAIS ─────────────────────────────────────────────
+            const urlImagem        = limpar(col[5] || "");
+            const variacaoTipo     = limpar(col[6] || "") || "Padrão";
+            const opcoesPersonal   = limpar(col[7] || "");
+            const pausado          = col[8] !== undefined ? parseBool(col[8]) : false;
+
+            // Higieniza SKU para ID Firebase (remove caracteres proibidos)
+            const skuID   = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
             const catSlug = gerarSlug(nomeCategoria);
 
-            log.innerHTML += `> Gravando SKU: ${skuOriginal}... `;
+            log(`<span class='gold'>›</span> SKU: <b>${skuOriginal}</b> | ${nome.substring(0,35)}${nome.length > 35 ? '…' : ''} ... `);
 
             try {
-                // 2. Cria/Garante a categoria limpa
+                // 2a. Cria/atualiza categoria
                 await db.ref('abella/categories/' + catSlug).update({
                     name: nomeCategoria,
                     slug: catSlug,
                     paused: false
                 });
-                categorias.add(nomeCategoria);
+                categoriasSet.add(nomeCategoria);
 
-                // 3. Grava o produto na nova estrutura limpa
-                await db.ref('abella/products/' + skuID).set({
-                    name: nome,
-                    sku: skuOriginal,
-                    category: catSlug,
-                    price: parseFloat(preco.toFixed(2)),
-                    weight: parseFloat(peso.toFixed(2)),
-                    image: urlImagem,
-                    paused: false,
-                    promo: 0
-                });
+                // 2b. Monta objeto do produto
+                const produto = {
+                    name:                nome,
+                    sku:                 skuOriginal,
+                    category:            catSlug,
+                    price:               parseFloat(preco.toFixed(2)),
+                    precoFinal:          parseFloat(preco.toFixed(2)),   // compatibilidade com editor
+                    weight:              parseFloat(peso.toFixed(2)),
+                    peso:                parseFloat(peso.toFixed(2)),    // compatibilidade com vitrine
+                    image:               urlImagem,
+                    imagem:              urlImagem,                      // compatibilidade com vitrine
+                    variacaoTipo:        variacaoTipo,
+                    opcoesPersonalizadas:opcoesPersonal,
+                    paused:              pausado,
+                    promo:               0
+                };
 
-                log.innerHTML += `<span class="success">OK 💎</span><br>`;
+                // 2c. Grava no Firebase (set substitui, update preserva campos não enviados)
+                if (modoIncremental) {
+                    await db.ref('abella/products/' + skuID).update(produto);
+                } else {
+                    await db.ref('abella/products/' + skuID).set(produto);
+                }
+
+                log(`<span class='success'>OK 💎</span>`);
                 totalProd++;
+
             } catch (e) {
-                log.innerHTML += `<span class="error">ERRO: ${e.message}</span><br>`;
+                log(`<span class='error'>ERRO: ${e.message}</span>`);
+                totalErros++;
             }
-            log.scrollTop = log.scrollHeight;
+
+            // Atualiza o log a cada linha
+            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
         }
 
-        log.innerHTML += `<br>✅ <b>PROCESSO CONCLUÍDO!</b><br>Produtos catalogados: ${totalProd}<br>Categorias criadas: ${categorias.size}`;
-        alert("O catálogo antigo foi apagado e a nova planilha foi importada com sucesso!");
+        // Progresso 100%
+        setProgress(total, total);
+
+        log('');
+        log(`<span class='success'>✅ PROCESSO CONCLUÍDO!</span>`);
+        log(`<span class='gold'>Produtos importados: ${totalProd} | Categorias: ${categoriasSet.size} | Erros: ${totalErros} | Ignoradas: ${totalSkip}</span>`);
+
+        // Sumário visual
+        document.getElementById('sumario').style.display  = 'block';
+        document.getElementById('sumProd').textContent    = totalProd;
+        document.getElementById('sumCat').textContent     = categoriasSet.size;
+        document.getElementById('sumErr').textContent     = totalErros;
+        document.getElementById('sumSkip').textContent    = totalSkip;
 
     } catch (err) {
-        log.innerHTML += `<span class="error">ERRO CRÍTICO NO ARQUIVO: ${err.message}</span><br>`;
+        log(`<span class='error'>ERRO CRÍTICO: ${err.message}</span>`);
+        console.error(err);
     } finally {
         btn.disabled = false;
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PARSER CSV ROBUSTO — respeita campos entre aspas com vírgulas internas
+// ─────────────────────────────────────────────────────────────────────────────
+function splitCSVLine(line, sep) {
+    const result = [];
+    let cur = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+            // Aspas duplas escapadas ("")
+            if (inQuotes && line[i + 1] === '"') {
+                cur += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (ch === sep && !inQuotes) {
+            result.push(cur);
+            cur = '';
+        } else {
+            cur += ch;
+        }
+    }
+    result.push(cur);
+    return result;
 }
 </script>
 </body>

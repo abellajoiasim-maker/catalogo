@@ -1,88 +1,235 @@
-<!-- 
-    ARQUIVO: modulo/produtos.html
-    CORRIGIDO: O botão "Salvar Alterações" chamava window.salvarDadosProdutoDoForm()
-    que não existia no admin-logic.js. O alias foi adicionado no admin-logic.js,
-    então este HTML não precisa ser alterado — mas o arquivo está aqui como
-    referência limpa para garantir que o onclick está correto.
-    O alias window.salvarDadosProdutoDoForm = window.salvarProdutoFirebase 
-    foi criado no admin-logic.js para resolver isso.
--->
-<div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
-    <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
-        <div>
-            <h1 class="text-xl font-bold text-white flex items-center gap-2 serif tracking-wider">
-                <span>💍</span> GESTÃO DE PRODUTOS NO BRUTO
-            </h1>
-            <p class="text-xs text-zinc-500 mt-1">Cadastre novos lotes, modifique referências de peso e gerencie imagens estruturadas.</p>
-        </div>
-        <button onclick="window.abrirModalProduto()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider">
-            <span>➕</span> Incluir Nova Joia
-        </button>
-    </div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo Atacado - Abella Joias</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <style>
+        /* Customizações refinadas de scrollbar e estilo */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #caa85c; border-radius: 3px; }
+        .product-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .product-card:hover { transform: translateY(-4px); }
+    </style>
+</head>
+<body class="bg-[#0a0a0a] text-[#adadad] font-sans min-h-screen flex flex-col">
 
-    <div id="grid-produtos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs animate-pulse">
-            ⏳ Sincronizando catálogo com nó abella/products...
-        </div>
-    </div>
-</div>
+    <header class="border-b border-zinc-900 bg-[#111] sticky top-0 z-50 backdrop-blur-md bg-opacity-95">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl md:text-2xl font-black tracking-tighter text-[#caa85c] uppercase">Abella Joias</h1>
+                <p class="text-xs text-zinc-500 font-mono">Atacado de Joias no Bruto</p>
+            </div>
 
-<div id="modalFormProduto" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-zinc-950 border border-zinc-900 rounded-2xl max-w-md w-full p-6 space-y-4 relative text-left">
-        <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 id="modalFormProdutoTitulo" class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">Formulário de Produto</h3>
-            <button onclick="window.fecharModalProduto()" class="text-zinc-500 hover:text-white transition-all text-xs font-bold">✕</button>
+            <a href="carrinho.html" class="relative bg-[#caa85c] hover:bg-[#b5944a] text-black px-4 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-amber-900/10">
+                <span>🛒 Carrinho</span>
+                <span id="cart-count" class="bg-black text-[#caa85c] text-xs px-2 py-0.5 rounded-md">0</span>
+                <span id="cart-total" class="hidden md:inline text-xs border-l border-amber-900/30 pl-2">R$ 0,00</span>
+            </a>
         </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
         
-        <form id="formProdutoReal" onsubmit="event.preventDefault();" class="space-y-4 text-xs font-mono">
-            <input type="hidden" id="prodId">
+        <aside class="w-full md:w-64 flex flex-col gap-4 shrink-0">
+            <div class="bg-[#111] border border-zinc-900 rounded-2xl p-4">
+                <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 font-mono">Pesquisa</h3>
+                <input type="text" id="search-input" oninput="filtrarProdutos()" placeholder="Buscar por nome ou SKU..." class="w-full bg-[#0a0a0a] border border-zinc-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-[#caa85c] transition-colors">
+            </div>
+
+            <div class="bg-[#111] border border-zinc-900 rounded-2xl p-4">
+                <h3 class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3 font-mono">Categorias</h3>
+                <div id="categories-list" class="flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0">
+                    <button onclick="selecionarCategoria('todas')" id="cat-todas" class="cat-btn w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-all bg-[#caa85c] text-black whitespace-nowrap">
+                        ✨ Todas as Peças
+                    </button>
+                    </div>
+            </div>
+        </aside>
+
+        <section class="flex-grow">
+            <div id="loader" class="flex flex-col items-center justify-center py-20 gap-3">
+                <div class="w-8 h-8 border-4 border-[#caa85c] border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-xs text-zinc-500 font-mono">Carregando catálogo da nuvem...</p>
+            </div>
+
+            <div id="products-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 hidden">
+                </div>
+
+            <div id="empty-alert" class="hidden text-center py-16 border border-dashed border-zinc-800 rounded-2xl">
+                <p class="text-sm text-zinc-500">Nenhum produto encontrado com os filtros selecionados.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-zinc-900 bg-[#111] py-4 text-center text-xs text-zinc-600 font-mono">
+        &copy; 2026 Abella Joias - Sistema Integrado de Catálogos Automáticos.
+    </footer>
+
+    <script>
+        // CONFIGURAÇÃO DO SEU FIREBASE ATIVO
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
+            storageBucket: "catalogo-abella-joias.firebasestorage.app"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Variáveis de Controle de Estado Global
+        let todosProdutos = [];
+        let categoriaSelecionada = 'todas';
+        let carrinho = JSON.parse(localStorage.getItem('carrinho_abella')) || [];
+
+        // Inicializador
+        window.onload = function() {
+            carregarCategorias();
+            carregarProdutos();
+            atualizarResumoCarrinho();
+        };
+
+        // 1. Busca Categorias Isoladas da Rota /abella/categories
+        function carregarCategorias() {
+            db.ref('abella/categories').on('value', (snapshot) => {
+                const listContainer = document.getElementById('categories-list');
+                // Mantém o botão "Todas"
+                listContainer.innerHTML = `<button onclick="selecionarCategoria('todas')" id="cat-todas" class="cat-btn w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-all ${categoriaSelecionada === 'todas' ? 'bg-[#caa85c] text-black' : 'bg-[#1a1a1a] hover:bg-[#222] text-zinc-400'} whitespace-nowrap">✨ Todas as Peças</button>`;
+                
+                if (snapshot.exists()) {
+                    snapshot.forEach((child) => {
+                        const cat = child.val();
+                        if (cat.paused) return; // Oculta pausadas
+
+                        const btn = document.createElement('button');
+                        btn.id = `cat-${cat.slug}`;
+                        btn.onclick = () => selecionarCategoria(cat.slug);
+                        btn.className = `cat-btn w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${categoriaSelecionada === cat.slug ? 'bg-[#caa85c] text-black' : 'bg-[#1a1a1a] hover:bg-[#222] text-zinc-400'}`;
+                        btn.innerText = cat.name;
+                        listContainer.appendChild(btn);
+                    });
+                }
+            });
+        }
+
+        // 2. Busca Produtos Isolados da Rota /abella/products
+        function carregarProdutos() {
+            db.ref('abella/products').on('value', (snapshot) => {
+                todosProdutos = [];
+                if (snapshot.exists()) {
+                    snapshot.forEach((child) => {
+                        const p = child.val();
+                        if (!p.paused) {
+                            todosProdutos.push({ id: child.key, ...p });
+                        }
+                    });
+                }
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('products-grid').classList.remove('hidden');
+                filtrarProdutos();
+            });
+        }
+
+        // 3. Aplica os filtros de Categoria e Pesquisa por Nome/SKU em Tempo Real
+        function filtrarProdutos() {
+            const termoBusca = document.getElementById('search-input').value.toLowerCase().trim();
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = '';
+
+            const produtosFiltrados = todosProdutos.filter(p => {
+                const bateCategoria = (categoriaSelecionada === 'todas' || p.category === categoriaSelecionada);
+                const bateNome = p.name.toLowerCase().includes(termoBusca);
+                const bateSKU = p.sku.toLowerCase().includes(termoBusca);
+                return bateCategoria && (bateNome || bateSKU);
+            });
+
+            if (produtosFiltrados.length === 0) {
+                document.getElementById('empty-alert').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('empty-alert').classList.add('hidden');
+            }
+
+            // Renderiza os Cards dos Produtos
+            produtosFiltrados.forEach(p => {
+                // Se a imagem estiver vazia, renderiza um placeholder padrão elegante
+                const fotoUrl = p.image || 'https://via.placeholder.com/300?text=Abella+Joias';
+                
+                const card = document.createElement('div');
+                card.className = "product-card bg-[#111] border border-zinc-900 rounded-2xl overflow-hidden flex flex-col p-3 justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="w-full aspect-square bg-[#0a0a0a] rounded-xl overflow-hidden relative border border-zinc-900/50 mb-3">
+                            <img src="${fotoUrl}" alt="${p.name}" class="w-full h-full object-cover object-center" onerror="this.src='https://via.placeholder.com/300?text=Abella+Joias'">
+                            <span class="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-[#caa85c] text-[10px] font-mono px-2 py-0.5 rounded-md border border-zinc-800">${p.sku}</span>
+                        </div>
+                        <h4 class="text-sm font-semibold text-white tracking-tight line-clamp-2 leading-tight mb-1">${p.name}</h4>
+                        <p class="text-[11px] text-zinc-500 font-mono mb-2">Peso médio: <span class="text-zinc-300">${parseFloat(p.weight).toFixed(2)}g</span></p>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-1 my-2">
+                            <span class="text-xs text-[#caa85c] font-bold">R$</span>
+                            <span class="text-lg font-black text-[#caa85c] tracking-tight">${parseFloat(p.price).toFixed(2).replace('.', ',')}</span>
+                        </div>
+                        <button onclick="adicionarAoCarrinho('${p.id}')" class="w-full bg-[#1a1a1a] hover:bg-[#caa85c] text-zinc-300 hover:text-black font-bold py-2 rounded-xl text-xs transition-all tracking-wide uppercase">
+                            Adicionar +
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // 4. Altera o Filtro de Categoria Ativa
+        function selecionarCategoria(slug) {
+            categoriaSelecionada = slug;
+            // Atualiza visual dos botões
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.className = "cat-btn w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap bg-[#1a1a1a] hover:bg-[#222] text-zinc-400";
+            });
+            document.getElementById(`cat-${slug}`).className = "cat-btn w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap bg-[#caa85c] text-black";
+            filtrarProdutos();
+        }
+
+        // 5. Gerenciamento do LocalStorage do Carrinho
+        function adicionarAoCarrinho(id) {
+            const itemOriginal = todosProdutos.find(p => p.id === id);
+            if (!itemOriginal) return;
+
+            const indexItem = carrinho.findIndex(item => item.id === id);
             
-            <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome da Joia:</label>
-                <input type="text" id="prodNome" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-            </div>
+            if (indexItem > -1) {
+                carrinho[indexItem].quantidade += 1;
+            } else {
+                carrinho.push({
+                    id: itemOriginal.id,
+                    name: itemOriginal.name,
+                    sku: itemOriginal.sku,
+                    price: itemOriginal.price,
+                    weight: itemOriginal.weight,
+                    image: itemOriginal.image,
+                    quantidade: 1
+                });
+            }
 
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1">
-                    <label class="text-[10px] text-zinc-400 uppercase font-bold">Código / SKU:</label>
-                    <input type="text" id="prodSku" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] text-zinc-400 uppercase font-bold">Coleção / Categoria:</label>
-                    <select id="prodCategoria" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c] appearance-none cursor-pointer">
-                        <option value="">Selecione...</option>
-                        <option value="aneis">Anéis</option>
-                        <option value="aneis-e-braceletes-com-dizeres">Anéis e Braceletes com Dizeres</option>
-                        <option value="brincos">Brincos</option>
-                        <option value="colares">Colares</option>
-                        <option value="pingentes">Pingentes</option>
-                        <option value="pulseiras">Pulseiras</option>
-                    </select>
-                </div>
-            </div>
+            localStorage.setItem('carrinho_abella', JSON.stringify(carrinho));
+            atualizarResumoCarrinho();
+            
+            // Feedback visual rápido no botão ou alerta discreto se necessário
+        }
 
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1">
-                    <label class="text-[10px] text-zinc-400 uppercase font-bold">Peso Médio Ref. (g):</label>
-                    <input type="text" id="prodPeso" placeholder="4.50" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] text-zinc-400 uppercase font-bold">Preço Base Bruto:</label>
-                    <input type="number" step="0.01" id="prodPreco" placeholder="0.00" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-                </div>
-            </div>
+        function atualizarResumoCarrinho() {
+            const totalItens = carrinho.reduce((acc, item) => acc + item.quantidade, 0);
+            const valorTotal = carrinho.reduce((acc, item) => acc + (item.price * item.quantidade), 0);
 
-            <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">URL da Imagem:</label>
-                <input type="text" id="prodUrlImagem" placeholder="https://firebasestorage.googleapis.com/..." class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c]">
-            </div>
-
-            <div class="pt-4 grid grid-cols-2 gap-3">
-                <button type="button" onclick="window.fecharModalProduto()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Cancelar</button>
-                <!-- CORRIGIDO: O alias window.salvarDadosProdutoDoForm foi criado no admin-logic.js 
-                     apontando para window.salvarProdutoFirebase para resolver o ReferenceError -->
-                <button type="button" onclick="window.salvarDadosProdutoDoForm()" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Salvar Alterações</button>
-            </div>
-        </form>
-    </div>
-</div>
+            document.getElementById('cart-count').innerText = totalItens;
+            document.getElementById('cart-total').innerText = `R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
+        }
+    </script>
+</body>
+</html>

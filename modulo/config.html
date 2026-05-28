@@ -1,16 +1,3 @@
-<!-- 
-    ARQUIVO: modulo/config.html
-    CORRIGIDO: O módulo lia/gravava em 'abella/configuracoes' mas TODO o restante
-    do sistema (index.html, carrinho.html, produtos.html) consome 'abella/settings'.
-    Isso criava uma desconexão total: salvar aqui não mudava nada no catálogo público.
-    
-    CORREÇÕES APLICADAS:
-    1. buscarConfiguracoesFirebase(): nó alterado para 'abella/settings'
-       e campos mapeados para as chaves reais (pix, parcelas, whatsapp, etc.)
-    2. salvarConfiguracoes(): nó alterado para 'abella/settings'
-       e estrutura de dados alinhada com o que index.html e carrinho.html esperam.
-    3. Visual: mantido inalterado para não quebrar layout existente.
--->
 <div class="p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
     <div class="flex items-center justify-between border-b border-gray-100 pb-4">
         <div>
@@ -20,7 +7,7 @@
             <p class="text-sm text-gray-500 mt-1">Controle operacional, regras de negócio e identidade visual do catálogo em tempo real.</p>
         </div>
         <div class="flex flex-col items-end gap-1">
-            <button id="btnSalvarConfig" onclick="salvarConfiguracoes()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2">
+            <button id="btnSalvarConfig" onclick="window.salvarConfiguracoes()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2">
                 <span>💾</span> Salvar Alterações
             </button>
             <span id="cfgUltimaAtualizacao" class="text-[10px] text-gray-400 font-mono"></span>
@@ -140,42 +127,37 @@
 </div>
 
 <script>
-    (function inicializarModulo() {
-        // CORRIGIDO: 'db' é a variável global do painel admin (window.db definida pelo admin-logic.js)
-        if (typeof db !== "undefined" || typeof window.db !== "undefined") {
-            buscarConfiguracoesFirebase();
-        } else {
-            console.error("Erro: Banco de dados (db) não localizado.");
+    // Vincula explicitamente as funções principais ao objeto global window para não sumirem no escopo da aplicação
+    window.buscarConfiguracoesFirebase = function() {
+        var database = window.db || (typeof db !== "undefined" ? db : null);
+        if (!database) {
+            console.error("Erro: Banco de dados (db) não localizado no escopo.");
+            return;
         }
-    })();
 
-    function buscarConfiguracoesFirebase() {
-        // CORRIGIDO: Nó alterado de 'abella/configuracoes' para 'abella/settings'
-        // que é o nó real consumido por index.html, carrinho.html e produtos.html
-        var dbRef = window.db || db;
-        dbRef.ref('abella/settings').once('value').then((snapshot) => {
+        database.ref('abella/settings').once('value').then((snapshot) => {
             const config = snapshot.val() || {};
 
-            // CORRIGIDO: Campos mapeados para as chaves reais do nó 'abella/settings'
-            document.getElementById('cfgNome').value = config.name || '';
-            document.getElementById('cfgSlogan').value = config.slogan || '';
-            document.getElementById('cfgWhatsapp').value = config.whatsapp || '';
-            document.getElementById('cfgDescPix').value = config.pix !== undefined ? config.pix : 5;
-            document.getElementById('cfgParcelas').value = config.parcelas || 6;
-            document.getElementById('cfgValorMinimo').value = config.pedidoMinimo || 0;
-            document.getElementById('cfgFreteFixo').value = config.freteFixo || 0;
-            document.getElementById('cfgFreteGratisAlvo').value = config.freteGratisAlvo || 0;
-            document.getElementById('cfgStatusLoja').value = config.statusLoja || 'aberto';
-            document.getElementById('cfgTextoAviso').value = config.bannerTexto || '';
-            document.getElementById('cfgAtivarAviso').checked = !!config.bannerAtivo;
+            // Verificação de segurança preventiva para garantir que os inputs existam na tela antes de preencher
+            if (document.getElementById('cfgNome')) document.getElementById('cfgNome').value = config.name || '';
+            if (document.getElementById('cfgSlogan')) document.getElementById('cfgSlogan').value = config.slogan || '';
+            if (document.getElementById('cfgWhatsapp')) document.getElementById('cfgWhatsapp').value = config.whatsapp || '';
+            if (document.getElementById('cfgDescPix')) document.getElementById('cfgDescPix').value = config.pix !== undefined ? config.pix : 5;
+            if (document.getElementById('cfgParcelas')) document.getElementById('cfgParcelas').value = config.parcelas || 6;
+            if (document.getElementById('cfgValorMinimo')) document.getElementById('cfgValorMinimo').value = config.pedidoMinimo || 0;
+            if (document.getElementById('cfgFreteFixo')) document.getElementById('cfgFreteFixo').value = config.freteFixo || 0;
+            if (document.getElementById('cfgFreteGratisAlvo')) document.getElementById('cfgFreteGratisAlvo').value = config.freteGratisAlvo || 0;
+            if (document.getElementById('cfgStatusLoja')) document.getElementById('cfgStatusLoja').value = config.statusLoja || 'aberto';
+            if (document.getElementById('cfgTextoAviso')) document.getElementById('cfgTextoAviso').value = config.bannerTexto || '';
+            if (document.getElementById('cfgAtivarAviso')) document.getElementById('cfgAtivarAviso').checked = !!config.bannerAtivo;
 
-            if (config.ultimaAtualizacao) {
+            if (config.ultimaAtualizacao && document.getElementById('cfgUltimaAtualizacao')) {
                 document.getElementById('cfgUltimaAtualizacao').innerText = `Última alteração: ${config.ultimaAtualizacao}`;
             }
         }).catch(erro => console.error("Erro ao carregar configurações:", erro));
-    }
+    };
 
-    function salvarConfiguracoes() {
+    window.salvarConfiguracoes = function() {
         const btn = document.getElementById('btnSalvarConfig');
         if (btn) {
             btn.disabled = true;
@@ -184,27 +166,38 @@
 
         const dataHoraAtual = new Date().toLocaleString('pt-BR');
 
-        // CORRIGIDO: Estrutura de dados alinhada com as chaves que index.html e carrinho.html esperam
+        // Captura e higieniza com segurança todos os valores preenchidos na tela
         const dadosNovos = {
-            name: document.getElementById('cfgNome').value.trim(),
-            slogan: document.getElementById('cfgSlogan').value.trim(),
-            whatsapp: document.getElementById('cfgWhatsapp').value.trim(),
-            pix: parseFloat(document.getElementById('cfgDescPix').value) || 5,
-            parcelas: parseInt(document.getElementById('cfgParcelas').value) || 6,
-            pedidoMinimo: parseFloat(document.getElementById('cfgValorMinimo').value) || 0,
-            freteFixo: parseFloat(document.getElementById('cfgFreteFixo').value) || 0,
-            freteGratisAlvo: parseFloat(document.getElementById('cfgFreteGratisAlvo').value) || 0,
-            statusLoja: document.getElementById('cfgStatusLoja').value,
-            bannerTexto: document.getElementById('cfgTextoAviso').value.trim(),
-            bannerAtivo: document.getElementById('cfgAtivarAviso').checked,
+            name: document.getElementById('cfgNome') ? document.getElementById('cfgNome').value.trim() : "",
+            slogan: document.getElementById('cfgSlogan') ? document.getElementById('cfgSlogan').value.trim() : "",
+            whatsapp: document.getElementById('cfgWhatsapp') ? document.getElementById('cfgWhatsapp').value.trim() : "",
+            pix: document.getElementById('cfgDescPix') ? (parseFloat(document.getElementById('cfgDescPix').value) || 0) : 5,
+            parcelas: document.getElementById('cfgParcelas') ? (parseInt(document.getElementById('cfgParcelas').value) || 1) : 6,
+            pedidoMinimo: document.getElementById('cfgValorMinimo') ? (parseFloat(document.getElementById('cfgValorMinimo').value) || 0) : 0,
+            freteFixo: document.getElementById('cfgFreteFixo') ? (parseFloat(document.getElementById('cfgFreteFixo').value) || 0) : 0,
+            freteGratisAlvo: document.getElementById('cfgFreteGratisAlvo') ? (parseFloat(document.getElementById('cfgFreteGratisAlvo').value) || 0) : 0,
+            statusLoja: document.getElementById('cfgStatusLoja') ? document.getElementById('cfgStatusLoja').value : "aberto",
+            bannerTexto: document.getElementById('cfgTextoAviso') ? document.getElementById('cfgTextoAviso').value.trim() : "",
+            bannerAtivo: document.getElementById('cfgAtivarAviso') ? document.getElementById('cfgAtivarAviso').checked : false,
             ultimaAtualizacao: dataHoraAtual
         };
 
-        // CORRIGIDO: Nó alterado de 'abella/configuracoes' para 'abella/settings'
-        var dbRef = window.db || db;
-        dbRef.ref('abella/settings').update(dadosNovos)
+        var database = window.db || (typeof db !== "undefined" ? db : null);
+        if (!database) {
+            alert("❌ Erro: Conexão com o Firebase não encontrada.");
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = "<span>💾</span> Salvar Alterações";
+            }
+            return;
+        }
+
+        // Salva diretamente na rota correta consumida pelo catálogo público
+        database.ref('abella/settings').update(dadosNovos)
             .then(() => {
-                document.getElementById('cfgUltimaAtualizacao').innerText = `Última alteração: ${dataHoraAtual}`;
+                if (document.getElementById('cfgUltimaAtualizacao')) {
+                    document.getElementById('cfgUltimaAtualizacao').innerText = `Última alteração: ${dataHoraAtual}`;
+                }
                 alert("✅ Configurações salvas e aplicadas ao catálogo público com sucesso!");
             })
             .catch(erro => {
@@ -217,5 +210,22 @@
                     btn.innerHTML = "<span>💾</span> Salvar Alterações";
                 }
             });
-    }
+    };
+
+    // Inicialização protegida por temporizador para aguardar a montagem dos inputs na árvore do HTML
+    setTimeout(function() {
+        if (typeof db !== "undefined" || typeof window.db !== "undefined") {
+            window.buscarConfiguracoesFirebase();
+        } else {
+            console.warn("Aguardando carregamento da instância global do banco de dados...");
+            // Segunda tentativa de contingência em 1 segundo
+            setTimeout(function() {
+                if (typeof db !== "undefined" || typeof window.db !== "undefined") {
+                    window.buscarConfiguracoesFirebase();
+                } else {
+                    console.error("Erro crítico: Variável de banco de dados indetectável.");
+                }
+            }, 1000);
+        }
+    }, 100);
 </script>

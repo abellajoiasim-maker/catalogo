@@ -1,104 +1,199 @@
-<!-- 
-    ARQUIVO: modulo/categorias.html
-    ATUALIZADO: v3.5 - Adicionado suporte a imagens 1:1 nas categorias.
-    Implementados botões de ação rápidos nos cards (Editar, Pausar e Excluir).
-    O modal foi expandido para capturar a URL da imagem e o estado de pausa.
--->
-<div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-900 pb-4 gap-4">
+<!-- ==========================================
+     ARQUIVO: modulo/categorias.html
+     VERSÃO CORRIGIDA COMPLETA COM INJEÇÃO DE LÓGICA
+     ========================================== -->
+
+<div class="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <!-- Cabeçalho Principal -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
         <div>
-            <h1 class="text-xl font-bold text-white flex items-center gap-2 serif tracking-wider">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2 tracking-wider">
                 <span>📁</span> GESTÃO DE COLEÇÕES E CATEGORIAS
             </h1>
-            <p class="text-xs text-zinc-500 mt-1">Gerencie os nós divisores do catálogo público, imagens de capa e links de filtragem.</p>
+            <p class="text-xs text-zinc-500 mt-1">Gerencie as imagens de capa, nomes e status de exibição das coleções na vitrine.</p>
         </div>
-        <button onclick="window.abrirModalCategoria()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider self-start sm:self-auto">
+        <button onclick="abrirModalCategoriaNova()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider self-start sm:self-auto">
             <span>➕</span> Nova Categoria
         </button>
     </div>
 
-    <!-- GRID DE CATEGORIAS -->
+    <!-- O GRID COMPATÍVEL - Totalmente limpo do botão de desconto antigo -->
     <div id="grid-categorias" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs animate-pulse">
-            ⏳ Carregando coleções mapeadas no banco...
+            ⏳ Sincronizando coleções diretamente com o Firebase...
         </div>
     </div>
 </div>
 
-<!-- MODAL DE CADASTRO E EDIÇÃO DE CATEGORIAS -->
+<!-- MODAL ATUALIZADO COM CAMPO DE IMAGEM -->
 <div id="modalCategoria" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-zinc-950 border border-zinc-900 rounded-2xl max-w-md w-full p-6 space-y-4 relative text-left">
         <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
             <h3 id="modalCategoriaTitulo" class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">Nova Categoria</h3>
-            <button onclick="window.fecharModalCategoria()" class="text-zinc-500 hover:text-white transition-all text-xs font-bold">✕</button>
+            <button onclick="fecharModalCategoriaLocal()" class="text-zinc-500 hover:text-white transition-all text-xs font-bold">✕</button>
         </div>
         
         <div class="space-y-4 text-xs font-mono">
-            <!-- Campo hidden para o ID ao editar uma categoria existente -->
+            <!-- ID Oculto para controle de edição -->
             <input type="hidden" id="catId">
             
-            <!-- Campo de Nome -->
+            <!-- Campo Nome -->
             <div class="space-y-1">
                 <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome da Coleção *</label>
-                <input type="text" id="catNome" placeholder="Ex: Brincos de Argola" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
+                <input type="text" id="catNome" placeholder="Ex: BRINCOS DE ARGOLAS" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c]">
             </div>
 
-            <!-- NOVO: Campo de URL da Imagem -->
+            <!-- CAMPO DE IMAGEM ADICIONADO -->
             <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">URL da Imagem da Capa (1:1)</label>
-                <input type="text" id="catImagem" placeholder="Cole o link https://... ou gs:// da foto" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-            </div>
-
-            <!-- NOVO: Opção de Pausar Categoria -->
-            <div class="flex items-center justify-between bg-zinc-900/40 p-3 rounded-xl border border-zinc-900">
-                <div class="space-y-0.5">
-                    <label class="text-[10px] text-zinc-300 uppercase font-bold cursor-pointer" for="catPausado">Ocultar Categoria</label>
-                    <p class="text-[9px] text-zinc-500">Pausa todas as joias desta categoria na vitrine.</p>
-                </div>
-                <input type="checkbox" id="catPausado" class="w-4 h-4 accent-[#caa85c] cursor-pointer">
+                <label class="text-[10px] text-zinc-400 uppercase font-bold">URL da Imagem da Capa (Proporção 1:1) *</label>
+                <input type="text" id="catImagem" placeholder="https://firebasestorage.googleapis.com/... ou gs://" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c]">
             </div>
 
             <div class="pt-2 grid grid-cols-2 gap-3">
-                <button onclick="window.fecharModalCategoria()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Cancelar</button>
-                <button onclick="window.salvarNovaCategoriaItem()" id="btnSalvarCategoria" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Criar Categoria</button>
+                <button onclick="fecharModalCategoriaLocal()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Cancelar</button>
+                <button onclick="salvarCategoriaDados()" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Gravar Coleção</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- DOCUMENTAÇÃO INTERNA PARA IMPLEMENTAÇÃO NO SEU ADMIN-LOGIC.JS -->
+<!-- ==========================================
+     MOTOR LÓGICO DE INTERCEPTAÇÃO E CORREÇÃO
+     ========================================== -->
 <script>
-    /**
-     * DICA DE IMPLEMENTAÇÃO PARA O RENDERIZADOR NO SEU 'admin-logic.js':
-     * Ao varrer o nó 'abella/categories' no Firebase, monte o HTML de cada card 
-     * dentro do '#grid-categorias' usando a seguinte estrutura modelo abaixo:
-     * 
-     * const urlCapa = cat.image || 'https://via.placeholder.com/300?text=Sem+Foto';
-     * const cardOpacity = cat.paused ? 'opacity-40 border-red-900/40' : 'border-zinc-900';
-     * 
-     * item.innerHTML = `
-     * <div class="bg-zinc-950 border ${cardOpacity} rounded-2xl overflow-hidden shadow-xl flex flex-col group transition-all duration-300 hover:border-zinc-800">
-     *     <!-- Container de Imagem Quadrada (Aspect 1:1) -->
-     *     <div class="w-full aspect-square bg-zinc-900 relative overflow-hidden border-b border-zinc-900">
-     *         <img src="${urlCapa}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src='https://via.placeholder.com/300?text=Erro+Imagem'">
-     *         ${cat.paused ? `<span class="absolute top-2 right-2 bg-red-950 border border-red-800 text-red-400 font-mono text-[9px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta</span>` : ''}
-     *     </div>
-     *     
-     *     <!-- Dados e Ações -->
-     *     <div class="p-4 flex-1 flex flex-col justify-between gap-3">
-     *         <div>
-     *             <span class="text-[9px] font-mono text-zinc-600 uppercase">ID: ${id}</span>
-     *             <h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">${cat.name}</h4>
-     *         </div>
-     *         
-     *         <!-- Botões de Controle Rápido -->
-     *         <div class="grid grid-cols-3 gap-1.5 border-t border-zinc-900 pt-3">
-     *             <button onclick="window.editarCategoriaItem('${id}')" title="Editar" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-1.5 rounded-lg text-[10px] font-bold transition-all flex justify-center items-center">✏️</button>
-     *             <button onclick="window.togglePausaCategoria('${id}')" title="${cat.paused ? 'Ativar' : 'Pausar'}" class="${cat.paused ? 'bg-emerald-950/40 border-emerald-900 text-emerald-400' : 'bg-amber-950/40 border-amber-900 text-amber-400'} border py-1.5 rounded-lg text-[10px] font-bold transition-all flex justify-center items-center">⏸️</button>
-     *             <button onclick="window.excluirCategoriaItem('${id}')" title="Excluir" class="bg-zinc-900 hover:bg-red-950/60 border border-zinc-800 hover:border-red-900 text-zinc-400 hover:text-red-400 py-1.5 rounded-lg text-[10px] font-bold transition-all flex justify-center items-center">🗑️</button>
-     *         </div>
-     *     </div>
-     * </div>
-     * `;
-     */
+    // Referência direta ao nó de categorias no seu Firebase Realtime DB
+    // Nota: Como o app usa firebase-compat.js globalmente, puxamos a instância existente.
+    const dbCategoriasRef = firebase.database().ref('abella/categories');
+
+    // Inicializa o ouvinte em tempo real para redesenhar a tela do jeito certo
+    function iniciarModuloCategoriasCorreto() {
+        dbCategoriasRef.on('value', snapshot => {
+            const grid = document.getElementById('grid-categorias');
+            if (!grid) return; // Segurança caso mude de aba rápida
+            
+            grid.innerHTML = '';
+            
+            if (!snapshot.exists()) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma categoria localizada no nó abella/categories.</div>`;
+                return;
+            }
+
+            snapshot.forEach(child => {
+                const id = child.key;
+                const cat = child.val();
+                
+                // Trata link quebrado ou vazio aplicando placeholder cinza premium
+                const linkImagem = cat.image || 'https://via.placeholder.com/400/141414/caa85c?text=Sem+Imagem+1:1';
+                const estaPausado = cat.paused === true;
+
+                const cardHTML = `
+                    <div class="bg-zinc-950 border ${estaPausado ? 'border-red-900/40 bg-zinc-950/40' : 'border-zinc-900'} rounded-2xl overflow-hidden shadow-xl flex flex-col group transition-all duration-300 hover:border-zinc-800 relative">
+                        
+                        <!-- Espaço da Imagem 1:1 Alinhado com a Vitrine Pública -->
+                        <div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900">
+                            <img src="${linkImagem}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src='https://via.placeholder.com/400/141414/ef4444?text=Erro+no+Link'">
+                            
+                            <!-- Indicador de Status Oculto/Pausado -->
+                            ${estaPausado ? `<span class="absolute top-3 right-3 bg-red-950 border border-red-800 text-red-400 font-mono text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">Oculta na Vitrine</span>` : ''}
+                        </div>
+                        
+                        <!-- Dados do Registro -->
+                        <div class="p-4 flex-1 flex flex-col justify-between gap-4">
+                            <div>
+                                <span class="text-[9px] font-mono text-zinc-600 block uppercase">ID Interno: ${id}</span>
+                                <h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">${cat.name}</h4>
+                            </div>
+                            
+                            <!-- Grade Corrigida de Ações (Sem Desconto / Com Editar, Pausar e Excluir) -->
+                            <div class="grid grid-cols-3 gap-2 border-t border-zinc-900 pt-3">
+                                <button onclick="editarCategoriaAcao('${id}', '${cat.name}', '${cat.image || ''}')" title="Editar Nome e Foto" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-xs transition-all flex justify-center items-center gap-1 font-bold">
+                                    ✏️ <span class="text-[10px] hidden xl:inline">Editar</span>
+                                </button>
+                                
+                                <button onclick="alternarPausaAcao('${id}', ${estaPausado})" title="${estaPausado ? 'Reativar Coleção' : 'Pausar/Ocultar Coleção'}" class="border py-2 rounded-xl text-xs transition-all flex justify-center items-center gap-1 font-bold ${estaPausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400 hover:bg-emerald-950/50' : 'bg-amber-950/20 border-amber-900/60 text-amber-500 hover:bg-amber-950/40'}">
+                                    ${estaPausado ? '▶️' : '⏸️'} <span class="text-[10px] hidden xl:inline">${estaPausado ? 'Ativar' : 'Pausar'}</span>
+                                </button>
+                                
+                                <button onclick="excluirCategoriaAcao('${id}')" title="Excluir Definitivamente" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-xs transition-all flex justify-center items-center gap-1 font-bold">
+                                    🗑️ <span class="text-[10px] hidden xl:inline">Excluir</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHTML);
+            });
+        });
+    }
+
+    // Ações de Controle do Modal
+    function abrirModalCategoriaNova() {
+        document.getElementById('catId').value = '';
+        document.getElementById('catNome').value = '';
+        document.getElementById('catImagem').value = '';
+        document.getElementById('modalCategoriaTitulo').innerText = "Criar Nova Coleção";
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    }
+
+    function fecharModalCategoriaLocal() {
+        document.getElementById('modalCategoria').classList.add('hidden');
+    }
+
+    function editarCategoriaAcao(id, nome, imagem) {
+        document.getElementById('catId').value = id;
+        document.getElementById('catNome').value = nome;
+        document.getElementById('catImagem').value = imagem === 'undefined' ? '' : imagem;
+        document.getElementById('modalCategoriaTitulo').innerText = "Modificar Coleção";
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    }
+
+    // Gravação e Atualização Direta e Limpa no Firebase
+    function salvarCategoriaDados() {
+        const id = document.getElementById('catId').value.trim();
+        const nome = document.getElementById('catNome').value.trim();
+        const imagem = document.getElementById('catImagem').value.trim();
+
+        if (!nome) {
+            alert("Por favor, informe o nome da categoria.");
+            return;
+        }
+
+        // Se não tiver ID, gera um slug amigável a partir do nome para evitar nós confusos
+        const nóDestino = id || nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
+        const payload = {
+            name: nome,
+            image: imagem
+        };
+
+        if (id) {
+            // Atualização parcial de item existente preservando status de pausa anterior
+            dbCategoriasRef.child(nóDestino).update(payload)
+                .then(() => { fecharModalCategoriaLocal(); })
+                .catch(err => alert("Erro ao atualizar: " + err.message));
+        } else {
+            // Novo registro inicializa despausado (visível)
+            payload.paused = false;
+            dbCategoriasRef.child(nóDestino).set(payload)
+                .then(() => { fecharModalCategoriaLocal(); })
+                .catch(err => alert("Erro ao criar: " + err.message));
+        }
+    }
+
+    // Alternar Visibilidade (Pausa)
+    function alternarPausaAcao(id, statusAtual) {
+        dbCategoriasRef.child(id).update({ paused: !statusAtual });
+    }
+
+    // Excluir Registro
+    function excluirCategoriaAcao(id) {
+        if (confirm(`Deseja remover a categoria [${id}] do banco?\n\n⚠️ Atenção: Isso não apaga as joias vinculadas a ela, mas elas podem perder a filtragem automática na vitrine.`)) {
+            dbCategoriasRef.child(id).remove();
+        }
+    }
+
+    // Executa imediatamente o motor ao carregar a aba na tela
+    setTimeout(() => {
+        iniciarModuloCategoriasCorreto();
+    }, 200);
 </script>

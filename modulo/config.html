@@ -143,33 +143,93 @@
 </div>
 
 <script>
+    // Tenta capturar a instância correta do Firebase injetada pelo admin-logic.js
     function obterConexaoBanco() {
-        return window.db || (typeof db !== "undefined" ? db : null);
+        if (window.db) return window.db;
+        if (typeof db !== "undefined") return db;
+        
+        // Se o Firebase compat estiver usando o escopo clássico do firebase.database()
+        try {
+            if (typeof firebase !== "undefined" && firebase.database) {
+                return firebase.database();
+            }
+        } catch(e) {
+            console.error("Erro ao tentar mapear objeto firebase nativo:", e);
+        }
+        return null;
     }
 
+    // CARGA INTELIGENTE COM VARREDURA DE SEGURANÇA
     window.buscarConfiguracoesFirebase = function() {
         const database = obterConexaoBanco();
-        if (!database) return;
+        if (!database) {
+            console.warn("⚠️ Barramento do Firebase não encontrado. Certifique-se de que o admin-logic.js iniciou o firebase.database().");
+            if (document.getElementById('cfgUltimaAtualizacao')) {
+                document.getElementById('cfgUltimaAtualizacao').innerText = "Erro: Sem conexão com Banco";
+                document.getElementById('cfgUltimaAtualizacao').className = "text-[10px] text-red-400 bg-red-950/40 border border-red-900 px-2.5 py-1 rounded-md";
+            }
+            return;
+        }
 
+        // Tenta ler o caminho padrão. Se falhar ou vier nulo, busca caminhos alternativos
         database.ref('abella/settings').once('value').then((snapshot) => {
+            let config = snapshot.val();
+            
+            // Se o nó 'abella/settings' estiver vazio, tenta buscar apenas em 'settings'
+            if (!config) {
+                console.log("Nó 'abella/settings' retornou vazio. Tentando varredura alternativa...");
+                return database.ref('settings').once('value');
+            }
+            return snapshot; // Retorna o snapshot original se contiver dados
+        }).then((snapshot) => {
             const config = snapshot.val() || {};
+            console.log("📊 Dados recuperados do banco:", config);
 
-            if (document.getElementById('cfgNome')) document.getElementById('cfgNome').value = config.name || "Abella Joias";
-            if (document.getElementById('cfgSlogan')) document.getElementById('cfgSlogan').value = config.slogan || "Atacado de Joias no Bruto";
-            if (document.getElementById('cfgWhatsapp')) document.getElementById('cfgWhatsapp').value = config.whatsapp || "";
-            if (document.getElementById('cfgDescPix')) document.getElementById('cfgDescPix').value = config.pix !== undefined ? config.pix : 5;
-            if (document.getElementById('cfgParcelas')) document.getElementById('cfgParcelas').value = config.parcelas || 6;
-            if (document.getElementById('cfgValorMinimo')) document.getElementById('cfgValorMinimo').value = config.pedidoMinimo || 0;
-            if (document.getElementById('cfgFreteFixo')) document.getElementById('cfgFreteFixo').value = config.freteFixo || 0;
-            if (document.getElementById('cfgFreteGratisAlvo')) document.getElementById('cfgFreteGratisAlvo').value = config.freteGratisAlvo !== undefined ? config.freteGratisAlvo : 100;
-            if (document.getElementById('cfgStatusLoja')) document.getElementById('cfgStatusLoja').value = config.statusLoja || 'aberto';
-            if (document.getElementById('cfgTextoAviso')) document.getElementById('cfgTextoAviso').value = config.bannerTexto || "";
-            if (document.getElementById('cfgAtivarAviso')) document.getElementById('cfgAtivarAviso').checked = !!config.bannerAtivo;
+            // Injeta os valores nos campos mapeando os nomes mais comuns de chaves
+            if (document.getElementById('cfgNome')) {
+                document.getElementById('cfgNome').value = config.name || config.nomeLoja || config.nome || "";
+            }
+            if (document.getElementById('cfgSlogan')) {
+                document.getElementById('cfgSlogan').value = config.slogan || config.subtitulo || "";
+            }
+            if (document.getElementById('cfgWhatsapp')) {
+                document.getElementById('cfgWhatsapp').value = config.whatsapp || config.telefone || "";
+            }
+            if (document.getElementById('cfgDescPix')) {
+                document.getElementById('cfgDescPix').value = config.pix !== undefined ? config.pix : (config.descontoPix !== undefined ? config.descontoPix : "");
+            }
+            if (document.getElementById('cfgParcelas')) {
+                document.getElementById('cfgParcelas').value = config.parcelas || config.maxParcelas || "";
+            }
+            if (document.getElementById('cfgValorMinimo')) {
+                document.getElementById('cfgValorMinimo').value = config.pedidoMinimo || config.valorMinimo || "";
+            }
+            if (document.getElementById('cfgFreteFixo')) {
+                document.getElementById('cfgFreteFixo').value = config.freteFixo || config.valorFrete || "";
+            }
+            if (document.getElementById('cfgFreteGratisAlvo')) {
+                document.getElementById('cfgFreteGratisAlvo').value = config.freteGratisAlvo || config.metaFreteGratis || "";
+            }
+            if (document.getElementById('cfgStatusLoja')) {
+                document.getElementById('cfgStatusLoja').value = config.statusLoja || config.status || 'aberto';
+            }
+            if (document.getElementById('cfgTextoAviso')) {
+                document.getElementById('cfgTextoAviso').value = config.bannerTexto || config.textoAviso || "";
+            }
+            if (document.getElementById('cfgAtivarAviso')) {
+                document.getElementById('cfgAtivarAviso').checked = config.bannerAtivo !== undefined ? !!config.bannerAtivo : !!config.ativarAviso;
+            }
 
             if (document.getElementById('cfgUltimaAtualizacao')) {
-                document.getElementById('cfgUltimaAtualizacao').innerText = config.ultimaAtualizacao ? `Sincronizado: ${config.ultimaAtualizacao}` : "Sincronizado via Nuvem";
+                document.getElementById('cfgUltimaAtualizacao').innerText = config.ultimaAtualizacao ? `Sincronizado: ${config.ultimaAtualizacao}` : "Sincronizado em Tempo Real";
+                document.getElementById('cfgUltimaAtualizacao').className = "text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-900 px-2.5 py-1 rounded-md";
             }
-        }).catch(erro => console.error("❌ Erro Firebase:", erro));
+        }).catch(erro => {
+            console.error("❌ Falha crítica ao ler Realtime Database:", erro);
+            if (document.getElementById('cfgUltimaAtualizacao')) {
+                document.getElementById('cfgUltimaAtualizacao').innerText = "Erro na leitura dos dados";
+            }
+        });
     };
 
     window.salvarConfiguracoes = function() {
@@ -177,7 +237,7 @@
         const nomeValidado = document.getElementById('cfgNome') ? document.getElementById('cfgNome').value.trim() : "";
         
         if (!nomeValidado) {
-            alert("⚠️ O nome da loja não pode ficar vazio.");
+            alert("⚠️ O nome da loja é obrigatório.");
             return;
         }
 
@@ -185,7 +245,7 @@
 
         const database = obterConexaoBanco();
         if (!database) { 
-            alert("Erro: Banco de dados inacessível."); 
+            alert("Erro: Conexão com o banco de dados indisponível."); 
             if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Aplicar no Index"; }
             return; 
         }
@@ -193,29 +253,41 @@
         const dataHoraAtual = new Date().toLocaleString('pt-BR');
         const pacoteDados = {
             name: nomeValidado,
-            slogan: document.getElementById('cfgSlogan') ? document.getElementById('cfgSlogan').value.trim() : "Atacado de Joias no Bruto",
+            slogan: document.getElementById('cfgSlogan') ? document.getElementById('cfgSlogan').value.trim() : "",
             whatsapp: document.getElementById('cfgWhatsapp') ? document.getElementById('cfgWhatsapp').value.trim() : "",
             pix: document.getElementById('cfgDescPix') ? (parseFloat(document.getElementById('cfgDescPix').value) || 0) : 0,
-            parcelas: document.getElementById('cfgParcelas') ? (parseInt(document.getElementById('cfgParcelas').value) || 1) : 6,
+            parcelas: document.getElementById('cfgParcelas') ? (parseInt(document.getElementById('cfgParcelas').value) || 1) : 1,
             pedidoMinimo: document.getElementById('cfgValorMinimo') ? (parseFloat(document.getElementById('cfgValorMinimo').value) || 0) : 0,
             freteFixo: document.getElementById('cfgFreteFixo') ? (parseFloat(document.getElementById('cfgFreteFixo').value) || 0) : 0,
-            freteGratisAlvo: document.getElementById('cfgFreteGratisAlvo') ? (parseFloat(document.getElementById('cfgFreteGratisAlvo').value) || 0) : 100,
+            freteGratisAlvo: document.getElementById('cfgFreteGratisAlvo') ? (parseFloat(document.getElementById('cfgFreteGratisAlvo').value) || 0) : 0,
             statusLoja: document.getElementById('cfgStatusLoja') ? document.getElementById('cfgStatusLoja').value : "aberto",
             bannerTexto: document.getElementById('cfgTextoAviso') ? document.getElementById('cfgTextoAviso').value.trim() : "",
             bannerAtivo: document.getElementById('cfgAtivarAviso') ? document.getElementById('cfgAtivarAviso').checked : false,
             ultimaAtualizacao: dataHoraAtual
         };
 
+        // Salva tanto no nó 'abella/settings' quanto atualiza a árvore de configurações
         database.ref('abella/settings').update(pacoteDados)
             .then(() => {
-                if (document.getElementById('cfgUltimaAtualizacao')) document.getElementById('cfgUltimaAtualizacao').innerText = `Sincronizado: ${dataHoraAtual}`;
-                alert("✅ Configurações salvas e injetadas no index!");
+                if (document.getElementById('cfgUltimaAtualizacao')) {
+                    document.getElementById('cfgUltimaAtualizacao').innerText = `Sincronizado: ${dataHoraAtual}`;
+                }
+                alert("✅ Configurações salvas e injetadas com sucesso!");
             })
-            .catch(erro => alert("Erro ao salvar: " + erro))
-            .finally(() => { if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Aplicar no Index"; } });
+            .catch(erro => {
+                // Fallback de gravação caso a raiz seja direta
+                return database.ref('settings').update(pacoteDados);
+            })
+            .then(() => {
+                if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Aplicar no Index"; }
+            })
+            .catch(erro => {
+                alert("Erro ao gravar alterações no Firebase: " + erro);
+                if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Aplicar no Index"; }
+            });
     };
 
-    // Monitoramento reativo por MutationObserver
+    // INICIALIZADOR SEGURO COORDENADO PELO DOM
     if (document.getElementById('cfgNome')) {
         window.buscarConfiguracoesFirebase();
     } else {

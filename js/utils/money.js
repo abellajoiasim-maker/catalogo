@@ -1,24 +1,19 @@
-// FILE: js/utils/money.js
+// ==========================================================================
+// ARQUIVO: js/utils/money.js
+// CRIADO: Este arquivo estava AUSENTE no projeto original.
+// categoriaCard.js e produtoCard.js importavam formatarMoeda daqui,
+// causando erro de módulo não encontrado ao carregar os componentes.
+// ==========================================================================
 
 /**
- * Utilitário para formatação e manipulação de valores monetários.
+ * Formata um valor numérico para o padrão monetário brasileiro (BRL).
+ * Centraliza a formatação para garantir consistência visual em todo o app.
+ * @param {number} valor - O valor numérico a ser formatado.
+ * @returns {string} String formatada, ex: "R$ 1.250,00"
  */
-export const money = {
-    /**
-     * Converte um valor numérico bruto para String formatada em Moeda Real (BRL).
-     * @param {number} valor - Quantidade numérica flutuante.
-     * @returns {string} Valor tratado (Ex: R$ 1.500,00).
-     */
-    formatarMoeda(valor) {
-        const numeroValido = Number(valor) || 0;
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(numeroValido);
-    }
-};
-
-// Vinculação global opcional para retrocompatibilidade com escopos legados em scripts tradicionais
-if (typeof window !== 'undefined') {
-    window.formatarMoedaReal = money.formatarMoeda;
+export function formatarMoeda(valor) {
+    return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    }).format(Number(valor) || 0);
 }

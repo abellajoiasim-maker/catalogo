@@ -677,3 +677,301 @@ const observerConfig = new MutationObserver((mutations) => {
     }
 });
 observerConfig.observe(document.body, { childList: true, subtree: true });
+
+// ============================================================================
+// EXTENSÃO GESTÃO DE CATEGORIAS (Injetado diretamente no escopo do admin-logic.js)
+// ============================================================================
+
+(function IniciarEscopoCategorias() {
+    var cacheLocalCategorias = {};
+    var abaAtivaCategorias = 'mae';
+
+    // Captura automática do banco de dados que seu admin-logic já usa
+    function obterReferenciaBanco() {
+        if (window.db && typeof window.db.ref === 'function') return window.db.ref('abella/categories');
+        if (window.firebase && typeof window.firebase.database === 'function') return window.firebase.database().ref('abella/categories');
+        return null;
+    }
+
+    function gerarSlug(txt) {
+        return (txt || '').toLowerCase().normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+    }
+
+    function converterGsParaHttp(url) {
+        if (!url) return '';
+        var s = url.trim();
+        if (!s.startsWith('gs://')) return s;
+        var sem = s.replace('gs://', '');
+        var bar = sem.indexOf('/');
+        if (bar === -1) return s;
+        return 'https://firebasestorage.googleapis.com/v0/b/' + sem.substring(0, bar) + '/o/' + encodeURIComponent(sem.substring(bar + 1)) + '?alt=media';
+    }
+
+    window.atualizarPreviewModal = function(url) {
+        var img = document.getElementById('previewImgModal');
+        var ph  = document.getElementById('previewPlaceholder');
+        if(!img || !ph) return;
+        var http = converterGsParaHttp(url);
+        if (http) {
+            img.src = http;
+            img.classList.remove('hidden');
+            ph.classList.add('hidden');
+        } else {
+            img.classList.add('hidden');
+            ph.classList.remove('hidden');
+        }
+    };
+
+    window.mudarAba = function(aba) {
+        abaAtivaCategorias = aba;
+        var gridMae = document.getElementById('grid-mae');
+        var gridSub = document.getElementById('grid-sub');
+        var btnMae  = document.getElementById('aba-mae');
+        var btnSub  = document.getElementById('aba-sub');
+
+        if (aba === 'mae') {
+            if(gridMae) gridMae.classList.remove('hidden');
+            if(gridSub) gridSub.classList.add('hidden');
+            if(btnMae) btnMae.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-[#caa85c] text-black border-b-2 border-[#caa85c]';
+            if(btnSub) btnSub.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-zinc-900 text-zinc-400 border-b-2 border-transparent hover:text-white';
+            renderizarMae(cacheLocalCategorias);
+        } else {
+            if(gridMae) gridMae.classList.add('hidden');
+            if(gridSub) gridSub.classList.remove('hidden');
+            if(btnSub) btnSub.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-[#caa85c] text-black border-b-2 border-[#caa85c]';
+            if(btnMae) btnMae.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-zinc-900 text-zinc-400 border-b-2 border-transparent hover:text-white';
+            renderizarSubcategorias();
+        }
+    };
+
+    function renderizarMae(dados) {
+        var grid = document.getElementById('grid-mae');
+        if (!grid) return; // Se o módulo de categorias não estiver aberto na tela, ignora a renderização
+        grid.innerHTML = '';
+
+        var entradas = Object.entries(dados);
+        if (!entradas.length) {
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma categoria localizada no nó abella/categories.</div>';
+            return;
+        }
+
+        entradas.forEach(function(entry) {
+            var id = entry[0];
+            var cat = entry[1];
+            var numSub = cat.subcategories ? Object.keys(cat.subcategories).length : 0;
+            var pausado = cat.paused === true;
+            var img = converterGsParaHttp(cat.image || '');
+
+            var nomeSafe = (cat.name || '').replace(/'/g, "\\'");
+            var imagemSafe = (cat.image || '').replace(/'/g, "\\'");
+
+            var card = document.createElement('div');
+            card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40 bg-zinc-950/40' : 'border-zinc-900') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-zinc-800 shadow-xl';
+
+            card.innerHTML =
+                '<div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900 flex-shrink-0">' +
+                    (img
+                        ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/caa85c?text=Erro+Imagem\'">'
+                        : '<div class="w-full h-full flex items-center justify-center text-zinc-700 text-[10px] font-mono">Sem imagem configurada</div>'
+                    ) +
+                    (pausado ? '<span class="absolute top-3 right-3 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta na Vitrine</span>' : '') +
+                    (numSub > 0 ? '<span class="absolute bottom-3 left-3 bg-indigo-950/80 border border-indigo-800 text-indigo-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md">' + numSub + ' sub-coleções</span>' : '') +
+                '</div>' +
+                '<div class="p-4 flex-1 flex flex-col justify-between gap-4">' +
+                    '<div>' +
+                        '<span class="text-[8px] font-mono text-zinc-600 uppercase block">ID: ' + id + '</span>' +
+                        '<h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">' + (cat.name || id) + '</h4>' +
+                    '</div>' +
+                    '<div class="grid grid-cols-3 gap-1.5 border-t border-zinc-900 pt-3">' +
+                        '<button onclick="window.editarCategoriaAcao(\'' + id + '\', \'' + nomeSafe + '\', \'' + imagemSafe + '\')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-[9px] font-bold transition-all text-center">✏️ Edit</button>' +
+                        '<button onclick="window.alternarPausaAcao(\'' + id + '\', ' + pausado + ')" class="border py-2 rounded-xl text-[9px] font-bold transition-all text-center ' + (pausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400' : 'bg-amber-950/20 border-amber-900/50 text-amber-500') + '">' + (pausado ? '▶️ Ativar' : '⏸️ Pausar') + '</button>' +
+                        '<button onclick="window.excluirCategoriaAcao(\'' + id + '\')" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-[9px] font-bold transition-all text-center">🗑️ Excluir</button>' +
+                    '</div>' +
+                    '<button onclick="window.abrirModalNovaSubcat(\'' + id + '\', \'' + nomeSafe + '\')" class="w-full border border-dashed border-indigo-900/60 hover:border-indigo-600 text-indigo-400 hover:text-indigo-300 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all">+ Subcategoria</button>' +
+                '</div>';
+
+            grid.appendChild(card);
+        });
+    }
+
+    function renderizarSubcategorias() {
+        var grid = document.getElementById('grid-sub');
+        if (!grid) return;
+        grid.innerHTML = '';
+        var total = 0;
+
+        Object.entries(cacheLocalCategorias).forEach(function(entry) {
+            var catSlug = entry[0];
+            var cat = entry[1];
+            if (!cat.subcategories) return;
+
+            Object.entries(cat.subcategories).forEach(function(subEntry) {
+                var subSlug = subEntry[0];
+                var sub = subEntry[1];
+                total++;
+
+                var pausado = sub.paused === true;
+                var img = converterGsParaHttp(sub.image || '');
+                var nomeSafe = (sub.name || '').replace(/'/g, "\\'");
+                var imagemSafe = (sub.image || '').replace(/'/g, "\\'");
+                var catNomeSafe = (cat.name || '').replace(/'/g, "\\'");
+
+                var card = document.createElement('div');
+                card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40' : 'border-indigo-900/40') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-indigo-800 shadow-xl';
+
+                card.innerHTML =
+                    '<div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900 flex-shrink-0">' +
+                        (img
+                            ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/caa85c?text=Erro+Imagem\'">'
+                            : '<div class="w-full h-full flex items-center justify-center text-indigo-400 text-[10px] font-mono">Sem foto vinculada</div>'
+                        ) +
+                        '<span class="absolute top-3 left-3 bg-indigo-950/90 border border-indigo-800 text-indigo-400 text-[8px] font-bold px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">Sub-peça</span>' +
+                        (pausado ? '<span class="absolute top-3 right-3 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta</span>' : '') +
+                    '</div>' +
+                    '<div class="p-4 flex-1 flex flex-col justify-between gap-4">' +
+                        '<div>' +
+                            '<span class="text-[8px] font-mono text-zinc-600 block uppercase">Mãe: ' + (cat.name || catSlug) + '</span>' +
+                            '<h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">' + (sub.name || subSlug) + '</h4>' +
+                        '</div>' +
+                        '<div class="grid grid-cols-3 gap-1.5 border-t border-zinc-900 pt-3">' +
+                            '<button onclick="window.editarSubcatAcao(\'' + catSlug + '\', \'' + subSlug + '\', \'' + nomeSafe + '\', \'' + imagemSafe + '\', \'' + catNomeSafe + '\')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-[9px] font-bold transition-all text-center">✏️ Edit</button>' +
+                            '<button onclick="window.alternarPausaSubcat(\'' + catSlug + '\', \'' + subSlug + '\', ' + pausado + ')" class="border py-2 rounded-xl text-[9px] font-bold transition-all text-center ' + (pausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400' : 'bg-amber-950/20 border-amber-900/50 text-amber-500') + '">' + (pausado ? '▶️ Ativar' : '⏸️ Pausar') + '</button>' +
+                            '<button onclick="window.excluirSubcatAcao(\'' + catSlug + '\', \'' + subSlug + '\')" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-[9px] font-bold transition-all text-center">🗑️ Excluir</button>' +
+                        '</div>' +
+                    '</div>';
+
+                grid.appendChild(card);
+            });
+        });
+
+        if (!total) {
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma subcategoria localizada. Use o botão "+ Subcategoria" nas categorias-mãe.</div>';
+        }
+    }
+
+    // Configura o canal contínuo com o Firebase
+    function loopConexaoCategorias() {
+        var dbRef = obterReferenciaBanco();
+        if (!dbRef) {
+            setTimeout(loopConexaoCategorias, 300);
+            return;
+        }
+
+        dbRef.on('value', function(snap) {
+            cacheLocalCategorias = snap.val() || {};
+            if (abaAtivaCategorias === 'mae') {
+                renderizarMae(cacheLocalCategorias);
+            } else {
+                renderizarSubcategorias();
+            }
+        }, function(error) {
+            console.error("Erro Firebase Categorias:", error);
+        });
+    }
+    loopConexaoCategorias();
+
+    // MAPEAMENTO DAS JANELAS MODAIS
+    window.abrirModalCategoriaNova = function() {
+        document.getElementById('catId').value = '';
+        document.getElementById('catPaiId').value = '';
+        document.getElementById('catNome').value = '';
+        document.getElementById('catImagem').value = '';
+        document.getElementById('modalCategoriaTitulo').innerText = 'Criar Nova Categoria-Mãe';
+        document.getElementById('indicadorSubcat').classList.add('hidden');
+        window.atualizarPreviewModal('');
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    };
+
+    window.abrirModalNovaSubcat = function(catPaiId, catPaiNome) {
+        document.getElementById('catId').value = '';
+        document.getElementById('catPaiId').value = catPaiId;
+        document.getElementById('catNome').value = '';
+        document.getElementById('catImagem').value = '';
+        document.getElementById('modalCategoriaTitulo').innerText = 'Nova Subcategoria';
+        document.getElementById('indicadorSubcat').classList.remove('hidden');
+        document.getElementById('nomePaiLabel').innerText = catPaiNome;
+        window.atualizarPreviewModal('');
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    };
+
+    window.editarCategoriaAcao = function(id, nome, imagem) {
+        document.getElementById('catId').value = id;
+        document.getElementById('catPaiId').value = '';
+        document.getElementById('catNome').value = nome;
+        document.getElementById('catImagem').value = imagem;
+        document.getElementById('modalCategoriaTitulo').innerText = 'Modificar Categoria-Mãe';
+        document.getElementById('indicadorSubcat').classList.add('hidden');
+        window.atualizarPreviewModal(imagem);
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    };
+
+    window.editarSubcatAcao = function(catPaiId, subId, nome, imagem, catPaiNome) {
+        document.getElementById('catId').value = subId;
+        document.getElementById('catPaiId').value = catPaiId;
+        document.getElementById('catNome').value = nome;
+        document.getElementById('catImagem').value = imagem;
+        document.getElementById('modalCategoriaTitulo').innerText = 'Modificar Subcategoria';
+        document.getElementById('indicadorSubcat').classList.remove('hidden');
+        document.getElementById('nomePaiLabel').innerText = catPaiNome;
+        window.atualizarPreviewModal(imagem);
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    };
+
+    window.fecharModalCategoriaLocal = function() {
+        document.getElementById('modalCategoria').classList.add('hidden');
+    };
+
+    window.salvarCategoriaDados = function() {
+        var id = document.getElementById('catId').value.trim();
+        var paiId = document.getElementById('catPaiId').value.trim();
+        var nome = document.getElementById('catNome').value.trim();
+        var imagem = document.getElementById('catImagem').value.trim();
+
+        if (!nome) { alert('Informe o nome da coleção.'); return; }
+
+        var dbRef = obterReferenciaBanco();
+        if (!dbRef) { alert('Banco de dados inacessível no momento.'); return; }
+
+        var slug = id || gerarSlug(nome);
+        var payload = { name: nome, slug: slug, image: imagem };
+
+        if (paiId) {
+            if (!id) payload.paused = false;
+            dbRef.child(paiId + '/subcategories/' + slug).update(payload)
+                .then(function() { window.fecharModalCategoriaLocal(); })
+                .catch(function(e) { alert('Erro ao salvar: ' + e.message); });
+        } else {
+            if (!id) payload.paused = false;
+            dbRef.child(slug).update(payload)
+                .then(function() { window.fecharModalCategoriaLocal(); })
+                .catch(function(e) { alert('Erro ao salvar: ' + e.message); });
+        }
+    };
+
+    window.alternarPausaAcao = function(id, statusAtual) {
+        var dbRef = obterReferenciaBanco();
+        if(dbRef) dbRef.child(id).update({ paused: !statusAtual });
+    };
+
+    window.alternarPausaSubcat = function(catId, subId, statusAtual) {
+        var dbRef = obterReferenciaBanco();
+        if(dbRef) dbRef.child(catId + '/subcategories/' + subId).update({ paused: !statusAtual });
+    };
+
+    window.excluirCategoriaAcao = function(id) {
+        var dbRef = obterReferenciaBanco();
+        if (dbRef && confirm('Deseja remover a categoria [' + id.toUpperCase() + '] de forma definitiva?')) {
+            dbRef.child(id).remove();
+        }
+    };
+
+    window.excluirSubcatAcao = function(catId, subId) {
+        var dbRef = obterReferenciaBanco();
+        if (dbRef && confirm('Deseja remover a subcategoria [' + subId.toUpperCase() + '] de forma definitiva?')) {
+            dbRef.child(catId + '/subcategories/' + subId).remove();
+        }
+    };
+})();

@@ -11,7 +11,7 @@
             <button id="btnSalvarConfig" onclick="window.salvarConfiguracoes()" class="bg-[#caa85c] hover:bg-[#b0904d] text-black font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2">
                 <span>💾</span> Salvar e Criar no Firebase
             </button>
-            <span id="cfgUltimaAtualizacao" class="text-[10px] text-zinc-400 font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-md">Verificando Banco...</span>
+            <span id="cfgUltimaAtualizacao" class="text-[10px] text-zinc-400 font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-md">Conectando ao banco...</span>
         </div>
     </div>
 
@@ -61,7 +61,7 @@
                 <div>
                     <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Parcelamento Max</label>
                     <div class="relative">
-                        <input type="number" id="cfgParcelas" value="6" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl pl-4 pr-8 py-2.5 text-zinc-2200 font-mono focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
+                        <input type="number" id="cfgParcelas" value="6" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl pl-4 pr-8 py-2.5 text-zinc-200 font-mono focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
                         <span class="absolute right-3 top-2.5 text-zinc-500 text-xs font-medium">x</span>
                     </div>
                 </div>
@@ -143,23 +143,32 @@
 </div>
 
 <script>
-    // CAPTURA MULTI-CAMADAS: Garante o mapeamento do Firebase de qualquer forma
-    function obterInstanciaFirebase() {
-        if (window.db) return window.db;
-        if (typeof db !== "undefined") return db;
+    let firebaseDatabaseInstance = null;
+
+    // Inicialização direta usando o link direto do seu Realtime Database
+    function inicializarBancoDireto() {
+        if (firebaseDatabaseInstance) return firebaseDatabaseInstance;
+
         try {
-            if (typeof firebase !== "undefined" && firebase.apps.length > 0) {
-                return firebase.database();
+            // Se o Firebase já foi inicializado em algum lugar do painel
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                firebaseDatabaseInstance = firebase.database();
+                return firebaseDatabaseInstance;
             }
-        } catch(e) { console.error(e); }
+            
+            // Caso contrário, faz uma chamada de segurança usando a janela mãe
+            if (window.db) return window.db;
+            if (typeof db !== "undefined") return db;
+        } catch (e) {
+            console.error("Erro ao mapear instância existente do Firebase:", e);
+        }
         return null;
     }
 
-    // BUSCA EXPLICITAMENTE EM 'abella/settings'
     window.buscarConfiguracoesFirebase = function() {
-        const database = obterInstanciaFirebase();
+        const database = inicializarBancoDireto();
         if (!database) {
-            document.getElementById('cfgUltimaAtualizacao').innerText = "Aguardando Inicialização...";
+            document.getElementById('cfgUltimaAtualizacao').innerText = "Aguardando barramento...";
             return;
         }
 
@@ -167,12 +176,10 @@
             const config = snapshot.val();
             
             if (!config) {
-                console.log("ℹ️ Nó 'abella/settings' não existe ainda. Pronto para ser criado.");
-                document.getElementById('cfgUltimaAtualizacao').innerText = "Nuvem Pronta (Nó Vazio)";
+                document.getElementById('cfgUltimaAtualizacao').innerText = "Banco conectado (Nó vazio)";
                 return;
             }
 
-            // Se achar dados, preenche os inputs
             if (document.getElementById('cfgNome')) document.getElementById('cfgNome').value = config.name || "Abella Joias";
             if (document.getElementById('cfgSlogan')) document.getElementById('cfgSlogan').value = config.slogan || "Atacado de Joias no Bruto";
             if (document.getElementById('cfgWhatsapp')) document.getElementById('cfgWhatsapp').value = config.whatsapp || "";
@@ -187,27 +194,26 @@
 
             document.getElementById('cfgUltimaAtualizacao').innerText = config.ultimaAtualizacao ? `Sincronizado: ${config.ultimaAtualizacao}` : "Sincronizado";
         }).catch(err => {
-            console.error("Erro na leitura:", err);
+            console.error("Erro na leitura do nó abella/settings:", err);
+            document.getElementById('cfgUltimaAtualizacao').innerText = "Erro ao ler dados";
         });
     };
 
-    // FUNÇÃO FORÇADA DE CRIAÇÃO/GRAVAÇÃO
     window.salvarConfiguracoes = function() {
         const btn = document.getElementById('btnSalvarConfig');
         const nomeValidado = document.getElementById('cfgNome') ? document.getElementById('cfgNome').value.trim() : "Abella Joias";
 
-        if (btn) { btn.disabled = true; btn.innerText = "⏳ CRIANDO NÓ NO FIREBASE..."; }
+        if (btn) { btn.disabled = true; btn.innerText = "⏳ GRAVANDO NO FIREBASE..."; }
 
-        const database = obterInstanciaFirebase();
+        const database = inicializarBancoDireto();
         if (!database) {
-            alert("❌ Erro: O barramento central do Firebase não respondeu.");
+            alert("❌ Erro de barramento: Salve o arquivo e recarregue a página com Ctrl+F5 antes de tentar novamente.");
             if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Criar no Firebase"; }
             return;
         }
 
         const dataHoraAtual = new Date().toLocaleString('pt-BR');
         
-        // Monta o pacote combinando perfeitamente com o nó do seu Realtime
         const pacoteDados = {
             name: nomeValidado,
             slogan: document.getElementById('cfgSlogan').value.trim(),
@@ -223,31 +229,23 @@
             ultimaAtualizacao: dataHoraAtual
         };
 
-        // Força a criação inserindo diretamente no endereço apontado
+        // Força a injeção diretamente no caminho exato apontado pelo banco
         database.ref('abella/settings').set(pacoteDados)
             .then(() => {
-                document.getElementById('cfgUltimaAtualizacao').innerText = `Criado: ${dataHoraAtual}`;
-                alert("💎 Sucesso! O nó 'settings' foi criado dentro de 'abella' com todos os dados salvos!");
+                document.getElementById('cfgUltimaAtualizacao').innerText = `Salvo: ${dataHoraAtual}`;
+                alert("💎 Sucesso! O nó 'settings' foi gerado e as configurações estão oficialmente ativas na nuvem!");
             })
             .catch(erro => {
-                console.error("Erro crítico de persistência:", erro);
-                alert("Falha ao criar tabelas: " + erro.message);
+                console.error("Falha ao salvar no banco:", erro);
+                alert("Erro de persistência: " + erro.message);
             })
             .finally(() => {
                 if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Criar no Firebase"; }
             });
     };
 
-    // Ativação reativa
-    if (document.getElementById('cfgNome')) {
+    // Inicialização segura controlada por tempo e carregamento do DOM
+    setTimeout(() => {
         window.buscarConfiguracoesFirebase();
-    } else {
-        const observador = new MutationObserver((mutations, obs) => {
-            if (document.getElementById('cfgNome')) {
-                window.buscarConfiguracoesFirebase();
-                obs.disconnect();
-            }
-        });
-        observador.observe(document.body, { childList: true, subtree: true });
-    }
+    }, 800);
 </script>

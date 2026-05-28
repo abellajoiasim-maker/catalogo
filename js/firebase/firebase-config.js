@@ -1,12 +1,12 @@
 // Configuração do Firebase Realtime Database da Abella Joias
 const firebaseConfig = {
-    apiKey: "AIzaSy...",
-    authDomain: "abella-joias.firebaseapp.com",
-    databaseURL: "https://abella-joias-default-rtdb.firebaseio.com",
-    projectId: "abella-joias",
-    storageBucket: "abella-joias.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:123456:web:abc123xyz"
+    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+    authDomain: "catalogo-abella-joias.firebaseapp.com",
+    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
+    projectId: "catalogo-abella-joias",
+    storageBucket: "catalogo-abella-joias.firebasestorage.app",
+    messagingSenderId: "727568435294",
+    appId: "1:727568435294:web:442c0179ecf0686dff4ccf"
 };
 
 // Inicializa o Firebase globalmente

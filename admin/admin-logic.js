@@ -701,14 +701,27 @@ observerConfig.observe(document.body, { childList: true, subtree: true });
     }
 
     function converterGsParaHttp(url) {
-        if (!url) return '';
-        var s = url.trim();
-        if (!s.startsWith('gs://')) return s;
-        var sem = s.replace('gs://', '');
-        var bar = sem.indexOf('/');
-        if (bar === -1) return s;
-        return 'https://firebasestorage.googleapis.com/v0/b/' + sem.substring(0, bar) + '/o/' + encodeURIComponent(sem.substring(bar + 1)) + '?alt=media';
-    }
+    if (!url) return '';
+    var s = url.trim();
+    
+    // Se não for um link do Storage (gs://), retorna ele mesmo (caso cole um link https direto)
+    if (!s.startsWith('gs://')) return s;
+    
+    // Remove o 'gs://' para isolar o balde (bucket) e o caminho
+    var semPrefixo = s.replace('gs://', '');
+    var primeiraBarra = semPrefixo.indexOf('/');
+    if (primeiraBarra === -1) return s;
+    
+    // Separa o nome do seu bucket e o caminho do arquivo
+    var bucketName = semPrefixo.substring(0, primeiraBarra); // Ex: catalogo-abella-joias.firebasestorage.app
+    var filePath = semPrefixo.substring(primeiraBarra + 1);  // Ex: images/categorias/ANEIS.jpeg
+    
+    // O Firebase exige que as barras da pasta sejam transformadas em '%2F' na URL pública
+    var filePathFormatado = encodeURIComponent(filePath);
+    
+    // Retorna a URL perfeitamente legível para qualquer navegador
+    return 'https://firebasestorage.googleapis.com/v0/b/' + bucketName + '/o/' + filePathFormatado + '?alt=media';
+}
 
     window.atualizarPreviewModal = function(url) {
         var img = document.getElementById('previewImgModal');

@@ -1,17 +1,5 @@
-<!-- ============================================================
-     ARQUIVO: modulo/categorias.html
-     VERSÃO 2.0 — Com suporte a Subcategorias, Imagem 1:1,
-     botões Editar / Pausar / Excluir. Sem botões de desconto.
-     Alinhado com a estrutura gravada pelo importador:
-       abella/categories/{catSlug}
-         ├── name, image, paused, slug
-         └── subcategories/
-               └── {subSlug}: { name, slug, image, paused }
-     ============================================================ -->
-
 <div class="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
 
-    <!-- CABEÇALHO -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
         <div>
             <h1 class="text-xl font-bold text-white flex items-center gap-2 tracking-wider">
@@ -21,40 +9,36 @@
                 Gerencie imagens de capa 1:1, nomes, subcategorias e status de exibição na vitrine pública.
             </p>
         </div>
-        <button onclick="abrirModalCategoriaNova()"
+        <button onclick="window.abrirModalCategoriaNova()"
                 class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider self-start sm:self-auto shrink-0">
             <span>+</span> Nova Categoria
         </button>
     </div>
 
-    <!-- ABAS -->
     <div class="flex gap-2 border-b border-zinc-900">
-        <button id="aba-mae" onclick="mudarAba('mae')"
+        <button id="aba-mae" onclick="window.mudarAba('mae')"
                 class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-[#caa85c] text-black border-b-2 border-[#caa85c]">
-            Categorias-Mae
+            Categorias-Mãe
         </button>
-        <button id="aba-sub" onclick="mudarAba('sub')"
+        <button id="aba-sub" onclick="window.mudarAba('sub')"
                 class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-zinc-900 text-zinc-400 border-b-2 border-transparent hover:text-white">
             Subcategorias
         </button>
     </div>
 
-    <!-- GRID CATEGORIAS-MAE -->
     <div id="grid-mae" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs animate-pulse">
-            Carregando categorias...
+            ⏳ Sincronizando categorias mãe com o Firebase...
         </div>
     </div>
 
-    <!-- GRID SUBCATEGORIAS -->
     <div id="grid-sub" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">
-            Clique na aba Subcategorias para ver.
+            Nenhuma subcategoria selecionada ou mapeada.
         </div>
     </div>
 </div>
 
-<!-- MODAL -->
 <div id="modalCategoria" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-[999]">
     <div class="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
 
@@ -62,9 +46,9 @@
             <h3 id="modalCategoriaTitulo" class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">
                 Nova Categoria
             </h3>
-            <button onclick="fecharModalCategoriaLocal()"
+            <button onclick="window.fecharModalCategoriaLocal()"
                     class="text-zinc-500 hover:text-white text-sm font-bold w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-900">
-                X
+                ✕
             </button>
         </div>
 
@@ -72,42 +56,39 @@
             <input type="hidden" id="catId">
             <input type="hidden" id="catPaiId">
 
-            <!-- Indicador subcat -->
             <div id="indicadorSubcat" class="hidden bg-indigo-950/40 border border-indigo-900/60 rounded-lg px-3 py-2 text-indigo-400 text-[10px]">
-                Esta e uma subcategoria vinculada a: <span id="nomePaiLabel" class="text-white font-bold"></span>
+                Esta é uma subcategoria vinculada a: <span id="nomePaiLabel" class="text-white font-bold"></span>
             </div>
 
-            <!-- NOME -->
             <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">Nome da Colecao *</label>
-                <input type="text" id="catNome" placeholder="Ex: Aneis Solitarios"
-                       class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c] transition-colors">
+                <label class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">Nome da Coleção *</label>
+                <input type="text" id="catNome" placeholder="Ex: ANÉIS SOLITÁRIOS"
+                       class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c] transition-colors uppercase">
             </div>
 
-            <!-- IMAGEM -->
             <div class="space-y-2">
                 <label class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">URL da Imagem de Capa (1:1) *</label>
                 <input type="text" id="catImagem"
-                       placeholder="https://firebasestorage.googleapis.com/..."
+                       placeholder="https://firebasestorage.googleapis.com/... ou gs://"
                        class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c] text-[10px] transition-colors"
-                       oninput="atualizarPreviewModal(this.value)">
-                <div class="w-full aspect-square bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden flex items-center justify-center">
+                       oninput="window.atualizarPreviewModal(this.value)">
+                
+                <div class="w-full aspect-square bg-black border border-zinc-900 rounded-xl overflow-hidden flex items-center justify-center relative">
                     <img id="previewImgModal" src="" alt=""
                          class="w-full h-full object-cover hidden"
                          onerror="this.classList.add('hidden'); document.getElementById('previewPlaceholder').classList.remove('hidden')">
-                    <span id="previewPlaceholder" class="text-zinc-600 text-[10px] text-center px-4">Cole a URL acima para visualizar</span>
+                    <span id="previewPlaceholder" class="text-zinc-600 text-[10px] text-center px-4">Insira o link acima para ver o preview quadrado</span>
                 </div>
             </div>
 
-            <!-- BOTOES -->
             <div class="pt-2 grid grid-cols-2 gap-3">
-                <button onclick="fecharModalCategoriaLocal()"
+                <button onclick="window.fecharModalCategoriaLocal()"
                         class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">
                     Cancelar
                 </button>
-                <button onclick="salvarCategoriaDados()"
+                <button onclick="window.salvarCategoriaDados()"
                         class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">
-                    Gravar
+                    Gravar Registro
                 </button>
             </div>
         </div>
@@ -115,7 +96,7 @@
 </div>
 
 <script>
-(function() {
+    // Conexão direta com o nó global do Firebase
     var dbRef = firebase.database().ref('abella/categories');
     var cacheLocal = {};
     var abaAtiva = 'mae';
@@ -163,6 +144,7 @@
             gridSub.classList.add('hidden');
             btnMae.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-[#caa85c] text-black border-b-2 border-[#caa85c]';
             btnSub.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-zinc-900 text-zinc-400 border-b-2 border-transparent hover:text-white';
+            renderizarMae(cacheLocal);
         } else {
             gridMae.classList.add('hidden');
             gridSub.classList.remove('hidden');
@@ -174,49 +156,49 @@
 
     function renderizarMae(dados) {
         var grid = document.getElementById('grid-mae');
-        if (!grid) return;
+        if (!grid || abaAtiva !== 'mae') return;
         grid.innerHTML = '';
 
-        var maes = Object.entries(dados).filter(function(e) { return !e[1].parentId; });
+        var entradas = Object.entries(dados);
 
-        if (!maes.length) {
-            grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma categoria-mae cadastrada.</div>';
+        if (!entradas.length) {
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma categoria cadastrada no banco.</div>';
             return;
         }
 
-        maes.forEach(function(entry) {
-            var id  = entry[0];
+        entradas.forEach(function(entry) {
+            var id = entry[0];
             var cat = entry[1];
-            var numSub  = cat.subcategories ? Object.keys(cat.subcategories).length : 0;
+            var numSub = cat.subcategories ? Object.keys(cat.subcategories).length : 0;
             var pausado = cat.paused === true;
-            var img     = converterGsParaHttp(cat.image || '');
+            var img = converterGsParaHttp(cat.image || '');
 
-            var nomeSafe   = (cat.name || '').replace(/'/g, "\\'");
+            var nomeSafe = (cat.name || '').replace(/'/g, "\\'");
             var imagemSafe = (cat.image || '').replace(/'/g, "\\'");
 
             var card = document.createElement('div');
-            card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40' : 'border-zinc-900') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-zinc-700 shadow-xl';
+            card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40 bg-zinc-950/40' : 'border-zinc-900') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-zinc-800 shadow-xl';
 
             card.innerHTML =
                 '<div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900 flex-shrink-0">' +
                     (img
-                        ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/555555?text=Sem+Imagem\'">'
-                        : '<div class="w-full h-full flex items-center justify-center text-zinc-700 text-[10px] font-mono">Sem imagem</div>'
+                        ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/caa85c?text=Erro+Imagem\'">'
+                        : '<div class="w-full h-full flex items-center justify-center text-zinc-700 text-[10px] font-mono">Sem imagem configurada</div>'
                     ) +
-                    (pausado ? '<span class="absolute top-2 right-2 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta</span>' : '') +
-                    (numSub > 0 ? '<span class="absolute bottom-2 left-2 bg-indigo-900/80 border border-indigo-800 text-indigo-300 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md">' + numSub + ' subcat</span>' : '') +
+                    (pausado ? '<span class="absolute top-3 right-3 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta na Vitrine</span>' : '') +
+                    (numSub > 0 ? '<span class="absolute bottom-3 left-3 bg-indigo-950/80 border border-indigo-800 text-indigo-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md">' + numSub + ' sub-coleções</span>' : '') +
                 '</div>' +
-                '<div class="p-4 flex-1 flex flex-col gap-3">' +
+                '<div class="p-4 flex-1 flex flex-col justify-between gap-4">' +
                     '<div>' +
-                        '<span class="text-[8px] font-mono text-zinc-600 uppercase">ID: ' + id + '</span>' +
+                        '<span class="text-[8px] font-mono text-zinc-600 uppercase block">ID: ' + id + '</span>' +
                         '<h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">' + (cat.name || id) + '</h4>' +
                     '</div>' +
                     '<div class="grid grid-cols-3 gap-1.5 border-t border-zinc-900 pt-3">' +
-                        '<button onclick="editarCategoriaAcao(\'' + id + '\', \'' + nomeSafe + '\', \'' + imagemSafe + '\')" title="Editar" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center">Editar</button>' +
-                        '<button onclick="alternarPausaAcao(\'' + id + '\', ' + pausado + ')" title="' + (pausado ? 'Reativar' : 'Pausar') + '" class="border py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center ' + (pausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400' : 'bg-amber-950/20 border-amber-900/50 text-amber-500') + '">' + (pausado ? 'Ativar' : 'Pausar') + '</button>' +
-                        '<button onclick="excluirCategoriaAcao(\'' + id + '\')" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center">Excluir</button>' +
+                        '<button onclick="window.editarCategoriaAcao(\'' + id + '\', \'' + nomeSafe + '\', \'' + imagemSafe + '\')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-[9px] font-bold transition-all text-center">✏️ Edit</button>' +
+                        '<button onclick="window.alternarPausaAcao(\'' + id + '\', ' + pausado + ')" class="border py-2 rounded-xl text-[9px] font-bold transition-all text-center ' + (pausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400' : 'bg-amber-950/20 border-amber-900/50 text-amber-500') + '">' + (pausado ? '▶️ Ativar' : '⏸️ Pausar') + '</button>' +
+                        '<button onclick="window.excluirCategoriaAcao(\'' + id + '\')" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-[9px] font-bold transition-all text-center">🗑️ Excluir</button>' +
                     '</div>' +
-                    '<button onclick="abrirModalNovaSubcat(\'' + id + '\', \'' + nomeSafe + '\')" class="w-full border border-dashed border-indigo-900/60 hover:border-indigo-600 text-indigo-500 hover:text-indigo-300 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all">+ Subcategoria</button>' +
+                    '<button onclick="window.abrirModalNovaSubcat(\'' + id + '\', \'' + nomeSafe + '\')" class="w-full border border-dashed border-indigo-900/60 hover:border-indigo-600 text-indigo-400 hover:text-indigo-300 py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all">+ Subcategoria</button>' +
                 '</div>';
 
             grid.appendChild(card);
@@ -225,47 +207,47 @@
 
     function renderizarSubcategorias() {
         var grid = document.getElementById('grid-sub');
-        if (!grid) return;
+        if (!grid || abaAtiva !== 'sub') return;
         grid.innerHTML = '';
         var total = 0;
 
         Object.entries(cacheLocal).forEach(function(entry) {
             var catSlug = entry[0];
-            var cat     = entry[1];
+            var cat = entry[1];
             if (!cat.subcategories) return;
 
             Object.entries(cat.subcategories).forEach(function(subEntry) {
                 var subSlug = subEntry[0];
-                var sub     = subEntry[1];
+                var sub = subEntry[1];
                 total++;
 
-                var pausado    = sub.paused === true;
-                var img        = converterGsParaHttp(sub.image || '');
-                var nomeSafe   = (sub.name  || '').replace(/'/g, "\\'");
+                var pausado = sub.paused === true;
+                var img = converterGsParaHttp(sub.image || '');
+                var nomeSafe = (sub.name || '').replace(/'/g, "\\'");
                 var imagemSafe = (sub.image || '').replace(/'/g, "\\'");
                 var catNomeSafe = (cat.name || '').replace(/'/g, "\\'");
 
                 var card = document.createElement('div');
-                card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40' : 'border-indigo-900/30') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-indigo-800/60 shadow-xl';
+                card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40' : 'border-indigo-900/40') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-indigo-800 shadow-xl';
 
                 card.innerHTML =
                     '<div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900 flex-shrink-0">' +
                         (img
-                            ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/818cf8?text=Sem+Imagem\'">'
-                            : '<div class="w-full h-full flex items-center justify-center text-indigo-900 text-[10px] font-mono">Sem imagem</div>'
+                            ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/caa85c?text=Erro+Imagem\'">'
+                            : '<div class="w-full h-full flex items-center justify-center text-indigo-400 text-[10px] font-mono">Sem foto vinculada</div>'
                         ) +
-                        '<span class="absolute top-2 left-2 bg-indigo-950/80 border border-indigo-900 text-indigo-400 text-[8px] font-bold px-2 py-0.5 rounded-md font-mono">subcat</span>' +
-                        (pausado ? '<span class="absolute top-2 right-2 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta</span>' : '') +
+                        '<span class="absolute top-3 left-3 bg-indigo-950/90 border border-indigo-800 text-indigo-400 text-[8px] font-bold px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">Sub-peça</span>' +
+                        (pausado ? '<span class="absolute top-3 right-3 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta</span>' : '') +
                     '</div>' +
-                    '<div class="p-4 flex-1 flex flex-col gap-3">' +
+                    '<div class="p-4 flex-1 flex flex-col justify-between gap-4">' +
                         '<div>' +
-                            '<span class="text-[8px] font-mono text-zinc-600 uppercase">Mae: ' + (cat.name || catSlug) + ' | ID: ' + subSlug + '</span>' +
+                            '<span class="text-[8px] font-mono text-zinc-600 block uppercase">Mãe: ' + (cat.name || catSlug) + '</span>' +
                             '<h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">' + (sub.name || subSlug) + '</h4>' +
                         '</div>' +
                         '<div class="grid grid-cols-3 gap-1.5 border-t border-zinc-900 pt-3">' +
-                            '<button onclick="editarSubcatAcao(\'' + catSlug + '\', \'' + subSlug + '\', \'' + nomeSafe + '\', \'' + imagemSafe + '\', \'' + catNomeSafe + '\')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center">Editar</button>' +
-                            '<button onclick="alternarPausaSubcat(\'' + catSlug + '\', \'' + subSlug + '\', ' + pausado + ')" class="border py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center ' + (pausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400' : 'bg-amber-950/20 border-amber-900/50 text-amber-500') + '">' + (pausado ? 'Ativar' : 'Pausar') + '</button>' +
-                            '<button onclick="excluirSubcatAcao(\'' + catSlug + '\', \'' + subSlug + '\')" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center">Excluir</button>' +
+                            '<button onclick="window.editarSubcatAcao(\'' + catSlug + '\', \'' + subSlug + '\', \'' + nomeSafe + '\', \'' + imagemSafe + '\', \'' + catNomeSafe + '\')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-[9px] font-bold transition-all text-center">✏️ Edit</button>' +
+                            '<button onclick="window.alternarPausaSubcat(\'' + catSlug + '\', \'' + subSlug + '\', ' + pausado + ')" class="border py-2 rounded-xl text-[9px] font-bold transition-all text-center ' + (pausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400' : 'bg-amber-950/20 border-amber-900/50 text-amber-500') + '">' + (pausado ? '▶️ Ativar' : '⏸️ Pausar') + '</button>' +
+                            '<button onclick="window.excluirSubcatAcao(\'' + catSlug + '\', \'' + subSlug + '\')" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-[9px] font-bold transition-all text-center">🗑️ Excluir</button>' +
                         '</div>' +
                     '</div>';
 
@@ -274,33 +256,36 @@
         });
 
         if (!total) {
-            grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma subcategoria cadastrada. Use o botao "+ Subcategoria" nas categorias-mae.</div>';
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma subcategoria localizada. Use o botão "+ Subcategoria" nas categorias-mãe.</div>';
         }
     }
 
-    // Listener realtime
+    // Ouvinte em tempo real do Firebase Realtime DB
     dbRef.on('value', function(snap) {
         cacheLocal = snap.val() || {};
-        renderizarMae(cacheLocal);
-        if (abaAtiva === 'sub') renderizarSubcategorias();
+        if (abaAtiva === 'mae') {
+            renderizarMae(cacheLocal);
+        } else {
+            renderizarSubcategorias();
+        }
     });
 
-    // Modais
+    // Controle Global dos Modais e Inserções
     window.abrirModalCategoriaNova = function() {
-        document.getElementById('catId').value    = '';
+        document.getElementById('catId').value = '';
         document.getElementById('catPaiId').value = '';
-        document.getElementById('catNome').value  = '';
+        document.getElementById('catNome').value = '';
         document.getElementById('catImagem').value = '';
-        document.getElementById('modalCategoriaTitulo').innerText = 'Nova Categoria-Mae';
+        document.getElementById('modalCategoriaTitulo').innerText = 'Criar Nova Categoria-Mãe';
         document.getElementById('indicadorSubcat').classList.add('hidden');
         window.atualizarPreviewModal('');
         document.getElementById('modalCategoria').classList.remove('hidden');
     };
 
     window.abrirModalNovaSubcat = function(catPaiId, catPaiNome) {
-        document.getElementById('catId').value    = '';
+        document.getElementById('catId').value = '';
         document.getElementById('catPaiId').value = catPaiId;
-        document.getElementById('catNome').value  = '';
+        document.getElementById('catNome').value = '';
         document.getElementById('catImagem').value = '';
         document.getElementById('modalCategoriaTitulo').innerText = 'Nova Subcategoria';
         document.getElementById('indicadorSubcat').classList.remove('hidden');
@@ -310,22 +295,22 @@
     };
 
     window.editarCategoriaAcao = function(id, nome, imagem) {
-        document.getElementById('catId').value    = id;
+        document.getElementById('catId').value = id;
         document.getElementById('catPaiId').value = '';
-        document.getElementById('catNome').value  = nome;
+        document.getElementById('catNome').value = nome;
         document.getElementById('catImagem').value = imagem;
-        document.getElementById('modalCategoriaTitulo').innerText = 'Editar Categoria';
+        document.getElementById('modalCategoriaTitulo').innerText = 'Modificar Categoria-Mãe';
         document.getElementById('indicadorSubcat').classList.add('hidden');
         window.atualizarPreviewModal(imagem);
         document.getElementById('modalCategoria').classList.remove('hidden');
     };
 
     window.editarSubcatAcao = function(catPaiId, subId, nome, imagem, catPaiNome) {
-        document.getElementById('catId').value    = subId;
+        document.getElementById('catId').value = subId;
         document.getElementById('catPaiId').value = catPaiId;
-        document.getElementById('catNome').value  = nome;
+        document.getElementById('catNome').value = nome;
         document.getElementById('catImagem').value = imagem;
-        document.getElementById('modalCategoriaTitulo').innerText = 'Editar Subcategoria';
+        document.getElementById('modalCategoriaTitulo').innerText = 'Modificar Subcategoria';
         document.getElementById('indicadorSubcat').classList.remove('hidden');
         document.getElementById('nomePaiLabel').innerText = catPaiNome;
         window.atualizarPreviewModal(imagem);
@@ -337,12 +322,12 @@
     };
 
     window.salvarCategoriaDados = function() {
-        var id     = document.getElementById('catId').value.trim();
-        var paiId  = document.getElementById('catPaiId').value.trim();
-        var nome   = document.getElementById('catNome').value.trim();
+        var id = document.getElementById('catId').value.trim();
+        var paiId = document.getElementById('catPaiId').value.trim();
+        var nome = document.getElementById('catNome').value.trim();
         var imagem = document.getElementById('catImagem').value.trim();
 
-        if (!nome) { alert('O nome e obrigatorio.'); return; }
+        if (!nome) { alert('Informe o nome da coleção.'); return; }
 
         var slug = id || gerarSlug(nome);
         var payload = { name: nome, slug: slug, image: imagem };
@@ -351,12 +336,12 @@
             if (!id) payload.paused = false;
             dbRef.child(paiId + '/subcategories/' + slug).update(payload)
                 .then(function() { window.fecharModalCategoriaLocal(); })
-                .catch(function(e) { alert('Erro: ' + e.message); });
+                .catch(function(e) { alert('Erro ao salvar no banco: ' + e.message); });
         } else {
             if (!id) payload.paused = false;
             dbRef.child(slug).update(payload)
                 .then(function() { window.fecharModalCategoriaLocal(); })
-                .catch(function(e) { alert('Erro: ' + e.message); });
+                .catch(function(e) { alert('Erro ao salvar no banco: ' + e.message); });
         }
     };
 
@@ -369,16 +354,14 @@
     };
 
     window.excluirCategoriaAcao = function(id) {
-        if (confirm('Remover a categoria [' + id + '] e TODAS as suas subcategorias?\n\nOs produtos vinculados perderao a filtragem.')) {
+        if (confirm('Deseja remover a categoria [' + id.toUpperCase() + '] e suas respectivas subcategorias de forma definitiva?')) {
             dbRef.child(id).remove();
         }
     };
 
     window.excluirSubcatAcao = function(catId, subId) {
-        if (confirm('Remover a subcategoria [' + subId + ']?\n\nOs produtos vinculados perderao a filtragem.')) {
+        if (confirm('Deseja remover a subcategoria [' + subId.toUpperCase() + '] de forma definitiva?')) {
             dbRef.child(catId + '/subcategories/' + subId).remove();
         }
     };
-
-})();
 </script>

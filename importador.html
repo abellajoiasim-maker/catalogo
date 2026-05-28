@@ -235,27 +235,25 @@
 
 <div class="box">
 
-    <!-- HEADER -->
     <div class="header">
         <h1>📦 Super Importador Abella Joias</h1>
         <p>Destino: <span>/abella/products</span> &amp; <span>/abella/categories</span> &nbsp;•&nbsp; Firebase Realtime Database</p>
     </div>
 
-    <!-- MAPEAMENTO DE COLUNAS -->
     <div class="col-map">
         <strong>📋 Ordem exata das colunas no CSV (separador: ponto-e-vírgula)</strong>
         <div class="col-row"><span class="badge">A</span> <b>Nome da Joia</b> &nbsp;<span class="req">obrigatório</span></div>
         <div class="col-row"><span class="badge">B</span> <b>SKU / Código</b> &nbsp;<span class="req">obrigatório — deve ser único</span></div>
         <div class="col-row"><span class="badge">C</span> <b>Categoria</b> &nbsp;<span class="req">obrigatório</span></div>
-        <div class="col-row"><span class="badge">D</span> <b>Preço (R$)</b> &nbsp;<span class="req">obrigatório — use ponto decimal: 49.90</span></div>
-        <div class="col-row"><span class="badge">E</span> <b>Peso (g)</b> &nbsp;<span class="req">obrigatório — ex: 4.50</span></div>
-        <div class="col-row"><span class="badge">F</span> <b>URL Imagem</b> &nbsp;<span class="opt">opcional — https://... ou gs://...</span></div>
-        <div class="col-row"><span class="badge">G</span> <b>Variação</b> &nbsp;<span class="opt">opcional — Padrão | Aro | Lista | Texto</span></div>
-        <div class="col-row"><span class="badge">H</span> <b>Opções (Lista/Aro)</b> &nbsp;<span class="opt">opcional — ex: P,M,G,GG ou 14,15,16,17</span></div>
-        <div class="col-row"><span class="badge">I</span> <b>Pausado</b> &nbsp;<span class="opt">opcional — TRUE | FALSE (padrão: FALSE)</span></div>
+        <div class="col-row"><span class="badge">D</span> <b>Subcategoria</b> &nbsp;<span class="opt">opcional — deixe vazio se não houver</span></div>
+        <div class="col-row"><span class="badge">E</span> <b>Preço (R$)</b> &nbsp;<span class="req">obrigatório — use ponto decimal: 49.90</span></div>
+        <div class="col-row"><span class="badge">F</span> <b>Peso (g)</b> &nbsp;<span class="req">obrigatório — ex: 4.50</span></div>
+        <div class="col-row"><span class="badge">G</span> <b>URL Imagem</b> &nbsp;<span class="opt">opcional — https://... ou gs://...</span></div>
+        <div class="col-row"><span class="badge">H</span> <b>Variação</b> &nbsp;<span class="opt">opcional — Padrão | Aro | Lista | Texto</span></div>
+        <div class="col-row"><span class="badge">I</span> <b>Opções (Lista/Aro)</b> &nbsp;<span class="opt">opcional — ex: P,M,G,GG ou 14,15,16,17</span></div>
+        <div class="col-row"><span class="badge">J</span> <b>Pausado</b> &nbsp;<span class="opt">opcional — TRUE | FALSE (padrão: FALSE)</span></div>
     </div>
 
-    <!-- UPLOAD -->
     <div class="upload-area" id="dropZone">
         <input type="file" id="csv" accept=".csv" onchange="onFileSelect(this)">
         <div class="upload-icon">📂</div>
@@ -263,7 +261,6 @@
         <div class="file-name" id="fileName">Nenhum arquivo selecionado</div>
     </div>
 
-    <!-- OPÇÕES -->
     <div class="options-row">
         <div class="option-card">
             <label>
@@ -281,7 +278,6 @@
         </div>
     </div>
 
-    <!-- BARRA DE PROGRESSO -->
     <div class="progress-wrap" id="progressWrap">
         <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="progressFill"></div>
@@ -289,13 +285,10 @@
         <div class="progress-label" id="progressLabel">0 / 0</div>
     </div>
 
-    <!-- BOTÃO -->
     <button id="btn" onclick="importarTudo()">🚀 Importar para o Catálogo</button>
 
-    <!-- LOG -->
     <div id="log">Pronto para processamento. Selecione um arquivo CSV e clique em Importar...</div>
 
-    <!-- SUMÁRIO FINAL -->
     <div id="sumario">
         <h3>✅ Importação Concluída</h3>
         <div class="sum-row"><span>Produtos importados:</span><span class="sum-val" id="sumProd">0</span></div>
@@ -304,11 +297,9 @@
         <div class="sum-row"><span>Linhas ignoradas (vazias/inválidas):</span><span class="sum-val" id="sumSkip">0</span></div>
     </div>
 
-</div><!-- /box -->
-
-<script>
+</div><script>
 // ─────────────────────────────────────────────────────────────────────────────
-// FIREBASE — CORRIGIDO: guard para não duplicar inicialização
+// FIREBASE — CONFIGURAÇÃO GUARDADA
 // ─────────────────────────────────────────────────────────────────────────────
 const firebaseConfig = {
     apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
@@ -330,7 +321,7 @@ dropZone.addEventListener('drop', e => {
     dropZone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
     if (file && file.name.endsWith('.csv')) {
-        document.getElementById('csv').files; // readonly — usa dataTransfer
+        document.getElementById('csv').files;
         window._droppedFile = file;
         document.getElementById('fileName').textContent = '📄 ' + file.name;
     } else {
@@ -352,7 +343,7 @@ function getFile() {
 // UTILITÁRIOS
 // ─────────────────────────────────────────────────────────────────────────────
 function gerarSlug(txt) {
-    if (!txt) return "geral";
+    if (!txt) return "";
     return txt.toString()
         .toLowerCase()
         .normalize("NFD")
@@ -366,7 +357,6 @@ function limpar(str) {
 }
 
 function parseNum(str) {
-    // Aceita vírgula ou ponto como decimal; remove R$, g, espaços
     const s = limpar(str).replace('R$', '').replace('g', '').replace(',', '.').trim();
     const n = parseFloat(s);
     return isNaN(n) ? 0 : n;
@@ -405,7 +395,6 @@ async function importarTudo() {
 
     if (!confirm(avisoApagar)) return;
 
-    // Setup UI
     const btn = document.getElementById('btn');
     const logEl = document.getElementById('log');
     btn.disabled = true;
@@ -418,7 +407,6 @@ async function importarTudo() {
     const categoriasSet = new Set();
 
     try {
-        // 1. Apagar dados antigos (se não for modo incremental)
         if (!modoIncremental) {
             log("🗑️ Limpando catálogo antigo...");
             await db.ref('abella/products').remove();
@@ -432,16 +420,11 @@ async function importarTudo() {
             log("<span class='info'>ℹ Modo incremental — nenhum dado será apagado.</span>");
         }
 
-        // 2. Ler e parsear CSV
         const text = await file.text();
-        // Remove BOM invisível (UTF-8 BOM: \uFEFF)
         const linhas = text.trim().replace(/^\uFEFF/, '').split(/\r?\n/);
-
-        // Detecta separador automaticamente (;  ou  ,)
         const separador = linhas[0].includes(';') ? ';' : ',';
-        log(`<span class='info'>ℹ Separador detectado: "${separador === ';' ? 'ponto-e-vírgula' : 'vírgula'}" &nbsp;|&nbsp; Total de linhas no arquivo: ${linhas.length - 1}</span>`);
+        log(`<span class='info'>ℹ Separador detectado: "${separador === ';' ? 'ponto-e-vírgula' : 'vírgula'}" &nbsp;|&nbsp; Total de linhas: ${linhas.length - 1}</span>`);
 
-        // Filtra linhas vazias e pula cabeçalho (linha 0)
         const linhasDados = linhas.slice(1).filter(l => l.trim());
         const total = linhasDados.length;
 
@@ -451,36 +434,33 @@ async function importarTudo() {
             const linha = linhasDados[i];
             setProgress(i + 1, total);
 
-            // Divide respeitando campos entre aspas (ex: "Nome com, vírgula")
             const col = splitCSVLine(linha, separador);
 
-            // ── COLUNAS OBRIGATÓRIAS ──────────────────────────────────────────
-            const nome         = limpar(col[0] || "");
-            const skuOriginal  = limpar(col[1] || "");
-            const nomeCategoria= limpar(col[2] || "") || "Geral";
-            const preco        = parseNum(col[3]);
-            const peso         = parseNum(col[4]);
+            // Mapeamento Atualizado para 10 colunas (Subcategoria adicionada na Coluna D / Índice 3)
+            const nome           = limpar(col[0] || "");
+            const skuOriginal    = limpar(col[1] || "");
+            const nomeCategoria  = limpar(col[2] || "") || "Geral";
+            const nomeSubcat     = limpar(col[3] || ""); 
+            const preco          = parseNum(col[4]);
+            const peso           = parseNum(col[5]);
+            const urlImagem      = limpar(col[6] || "");
+            const variacaoTipo   = limpar(col[7] || "") || "Padrão";
+            const opcoesPersonal = limpar(col[8] || "");
+            const pausado        = col[9] !== undefined ? parseBool(col[9]) : false;
 
-            // Ignora se não tiver SKU ou Nome (linha de cabeçalho duplicada ou vazia)
             if (!skuOriginal || !nome || skuOriginal.toLowerCase() === "sku") {
                 totalSkip++;
                 continue;
             }
 
-            // ── COLUNAS OPCIONAIS ─────────────────────────────────────────────
-            const urlImagem        = limpar(col[5] || "");
-            const variacaoTipo     = limpar(col[6] || "") || "Padrão";
-            const opcoesPersonal   = limpar(col[7] || "");
-            const pausado          = col[8] !== undefined ? parseBool(col[8]) : false;
-
-            // Higieniza SKU para ID Firebase (remove caracteres proibidos)
             const skuID   = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
             const catSlug = gerarSlug(nomeCategoria);
+            const subSlug = gerarSlug(nomeSubcat);
 
-            log(`<span class='gold'>›</span> SKU: <b>${skuOriginal}</b> | ${nome.substring(0,35)}${nome.length > 35 ? '…' : ''} ... `);
+            log(`<span class='gold'>›</span> SKU: <b>${skuOriginal}</b> | ${nome.substring(0,30)}... `);
 
             try {
-                // 2a. Cria/atualiza categoria
+                // Estrutura a categoria pai
                 await db.ref('abella/categories/' + catSlug).update({
                     name: nomeCategoria,
                     slug: catSlug,
@@ -488,24 +468,32 @@ async function importarTudo() {
                 });
                 categoriasSet.add(nomeCategoria);
 
-                // 2b. Monta objeto do produto
+                // Se houver subcategoria na linha, injeta aninhada dentro da categoria pai
+                if (subSlug) {
+                    await db.ref(`abella/categories/${catSlug}/subcategories/${subSlug}`).update({
+                        name: nomeSubcat,
+                        slug: subSlug
+                    });
+                }
+
+                // Monta o objeto final do produto para o banco
                 const produto = {
-                    name:                nome,
-                    sku:                 skuOriginal,
-                    category:            catSlug,
-                    price:               parseFloat(preco.toFixed(2)),
-                    precoFinal:          parseFloat(preco.toFixed(2)),   // compatibilidade com editor
-                    weight:              parseFloat(peso.toFixed(2)),
-                    peso:                parseFloat(peso.toFixed(2)),    // compatibilidade com vitrine
-                    image:               urlImagem,
-                    imagem:              urlImagem,                      // compatibilidade com vitrine
-                    variacaoTipo:        variacaoTipo,
-                    opcoesPersonalizadas:opcoesPersonal,
-                    paused:              pausado,
-                    promo:               0
+                    name:                 nome,
+                    sku:                  skuOriginal,
+                    category:             catSlug,
+                    subcategory:          subSlug || "", // Salva a referência se houver
+                    price:                parseFloat(preco.toFixed(2)),
+                    precoFinal:           parseFloat(preco.toFixed(2)),
+                    weight:               parseFloat(peso.toFixed(2)),
+                    peso:                 parseFloat(peso.toFixed(2)),
+                    image:                urlImagem,
+                    imagem:               urlImagem,
+                    variacaoTipo:         variacaoTipo,
+                    opcoesPersonalizadas: opcoesPersonal,
+                    paused:               pausado,
+                    promo:                0
                 };
 
-                // 2c. Grava no Firebase (set substitui, update preserva campos não enviados)
                 if (modoIncremental) {
                     await db.ref('abella/products/' + skuID).update(produto);
                 } else {
@@ -519,19 +507,12 @@ async function importarTudo() {
                 log(`<span class='error'>ERRO: ${e.message}</span>`);
                 totalErros++;
             }
-
-            // Atualiza o log a cada linha
-            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
         }
 
-        // Progresso 100%
         setProgress(total, total);
-
         log('');
         log(`<span class='success'>✅ PROCESSO CONCLUÍDO!</span>`);
-        log(`<span class='gold'>Produtos importados: ${totalProd} | Categorias: ${categoriasSet.size} | Erros: ${totalErros} | Ignoradas: ${totalSkip}</span>`);
 
-        // Sumário visual
         document.getElementById('sumario').style.display  = 'block';
         document.getElementById('sumProd').textContent    = totalProd;
         document.getElementById('sumCat').textContent     = categoriasSet.size;
@@ -540,24 +521,18 @@ async function importarTudo() {
 
     } catch (err) {
         log(`<span class='error'>ERRO CRÍTICO: ${err.message}</span>`);
-        console.error(err);
     } finally {
         btn.disabled = false;
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PARSER CSV ROBUSTO — respeita campos entre aspas com vírgulas internas
-// ─────────────────────────────────────────────────────────────────────────────
 function splitCSVLine(line, sep) {
     const result = [];
     let cur = '';
     let inQuotes = false;
-
     for (let i = 0; i < line.length; i++) {
         const ch = line[i];
         if (ch === '"') {
-            // Aspas duplas escapadas ("")
             if (inQuotes && line[i + 1] === '"') {
                 cur += '"';
                 i++;

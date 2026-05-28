@@ -700,9 +700,17 @@ observerConfig.observe(document.body, { childList: true, subtree: true });
             .replace(/(^-|-$)/g, '');
     }
 
-    function converterGsParaHttp(url) {
+// Variable global de fallback (Imunidade contra quedas de servidores externos de placeholder)
+var IMG_RESERVA_BASE64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100' style='background-color:%23141414;'><rect width='100' height='100' fill='%23141414'/><path d='M50 35 L65 50 L50 65 L35 50 Z' fill='none' stroke='%23caa85c' stroke-width='1.5'/><text x='50%' y='75%' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='5' fill='%2352525b'>SEM IMAGEM</text></svg>";
+
+function converterGsParaHttp(url) {
     if (!url) return '';
     var s = url.trim();
+    
+    // Filtro de Segurança: Ignora strings textuais de exemplo ou inválidas do banco
+    if (s.toUpperCase() === 'URL IMAGEM' || s === '' || s.indexOf('.') === -1) {
+        return '';
+    }
     
     // Se não for um link do Storage (gs://), retorna ele mesmo (caso cole um link https direto)
     if (!s.startsWith('gs://')) return s;
@@ -723,20 +731,24 @@ observerConfig.observe(document.body, { childList: true, subtree: true });
     return 'https://firebasestorage.googleapis.com/v0/b/' + bucketName + '/o/' + filePathFormatado + '?alt=media';
 }
 
-    window.atualizarPreviewModal = function(url) {
-        var img = document.getElementById('previewImgModal');
-        var ph  = document.getElementById('previewPlaceholder');
-        if(!img || !ph) return;
-        var http = converterGsParaHttp(url);
-        if (http) {
-            img.src = http;
-            img.classList.remove('hidden');
-            ph.classList.add('hidden');
-        } else {
-            img.classList.add('hidden');
-            ph.classList.remove('hidden');
-        }
-    };
+window.atualizarPreviewModal = function(url) {
+    var img = document.getElementById('previewImgModal');
+    var ph  = document.getElementById('previewPlaceholder');
+    if(!img || !ph) return;
+    
+    var http = converterGsParaHttp(url);
+    
+    if (http) {
+        img.src = http;
+        img.classList.remove('hidden');
+        ph.classList.add('hidden');
+    } else {
+        // Se a URL for inválida, limpa o src para não forçar requisições 404 locais
+        img.src = ''; 
+        img.classList.add('hidden');
+        ph.classList.remove('hidden');
+    }
+};
 
     window.mudarAba = function(aba) {
         abaAtivaCategorias = aba;
@@ -762,7 +774,7 @@ observerConfig.observe(document.body, { childList: true, subtree: true });
 
     function renderizarMae(dados) {
         var grid = document.getElementById('grid-mae');
-        if (!grid) return; // Se o módulo de categorias não estiver aberto na tela, ignora a renderização
+        if (!grid) return; 
         grid.innerHTML = '';
 
         var entradas = Object.entries(dados);
@@ -784,10 +796,11 @@ observerConfig.observe(document.body, { childList: true, subtree: true });
             var card = document.createElement('div');
             card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40 bg-zinc-950/40' : 'border-zinc-900') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-zinc-800 shadow-xl';
 
+            // AQUÍ ESTÁ A LINHA DA TAG DE IMAGEM AJUSTADA COM O ERROR HANDLER LOCAL:
             card.innerHTML =
                 '<div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900 flex-shrink-0">' +
                     (img
-                        ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/caa85c?text=Erro+Imagem\'">'
+                        ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=window.IMG_RESERVA_BASE64 || IMG_RESERVA_BASE64">'
                         : '<div class="w-full h-full flex items-center justify-center text-zinc-700 text-[10px] font-mono">Sem imagem configurada</div>'
                     ) +
                     (pausado ? '<span class="absolute top-3 right-3 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta na Vitrine</span>' : '') +
@@ -835,10 +848,11 @@ observerConfig.observe(document.body, { childList: true, subtree: true });
                 var card = document.createElement('div');
                 card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40' : 'border-indigo-900/40') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-indigo-800 shadow-xl';
 
+                // AQUÍ TAMBÉM FOI AJUSTADO PARA USAR O SVG SE DER ERRO DE CONEXÃO:
                 card.innerHTML =
                     '<div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900 flex-shrink-0">' +
                         (img
-                            ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/caa85c?text=Erro+Imagem\'">'
+                            ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=window.IMG_RESERVA_BASE64 || IMG_RESERVA_BASE64">'
                             : '<div class="w-full h-full flex items-center justify-center text-indigo-400 text-[10px] font-mono">Sem foto vinculada</div>'
                         ) +
                         '<span class="absolute top-3 left-3 bg-indigo-950/90 border border-indigo-800 text-indigo-400 text-[8px] font-bold px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">Sub-peça</span>' +
@@ -864,7 +878,6 @@ observerConfig.observe(document.body, { childList: true, subtree: true });
             grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma subcategoria localizada. Use o botão "+ Subcategoria" nas categorias-mãe.</div>';
         }
     }
-
     // Configura o canal contínuo com o Firebase
     function loopConexaoCategorias() {
         var dbRef = obterReferenciaBanco();

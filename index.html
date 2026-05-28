@@ -21,6 +21,10 @@
         
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+
+        /* Classe de controle dinâmico para suspensão do catálogo */
+        .catalogo-suspenso .card { opacity: 0.6; pointer-events: none; cursor: not-allowed; }
+        .catalogo-suspenso .card:hover { transform: none; border-color: #2a2a2a; }
     </style>
 </head>
 <body>
@@ -51,7 +55,7 @@
             <p id="pix" class="gold font-black mt-1 text-sm">5% OFF no PIX</p>
         </div>
         <div class="card p-4 flex flex-col justify-center">
-            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Suporte Direto</p>
+            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Suporte Directo</p>
             <a id="whats" target="_blank" class="gold font-black mt-1 text-sm block hover:underline">WhatsApp</a>
         </div>
     </div>
@@ -59,7 +63,7 @@
     <main class="max-w-7xl mx-auto p-6">
         <h2 class="serif text-xl mb-6 tracking-wider uppercase border-b border-zinc-900 pb-3">Nossas Coleções</h2>
         <div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <div class="text-center py-10 text-gray-600 italic col-span-full">Aguardando resposta do Firebase...</div>
+            <div id="status-carregamento" class="text-center py-10 text-gray-600 italic col-span-full">Aguardando resposta do Firebase...</div>
         </div>
     </main>
 
@@ -82,42 +86,67 @@
         
         const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
+        // Objeto global para compartilhamento com os módulos integrados da vitrine
+        window.configuracoesAtivas = {};
+
         async function init(){
-            // 1. Sincronização dinâmica com o painel de configurações (Apenas dados leves da empresa)
+            // 1. Sincronização dinâmica com o painel de configurações (Escuta em tempo real)
             db.ref('abella/settings').on('value', snap => {
-                if(!snap.exists()) return;
+                if(!snap.exists()) {
+                    document.getElementById("slogan").innerText = "Atacado de Joias no Bruto";
+                    return;
+                }
+                
                 const settingsGerais = snap.val() || {};
-                const emp = settingsGerais.empresa || {};
+                window.configuracoesAtivas = settingsGerais; // Alinha o objeto global na memória
                 
-                document.getElementById("nome").innerText = settingsGerais.name || emp.nome || "Abella Joias";
-                document.getElementById("slogan").innerText = settingsGerais.slogan || emp.slogan || "Atacado de Joias no Bruto";
+                // Aplica identidade básica
+                document.getElementById("nome").innerText = settingsGerais.name || "Abella Joias";
+                document.getElementById("slogan").innerText = settingsGerais.slogan || "Atacado de Joias no Bruto";
                 
-                if(settingsGerais.bannerAtivo || emp.bannerAtivo) {
-                    document.getElementById("bannerTexto").innerText = settingsGerais.bannerTexto || emp.bannerTexto || "";
+                // Controle dinâmico do Alerta Geral (Banner)
+                if(settingsGerais.bannerAtivo && settingsGerais.bannerTexto) {
+                    document.getElementById("bannerTexto").innerText = settingsGerais.bannerTexto;
                     document.getElementById("banner").classList.remove("hidden");
                 } else {
                     document.getElementById("banner").classList.add("hidden");
                 }
 
-                const parc = settingsGerais.parcelas || emp.parcelas || 6;
+                // Ajusta dinamicamente as regras financeiras nos blocos superiores
+                const parc = settingsGerais.parcelas || 6;
                 document.getElementById("parcelamento").innerText = `Até ${parc}x no cartão`;
                 
-                const pixDesc = settingsGerais.pix || emp.pix || 5;
+                const pixDesc = settingsGerais.pix !== undefined ? settingsGerais.pix : 5;
                 document.getElementById("pix").innerText = `${pixDesc}% OFF no PIX`;
                 
-                const wppNum = settingsGerais.whatsapp || emp.whatsapp;
+                // Atualiza canal de redirecionamento do WhatsApp
+                const wppNum = settingsGerais.whatsapp;
                 if(wppNum) {
                     document.getElementById("whats").href = `https://wa.me/${wppNum.replace(/\D/g, '')}`;
+                } else {
+                    document.getElementById("whats").removeAttribute('href');
+                }
+
+                // Controle do Estado do Catálogo (Se fechado ou em manutenção, suspende interações de compra)
+                if (settingsGerais.statusLoja && settingsGerais.statusLoja !== 'aberto') {
+                    document.body.classList.add('catalogo-suspenso');
+                    if (settingsGerais.statusLoja === 'manutencao') {
+                        document.getElementById("slogan").innerText = "🔧 AMBIENTE EM MANUTENÇÃO REATIVA";
+                    } else if (settingsGerais.statusLoja === 'fechado') {
+                        document.getElementById("slogan").innerText = "🚪 CATÁLOGO FECHADO TEMPORARIAMENTE";
+                    }
+                } else {
+                    document.body.classList.remove('catalogo-suspenso');
                 }
             });
 
-            // 2. Renderização das Categorias (Apenas carregar as coleções - Ultra rápido e leve)
+            // 2. Renderização das Categorias (Sincronizado de forma independente)
             db.ref('abella/categories').on('value', snap => {
                 const grid = document.getElementById('grid');
                 grid.innerHTML = '';
                 
                 if(!snap.exists()) {
-                    grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-10 italic">Nenhuma coleção active configurada no momento.</p>';
+                    grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-10 italic">Nenhuma coleção ativa configurada no momento.</p>';
                     return;
                 }
 
@@ -166,14 +195,12 @@
             
             cart.forEach(item => {
                 let qtd = parseInt(item.quantidade) || 1;
-                // Busca o preço final tratado de forma resiliente
                 let preco = parseFloat(item.precoFinal || item.preco || 0);
                 
                 totalPecas += qtd;
                 valorTotal += (preco * qtd);
             });
             
-            // Injeta os valores reais calculados a partir dos objetos
             const elCount = document.getElementById('cart-count');
             const elTotal = document.getElementById('cart-total');
             
@@ -181,7 +208,6 @@
             if(elTotal) elTotal.innerText = fM(valorTotal);
         }
 
-        // Escuta atualizações de página/foco para re-sincronizar imediatamente caso o usuário volte do carrinho
         window.addEventListener('pageshow', atualizarCarrinho);
         window.onload = init;
     </script>

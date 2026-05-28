@@ -1,199 +1,384 @@
-<!-- ==========================================
+<!-- ============================================================
      ARQUIVO: modulo/categorias.html
-     VERSÃO CORRIGIDA COMPLETA COM INJEÇÃO DE LÓGICA
-     ========================================== -->
+     VERSÃO 2.0 — Com suporte a Subcategorias, Imagem 1:1,
+     botões Editar / Pausar / Excluir. Sem botões de desconto.
+     Alinhado com a estrutura gravada pelo importador:
+       abella/categories/{catSlug}
+         ├── name, image, paused, slug
+         └── subcategories/
+               └── {subSlug}: { name, slug, image, paused }
+     ============================================================ -->
 
 <div class="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
-    <!-- Cabeçalho Principal -->
+
+    <!-- CABEÇALHO -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-800 pb-4 gap-4">
         <div>
             <h1 class="text-xl font-bold text-white flex items-center gap-2 tracking-wider">
                 <span>📁</span> GESTÃO DE COLEÇÕES E CATEGORIAS
             </h1>
-            <p class="text-xs text-zinc-500 mt-1">Gerencie as imagens de capa, nomes e status de exibição das coleções na vitrine.</p>
+            <p class="text-xs text-zinc-500 mt-1">
+                Gerencie imagens de capa 1:1, nomes, subcategorias e status de exibição na vitrine pública.
+            </p>
         </div>
-        <button onclick="abrirModalCategoriaNova()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider self-start sm:self-auto">
-            <span>➕</span> Nova Categoria
+        <button onclick="abrirModalCategoriaNova()"
+                class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider self-start sm:self-auto shrink-0">
+            <span>+</span> Nova Categoria
         </button>
     </div>
 
-    <!-- O GRID COMPATÍVEL - Totalmente limpo do botão de desconto antigo -->
-    <div id="grid-categorias" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <!-- ABAS -->
+    <div class="flex gap-2 border-b border-zinc-900">
+        <button id="aba-mae" onclick="mudarAba('mae')"
+                class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-[#caa85c] text-black border-b-2 border-[#caa85c]">
+            Categorias-Mae
+        </button>
+        <button id="aba-sub" onclick="mudarAba('sub')"
+                class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-zinc-900 text-zinc-400 border-b-2 border-transparent hover:text-white">
+            Subcategorias
+        </button>
+    </div>
+
+    <!-- GRID CATEGORIAS-MAE -->
+    <div id="grid-mae" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs animate-pulse">
-            ⏳ Sincronizando coleções diretamente com o Firebase...
+            Carregando categorias...
+        </div>
+    </div>
+
+    <!-- GRID SUBCATEGORIAS -->
+    <div id="grid-sub" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">
+            Clique na aba Subcategorias para ver.
         </div>
     </div>
 </div>
 
-<!-- MODAL ATUALIZADO COM CAMPO DE IMAGEM -->
-<div id="modalCategoria" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-zinc-950 border border-zinc-900 rounded-2xl max-w-md w-full p-6 space-y-4 relative text-left">
+<!-- MODAL -->
+<div id="modalCategoria" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-[999]">
+    <div class="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+
         <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 id="modalCategoriaTitulo" class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">Nova Categoria</h3>
-            <button onclick="fecharModalCategoriaLocal()" class="text-zinc-500 hover:text-white transition-all text-xs font-bold">✕</button>
+            <h3 id="modalCategoriaTitulo" class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">
+                Nova Categoria
+            </h3>
+            <button onclick="fecharModalCategoriaLocal()"
+                    class="text-zinc-500 hover:text-white text-sm font-bold w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-900">
+                X
+            </button>
         </div>
-        
+
         <div class="space-y-4 text-xs font-mono">
-            <!-- ID Oculto para controle de edição -->
             <input type="hidden" id="catId">
-            
-            <!-- Campo Nome -->
-            <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome da Coleção *</label>
-                <input type="text" id="catNome" placeholder="Ex: BRINCOS DE ARGOLAS" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c]">
+            <input type="hidden" id="catPaiId">
+
+            <!-- Indicador subcat -->
+            <div id="indicadorSubcat" class="hidden bg-indigo-950/40 border border-indigo-900/60 rounded-lg px-3 py-2 text-indigo-400 text-[10px]">
+                Esta e uma subcategoria vinculada a: <span id="nomePaiLabel" class="text-white font-bold"></span>
             </div>
 
-            <!-- CAMPO DE IMAGEM ADICIONADO -->
+            <!-- NOME -->
             <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">URL da Imagem da Capa (Proporção 1:1) *</label>
-                <input type="text" id="catImagem" placeholder="https://firebasestorage.googleapis.com/... ou gs://" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c]">
+                <label class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">Nome da Colecao *</label>
+                <input type="text" id="catNome" placeholder="Ex: Aneis Solitarios"
+                       class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c] transition-colors">
             </div>
 
+            <!-- IMAGEM -->
+            <div class="space-y-2">
+                <label class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">URL da Imagem de Capa (1:1) *</label>
+                <input type="text" id="catImagem"
+                       placeholder="https://firebasestorage.googleapis.com/..."
+                       class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-[#caa85c] text-[10px] transition-colors"
+                       oninput="atualizarPreviewModal(this.value)">
+                <div class="w-full aspect-square bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden flex items-center justify-center">
+                    <img id="previewImgModal" src="" alt=""
+                         class="w-full h-full object-cover hidden"
+                         onerror="this.classList.add('hidden'); document.getElementById('previewPlaceholder').classList.remove('hidden')">
+                    <span id="previewPlaceholder" class="text-zinc-600 text-[10px] text-center px-4">Cole a URL acima para visualizar</span>
+                </div>
+            </div>
+
+            <!-- BOTOES -->
             <div class="pt-2 grid grid-cols-2 gap-3">
-                <button onclick="fecharModalCategoriaLocal()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Cancelar</button>
-                <button onclick="salvarCategoriaDados()" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Gravar Coleção</button>
+                <button onclick="fecharModalCategoriaLocal()"
+                        class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">
+                    Cancelar
+                </button>
+                <button onclick="salvarCategoriaDados()"
+                        class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">
+                    Gravar
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ==========================================
-     MOTOR LÓGICO DE INTERCEPTAÇÃO E CORREÇÃO
-     ========================================== -->
 <script>
-    // Referência direta ao nó de categorias no seu Firebase Realtime DB
-    // Nota: Como o app usa firebase-compat.js globalmente, puxamos a instância existente.
-    const dbCategoriasRef = firebase.database().ref('abella/categories');
+(function() {
+    var dbRef = firebase.database().ref('abella/categories');
+    var cacheLocal = {};
+    var abaAtiva = 'mae';
 
-    // Inicializa o ouvinte em tempo real para redesenhar a tela do jeito certo
-    function iniciarModuloCategoriasCorreto() {
-        dbCategoriasRef.on('value', snapshot => {
-            const grid = document.getElementById('grid-categorias');
-            if (!grid) return; // Segurança caso mude de aba rápida
-            
-            grid.innerHTML = '';
-            
-            if (!snapshot.exists()) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma categoria localizada no nó abella/categories.</div>`;
-                return;
-            }
-
-            snapshot.forEach(child => {
-                const id = child.key;
-                const cat = child.val();
-                
-                // Trata link quebrado ou vazio aplicando placeholder cinza premium
-                const linkImagem = cat.image || 'https://via.placeholder.com/400/141414/caa85c?text=Sem+Imagem+1:1';
-                const estaPausado = cat.paused === true;
-
-                const cardHTML = `
-                    <div class="bg-zinc-950 border ${estaPausado ? 'border-red-900/40 bg-zinc-950/40' : 'border-zinc-900'} rounded-2xl overflow-hidden shadow-xl flex flex-col group transition-all duration-300 hover:border-zinc-800 relative">
-                        
-                        <!-- Espaço da Imagem 1:1 Alinhado com a Vitrine Pública -->
-                        <div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900">
-                            <img src="${linkImagem}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src='https://via.placeholder.com/400/141414/ef4444?text=Erro+no+Link'">
-                            
-                            <!-- Indicador de Status Oculto/Pausado -->
-                            ${estaPausado ? `<span class="absolute top-3 right-3 bg-red-950 border border-red-800 text-red-400 font-mono text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">Oculta na Vitrine</span>` : ''}
-                        </div>
-                        
-                        <!-- Dados do Registro -->
-                        <div class="p-4 flex-1 flex flex-col justify-between gap-4">
-                            <div>
-                                <span class="text-[9px] font-mono text-zinc-600 block uppercase">ID Interno: ${id}</span>
-                                <h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">${cat.name}</h4>
-                            </div>
-                            
-                            <!-- Grade Corrigida de Ações (Sem Desconto / Com Editar, Pausar e Excluir) -->
-                            <div class="grid grid-cols-3 gap-2 border-t border-zinc-900 pt-3">
-                                <button onclick="editarCategoriaAcao('${id}', '${cat.name}', '${cat.image || ''}')" title="Editar Nome e Foto" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-xs transition-all flex justify-center items-center gap-1 font-bold">
-                                    ✏️ <span class="text-[10px] hidden xl:inline">Editar</span>
-                                </button>
-                                
-                                <button onclick="alternarPausaAcao('${id}', ${estaPausado})" title="${estaPausado ? 'Reativar Coleção' : 'Pausar/Ocultar Coleção'}" class="border py-2 rounded-xl text-xs transition-all flex justify-center items-center gap-1 font-bold ${estaPausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400 hover:bg-emerald-950/50' : 'bg-amber-950/20 border-amber-900/60 text-amber-500 hover:bg-amber-950/40'}">
-                                    ${estaPausado ? '▶️' : '⏸️'} <span class="text-[10px] hidden xl:inline">${estaPausado ? 'Ativar' : 'Pausar'}</span>
-                                </button>
-                                
-                                <button onclick="excluirCategoriaAcao('${id}')" title="Excluir Definitivamente" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-xs transition-all flex justify-center items-center gap-1 font-bold">
-                                    🗑️ <span class="text-[10px] hidden xl:inline">Excluir</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                grid.insertAdjacentHTML('beforeend', cardHTML);
-            });
-        });
+    function gerarSlug(txt) {
+        return (txt || '').toLowerCase().normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
     }
 
-    // Ações de Controle do Modal
-    function abrirModalCategoriaNova() {
-        document.getElementById('catId').value = '';
-        document.getElementById('catNome').value = '';
-        document.getElementById('catImagem').value = '';
-        document.getElementById('modalCategoriaTitulo').innerText = "Criar Nova Coleção";
-        document.getElementById('modalCategoria').classList.remove('hidden');
+    function converterGsParaHttp(url) {
+        if (!url) return '';
+        var s = url.trim();
+        if (!s.startsWith('gs://')) return s;
+        var sem = s.replace('gs://', '');
+        var bar = sem.indexOf('/');
+        if (bar === -1) return s;
+        return 'https://firebasestorage.googleapis.com/v0/b/' + sem.substring(0, bar) + '/o/' + encodeURIComponent(sem.substring(bar + 1)) + '?alt=media';
     }
 
-    function fecharModalCategoriaLocal() {
-        document.getElementById('modalCategoria').classList.add('hidden');
-    }
+    window.atualizarPreviewModal = function(url) {
+        var img = document.getElementById('previewImgModal');
+        var ph  = document.getElementById('previewPlaceholder');
+        var http = converterGsParaHttp(url);
+        if (http) {
+            img.src = http;
+            img.classList.remove('hidden');
+            ph.classList.add('hidden');
+        } else {
+            img.classList.add('hidden');
+            ph.classList.remove('hidden');
+        }
+    };
 
-    function editarCategoriaAcao(id, nome, imagem) {
-        document.getElementById('catId').value = id;
-        document.getElementById('catNome').value = nome;
-        document.getElementById('catImagem').value = imagem === 'undefined' ? '' : imagem;
-        document.getElementById('modalCategoriaTitulo').innerText = "Modificar Coleção";
-        document.getElementById('modalCategoria').classList.remove('hidden');
-    }
+    window.mudarAba = function(aba) {
+        abaAtiva = aba;
+        var gridMae = document.getElementById('grid-mae');
+        var gridSub = document.getElementById('grid-sub');
+        var btnMae  = document.getElementById('aba-mae');
+        var btnSub  = document.getElementById('aba-sub');
 
-    // Gravação e Atualização Direta e Limpa no Firebase
-    function salvarCategoriaDados() {
-        const id = document.getElementById('catId').value.trim();
-        const nome = document.getElementById('catNome').value.trim();
-        const imagem = document.getElementById('catImagem').value.trim();
+        if (aba === 'mae') {
+            gridMae.classList.remove('hidden');
+            gridSub.classList.add('hidden');
+            btnMae.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-[#caa85c] text-black border-b-2 border-[#caa85c]';
+            btnSub.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-zinc-900 text-zinc-400 border-b-2 border-transparent hover:text-white';
+        } else {
+            gridMae.classList.add('hidden');
+            gridSub.classList.remove('hidden');
+            btnSub.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-[#caa85c] text-black border-b-2 border-[#caa85c]';
+            btnMae.className = 'px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-t-lg transition-all bg-zinc-900 text-zinc-400 border-b-2 border-transparent hover:text-white';
+            renderizarSubcategorias();
+        }
+    };
 
-        if (!nome) {
-            alert("Por favor, informe o nome da categoria.");
+    function renderizarMae(dados) {
+        var grid = document.getElementById('grid-mae');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        var maes = Object.entries(dados).filter(function(e) { return !e[1].parentId; });
+
+        if (!maes.length) {
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma categoria-mae cadastrada.</div>';
             return;
         }
 
-        // Se não tiver ID, gera um slug amigável a partir do nome para evitar nós confusos
-        const nóDestino = id || nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+        maes.forEach(function(entry) {
+            var id  = entry[0];
+            var cat = entry[1];
+            var numSub  = cat.subcategories ? Object.keys(cat.subcategories).length : 0;
+            var pausado = cat.paused === true;
+            var img     = converterGsParaHttp(cat.image || '');
 
-        const payload = {
-            name: nome,
-            image: imagem
-        };
+            var nomeSafe   = (cat.name || '').replace(/'/g, "\\'");
+            var imagemSafe = (cat.image || '').replace(/'/g, "\\'");
 
-        if (id) {
-            // Atualização parcial de item existente preservando status de pausa anterior
-            dbCategoriasRef.child(nóDestino).update(payload)
-                .then(() => { fecharModalCategoriaLocal(); })
-                .catch(err => alert("Erro ao atualizar: " + err.message));
+            var card = document.createElement('div');
+            card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40' : 'border-zinc-900') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-zinc-700 shadow-xl';
+
+            card.innerHTML =
+                '<div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900 flex-shrink-0">' +
+                    (img
+                        ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/555555?text=Sem+Imagem\'">'
+                        : '<div class="w-full h-full flex items-center justify-center text-zinc-700 text-[10px] font-mono">Sem imagem</div>'
+                    ) +
+                    (pausado ? '<span class="absolute top-2 right-2 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta</span>' : '') +
+                    (numSub > 0 ? '<span class="absolute bottom-2 left-2 bg-indigo-900/80 border border-indigo-800 text-indigo-300 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md">' + numSub + ' subcat</span>' : '') +
+                '</div>' +
+                '<div class="p-4 flex-1 flex flex-col gap-3">' +
+                    '<div>' +
+                        '<span class="text-[8px] font-mono text-zinc-600 uppercase">ID: ' + id + '</span>' +
+                        '<h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">' + (cat.name || id) + '</h4>' +
+                    '</div>' +
+                    '<div class="grid grid-cols-3 gap-1.5 border-t border-zinc-900 pt-3">' +
+                        '<button onclick="editarCategoriaAcao(\'' + id + '\', \'' + nomeSafe + '\', \'' + imagemSafe + '\')" title="Editar" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center">Editar</button>' +
+                        '<button onclick="alternarPausaAcao(\'' + id + '\', ' + pausado + ')" title="' + (pausado ? 'Reativar' : 'Pausar') + '" class="border py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center ' + (pausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400' : 'bg-amber-950/20 border-amber-900/50 text-amber-500') + '">' + (pausado ? 'Ativar' : 'Pausar') + '</button>' +
+                        '<button onclick="excluirCategoriaAcao(\'' + id + '\')" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center">Excluir</button>' +
+                    '</div>' +
+                    '<button onclick="abrirModalNovaSubcat(\'' + id + '\', \'' + nomeSafe + '\')" class="w-full border border-dashed border-indigo-900/60 hover:border-indigo-600 text-indigo-500 hover:text-indigo-300 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all">+ Subcategoria</button>' +
+                '</div>';
+
+            grid.appendChild(card);
+        });
+    }
+
+    function renderizarSubcategorias() {
+        var grid = document.getElementById('grid-sub');
+        if (!grid) return;
+        grid.innerHTML = '';
+        var total = 0;
+
+        Object.entries(cacheLocal).forEach(function(entry) {
+            var catSlug = entry[0];
+            var cat     = entry[1];
+            if (!cat.subcategories) return;
+
+            Object.entries(cat.subcategories).forEach(function(subEntry) {
+                var subSlug = subEntry[0];
+                var sub     = subEntry[1];
+                total++;
+
+                var pausado    = sub.paused === true;
+                var img        = converterGsParaHttp(sub.image || '');
+                var nomeSafe   = (sub.name  || '').replace(/'/g, "\\'");
+                var imagemSafe = (sub.image || '').replace(/'/g, "\\'");
+                var catNomeSafe = (cat.name || '').replace(/'/g, "\\'");
+
+                var card = document.createElement('div');
+                card.className = 'bg-zinc-950 border ' + (pausado ? 'border-red-900/40' : 'border-indigo-900/30') + ' rounded-2xl overflow-hidden flex flex-col group transition-all hover:border-indigo-800/60 shadow-xl';
+
+                card.innerHTML =
+                    '<div class="w-full aspect-square bg-[#141414] relative overflow-hidden border-b border-zinc-900 flex-shrink-0">' +
+                        (img
+                            ? '<img src="' + img + '" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" onerror="this.src=\'https://via.placeholder.com/400/141414/818cf8?text=Sem+Imagem\'">'
+                            : '<div class="w-full h-full flex items-center justify-center text-indigo-900 text-[10px] font-mono">Sem imagem</div>'
+                        ) +
+                        '<span class="absolute top-2 left-2 bg-indigo-950/80 border border-indigo-900 text-indigo-400 text-[8px] font-bold px-2 py-0.5 rounded-md font-mono">subcat</span>' +
+                        (pausado ? '<span class="absolute top-2 right-2 bg-red-950 border border-red-800 text-red-400 font-mono text-[8px] font-bold px-2 py-0.5 rounded-md uppercase">Oculta</span>' : '') +
+                    '</div>' +
+                    '<div class="p-4 flex-1 flex flex-col gap-3">' +
+                        '<div>' +
+                            '<span class="text-[8px] font-mono text-zinc-600 uppercase">Mae: ' + (cat.name || catSlug) + ' | ID: ' + subSlug + '</span>' +
+                            '<h4 class="text-xs font-bold text-white tracking-wide uppercase truncate mt-0.5">' + (sub.name || subSlug) + '</h4>' +
+                        '</div>' +
+                        '<div class="grid grid-cols-3 gap-1.5 border-t border-zinc-900 pt-3">' +
+                            '<button onclick="editarSubcatAcao(\'' + catSlug + '\', \'' + subSlug + '\', \'' + nomeSafe + '\', \'' + imagemSafe + '\', \'' + catNomeSafe + '\')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center">Editar</button>' +
+                            '<button onclick="alternarPausaSubcat(\'' + catSlug + '\', \'' + subSlug + '\', ' + pausado + ')" class="border py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center ' + (pausado ? 'bg-emerald-950/30 border-emerald-900 text-emerald-400' : 'bg-amber-950/20 border-amber-900/50 text-amber-500') + '">' + (pausado ? 'Ativar' : 'Pausar') + '</button>' +
+                            '<button onclick="excluirSubcatAcao(\'' + catSlug + '\', \'' + subSlug + '\')" class="bg-zinc-900 hover:bg-red-950/40 border border-zinc-800 hover:border-red-900 text-zinc-500 hover:text-red-400 py-2 rounded-xl text-[9px] font-bold transition-all flex items-center justify-center">Excluir</button>' +
+                        '</div>' +
+                    '</div>';
+
+                grid.appendChild(card);
+            });
+        });
+
+        if (!total) {
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs">Nenhuma subcategoria cadastrada. Use o botao "+ Subcategoria" nas categorias-mae.</div>';
+        }
+    }
+
+    // Listener realtime
+    dbRef.on('value', function(snap) {
+        cacheLocal = snap.val() || {};
+        renderizarMae(cacheLocal);
+        if (abaAtiva === 'sub') renderizarSubcategorias();
+    });
+
+    // Modais
+    window.abrirModalCategoriaNova = function() {
+        document.getElementById('catId').value    = '';
+        document.getElementById('catPaiId').value = '';
+        document.getElementById('catNome').value  = '';
+        document.getElementById('catImagem').value = '';
+        document.getElementById('modalCategoriaTitulo').innerText = 'Nova Categoria-Mae';
+        document.getElementById('indicadorSubcat').classList.add('hidden');
+        window.atualizarPreviewModal('');
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    };
+
+    window.abrirModalNovaSubcat = function(catPaiId, catPaiNome) {
+        document.getElementById('catId').value    = '';
+        document.getElementById('catPaiId').value = catPaiId;
+        document.getElementById('catNome').value  = '';
+        document.getElementById('catImagem').value = '';
+        document.getElementById('modalCategoriaTitulo').innerText = 'Nova Subcategoria';
+        document.getElementById('indicadorSubcat').classList.remove('hidden');
+        document.getElementById('nomePaiLabel').innerText = catPaiNome;
+        window.atualizarPreviewModal('');
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    };
+
+    window.editarCategoriaAcao = function(id, nome, imagem) {
+        document.getElementById('catId').value    = id;
+        document.getElementById('catPaiId').value = '';
+        document.getElementById('catNome').value  = nome;
+        document.getElementById('catImagem').value = imagem;
+        document.getElementById('modalCategoriaTitulo').innerText = 'Editar Categoria';
+        document.getElementById('indicadorSubcat').classList.add('hidden');
+        window.atualizarPreviewModal(imagem);
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    };
+
+    window.editarSubcatAcao = function(catPaiId, subId, nome, imagem, catPaiNome) {
+        document.getElementById('catId').value    = subId;
+        document.getElementById('catPaiId').value = catPaiId;
+        document.getElementById('catNome').value  = nome;
+        document.getElementById('catImagem').value = imagem;
+        document.getElementById('modalCategoriaTitulo').innerText = 'Editar Subcategoria';
+        document.getElementById('indicadorSubcat').classList.remove('hidden');
+        document.getElementById('nomePaiLabel').innerText = catPaiNome;
+        window.atualizarPreviewModal(imagem);
+        document.getElementById('modalCategoria').classList.remove('hidden');
+    };
+
+    window.fecharModalCategoriaLocal = function() {
+        document.getElementById('modalCategoria').classList.add('hidden');
+    };
+
+    window.salvarCategoriaDados = function() {
+        var id     = document.getElementById('catId').value.trim();
+        var paiId  = document.getElementById('catPaiId').value.trim();
+        var nome   = document.getElementById('catNome').value.trim();
+        var imagem = document.getElementById('catImagem').value.trim();
+
+        if (!nome) { alert('O nome e obrigatorio.'); return; }
+
+        var slug = id || gerarSlug(nome);
+        var payload = { name: nome, slug: slug, image: imagem };
+
+        if (paiId) {
+            if (!id) payload.paused = false;
+            dbRef.child(paiId + '/subcategories/' + slug).update(payload)
+                .then(function() { window.fecharModalCategoriaLocal(); })
+                .catch(function(e) { alert('Erro: ' + e.message); });
         } else {
-            // Novo registro inicializa despausado (visível)
-            payload.paused = false;
-            dbCategoriasRef.child(nóDestino).set(payload)
-                .then(() => { fecharModalCategoriaLocal(); })
-                .catch(err => alert("Erro ao criar: " + err.message));
+            if (!id) payload.paused = false;
+            dbRef.child(slug).update(payload)
+                .then(function() { window.fecharModalCategoriaLocal(); })
+                .catch(function(e) { alert('Erro: ' + e.message); });
         }
-    }
+    };
 
-    // Alternar Visibilidade (Pausa)
-    function alternarPausaAcao(id, statusAtual) {
-        dbCategoriasRef.child(id).update({ paused: !statusAtual });
-    }
+    window.alternarPausaAcao = function(id, statusAtual) {
+        dbRef.child(id).update({ paused: !statusAtual });
+    };
 
-    // Excluir Registro
-    function excluirCategoriaAcao(id) {
-        if (confirm(`Deseja remover a categoria [${id}] do banco?\n\n⚠️ Atenção: Isso não apaga as joias vinculadas a ela, mas elas podem perder a filtragem automática na vitrine.`)) {
-            dbCategoriasRef.child(id).remove();
+    window.alternarPausaSubcat = function(catId, subId, statusAtual) {
+        dbRef.child(catId + '/subcategories/' + subId).update({ paused: !statusAtual });
+    };
+
+    window.excluirCategoriaAcao = function(id) {
+        if (confirm('Remover a categoria [' + id + '] e TODAS as suas subcategorias?\n\nOs produtos vinculados perderao a filtragem.')) {
+            dbRef.child(id).remove();
         }
-    }
+    };
 
-    // Executa imediatamente o motor ao carregar a aba na tela
-    setTimeout(() => {
-        iniciarModuloCategoriasCorreto();
-    }, 200);
+    window.excluirSubcatAcao = function(catId, subId) {
+        if (confirm('Remover a subcategoria [' + subId + ']?\n\nOs produtos vinculados perderao a filtragem.')) {
+            dbRef.child(catId + '/subcategories/' + subId).remove();
+        }
+    };
+
+})();
 </script>

@@ -2,328 +2,555 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Editor Full Master v3.4 • Abella Joias</title>
+    <title>Editor Full Master v4.0 • Abella Joias</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+
     <style>
         body { background: #0b0b0b; color: #eee; font-family: 'Poppins', sans-serif; }
-        .input-dark { background: #1a1a1a; border: 1px solid #333; color: white; padding: 6px; border-radius: 6px; width: 100%; font-size: 10px; transition: 0.3s; }
+
+        .input-dark {
+            background: #1a1a1a; border: 1px solid #333; color: white;
+            padding: 5px 7px; border-radius: 6px; width: 100%;
+            font-size: 10px; transition: 0.2s;
+        }
         .input-dark:focus { border-color: #caa85c; outline: none; background: #222; }
+
         .edit-sku { color: #caa85c; font-family: monospace; font-weight: bold; text-transform: uppercase; }
+
         tr.is-paused { opacity: 0.4; background: #2a1010 !important; }
-        .btn-status { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 4px; border-radius: 4px; cursor: pointer; width: 50px; text-align: center; }
-        .status-on { background: #15803d; color: white; }
+
+        .btn-status {
+            font-size: 9px; font-weight: 800; text-transform: uppercase;
+            padding: 4px 6px; border-radius: 4px; cursor: pointer;
+            width: 44px; text-align: center; border: none;
+        }
+        .status-on  { background: #15803d; color: white; }
         .status-off { background: #b91c1c; color: white; }
-        .sticky-header th { position: sticky; top: 0; background: #0b0b0b; z-index: 10; border-bottom: 2px solid #caa85c; padding: 10px; font-size: 9px; }
-        .img-preview { width: 35px; height: 35px; object-fit: contain; background: #222; border-radius: 4px; border: 1px solid #444; margin-bottom: 2px; }
-        .img-error { border-color: #ef4444; background: #451a1a; }
-        .highlight-var { border: 1px solid #caa85c !important; background: #262116 !important; }
+
+        .sticky-header th {
+            position: sticky; top: 0; background: #0b0b0b; z-index: 10;
+            border-bottom: 2px solid #caa85c; padding: 9px 6px;
+            font-size: 9px; white-space: nowrap;
+        }
+
+        .img-preview {
+            width: 34px; height: 34px; object-fit: cover;
+            background: #222; border-radius: 4px;
+            border: 1px solid #444; flex-shrink: 0;
+        }
+        .img-error { border-color: #ef4444 !important; background: #451a1a; }
+
+        .highlight-var  { border: 1px solid #caa85c !important; background: #262116 !important; }
+        .highlight-sub  { border: 1px solid #818cf8 !important; background: #1e1a2e !important; }
+
+        /* Separador visual de subcategoria no select */
+        optgroup { background: #111; font-style: normal; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #0b0b0b; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #caa85c; }
     </style>
 </head>
 <body class="p-2">
 
-    <div class="max-w-[100%] mx-auto">
-        <header class="bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] shadow-xl mb-4 flex flex-col xl:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-xl font-bold text-[#caa85c]">Editor Full Master v3.4</h1>
-                <p class="text-[9px] text-gray-400 uppercase tracking-widest">Controle de Estoque e URLs de Imagens • Alinhado com o Super Importador</p>
-            </div>
-            
-            <div class="flex flex-wrap gap-2 justify-center">
-                <button onclick="criarNovoProduto()" class="bg-white text-black font-black px-4 py-2 rounded-lg text-[10px] hover:bg-gray-200">+ NOVO PRODUTO</button>
-                <select id="filtroCat" class="bg-[#0b0b0b] border border-[#333] px-2 py-2 rounded-lg text-[10px] text-white outline-none focus:border-[#caa85c]"><option value="">Todas Categorias</option></select>
-                <input id="filtroSku" onkeypress="if(event.key === 'Enter') carregarProdutos()" placeholder="SKU parcial ou Nome..." class="bg-[#0b0b0b] border border-[#333] px-2 py-2 rounded-lg text-[10px] w-40 text-white">
-                <button onclick="carregarProdutos()" class="bg-[#caa85c] text-black font-bold px-4 py-2 rounded-lg text-[10px] hover:brightness-110">🔍 BUSCAR</button>
-                <button onclick="sincronizarFotosInteligente()" class="bg-blue-600 text-white font-bold px-4 py-2 rounded-lg text-[10px]">🔄 AUTO-SYNC (SKU)</button>
-            </div>
-        </header>
+<div class="max-w-[100%] mx-auto">
 
-        <div class="bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-2xl">
-            <div class="overflow-x-auto" style="max-height: 75vh;">
-                <table class="w-full text-left text-[10px] border-collapse">
-                    <thead class="sticky-header">
-                        <tr class="text-[#caa85c] uppercase tracking-wider">
-                            <th class="p-2 w-16">Status</th>
-                            <th class="w-48">Imagem (URL/Preview)</th>
-                            <th class="w-24">SKU</th>
-                            <th>Nome do Produto</th>
-                            <th class="w-16 text-center">Peso(g)</th>
-                            <th class="w-32">Categoria</th>
-                            <th class="w-32">Subcategoria</th>
-                            <th class="w-24">Variação</th>
-                            <th class="w-32">Opções Lista</th>
-                            <th class="w-20">Preço R$</th>
-                            <th class="text-center w-20">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaCorpo">
-                        <tr><td colspan="11" class="p-20 text-center text-gray-500 italic">Busque produtos informando parte do SKU, nome ou categoria.</td></tr>
-                    </tbody>
-                </table>
-            </div>
+    <!-- HEADER -->
+    <header class="bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] shadow-xl mb-4 flex flex-col xl:flex-row justify-between items-center gap-4">
+        <div>
+            <h1 class="text-xl font-bold text-[#caa85c]">Editor Full Master v4.0</h1>
+            <p class="text-[9px] text-gray-400 uppercase tracking-widest">Controle Completo • Subcategorias • Raiz /abella</p>
         </div>
 
-        <div class="mt-4 flex flex-col md:flex-row justify-between items-center bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] gap-4">
-            <div id="statusInfo" class="text-[10px] text-gray-400 font-mono">Status: Pronto.</div>
-            <button onclick="salvarAlteracoes()" class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-black px-12 py-3 rounded-lg uppercase tracking-widest text-xs shadow-lg shadow-green-900/20">
-                💾 SALVAR TUDO
+        <div class="flex flex-wrap gap-2 justify-center">
+            <button onclick="criarNovoProduto()" class="bg-white text-black font-black px-4 py-2 rounded-lg text-[10px] hover:bg-gray-200">
+                + NOVO PRODUTO
             </button>
+
+            <!-- FILTRO CATEGORIA/SUBCAT — preenchido dinamicamente -->
+            <select id="filtroCat" class="bg-[#0b0b0b] border border-[#333] px-2 py-2 rounded-lg text-[10px] text-white outline-none focus:border-[#caa85c] max-w-[180px]">
+                <option value="">Todas Categorias</option>
+            </select>
+
+            <input id="filtroSku" onkeypress="if(event.key==='Enter') carregarProdutos()"
+                   placeholder="SKU ou nome..." 
+                   class="bg-[#0b0b0b] border border-[#333] px-2 py-2 rounded-lg text-[10px] w-36 text-white outline-none focus:border-[#caa85c]">
+
+            <button onclick="carregarProdutos()" class="bg-[#caa85c] text-black font-bold px-4 py-2 rounded-lg text-[10px] hover:brightness-110">
+                🔍 BUSCAR
+            </button>
+
+            <button onclick="sincronizarFotosInteligente()" class="bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-[10px] hover:bg-blue-600">
+                🔄 AUTO-SYNC (SKU)
+            </button>
+        </div>
+    </header>
+
+    <!-- TABELA -->
+    <div class="bg-[#141414] border border-[#2a2a2a] rounded-xl overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto" style="max-height: 72vh;">
+            <table class="w-full text-left text-[10px] border-collapse">
+                <thead class="sticky-header">
+                    <tr class="text-[#caa85c] uppercase tracking-wider">
+                        <th class="w-14 text-center">Status</th>
+                        <th class="w-44">Imagem / URL</th>
+                        <th class="w-24">SKU</th>
+                        <th class="min-w-[140px]">Nome do Produto</th>
+                        <th class="w-14 text-center">Peso(g)</th>
+                        <!-- ADICIONADO: Coluna Categoria separada de Subcategoria -->
+                        <th class="w-36">Categoria</th>
+                        <th class="w-36" title="Subcategoria vinculada à categoria-mãe (alinhado com importador col D)">
+                            Subcategoria <span class="text-indigo-400">↳</span>
+                        </th>
+                        <th class="w-24">Variação</th>
+                        <th class="w-32">Opções Lista</th>
+                        <th class="w-20">Preço R$</th>
+                        <th class="w-16 text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo">
+                    <tr>
+                        <td colspan="11" class="p-16 text-center text-gray-500 italic text-xs">
+                            Use os filtros acima e clique em Buscar para carregar os produtos.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
+    <!-- RODAPÉ DE AÇÕES -->
+    <div class="mt-4 flex flex-col md:flex-row justify-between items-center bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] gap-4">
+        <div id="statusInfo" class="text-[10px] text-gray-400 font-mono">Status: Pronto.</div>
+        <button onclick="salvarAlteracoes()" class="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white font-black px-12 py-3 rounded-lg uppercase tracking-widest text-xs shadow-lg">
+            💾 SALVAR TUDO
+        </button>
+    </div>
+
+</div><!-- /max-w -->
+
 <script>
+// ─────────────────────────────────────────────────────────────────────────────
+// FIREBASE
+// ─────────────────────────────────────────────────────────────────────────────
 const firebaseConfig = {
     apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
     databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
 };
-if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let categoriasCache = {};
+// ─────────────────────────────────────────────────────────────────────────────
+// CACHE DE ESTRUTURA DE CATEGORIAS
+// Formato: { catSlug: { name, subcategories: { subSlug: { name } } } }
+// Exatamente o que o importador grava em abella/categories
+// ─────────────────────────────────────────────────────────────────────────────
+let categoriasCache   = {};   // todas as categorias-mãe (nível raiz)
+let subcatPorPai      = {};   // { catSlug: { subSlug: { name } } }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILITÁRIO: converte gs:// → URL pública HTTP
+// ─────────────────────────────────────────────────────────────────────────────
 function converterUrlStorage(url) {
     if (!url) return '';
-    const linkStr = url.trim();
-    if (linkStr.startsWith('gs://')) {
-        const semPrefixo = linkStr.replace('gs://', '');
-        const primeiraBarra = semPrefixo.indexOf('/');
-        if (primeiraBarra === -1) return linkStr;
-        
-        const bucket = semPrefixo.substring(0, primeiraBarra);
-        const caminhoArquivo = semPrefixo.substring(primeiraBarra + 1);
-        const caminhoCodificado = encodeURIComponent(caminhoArquivo);
-        return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${caminhoCodificado}?alt=media`;
-    }
-    return linkStr;
+    const s = url.trim();
+    if (!s.startsWith('gs://')) return s;
+    const semPrefixo   = s.replace('gs://', '');
+    const primeiraBarra = semPrefixo.indexOf('/');
+    if (primeiraBarra === -1) return s;
+    const bucket  = semPrefixo.substring(0, primeiraBarra);
+    const caminho = semPrefixo.substring(primeiraBarra + 1);
+    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CARREGA CATEGORIAS — lê a estrutura exata gravada pelo importador
+// ─────────────────────────────────────────────────────────────────────────────
 async function carregarCategorias() {
     const snap = await db.ref('abella/categories').once('value');
     categoriasCache = snap.val() || {};
-    const filterSelect = document.getElementById('filtroCat');
-    let options = '<option value="">Todas Categorias</option>';
-    Object.entries(categoriasCache).forEach(([id, cat]) => {
-        options += `<option value="${id}">${cat.name}</option>`;
+    subcatPorPai    = {};
+
+    // Monta o lookup de subcategorias aninhadas
+    Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
+        if (cat.subcategories) {
+            subcatPorPai[catSlug] = cat.subcategories;
+        }
     });
-    filterSelect.innerHTML = options;
+
+    // Popula o filtro de categoria no header
+    const filterSelect = document.getElementById('filtroCat');
+    let opts = '<option value="">Todas Categorias</option>';
+
+    Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
+        opts += `<option value="${catSlug}">${cat.name || catSlug}</option>`;
+        // Adiciona subcategorias indentadas no filtro
+        if (cat.subcategories) {
+            Object.entries(cat.subcategories).forEach(([subSlug, sub]) => {
+                opts += `<option value="__sub__${catSlug}__${subSlug}">↳ ${sub.name || subSlug}</option>`;
+            });
+        }
+    });
+
+    filterSelect.innerHTML = opts;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSTRÓI O SELECT DE CATEGORIA com optgroups (Mãe > Subcat)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildCatOptions(prodCat, prodSubcat) {
+    let html = '<option value="">— Selecione —</option>';
+    Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
+        const nome = cat.name || catSlug;
+        html += `<option value="${catSlug}" ${prodCat === catSlug && !prodSubcat ? 'selected' : ''}>${nome}</option>`;
+    });
+    return html;
+}
+
+// Constrói o select de SUBCATEGORIA baseado na categoria-mãe selecionada
+function buildSubcatOptions(catSlug, prodSubcat) {
+    if (!catSlug || !subcatPorPai[catSlug]) {
+        return '<option value="">Sem subcategorias</option>';
+    }
+    let html = '<option value="">Nenhuma (produto na categoria-mãe)</option>';
+    Object.entries(subcatPorPai[catSlug]).forEach(([subSlug, sub]) => {
+        html += `<option value="${subSlug}" ${prodSubcat === subSlug ? 'selected' : ''}>${sub.name || subSlug}</option>`;
+    });
+    return html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ATUALIZA SELECT DE SUBCAT ao mudar a categoria (dinamicamente na linha)
+// ─────────────────────────────────────────────────────────────────────────────
+function onCatChange(selectEl) {
+    const tr       = selectEl.closest('tr');
+    const catSlug  = selectEl.value;
+    const subSelect = tr.querySelector('.edit-subcat');
+    subSelect.innerHTML = buildSubcatOptions(catSlug, '');
+
+    // Destaca se tiver subcategorias disponíveis
+    if (catSlug && subcatPorPai[catSlug]) {
+        subSelect.classList.add('highlight-sub');
+    } else {
+        subSelect.classList.remove('highlight-sub');
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREVIEW DE IMAGEM ao digitar a URL
+// ─────────────────────────────────────────────────────────────────────────────
 function atualizarPreview(input) {
-    const urlOriginal = input.value.trim();
-    const urlConvertida = converterUrlStorage(urlOriginal);
+    const urlConvertida = converterUrlStorage(input.value.trim());
     const img = input.closest('td').querySelector('.row-img');
-    img.src = urlConvertida || 'https://via.placeholder.com/40';
+    img.src = urlConvertida || 'https://via.placeholder.com/40?text=?';
     img.classList.remove('img-error');
 }
 
-function atualizarSubcategoriasSelect(catSelect, subcatSelecionada = "") {
-    const tr = catSelect.closest('tr');
-    const subcatSelect = tr.querySelector('.edit-subcat');
-    const catSlug = catSelect.value;
-    
-    let options = '<option value="">Sem Subcategoria</option>';
-    
-    if (catSlug && categoriasCache[catSlug] && categoriasCache[catSlug].subcategories) {
-        Object.entries(categoriasCache[catSlug].subcategories).forEach(([subId, subcat]) => {
-            options += `<option value="${subId}" ${subId === subcatSelecionada ? 'selected' : ''}>${subcat.name}</option>`;
-        });
-    }
-    
-    subcatSelect.innerHTML = options;
-}
-
+// ─────────────────────────────────────────────────────────────────────────────
+// MONTA HTML DE UMA LINHA DA TABELA
+// ALINHADO COM O IMPORTADOR: category = catSlug, subcategory = subSlug
+// ─────────────────────────────────────────────────────────────────────────────
 function criarLinhaHTML(id, p) {
-    let catOptions = '';
-    Object.entries(categoriasCache).forEach(([cid, cat]) => {
-        catOptions += `<option value="${cid}" ${p.category === cid ? 'selected' : ''}>${cat.name}</option>`;
-    });
-    const urlVisualizacao = converterUrlStorage(p.image || p.imagem || '');
+    const catSlug    = p.category    || '';
+    const subcatSlug = p.subcategory || '';
 
-    setTimeout(() => {
-        const tr = document.querySelector(`tr[data-id="${id}"]`);
-        if (tr) {
-            const catSelect = tr.querySelector('.edit-cat');
-            atualizarSubcategoriasSelect(catSelect, p.subcategory || '');
-        }
-    }, 50);
+    const catOpts    = buildCatOptions(catSlug, subcatSlug);
+    const subcatOpts = buildSubcatOptions(catSlug, subcatSlug);
+    const urlVis     = converterUrlStorage(p.image || '');
+
+    // Estilo do select de subcat: destacado se tiver valor
+    const subcatClass = subcatSlug
+        ? 'input-dark edit-subcat highlight-sub'
+        : 'input-dark edit-subcat';
+
+    // Libera campo opções somente se variacaoTipo = Lista ou Aro
+    const opcoesBloqueadas = !p.variacaoTipo || p.variacaoTipo === 'Padrão';
+    const opcoesClass = opcoesBloqueadas
+        ? 'input-dark edit-opcoes opacity-20 pointer-events-none'
+        : 'input-dark edit-opcoes highlight-var';
 
     return `
-    <tr data-id="${id}" class="border-b border-[#222] ${p.paused ? 'is-paused' : ''}">
+    <tr data-id="${id}" class="border-b border-[#1e1e1e] hover:bg-[#191919] transition-colors ${p.paused ? 'is-paused' : ''}">
+
+        <!-- STATUS -->
         <td class="p-2 text-center">
-            <button class="btn-status ${p.paused ? 'status-off' : 'status-on'}" onclick="toggleStatus(this)">${p.paused ? 'OFF' : 'ON'}</button>
+            <button class="btn-status ${p.paused ? 'status-off' : 'status-on'}" onclick="toggleStatus(this)">
+                ${p.paused ? 'OFF' : 'ON'}
+            </button>
         </td>
+
+        <!-- IMAGEM -->
         <td class="p-1">
-            <div class="flex items-center gap-2">
-                <img src="${urlVisualizacao}" class="img-preview row-img" onerror="this.classList.add('img-error')">
-                <input class="input-dark edit-img text-[9px]" value="${p.image || p.imagem || ''}" placeholder="Cole URL ou gs:// aqui" onchange="atualizarPreview(this)">
+            <div class="flex items-center gap-1.5">
+                <img src="${urlVis}" class="img-preview row-img" onerror="this.classList.add('img-error')" title="Preview">
+                <input class="input-dark edit-img text-[9px]" value="${p.image || ''}"
+                       placeholder="URL ou gs://" onchange="atualizarPreview(this)">
             </div>
         </td>
-        <td class="p-1"><input class="input-dark edit-sku font-mono" value="${p.sku || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-name" value="${p.name || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-peso text-center" value="${p.peso || p.weight || '0.00'}"></td>
+
+        <!-- SKU -->
         <td class="p-1">
-            <select class="input-dark edit-cat" onchange="atualizarSubcategoriasSelect(this)">
-                ${catOptions}
+            <input class="input-dark edit-sku" value="${p.sku || ''}">
+        </td>
+
+        <!-- NOME -->
+        <td class="p-1">
+            <input class="input-dark edit-name" value="${p.name || ''}">
+        </td>
+
+        <!-- PESO -->
+        <td class="p-1">
+            <input class="input-dark edit-peso text-center" value="${p.peso || p.weight || '0.00'}">
+        </td>
+
+        <!-- CATEGORIA (slug da categoria-mãe — col C do importador) -->
+        <td class="p-1">
+            <select class="input-dark edit-cat" onchange="onCatChange(this)">
+                ${catOpts}
             </select>
         </td>
+
+        <!-- SUBCATEGORIA (slug da subcat — col D do importador) -->
         <td class="p-1">
-            <select class="input-dark edit-subcat">
-                <option value="">Sem Subcategoria</option>
+            <select class="${subcatClass}">
+                ${subcatOpts}
             </select>
         </td>
+
+        <!-- VARIAÇÃO -->
         <td class="p-1">
             <select class="input-dark edit-varTipo" onchange="liberarCampoLista(this)">
-                <option value="Padrão" ${p.variacaoTipo === 'Padrão' || !p.variacaoTipo ? 'selected' : ''}>Padrão</option>
-                <option value="Aro" ${p.variacaoTipo === 'Aro' ? 'selected' : ''}>Aro</option>
-                <option value="Lista" ${p.variacaoTipo === 'Lista' ? 'selected' : ''}>Lista</option>
-                <option value="Texto" ${p.variacaoTipo === 'Texto' ? 'selected' : ''}>Texto</option>
+                <option value="Padrão" ${(!p.variacaoTipo || p.variacaoTipo === 'Padrão') ? 'selected' : ''}>Padrão</option>
+                <option value="Aro"    ${p.variacaoTipo === 'Aro'    ? 'selected' : ''}>Aro</option>
+                <option value="Lista"  ${p.variacaoTipo === 'Lista'  ? 'selected' : ''}>Lista</option>
+                <option value="Texto"  ${p.variacaoTipo === 'Texto'  ? 'selected' : ''}>Texto</option>
             </select>
         </td>
-        <td class="p-1"><input class="input-dark edit-opcoes ${p.variacaoTipo === 'Lista' || p.variacaoTipo === 'Aro' ? 'highlight-var' : 'opacity-20 pointer-events-none'}" value="${p.opcoesPersonalizadas || ''}"></td>
-        <td class="p-1"><input class="input-dark edit-precoFinal text-gold font-bold" type="number" step="0.01" value="${p.precoFinal || p.price || 0}"></td>
-        <td class="p-1 text-center">
-             <div class="flex justify-center gap-1">
-                <button onclick="salvarLinhaUnica(this)" title="Salvar Linha" class="bg-green-600 p-2 rounded hover:bg-green-500">✅</button>
-                <button onclick="deletarProduto('${id}')" title="Excluir" class="bg-red-900 p-2 rounded hover:bg-red-700">🗑️</button>
-             </div>
+
+        <!-- OPÇÕES LISTA -->
+        <td class="p-1">
+            <input class="${opcoesClass}" value="${p.opcoesPersonalizadas || ''}"
+                   placeholder="P,M,G ou 14,15,16...">
         </td>
+
+        <!-- PREÇO -->
+        <td class="p-1">
+            <input class="input-dark edit-precoFinal font-bold" type="number" step="0.01"
+                   value="${p.precoFinal || p.price || 0}" style="color:#caa85c;">
+        </td>
+
+        <!-- AÇÕES -->
+        <td class="p-1 text-center">
+            <div class="flex justify-center gap-1">
+                <button onclick="salvarLinhaUnica(this)" title="Salvar esta linha"
+                        class="bg-green-700 hover:bg-green-600 p-2 rounded text-xs">✅</button>
+                <button onclick="deletarProduto('${id}')" title="Excluir produto"
+                        class="bg-red-900 hover:bg-red-700 p-2 rounded text-xs">🗑️</button>
+            </div>
+        </td>
+
     </tr>`;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CRIA NOVO PRODUTO (linha em branco no topo)
+// ─────────────────────────────────────────────────────────────────────────────
 function criarNovoProduto() {
     const novoRef = db.ref('abella/products').push();
-    const novoProduto = { sku: "SKU-TEMP", name: "Novo Produto", peso: "0.00", weight: "0.00", precoFinal: 0, price: 0, paused: true, image: "", imagem: "", category: Object.keys(categoriasCache)[0] || "" };
+    const novo    = {
+        sku: 'SKU-NOVO', name: 'Novo Produto',
+        peso: '0.00', precoFinal: 0, price: 0,
+        paused: true, image: '',
+        category: '', subcategory: '',
+        variacaoTipo: 'Padrão', opcoesPersonalizadas: ''
+    };
     const corpo = document.getElementById('tabelaCorpo');
-    if(corpo.innerText.includes("Busque")) corpo.innerHTML = '';
-    corpo.insertAdjacentHTML('afterbegin', criarLinhaHTML(novoRef.key, novoProduto));
+    if (corpo.querySelector('td[colspan]')) corpo.innerHTML = '';
+    corpo.insertAdjacentHTML('afterbegin', criarLinhaHTML(novoRef.key, novo));
+    documento_setStatus(`Novo produto criado com ID temporário ${novoRef.key}. Preencha e salve.`);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CARREGA PRODUTOS com filtros (categoria, subcat ou texto)
+// ─────────────────────────────────────────────────────────────────────────────
 async function carregarProdutos() {
-    const filtroTexto = document.getElementById('filtroSku').value.trim().toUpperCase();
-    const filtroCat = document.getElementById('filtroCat').value;
-    const corpo = document.getElementById('tabelaCorpo');
-    corpo.innerHTML = '<tr><td colspan="11" class="p-20 text-center text-[#caa85c] animate-pulse font-bold">BUSCANDO NO BANCO (/abella)...</td></tr>';
-    
-    db.ref('abella/products').once('value', snapshot => {
+    const filtroTexto  = document.getElementById('filtroSku').value.trim().toUpperCase();
+    const filtroCatRaw = document.getElementById('filtroCat').value;
+    const corpo        = document.getElementById('tabelaCorpo');
+
+    corpo.innerHTML = `<tr><td colspan="11" class="p-16 text-center text-[#caa85c] animate-pulse font-bold text-xs">BUSCANDO NO BANCO (/abella/products)...</td></tr>`;
+
+    // Detecta se é filtro de subcat codificado: "__sub__catSlug__subSlug"
+    let filtroCat    = '';
+    let filtroSubcat = '';
+    if (filtroCatRaw.startsWith('__sub__')) {
+        const partes  = filtroCatRaw.split('__');
+        filtroCat    = partes[2] || '';
+        filtroSubcat = partes[3] || '';
+    } else {
+        filtroCat = filtroCatRaw;
+    }
+
+    db.ref('abella/products').once('value', snap => {
         let html = '';
-        let contador = 0;
-        snapshot.forEach(child => {
-            const p = child.val();
-            const sku = String(p.sku || "").toUpperCase();
-            const nome = String(p.name || "").toUpperCase();
-            
-            if ((!filtroTexto || sku.includes(filtroTexto) || nome.includes(filtroTexto)) && (!filtroCat || p.category === filtroCat)) {
-                contador++;
+        let count = 0;
+
+        snap.forEach(child => {
+            const p   = child.val();
+            const sku = String(p.sku  || '').toUpperCase();
+            const nom = String(p.name || '').toUpperCase();
+
+            const passaTexto = !filtroTexto  || sku.includes(filtroTexto) || nom.includes(filtroTexto);
+            const passaCat   = !filtroCat    || p.category    === filtroCat;
+            const passaSub   = !filtroSubcat || p.subcategory === filtroSubcat;
+
+            if (passaTexto && passaCat && passaSub) {
+                count++;
                 html += criarLinhaHTML(child.key, p);
             }
         });
-        corpo.innerHTML = html || '<tr><td colspan="11" class="p-20 text-center text-red-500">Nenhum produto localizado com estes critérios.</td></tr>';
-        document.getElementById('statusInfo').innerText = `Total exibido: ${contador} produtos.`;
+
+        corpo.innerHTML = html || `<tr><td colspan="11" class="p-16 text-center text-red-500 italic text-xs">Nenhum produto encontrado com estes critérios.</td></tr>`;
+        documento_setStatus(`${count} produto(s) exibido(s).`);
     });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTO-SYNC: preenche gs:// baseado nos SKUs visíveis
+// ─────────────────────────────────────────────────────────────────────────────
 function sincronizarFotosInteligente() {
-    const ext = prompt("Qual a extensão das fotos no Storage? (png, jpg, jpeg ou webp)", "jpeg");
-    if(!ext) return;
+    const ext = prompt("Extensão das fotos no Storage? (jpeg, png, webp)", "jpeg");
+    if (!ext) return;
     const dominio = "catalogo-abella-joias.firebasestorage.app";
     let count = 0;
     document.querySelectorAll('#tabelaCorpo tr[data-id]').forEach(tr => {
-        const sku = tr.querySelector('.edit-sku').value.trim();
+        const sku      = tr.querySelector('.edit-sku').value.trim();
         const inputImg = tr.querySelector('.edit-img');
         if (sku) {
-            const linkGs = `gs://${dominio}/images/produtos/${sku}.${ext}`;
-            inputImg.value = linkGs;
+            inputImg.value = `gs://${dominio}/images/produtos/${sku}.${ext}`;
             atualizarPreview(inputImg);
             count++;
         }
     });
-    alert(`${count} SKUs processados localmente. Lembre-se de clicar em SALVAR TUDO.`);
+    alert(`${count} SKUs processados. Clique em SALVAR TUDO para confirmar.`);
 }
 
-function salvarLinhaUnica(btn) {
-    const tr = btn.closest('tr');
-    const id = tr.dataset.id;
+// ─────────────────────────────────────────────────────────────────────────────
+// COLETA DADOS DE UMA LINHA (usado por salvarLinhaUnica e salvarAlteracoes)
+// ─────────────────────────────────────────────────────────────────────────────
+function coletarDadosLinha(tr) {
     const preco = parseFloat(tr.querySelector('.edit-precoFinal').value) || 0;
-    const peso = parseFloat(tr.querySelector('.edit-peso').value.replace(',', '.')) || 0;
-    const imagemUrl = tr.querySelector('.edit-img').value.trim();
-
-    const data = {
-        sku: tr.querySelector('.edit-sku').value.toUpperCase(),
-        name: tr.querySelector('.edit-name').value,
-        peso: peso,
-        weight: peso,
-        category: tr.querySelector('.edit-cat').value,
-        subcategory: tr.querySelector('.edit-subcat').value || "",
-        variacaoTipo: tr.querySelector('.edit-varTipo').value,
+    return {
+        sku:                  tr.querySelector('.edit-sku').value.trim().toUpperCase(),
+        name:                 tr.querySelector('.edit-name').value.trim(),
+        peso:                 tr.querySelector('.edit-peso').value.replace(',', '.'),
+        weight:               tr.querySelector('.edit-peso').value.replace(',', '.'),
+        // ALINHADO COM IMPORTADOR: category = slug da mãe, subcategory = slug da subcat
+        category:             tr.querySelector('.edit-cat').value,
+        subcategory:          tr.querySelector('.edit-subcat').value,
+        variacaoTipo:         tr.querySelector('.edit-varTipo').value,
         opcoesPersonalizadas: tr.querySelector('.edit-opcoes').value,
-        precoFinal: preco, 
-        price: preco,
-        image: imagemUrl,
-        imagem: imagemUrl,
-        paused: tr.querySelector('.btn-status').classList.contains('status-off'),
-        promo: 0
+        precoFinal:           preco,
+        price:                preco,
+        image:                tr.querySelector('.edit-img').value.trim(),
+        imagem:               tr.querySelector('.edit-img').value.trim(),
+        paused:               tr.querySelector('.btn-status').classList.contains('status-off')
     };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SALVAR LINHA ÚNICA
+// ─────────────────────────────────────────────────────────────────────────────
+function salvarLinhaUnica(btn) {
+    const tr   = btn.closest('tr');
+    const id   = tr.dataset.id;
+    const data = coletarDadosLinha(tr);
 
     db.ref(`abella/products/${id}`).update(data).then(() => {
-        btn.classList.replace('bg-green-600', 'bg-blue-600');
-        setTimeout(() => btn.classList.replace('bg-blue-600', 'bg-green-600'), 1000);
-    });
+        btn.style.background = '#1d4ed8';
+        setTimeout(() => btn.style.background = '', 900);
+        documento_setStatus(`✅ Produto "${data.name}" salvo com sucesso.`);
+    }).catch(e => alert('Erro ao salvar: ' + e.message));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SALVAR TODOS OS PRODUTOS VISÍVEIS (batch update)
+// ─────────────────────────────────────────────────────────────────────────────
 function salvarAlteracoes() {
     const updates = {};
     document.querySelectorAll('#tabelaCorpo tr[data-id]').forEach(tr => {
-        const id = tr.dataset.id;
-        const preco = parseFloat(tr.querySelector('.edit-precoFinal').value) || 0;
-        const peso = parseFloat(tr.querySelector('.edit-peso').value.replace(',', '.')) || 0;
-        const imagemUrl = tr.querySelector('.edit-img').value.trim();
-
-        updates[`abella/products/${id}/sku`] = tr.querySelector('.edit-sku').value.toUpperCase();
-        updates[`abella/products/${id}/name`] = tr.querySelector('.edit-name').value;
-        updates[`abella/products/${id}/peso`] = peso;
-        updates[`abella/products/${id}/weight`] = peso;
-        updates[`abella/products/${id}/category`] = tr.querySelector('.edit-cat').value;
-        updates[`abella/products/${id}/subcategory`] = tr.querySelector('.edit-subcat').value || "";
-        updates[`abella/products/${id}/variacaoTipo`] = tr.querySelector('.edit-varTipo').value;
-        updates[`abella/products/${id}/opcoesPersonalizadas`] = tr.querySelector('.edit-opcoes').value;
-        updates[`abella/products/${id}/precoFinal`] = preco;
-        updates[`abella/products/${id}/price`] = preco;
-        updates[`abella/products/${id}/image`] = imagemUrl;
-        updates[`abella/products/${id}/imagem`] = imagemUrl;
-        updates[`abella/products/${id}/paused`] = tr.querySelector('.btn-status').classList.contains('status-off');
-        updates[`abella/products-[#${id}]/promo`] = 0;
+        const id   = tr.dataset.id;
+        const data = coletarDadosLinha(tr);
+        Object.entries(data).forEach(([campo, val]) => {
+            updates[`abella/products/${id}/${campo}`] = val;
+        });
     });
 
-    db.ref().update(updates).then(() => alert("✅ Banco de dados (/abella) atualizado com sucesso!"));
+    if (!Object.keys(updates).length) {
+        alert('Nenhum produto visível para salvar.');
+        return;
+    }
+
+    db.ref().update(updates)
+        .then(() => {
+            alert('✅ Todos os produtos visíveis foram salvos no Firebase!');
+            documento_setStatus('Banco de dados atualizado com sucesso.');
+        })
+        .catch(e => alert('Erro ao salvar: ' + e.message));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TOGGLE ON/OFF
+// ─────────────────────────────────────────────────────────────────────────────
+function toggleStatus(btn) {
+    const ligado = btn.classList.contains('status-on');
+    btn.className = `btn-status ${ligado ? 'status-off' : 'status-on'}`;
+    btn.innerText = ligado ? 'OFF' : 'ON';
+    btn.closest('tr').classList.toggle('is-paused', ligado);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIBERA/BLOQUEIA CAMPO OPÇÕES conforme tipo de variação
+// ─────────────────────────────────────────────────────────────────────────────
 function liberarCampoLista(select) {
     const input = select.closest('tr').querySelector('.edit-opcoes');
-    if(select.value === 'Lista' || select.value === 'Aro') { 
-        input.classList.remove('opacity-20', 'pointer-events-none'); 
+    const precisa = select.value === 'Lista' || select.value === 'Aro';
+    if (precisa) {
+        input.classList.remove('opacity-20', 'pointer-events-none');
         input.classList.add('highlight-var');
-    } else { 
-        input.classList.add('opacity-20', 'pointer-events-none'); 
-        input.classList.remove('highlight-var'); 
+    } else {
+        input.classList.add('opacity-20', 'pointer-events-none');
+        input.classList.remove('highlight-var');
         input.value = '';
     }
 }
 
-function toggleStatus(btn) {
-    const isActive = btn.classList.contains('status-on');
-    btn.className = `btn-status ${isActive ? 'status-off' : 'status-on'}`;
-    btn.innerText = isActive ? 'OFF' : 'ON';
-    btn.closest('tr').classList.toggle('is-paused', isActive);
-}
-
-function deletarProduto(id) { 
-    if(confirm("Apagar produto definitivamente do catálogo Abella?")) {
-        db.ref('abella/products/' + id).remove().then(() => carregarProdutos());
+// ─────────────────────────────────────────────────────────────────────────────
+// DELETAR PRODUTO
+// ─────────────────────────────────────────────────────────────────────────────
+function deletarProduto(id) {
+    if (confirm('Apagar produto definitivamente do Firebase?')) {
+        db.ref('abella/products/' + id).remove()
+            .then(() => carregarProdutos());
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STATUS BAR
+// ─────────────────────────────────────────────────────────────────────────────
+function documento_setStatus(msg) {
+    const el = document.getElementById('statusInfo');
+    if (el) el.innerText = msg;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────────────────────────────────────────
 carregarCategorias();
 </script>
 </body>

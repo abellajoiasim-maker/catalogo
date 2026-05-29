@@ -1,360 +1,439 @@
-<div class="p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
-    <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
-        <div>
-            <h1 class="text-xl font-bold text-white flex items-center gap-2 serif tracking-wider">
-                <span>💍</span> VITRINE E PRODUTOS NO BRUTO
-            </h1>
-            <p class="text-xs text-zinc-500 mt-1">Consulte lotes, referências de peso, valores com desconto e gerencie pedidos.</p>
-        </div>
-        <button onclick="window.abrirModalProduto()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 text-xs uppercase tracking-wider">
-            <span>➕</span> Incluir Nova Joia
-        </button>
-    </div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Abella Joias • Vitrine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
+        .serif { font-family:'Cinzel', serif; }
+        .gold { color:#caa85c; }
+        .card { background:#141414; border:1px solid #2a2a2a; border-radius:20px; overflow:hidden; transition:.3s; }
+        .card:hover { border-color:#caa85c; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
 
-    <div id="grid-produtos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs animate-pulse">
-            ⏳ Sincronizando catálogo com nó abella/products...
-        </div>
-    </div>
-</div>
+        .catalogo-suspenso .card { opacity: 0.6; pointer-events: none; cursor: not-allowed; }
+        .catalogo-suspenso .btn-comprar-vitrine { display: none !important; }
+    </style>
+</head>
+<body>
 
-<div id="modalFormProduto" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-zinc-950 border border-zinc-900 rounded-2xl max-w-md w-full p-6 space-y-4 relative text-left">
-        <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 id="modalFormProdutoTitulo" class="text-xs font-black uppercase text-[#caa85c] tracking-widest font-mono">Formulário de Produto</h3>
-            <button onclick="window.fecharModalProduto()" class="text-zinc-500 hover:text-white transition-all text-xs font-bold">✕</button>
+    <header class="sticky top-0 bg-black/90 backdrop-blur border-b border-[#222] z-50">
+        <div class="max-w-7xl mx-auto p-5 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-center md:text-left">
+                <a href="index.html">
+                    <h1 id="nome" class="serif gold text-xl uppercase tracking-wide">Abella Joias</h1>
+                </a>
+                <p id="slogan" class="text-[9px] text-gray-400 uppercase tracking-widest">Carregando catálogo corporativo...</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button onclick="window.historicoVoltar()" class="text-xs text-zinc-400 hover:text-white transition-all bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl">✖ Voltar</button>
+                <a href="carrinho.html" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2">
+                    🛒 Carrinho (<span id="cart-count" class="gold font-bold">0</span>) <span id="cart-total" class="text-gray-400 font-normal ml-1">R$ 0,00</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 mb-12">
+        <div class="flex items-center justify-between border-b border-zinc-900 pb-3 mb-6">
+            <h2 id="titulo-pagina-produtos" class="serif text-xl tracking-wider uppercase text-white">Coleção de Modelos</h2>
+            <p id="contador-produtos-vitrine" class="text-[11px] font-mono text-zinc-500"></p>
         </div>
         
-        <form id="formProdutoReal" onsubmit="event.preventDefault();" class="space-y-4 text-xs font-mono">
-            <input type="hidden" id="prodId">
+        <div id="grid-produtos-publico" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="text-center py-12 text-zinc-600 font-mono text-xs italic col-span-full animate-pulse">Sincronizando vitrine com Firebase...</div>
+        </div>
+    </main>
+
+    <div id="modalDetalhesProduto" class="hidden fixed inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl text-left text-white grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+            <button onclick="window.fecharModalDetalhes()" class="absolute top-4 right-4 text-zinc-500 hover:text-white font-bold text-sm bg-zinc-900 w-7 h-7 rounded-full flex items-center justify-center border border-zinc-800">✕</button>
             
-            <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">Nome da Joia:</label>
-                <input type="text" id="prodNome" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
+            <div class="relative bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden aspect-square flex items-center justify-center">
+                <div id="detalheSeloPromo" class="hidden absolute top-3 left-3 bg-red-600 text-white font-mono text-[9px] font-black px-2 py-1 rounded shadow-lg uppercase tracking-widest">OFERTA</div>
+                <img id="detalheImagem" src="" class="w-full h-full object-cover">
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1">
-                    <label class="text-[10px] text-zinc-400 uppercase font-bold">Código / SKU:</label>
-                    <input type="text" id="prodSku" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] text-zinc-400 uppercase font-bold">Coleção / Categoria:</label>
-                    <select id="prodCategoria" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c] appearance-none cursor-pointer">
-                        <option value="">Selecione...</option>
-                        <option value="aneis">Anéis</option>
-                        <option value="aneis-e-braceletes-com-dizeres">Anéis e Braceletes com Dizeres</option>
-                        <option value="brincos">Brincos</option>
-                        <option value="colares">Colares</option>
-                        <option value="pingentes">Pingentes</option>
-                        <option value="pulseiras">Pulseiras</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1">
-                    <label class="text-[10px] text-zinc-400 uppercase font-bold">Peso Médio Ref. (g):</label>
-                    <input type="text" id="prodPeso" placeholder="4.50" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] text-zinc-400 uppercase font-bold">Preço Base Bruto:</label>
-                    <input type="number" step="0.01" id="prodPreco" placeholder="0.00" class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-white outline-none focus:border-[#caa85c]">
-                </div>
-            </div>
-
-            <div class="space-y-1">
-                <label class="text-[10px] text-zinc-400 uppercase font-bold">URL da Imagem:</label>
-                <input type="text" id="prodUrlImagem" placeholder="https://firebasestorage.googleapis.com/..." class="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c]">
-            </div>
-
-            <div class="pt-4 grid grid-cols-2 gap-3">
-                <button type="button" onclick="window.fecharModalProduto()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Cancelar</button>
-                <button type="button" onclick="window.salvarDadosProdutoDoForm()" class="bg-[#caa85c] text-black hover:bg-[#bda152] py-3 rounded-xl font-bold uppercase text-[10px] tracking-wider transition-all">Salvar Alterações</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div id="modalDetalhesProduto" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl text-left text-white grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-        <button onclick="window.fecharModalDetalhes()" class="absolute top-4 right-4 text-zinc-500 hover:text-white font-bold text-sm">✕</button>
-        
-        <div class="relative bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden aspect-square flex items-center justify-center">
-            <div id="detalheSeloPromo" class="hidden absolute top-3 left-3 bg-red-600 text-white font-mono text-[9px] font-black px-2 py-1 rounded shadow-lg uppercase tracking-widest">PROMOÇÃO</div>
-            <img id="detalheImagem" src="" class="w-full h-full object-cover">
-        </div>
-
-        <div class="flex flex-col justify-between space-y-4">
-            <div>
-                <span id="detalheSku" class="text-[10px] font-mono text-[#caa85c] tracking-widest font-bold uppercase">SKU: ---</span>
-                <h2 id="detalheNome" class="text-lg font-bold uppercase tracking-tight serif mt-0.5 text-white">Nome da Joia</h2>
-                <p id="detalhePeso" class="text-[11px] font-mono text-zinc-400 mt-1">⚖️ Peso Médio: 0.00g</p>
-            </div>
-
-            <div class="bg-[#090909] border border-zinc-900 p-3 rounded-xl space-y-2 font-mono">
+            <div class="flex flex-col justify-between space-y-4">
                 <div>
-                    <span class="text-[9px] text-zinc-500 uppercase">Preço Bruto Base</span>
-                    <p id="detalhePrecoCheio" class="text-sm line-through text-zinc-500">R$ 0,00</p>
+                    <span id="detalheSku" class="text-[10px] font-mono text-[#caa85c] tracking-widest font-bold uppercase block">SKU / REF: ---</span>
+                    <h2 id="detalheNome" class="text-lg font-bold uppercase tracking-tight serif mt-0.5 text-white">Nome da Joia</h2>
+                    <p id="detalhePeso" class="text-[11px] font-mono text-zinc-400 mt-1">⚖️ Peso Médio Ref: 0.00g</p>
                 </div>
-                <div id="blocoOfertaAtiva" class="hidden bg-red-950/20 border border-red-900/50 p-1.5 rounded text-[11px] text-red-400">
-                    🔥 Desconto da Categoria Ativo!
-                </div>
-                <div>
-                    <span class="text-[9px] text-[#caa85c] uppercase font-bold">À Vista no PIX</span>
-                    <p id="detalhePrecoPix" class="text-lg font-black text-[#caa85c]">R$ 0,00</p>
-                </div>
-                <div class="border-t border-zinc-900 pt-1.5">
-                    <p id="detalheParcelas" class="text-[10px] text-zinc-400">💳 Parcelamento: Até 6x s/ acréscimo</p>
-                </div>
-            </div>
 
-            <button id="btnGatilhoComprar" onclick="" class="w-full bg-white text-black hover:bg-zinc-200 font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all text-center">
-                🛒 Adicionar ao Carrinho
-            </button>
-        </div>
-    </div>
-</div>
-
-<div id="modalSeletorCompra" class="hidden fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
-    <div class="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center text-white">
-        <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h4 class="text-xs font-mono font-black uppercase text-[#caa85c] tracking-widest">Escolha a Quantidade</h4>
-            <button onclick="window.fecharModalSeletorCompra()" class="text-zinc-500 hover:text-white font-bold text-xs">✕</button>
-        </div>
-
-        <div class="flex items-center gap-4 text-left border-b border-zinc-900 pb-3">
-            <img id="seletorImagem" src="" class="w-16 h-16 object-cover rounded-lg border border-zinc-800 bg-zinc-900">
-            <div>
-                <h5 id="seletorNome" class="text-xs font-bold uppercase text-white truncate">Nome</h5>
-                <p id="seletorRef" class="text-[10px] font-mono text-zinc-500 mt-0.5">SKU: --</p>
-            </div>
-        </div>
-
-        <div id="containerGradeVariacoes" class="space-y-3 max-h-[220px] overflow-y-auto py-1">
-            </div>
-
-        <div class="grid grid-cols-2 gap-3 pt-2">
-            <button onclick="window.fecharModalSeletorCompra()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-2.5 rounded-xl text-xs font-bold uppercase font-mono">Voltar</button>
-            <button id="btnConfirmarAdicionarCarrinho" onclick="" class="bg-[#caa85c] hover:bg-[#b5944f] text-black py-2.5 rounded-xl text-xs font-black uppercase tracking-wider">Confirmar</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    var _PRODUTOS_GLOBAL_CACHE = {};
-
-    // Escuta ativa do nó de produtos do Firebase
-    var checadorFirebaseCore = setInterval(function() {
-        if (typeof db !== "undefined") {
-            clearInterval(checadorFirebaseCore);
-            inicializarEscutaVitrine();
-        }
-    }, 300);
-
-    function inicializarEscutaVitrine() {
-        db.ref('abella/products').on('value', function(snapshot) {
-            var dados = snapshot.val() || {};
-            _PRODUTOS_GLOBAL_CACHE = dados;
-            renderizarVitrineComercial(dados);
-        });
-    }
-
-    function renderizarVitrineComercial(produtos) {
-        var grid = document.getElementById('grid-produtos');
-        if(!grid) return;
-        grid.innerHTML = '';
-
-        var chaves = Object.keys(produtos);
-        if(chaves.length === 0) {
-            grid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-600 font-mono text-xs italic">Nenhuma joia encontrada no banco de dados.</div>`;
-            return;
-        }
-
-        chaves.forEach(function(key) {
-            var p = produtos[key];
-            var imgUrl = p.urlImagem || p.imagem || 'https://via.placeholder.com/400?text=Sem+Foto';
-            var precoBase = parseFloat(p.preco || p.precoBase || 0);
-            
-            var card = document.createElement('div');
-            card.className = "bg-[#111] border border-zinc-900 rounded-2xl overflow-hidden hover:border-zinc-700 transition-all flex flex-col justify-between group";
-            card.innerHTML = `
-                <div class="relative aspect-square bg-zinc-950 flex items-center justify-center overflow-hidden cursor-pointer" onclick="window.abrirModalDetalhes('${key}')">
-                    <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-300">
-                    <span class="absolute bottom-2 left-2 text-[9px] font-mono bg-black/70 px-2 py-0.5 rounded text-zinc-400">#${p.sku || 'S/K'}</span>
-                </div>
-                <div class="p-4 space-y-3">
-                    <div class="space-y-0.5">
-                        <h3 class="text-xs font-bold text-white uppercase truncate">${p.nome || 'Joia Sem Nome'}</h3>
-                        <p class="text-[10px] text-zinc-500 font-mono">⚖️ Ref: ${p.peso || '0.0'}g</p>
+                <div class="bg-[#090909] border border-zinc-900 p-4 rounded-xl space-y-3 font-mono">
+                    <div class="flex justify-between items-center border-b border-zinc-900 pb-2">
+                        <span class="text-[10px] text-zinc-500 uppercase">Preço Cheio Bruto:</span>
+                        <span id="detalhePrecoCheio" class="text-sm font-bold text-zinc-400">R$ 0,00</span>
                     </div>
-                    <div class="flex items-center justify-between border-t border-zinc-900 pt-3">
-                        <span class="text-xs font-mono font-black text-[#caa85c]">${typeof fM !== "undefined" ? fM(precoBase) : "R$ " + precoBase.toFixed(2)}</span>
-                        <button onclick="window.abrirSeletorCompra('${key}')" class="bg-zinc-800 hover:bg-white hover:text-black text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-all">
-                            🛒 Comprar
-                        </button>
+                    
+                    <div id="blocoOfertaAtiva" class="hidden bg-red-950/30 border border-red-900/40 p-2 rounded text-[10px] text-red-400 flex items-center justify-between">
+                        <span>🔥 DESCONTO PROMOCIONAL:</span>
+                        <span id="txtPorcentagemOferta" class="font-bold">0% OFF</span>
+                    </div>
+
+                    <div class="pt-1">
+                        <span class="text-[10px] text-[#caa85c] uppercase font-bold block mb-0.5">À Vista no PIX:</span>
+                        <div class="flex items-baseline gap-2">
+                            <span id="detalhePrecoPix" class="text-xl font-black text-[#caa85c]">R$ 0,00</span>
+                            <span id="txtSeloPixHeader" class="text-[9px] bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/20 px-1.5 py-0.5 rounded"></span>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-zinc-900 pt-2 flex items-center gap-1.5 text-zinc-400 text-[11px]">
+                        <span>💳</span>
+                        <span id="detalheParcelas">Até 6x sem acréscimo</span>
                     </div>
                 </div>
-            `;
-            grid.appendChild(card);
-        });
-    }
 
-    // ================= CONTROLE: MODAL DETALHES AVANÇADOS =================
-    window.abrirModalDetalhes = function(id) {
-        var p = _PRODUTOS_GLOBAL_CACHE[id];
-        if(!p) return;
+                <button id="btnGatilhoComprar" class="w-full bg-[#caa85c] text-black hover:bg-[#bda152] font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all">
+                    🛒 COMPRAR
+                </button>
+            </div>
+        </div>
+    </div>
 
-        // Resgata configurações financeiras ativas do objeto global da janela
-        var configs = window.configuracoesAtivas || {};
-        var descPixPorcentagem = configs.pix !== undefined ? parseFloat(configs.pix) : 5;
-        var maxParcelas = configs.parcelas || 6;
+    <div id="modalSeletorCompra" class="hidden fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
+        <div class="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center text-white">
+            <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
+                <h4 class="text-xs font-mono font-black uppercase text-[#caa85c] tracking-widest">Definir Lote de Pedido</h4>
+                <button onclick="window.fecharModalSeletorCompra()" class="text-zinc-500 hover:text-white font-bold text-xs">✕</button>
+            </div>
 
-        var precoCheio = parseFloat(p.preco || p.precoBase || 0);
+            <div class="flex items-center gap-4 text-left border-b border-zinc-900 pb-3">
+                <img id="seletorImagem" src="" class="w-16 h-16 object-cover rounded-xl border border-zinc-800 bg-zinc-900">
+                <div class="overflow-hidden">
+                    <h5 id="seletorNome" class="text-xs font-bold uppercase text-white truncate">Nome da Peça</h5>
+                    <p id="seletorRef" class="text-[10px] font-mono text-zinc-500 mt-0.5">SKU / REF: --</p>
+                </div>
+            </div>
+
+            <div id="containerGradeVariacoes" class="space-y-2 max-h-[220px] overflow-y-auto py-1 pr-1">
+                </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button type="button" onclick="window.fecharModalSeletorCompra()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 py-3 rounded-xl text-[10px] font-bold uppercase font-mono tracking-wider transition-all">Voltar</button>
+                <button id="btnConfirmarAdicionarCarrinho" class="bg-[#caa85c] hover:bg-[#bda152] text-black py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">Adicionar ao Carrinho</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
         
-        // Calcula desconto no PIX
-        var precoPix = precoCheio - (precoCheio * (descPixPorcentagem / 100));
+        const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
 
-        // Injeta dados no Modal de Detalhes
-        document.getElementById('detalheSku').innerText = "SKU: " + (p.sku || "NÃO INFORMADO");
-        document.getElementById('detalheNome').innerText = p.nome || "Joia sem título";
-        document.getElementById('detalhePeso').innerText = "⚖️ Peso Médio Ref: " + (p.peso || "0.00") + "g";
-        document.getElementById('detalheImagem').src = p.urlImagem || p.imagem || 'https://via.placeholder.com/400?text=Sem+Foto';
-        
-        document.getElementById('detalhePrecoCheio').innerText = typeof fM !== "undefined" ? fM(precoCheio) : "R$ " + precoCheio.toFixed(2);
-        document.getElementById('detalhePrecoPix').innerText = typeof fM !== "undefined" ? fM(precoPix) : "R$ " + precoPix.toFixed(2);
-        document.getElementById('detalheParcelas').innerText = `💳 Parcelamento: Até ${maxParcelas}x sem acréscimo nos cartões`;
+        window.configuracoesAtivas = {};
+        let _PRODUTOS_DB_CACHE = {};
+        let _CATEGORIAS_DB_CACHE = {};
 
-        // Atribui ação dinâmica ao botão de compra interna do detalhe
-        document.getElementById('btnGatilhoComprar').setAttribute('onclick', `window.fecharModalDetalhes(); window.abrirSeletorCompra('${id}');`);
+        const urlParams = new URLSearchParams(window.location.search);
+        const catId = urlParams.get('id');
+        const subId = urlParams.get('sub');
 
-        document.getElementById('modalDetalhesProduto').classList.remove('hidden');
-    };
+        function converterGsParaHttp(url) {
+            if (!url) return '';
+            var s = (url || '').trim();
+            if (!s.startsWith('gs://')) return s;
+            var sem = s.replace('gs://', '');
+            var bar = sem.indexOf('/');
+            if (bar === -1) return s;
+            return 'https://firebasestorage.googleapis.com/v0/b/' +
+                   sem.substring(0, bar) + '/o/' +
+                   encodeURIComponent(sem.substring(bar + 1)) + '?alt=media';
+        }
 
-    window.fecharModalDetalhes = function() {
-        document.getElementById('modalDetalhesProduto').classList.add('hidden');
-    };
+        async function initVitrineCompleta() {
+            // Sincronização mestre das configurações da conta
+            db.ref('abella/settings').on('value', snap => {
+                const s = snap.val() || {};
+                window.configuracoesAtivas = s;
+                document.getElementById("nome").innerText = s.name || "Abella Joias";
+                document.getElementById("slogan").innerText = s.slogan || "Atacado de Joias no Bruto";
 
-    // ================= CONTROLE: MODAL INTERATIVO DE COMPRA E VARIAÇÕES =================
-    window.abrirSeletorCompra = function(id) {
-        var p = _PRODUTOS_GLOBAL_CACHE[id];
-        if(!p) return;
+                if (s.statusLoja && s.statusLoja !== 'aberto') {
+                    document.body.classList.add('catalogo-suspenso');
+                    document.getElementById("slogan").innerText = "🚪 CATÁLOGO FECHADO TEMPORARIAMENTE";
+                } else {
+                    document.body.classList.remove('catalogo-suspenso');
+                }
+                renderizarCardsProdutosVitrine();
+            });
 
-        document.getElementById('seletorImagem').src = p.urlImagem || p.imagem || 'https://via.placeholder.com/400?text=Sem+Foto';
-        document.getElementById('seletorNome').innerText = p.nome || "Item";
-        document.getElementById('seletorRef').innerText = "SKU: " + (p.sku || '---');
+            // Resgata dados das categorias-mãe para cruzar informações de títulos e ofertas ativas
+            db.ref('abella/categories').on('value', snap => {
+                _CATEGORIAS_DB_CACHE = snap.val() || {};
+                if(catId && _CATEGORIAS_DB_CACHE[catId]) {
+                    const cData = _CATEGORIAS_DB_CACHE[catId];
+                    let labelHeader = cData.name || cData.nome || catId;
+                    
+                    // Se estiver navegando em subcategoria, tenta puxar o nome amigável dela
+                    if(subId && cData.subcategories && cData.subcategories[subId]) {
+                        labelHeader += ` • ${cData.subcategories[subId].name || cData.subcategories[subId].nome || subId}`;
+                    }
+                    document.getElementById('titulo-pagina-produtos').innerText = labelHeader;
+                }
+                renderizarCardsProdutosVitrine();
+            });
 
-        var container = document.getElementById('containerGradeVariacoes');
-        container.innerHTML = '';
+            // Escuta nó global de produtos
+            db.ref('abella/products').on('value', snap => {
+                _PRODUTOS_DB_CACHE = snap.val() || {};
+                renderizarCardsProdutosVitrine();
+            });
 
-        // Tratamento de variações estruturadas (Ex: tamanhos ou banhos)
-        var temVariacoes = p.variacoes || p.tamanhos || null;
+            atualizarCarrinho();
+        }
 
-        if (temVariacoes) {
-            // Se as variações forem um objeto ou string separada por vírgulas, transformamos em array
-            var listaVariacoes = Array.isArray(temVariacoes) ? temVariacoes : (typeof temVariacoes === 'string' ? temVariacoes.split(',') : Object.values(temVariacoes));
-            
-            listaVariacoes.forEach(function(v, index) {
-                var nomeVar = typeof v === 'object' ? (v.nome || v.tamanho) : v;
-                var div = document.createElement('div');
-                div.className = "flex items-center justify-between bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl";
-                div.innerHTML = `
-                    <span class="text-xs font-bold font-mono text-zinc-300 uppercase">Variação / Tam: <span class="text-white">${nomeVar}</span></span>
-                    <div class="flex items-center gap-1">
-                        <input type="number" id="qtd_var_${index}" data-variacao="${nomeVar}" value="0" min="0" class="input-quantidade-variacao w-14 bg-black border border-zinc-700 text-center font-mono text-xs rounded p-1 text-white focus:border-[#caa85c] outline-none">
+        function renderizarCardsProdutosVitrine() {
+            const grid = document.getElementById('grid-produtos-publico');
+            if(!grid) return;
+
+            grid.innerHTML = '';
+            const chaves = Object.keys(_PRODUTOS_DB_CACHE);
+            let totalExibidos = 0;
+
+            chaves.forEach(key => {
+                const p = _PRODUTOS_DB_CACHE[key];
+
+                // Filtros estruturais obrigatórios baseados nos parâmetros da URL
+                if (catId && p.categoria !== catId && p.colecao !== catId) return;
+                if (subId && p.subcategoria !== subId) return;
+                if (p.paused === true || p.paused === "true") return;
+
+                totalExibidos++;
+                const imgRaw = p.urlImagem || p.imagem || '';
+                const img = converterGsParaHttp(imgRaw) || 'https://via.placeholder.com/400?text=Sem+Foto';
+                const precoBase = parseFloat(p.preco || p.precoBase || 0);
+
+                const divCard = document.createElement('div');
+                divCard.className = "card relative cursor-pointer animate-fade-in flex flex-col justify-between group";
+                divCard.setAttribute('onclick', `window.abrirModalDetalhes('${key}')`);
+
+                divCard.innerHTML = `
+                    <div class="relative overflow-hidden aspect-square w-full bg-zinc-950 flex items-center justify-center">
+                        <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" loading="lazy" onerror="this.src='https://via.placeholder.com/400/141414/555555?text=Sem+Imagem'">
+                    </div>
+                    <div class="p-4 bg-zinc-900/40 border-t border-zinc-900 space-y-3">
+                        <div>
+                            <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-tight">REF: ${p.sku || '---'} • PESO: ${p.peso || '0'}g</p>
+                            <h3 class="font-bold text-xs truncate text-white uppercase tracking-wider mt-0.5">${p.nome || 'Sem Título'}</h3>
+                        </div>
+                        <div class="flex items-center justify-between border-t border-zinc-900/60 pt-2">
+                            <span class="gold text-xs font-black font-mono">${fM(precoBase)} <span class="text-[9px] text-zinc-500 font-normal">no bruto</span></span>
+                            <button onclick="event.stopPropagation(); window.abrirSeletorCompra('${key}')" class="btn-comprar-vitrine bg-zinc-900 border border-zinc-800 hover:bg-white hover:text-black hover:border-white text-zinc-300 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-lg transition-all">
+                                + Adicionar
+                            </button>
+                        </div>
                     </div>
                 `;
-                container.appendChild(div);
-            });
-        } else {
-            // Caso padrão: Produto de grade única sem variações internas
-            var div = document.createElement('div');
-            div.className = "flex items-center justify-between bg-zinc-900 border border-zinc-800 p-3 rounded-xl";
-            div.innerHTML = `
-                <span class="text-xs font-bold font-mono text-zinc-400 uppercase">Quantidade:</span>
-                <input type="number" id="qtd_produto_unico" value="1" min="1" class="w-16 bg-black border border-zinc-700 text-center font-mono text-sm rounded p-1.5 text-white focus:border-[#caa85c] outline-none">
-            `;
-            container.appendChild(div);
-        }
-
-        // Modifica ação de salvamento passando o id correto do produto clicado
-        document.getElementById('btnConfirmarAdicionarCarrinho').setAttribute('onclick', `window.processarInclusaoCarrinho('${id}')`);
-
-        document.getElementById('modalSeletorCompra').classList.remove('hidden');
-    };
-
-    window.fecharModalSeletorCompra = function() {
-        document.getElementById('modalSeletorCompra').classList.add('hidden');
-    };
-
-    window.processarInclusaoCarrinho = function(id) {
-        var p = _PRODUTOS_GLOBAL_CACHE[id];
-        if(!p) return;
-
-        var carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-        var inputsVariacao = document.querySelectorAll('.input-quantidade-variacao');
-
-        if(inputsVariacao.length > 0) {
-            // Processa inserção item por item para quem marcou quantidade nas variações
-            var adicionouAlgum = false;
-            inputsVariacao.forEach(function(input) {
-                var qtd = parseInt(input.value) || 0;
-                var varNome = input.getAttribute('data-variacao');
-                
-                if(qtd > 0) {
-                    adicionouAlgum = true;
-                    carrinho.push({
-                        id: id,
-                        sku: p.sku || '',
-                        nome: (p.nome || 'Joia') + " (" + varNome + ")",
-                        quantidade: qtd,
-                        preco: parseFloat(p.preco || p.precoBase || 0),
-                        peso: parseFloat(p.peso || 0),
-                        imagem: p.urlImagem || p.imagem || ''
-                    });
-                }
+                grid.appendChild(divCard);
             });
 
-            if(!adicionouAlgum) {
-                alert("Por favor, insira a quantidade em pelo menos uma das variações.");
-                return;
+            document.getElementById('contador-produtos-vitrine').innerText = `${totalExibidos} joias carregadas`;
+            if(totalExibidos === 0) {
+                grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-12 italic text-center">Nenhum modelo disponível para exibição nesta seleção.</p>';
             }
-        } else {
-            // Processa o produto único tradicional
-            var inputUnico = document.getElementById('qtd_produto_unico');
-            var qtdUnica = inputUnico ? (parseInt(inputUnico.value) || 1) : 1;
-
-            carrinho.push({
-                id: id,
-                sku: p.sku || '',
-                nome: p.nome || 'Joia',
-                quantidade: qtdUnica,
-                preco: parseFloat(p.preco || p.precoBase || 0),
-                peso: parseFloat(p.peso || 0),
-                imagem: p.urlImagem || p.imagem || ''
-            });
         }
 
-        // Salva e despacha a atualização para sincronizar o contador do Header do index
-        localStorage.setItem('carrinho', JSON.stringify(carrinho));
-        if(typeof window.atualizarCarrinho === 'function') window.atualizarCarrinho();
-        
-        window.fecharModalSeletorCompra();
-        alert(`🛒 ${p.nome || 'Item'} adicionado ao carrinho com sucesso!`);
-    };
+        // ================= MODAL 1: VISUALIZAÇÃO AVANÇADA DE DETALHES COMERCIAIS =================
+        window.abrirModalDetalhes = function(id) {
+            const p = _PRODUTOS_DB_CACHE[id];
+            if(!p) return;
 
-    // Fallbacks administrativos de compatibilidade caso o arquivo admin-logic não responda de imediato
-    if(!window.abrirModalProduto) {
-        window.abrirModalProduto = function() {
-            document.getElementById('modalFormProdutoTitulo').innerText = "Incluir Nova Joia";
-            document.getElementById('formProdutoReal').reset();
-            document.getElementById('prodId').value = '';
-            document.getElementById('modalFormProduto').classList.remove('hidden');
+            const configs = window.configuracoesAtivas || {};
+            const pixDesc = configs.pix !== undefined ? parseFloat(configs.pix) : 5;
+            const maxParc = configs.parcelas || 6;
+
+            let precoCheio = parseFloat(p.preco || p.precoBase || 0);
+            let precoComDescontoOferta = precoCheio;
+
+            // Checador Automático de Promoções/Ofertas do módulo de categorias ou no produto
+            const catMãe = _CATEGORIAS_DB_CACHE[catId] || {};
+            
+            // Verifica se a promoção está ativa no nó pai ou diretamente no produto
+            const descPromocionalAtivo = catMãe.promoAtiva === true || catMãe.promoAtiva === "true" || p.promoAtiva === true || p.promoAtiva === "true";
+            const porcDescontoPromo = descPromocionalAtivo ? parseFloat(p.promoPorcentagem || catMãe.promoPorcentagem || 0) : 0;
+
+            if(porcDescontoPromo > 0) {
+                precoComDescontoOferta = precoCheio - (precoCheio * (porcDescontoPromo / 100));
+                document.getElementById('detalheSeloPromo').style.backgroundColor = p.promoColor || catMãe.promoColor || '#dc2626';
+                document.getElementById('detalheSeloPromo').innerText = p.promoTag || catMãe.promoTag || 'OFERTA ACTIVA';
+                document.getElementById('detalheSeloPromo').classList.remove('hidden');
+                
+                document.getElementById('txtPorcentagemOferta').innerText = `${porcDescontoPromo}% OFF`;
+                document.getElementById('blocoOfertaAtiva').classList.remove('hidden');
+            } else {
+                document.getElementById('detalheSeloPromo').classList.add('hidden');
+                document.getElementById('blocoOfertaAtiva').classList.add('hidden');
+            }
+
+            // O desconto do PIX é calculado de forma correta e automatizada após o desconto promocional
+            const precoPixFinal = precoComDescontoOferta - (precoComDescontoOferta * (pixDesc / 100));
+
+            document.getElementById('detalheSku').innerText = `SKU / REF: ${p.sku || 'NÃO CONFIGURADO'}`;
+            document.getElementById('detalheNome').innerText = p.nome || 'Joia sem nome';
+            document.getElementById('detalhePeso').innerText = `⚖️ Peso Médio Referência: ${p.peso || '0.00'}g`;
+            
+            const imgRaw = p.urlImagem || p.imagem || '';
+            document.getElementById('detalheImagem').src = converterGsParaHttp(imgRaw) || 'https://via.placeholder.com/400?text=Sem+Foto';
+            
+            document.getElementById('detalhePrecoCheio').innerText = fM(precoCheio);
+            document.getElementById('detalhePrecoPix').innerText = fM(precoPixFinal);
+            document.getElementById('txtSeloPixHeader').innerText = `${pixDesc}% OFF NO PIX`;
+            document.getElementById('detalheParcelas').innerText = `Até ${maxParc}x sem acréscimo nos cartões corporativos`;
+
+            document.getElementById('btnGatilhoComprar').setAttribute('onclick', `window.fecharModalDetalhes(); window.abrirSeletorCompra('${id}');`);
+            document.getElementById('modalDetalhesProduto').classList.remove('hidden');
         };
-    }
-    if(!window.fecharModalProduto) {
-        window.fecharModalProduto = function() {
-            document.getElementById('modalFormProduto').classList.add('hidden');
+
+        window.fecharModalDetalhes = function() {
+            document.getElementById('modalDetalhesProduto').classList.add('hidden');
         };
-    }
-</script>
+
+        // ================= MODAL 2: INTERATIVO DE COMPRA COM VALIDAÇÃO DE PROPRIEDADES =================
+        window.abrirSeletorCompra = function(id) {
+            const p = _PRODUTOS_DB_CACHE[id];
+            if(!p) return;
+
+            const imgRaw = p.urlImagem || p.imagem || '';
+            document.getElementById('seletorImagem').src = converterGsParaHttp(imgRaw) || 'https://via.placeholder.com/400?text=Sem+Foto';
+            document.getElementById('seletorNome').innerText = p.nome || "Item";
+            document.getElementById('seletorRef').innerText = `SKU / REF: ${p.sku || '---'}`;
+
+            const container = document.getElementById('containerGradeVariacoes');
+            container.innerHTML = '';
+
+            // Inteligência que inspeciona todas as possíveis chaves e ramificações de variações do produto
+            const temVariacoes = p.variacoes || p.tamanhos || p.grades || p.banhos || null;
+
+            if (temVariacoes) {
+                const listaVariacoes = Array.isArray(temVariacoes) 
+                    ? temVariacoes 
+                    : (typeof temVariacoes === 'string' ? temVariacoes.split(',') : Object.values(temVariacoes));
+                
+                listaVariacoes.forEach((v, index) => {
+                    const nomeVar = typeof v === 'object' ? (v.nome || v.tamanho || v.aro || v.banho) : v;
+                    const linha = document.createElement('div');
+                    linha.className = "flex items-center justify-between bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl animate-fade-in";
+                    linha.innerHTML = `
+                        <span class="text-xs font-bold font-mono text-zinc-300">Grade / Var: <span class="gold">${nomeVar.trim()}</span></span>
+                        <input type="number" id="qtd_public_var_${index}" data-variacao="${nomeVar.trim()}" value="0" min="0" class="input-quantidade-public-var w-14 bg-black border border-zinc-700 text-center font-mono text-xs rounded p-1 text-white focus:border-[#caa85c] outline-none">
+                    `;
+                    container.appendChild(linha);
+                });
+            } else {
+                // Seletor único se o produto for plano (sem array ou string de grades mapeadas)
+                const linha = document.createElement('div');
+                linha.className = "flex items-center justify-between bg-zinc-900 border border-zinc-800 p-3 rounded-xl animate-fade-in";
+                linha.innerHTML = `
+                    <span class="text-xs font-bold font-mono text-zinc-400">Quantidade Desejada:</span>
+                    <input type="number" id="qtd_public_unico" value="1" min="1" class="w-16 bg-black border border-zinc-700 text-center font-mono text-sm rounded p-1.5 text-white focus:border-[#caa85c] outline-none">
+                `;
+                container.appendChild(linha);
+            }
+
+            document.getElementById('btnConfirmarAdicionarCarrinho').setAttribute('onclick', `window.adicionarItensAoCarrinhoGeral('${id}')`);
+            document.getElementById('modalSeletorCompra').classList.remove('hidden');
+        };
+
+        window.fecharModalSeletorCompra = function() {
+            document.getElementById('modalSeletorCompra').classList.add('hidden');
+        };
+
+        window.adicionarItensAoCarrinhoGeral = function(id) {
+            const p = _PRODUTOS_DB_CACHE[id];
+            if(!p) return;
+
+            let carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
+            const inputsVariacoes = document.querySelectorAll('.input-quantidade-public-var');
+
+            if(inputsVariacoes.length > 0) {
+                let adicionouAlgum = false;
+                inputsVariacoes.forEach(input => {
+                    const qtd = parseInt(input.value) || 0;
+                    const varNome = input.getAttribute('data-variacao');
+                    
+                    if(qtd > 0) {
+                        adicionouAlgum = true;
+                        carrinho.push({
+                            id: id,
+                            sku: p.sku || '',
+                            nome: `${p.nome || 'Joia'} (${varNome})`,
+                            quantidade: qtd,
+                            preco: parseFloat(p.preco || p.precoBase || 0),
+                            peso: parseFloat(p.peso || 0),
+                            imagem: p.urlImagem || p.imagem || ''
+                        });
+                    }
+                });
+
+                if(!adicionouAlgum) {
+                    alert("⚠️ Defina a quantidade de itens em ao menos uma variação disponível!");
+                    return;
+                }
+            } else {
+                const inputUnico = document.getElementById('qtd_public_unico');
+                const qtdUnica = inputUnico ? (parseInt(inputUnico.value) || 1) : 1;
+
+                carrinho.push({
+                    id: id,
+                    sku: p.sku || '',
+                    nome: p.nome || 'Joia',
+                    quantidade: qtdUnica,
+                    preco: parseFloat(p.preco || p.precoBase || 0),
+                    peso: parseFloat(p.peso || 0),
+                    imagem: p.urlImagem || p.imagem || ''
+                });
+            }
+
+            localStorage.setItem('carrinho', JSON.stringify(carrinho));
+            atualizarCarrinho();
+            window.fecharModalSeletorCompra();
+        };
+
+        function atualizarCarrinho(){
+            const cart = JSON.parse(localStorage.getItem('carrinho') || '[]');
+            let totalPecas = 0;
+            let valorTotal = 0;
+            
+            cart.forEach(item => {
+                let qtd = parseInt(item.quantidade) || 1;
+                let preco = parseFloat(item.precoFinal || item.preco || 0);
+                totalPecas += qtd;
+                valorTotal += (preco * qtd);
+            });
+            
+            if(document.getElementById('cart-count')) document.getElementById('cart-count').innerText = totalPecas;
+            if(document.getElementById('cart-total')) document.getElementById('cart-total').innerText = fM(valorTotal);
+        }
+
+        window.historicoVoltar = function() {
+            if(document.referrer.includes('subcategorias.html')) {
+                window.location.href = 'index.html';
+            } else {
+                window.history.back();
+            }
+        };
+
+        window.addEventListener('pageshow', atualizarCarrinho);
+        window.onload = initVitrineCompleta;
+    </script>
+</body>
+</html>

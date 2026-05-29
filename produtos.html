@@ -70,27 +70,39 @@
                         <p id="msPeso" class="text-sm md:text-base text-zinc-400 font-mono flex items-center gap-1.5 font-medium">⚖️ Peso Médio Peça: <span class="text-white font-bold" id="msPesoVal">0.00g</span></p>
                     </div>
 
-                    <div class="bg-zinc-900/30 border border-zinc-950 rounded-xl p-5 space-y-3 font-mono">
-                        <div class="flex justify-between items-center text-zinc-500 border-b border-zinc-900 pb-2">
-                            <span class="text-xs uppercase font-sans tracking-wider">Preço Regular de Tabela:</span>
-                            <span id="msPrecoBruto" class="text-xl md:text-2xl font-bold line-through decoration-red-600 decoration-2 text-zinc-400">R$ 0,00</span>
+                    <div class="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 space-y-4 font-mono">
+                        
+                        <div class="flex justify-between items-center text-zinc-500 pb-1">
+                            <span class="text-xs font-sans text-zinc-400">Preço Regular de Tabela:</span>
+                            <span id="msPrecoBruto" class="text-lg font-bold line-through decoration-red-600 decoration-2 text-zinc-500">R$ 0,00</span>
                         </div>
-                        <div id="msLinhaOferta" class="flex justify-between text-sm text-amber-500 font-bold hidden">
-                            <span>Com Oferta Ativa:</span>
-                            <span id="msPrecoOferta">R$ 0,00</span>
+                        
+                        <div id="msLinhaOferta" class="flex justify-between items-center bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-lg hidden">
+                            <span class="text-xs font-sans text-amber-400 font-semibold">🔥 Preço Promocional Atacado:</span>
+                            <span id="msPrecoOferta" class="text-base font-bold text-amber-400">R$ 0,00</span>
                         </div>
-                        <div class="flex justify-between items-center text-emerald-400 border-t border-zinc-900 pt-2">
-                            <span class="text-sm font-bold font-sans">⚡ À VISTA NO PIX:</span>
-                            <span id="msPrecoPix" class="text-2xl md:text-3xl font-black">R$ 0,00</span>
+                        
+                        <div class="bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                            <div>
+                                <span class="block text-xs font-sans text-emerald-400 font-bold tracking-wide">⚡ VALOR LÍQUIDO NO PIX</span>
+                                <span id="msLabelPixDesc" class="text-[10px] text-zinc-400 font-sans block">Com desconto aplicado sobre a tabela</span>
+                            </div>
+                            <span id="msPrecoPix" class="text-2xl md:text-3xl font-black text-emerald-400">R$ 0,00</span>
                         </div>
-                        <div class="bg-black/40 border border-zinc-900 rounded-lg p-2.5 flex justify-between items-center text-zinc-300 font-sans text-xs md:text-sm font-semibold">
-                            <span>💳 Cartão Sem Acréscimo:</span>
-                            <span id="msParcelas" class="gold font-mono font-bold text-sm md:text-base">ou 6x de R$ 0,00</span>
+
+                        <div class="bg-black/40 border border-zinc-900 rounded-lg p-3 space-y-2 text-xs md:text-sm font-sans text-zinc-300">
+                            <div class="flex justify-between items-center border-b border-zinc-900/60 pb-1.5">
+                                <span class="text-zinc-400">💳 Cartão de Crédito:</span>
+                                <span id="msParcelas" class="gold font-mono font-bold">ou 6x sem juros</span>
+                            </div>
+                            <div class="text-[11px] text-zinc-500 leading-relaxed italic pt-0.5">
+                                * Nota: Como trabalhamos estritamente com atacado de joias brutas, os valores financeiros acima referem-se à peça base, sem a inclusão de serviços galvânicos ou banhos posteriores.
+                            </div>
                         </div>
                     </div>
 
                     <div class="space-y-3">
-                        <label class="block text-xs font-bold uppercase tracking-widest text-zinc-400 border-b border-zinc-900 pb-2">Escolha as opções / iniciais abaixo:</label>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-zinc-400 border-b border-zinc-900 pb-2">Selecione as Letras / Iniciais Desejadas:</label>
                         <div id="msGradeQuantidades" class="space-y-2">
                             </div>
                     </div>
@@ -268,7 +280,11 @@
                 }
 
                 document.getElementById('msPrecoPix').innerText = fM(precoPixFinal);
-                document.getElementById('msParcelas').innerText = `${configGlobal.parcelasMax}x de ${fM(precoFinalOferta / configGlobal.parcelasMax)} sem juros`;
+                document.getElementById('msLabelPixDesc').innerText = `Garante o preço final com -${configGlobal.pixDesc}% de desconto aplicado`;
+                
+                // Exibe as parcelas exatas sem acréscimo baseadas no preço de tabela ou de oferta
+                const valorParcela = precoFinalOferta / configGlobal.parcelasMax;
+                document.getElementById('msParcelas').innerText = `ou ${configGlobal.parcelasMax}x de ${fM(valorParcela)} sem juros`;
 
                 const grade = document.getElementById('msGradeQuantidades');
                 grade.innerHTML = '';
@@ -305,6 +321,7 @@
                     grade.appendChild(row);
                 }
 
+                // Dispara o cálculo inicial
                 calcularResumoInstantaneo();
                 document.getElementById('modalSupremo').classList.remove('hidden');
             });

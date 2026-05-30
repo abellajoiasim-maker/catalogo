@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght=300;400;600&display=swap" rel="stylesheet">
     <style>
         body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
         .serif { font-family:'Cinzel', serif; }
@@ -24,7 +24,7 @@
                 <h1 class="serif gold text-lg uppercase tracking-wider">Abella Joias</h1>
                 <p id="slogan-sub" class="text-[9px] text-zinc-500 uppercase tracking-widest">Aguardando mapeamento...</p>
             </div>
-            <a href="index.html" class="text-xs bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-zinc-400 hover:text-white transition-all">✖ Voltar</a>
+            <a href="../index.html" class="text-xs bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-zinc-400 hover:text-white transition-all">✖ Voltar</a>
         </div>
     </header>
 
@@ -34,7 +34,7 @@
         </div>
 
         <div id="grid-subcategorias" class="hidden grid grid-cols-2 md:grid-cols-4 gap-6 text-left">
-            </div>
+        </div>
     </main>
 
     <script>
@@ -49,7 +49,7 @@
         const catId = urlParams.get('id');
 
         if(!catId) {
-            window.location.href = 'index.html';
+            window.location.href = '../index.html';
         } else {
             verificarEstruturaDeSubcategorias();
         }
@@ -67,21 +67,18 @@
         }
 
         function verificarEstruturaDeSubcategorias() {
-            // Busca o nome mestre da Categoria-Mãe primeiro
             db.ref(`abella/categories/${catId}`).once('value', snapMae => {
                 const maeData = snapMae.val() || {};
                 document.getElementById('slogan-sub').innerText = (maeData.name || maeData.nome || catId).toUpperCase();
                 
-                // Mapeia o subnó exatamente como o módulo de categorias grava
                 const subcategorias = maeData.subcategories;
 
-                // 🌟 REGRA DE PULO AUTOMÁTICO: Se não contiver subcategorias cadastradas, pula direto para a vitrine
+                // Se não contiver subcategorias filhas, pula direto para a vitrine na raiz
                 if (!subcategorias || Object.keys(subcategorias).length === 0) {
-                    window.location.href = `produtos.html?id=${catId}`;
+                    window.location.href = `../produtos.html?id=${catId}`;
                     return;
                 }
 
-                // Se houver subcategorias filhas estruturadas, exibe a tela e renderiza
                 document.getElementById('loader-sub').classList.add('hidden');
                 const grid = document.getElementById('grid-subcategorias');
                 grid.classList.remove('hidden');
@@ -96,7 +93,9 @@
                     
                     const card = document.createElement('div');
                     card.className = "card cursor-pointer flex flex-col justify-between";
-                    card.setAttribute('onclick', `window.location.href='produtos.html?id=${catId}&sub=${subKey}'`);
+                    
+                    // 🌟 AJUSTE CRUCIAL: Adicionado '../' para garantir que o clique saia da pasta 'modulo' e busque o 'produtos.html' atualizado da raiz
+                    card.setAttribute('onclick', `window.location.href='../produtos.html?id=${catId}&sub=${subKey}'`);
                     
                     card.innerHTML = `
                         <div class="aspect-square bg-zinc-950 overflow-hidden flex items-center justify-center">

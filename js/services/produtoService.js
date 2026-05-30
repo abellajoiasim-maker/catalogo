@@ -1,7 +1,7 @@
 const ProdutoService = {
     async obterTodos() {
         return new Promise((resolve) => {
-            database.ref('produtos').once('value', (snapshot) => {
+            database.ref('abella/products').once('value', (snapshot) => {
                 const dados = snapshot.val();
                 const lista = dados ? Object.keys(dados).map(key => ({ id: key, ...dados[key] })) : [];
                 resolve(lista);
@@ -11,7 +11,7 @@ const ProdutoService = {
 
     async obterPorId(id) {
         return new Promise((resolve) => {
-            database.ref(`produtos/${id}`).once('value', (snapshot) => {
+            database.ref(`abella/products/${id}`).once('value', (snapshot) => {
                 resolve(snapshot.val());
             });
         });

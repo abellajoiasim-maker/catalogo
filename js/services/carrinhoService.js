@@ -10,7 +10,10 @@ const CarrinhoService = {
         if (index > -1) {
             carrinho[index].quantidade += quantidade;
         } else {
-            carrinho.push({ ...produto, quantidade });
+            carrinho.push({
+    ...produto,
+    quantidade
+});
         }
         StorageUtils.salvar('carrinho_abella', carrinho);
         window.dispatchEvent(new Event('carrinhoAtualizado'));

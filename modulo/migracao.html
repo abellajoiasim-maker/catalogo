@@ -1,1 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
 
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Migração de Banco | Abella Joias
+    </title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <div class="max-w-6xl mx-auto p-6">
+
+        <div class="bg-white rounded-2xl shadow p-8">
+
+            <div class="flex items-center justify-between mb-6">
+
+                <div>
+
+                    <h1 class="text-3xl font-bold">
+                        Migração de Banco
+                    </h1>
+
+                    <p class="text-gray-500 mt-2">
+                        Ferramenta de manutenção da estrutura Firebase da Abella.
+                    </p>
+
+                </div>
+
+                <a
+                    href="config.html"
+                    class="px-4 py-2 bg-gray-700 text-white rounded-lg">
+                    Voltar
+                </a>
+
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+                <button
+                    onclick="executarBackup()"
+                    class="bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl p-4">
+
+                    Backup JSON
+
+                </button>
+
+                <button
+                    onclick="migrarProdutos()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl p-4">
+
+                    Migrar Produtos
+
+                </button>
+
+                <button
+                    onclick="migrarPedidos()"
+                    class="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl p-4">
+
+                    Migrar Pedidos
+
+                </button>
+
+                <button
+                    onclick="validarBanco()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl p-4">
+
+                    Validar Banco
+
+                </button>
+
+            </div>
+
+            <button
+                onclick="executarTudo()"
+                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl p-5 mb-8">
+
+                EXECUTAR MIGRAÇÃO COMPLETA
+
+            </button>
+
+            <div class="mb-6">
+
+                <div class="bg-gray-200 h-4 rounded-full overflow-hidden">
+
+                    <div
+                        id="barra"
+                        class="bg-blue-600 h-4 transition-all duration-500"
+                        style="width:0%">
+                    </div>
+
+                </div>
+
+                <p
+                    id="status"
+                    class="text-sm text-gray-600 mt-2">
+
+                    Aguardando...
+
+                </p>
+
+            </div>
+
+            <div
+                id="log"
+                class="bg-black text-green-400 rounded-xl p-4 h-[500px] overflow-y-auto font-mono text-sm">
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        const firebaseConfig = {
+
+            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
+            authDomain: "catalogo-abella-joias.firebaseapp.com",
+            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
+            projectId: "catalogo-abella-joias",
+            storageBucket: "catalogo-abella-joias.firebasestorage.app",
+            messagingSenderId: "727568435294",
+            appId: "1:727568435294:web:442c0179ecf0686dff4ccf"
+
+        };
+
+        if (!firebase.apps.length) {
+
+            firebase.initializeApp(firebaseConfig);
+
+        }
+
+        const db = firebase.database();
+
+        let executando = false;
+
+        function log(msg) {
+
+            const el =
+                document.getElementById("log");
+
+            el.innerHTML += msg + "<br>";
+
+            el.scrollTop =
+                el.scrollHeight;
+
+        }
+
+        function progresso(percentual, texto) {
+
+            document.getElementById(
+                "barra"
+            ).style.width =
+                percentual + "%";
+
+            document.getElementById(
+                "status"
+            ).innerText =
+                texto;
+
+        }
+
+        async function executarBackup() {
+
+            log("📦 Gerando backup...");
+
+            const snap =
+                await db
+                .ref("abella")
+                .once("value");
+
+            const blob =
+                new Blob(
+                    [
+                        JSON.stringify(
+                            snap.val(),
+                            null,
+                            2
+                        )
+                    ],
+                    {
+                        type:
+                            "application/json"
+                    }
+                );
+
+            const url =
+                URL.createObjectURL(blob);
+
+            const a =
+                document.createElement("a");
+
+            a.href = url;
+
+            a.download =
+                "backup-abella-" +
+                Date.now() +
+                ".json";
+
+            a.click();
+
+            URL.revokeObjectURL(url);
+
+            log("✅ Backup concluído");
+
+        }
+
+        async function migrarProdutos() {
+
+            log("📦 Migrando produtos...");
+
+            const snap =
+                await db
+                .ref("abella/products")
+                .once("value");
+
+            const updates = {};
+
+            let total = 0;
+
+            snap.forEach(item => {
+
+                const p =
+                    item.val();
+
+                updates[item.key] = {
+
+                    sku:
+                        p.sku || "",
+
+                    name:
+                        p.name ||
+                        p.nome ||
+                        "",
+
+                    category:
+                        p.category ||
+                        p.categoria ||
+                        "",
+
+                    subcategory:
+                        p.subcategory ||
+                        p.subcategoria ||
+                        "",
+
+                    image:
+                        p.image ||
+                        p.imagem ||
+                        "",
+
+                    price:
+                        Number(
+                            p.price ??
+                            p.preco ??
+                            p.precoFinal ??
+                            0
+                        ),
+
+                    weight:
+                        Number(
+                            p.weight ??
+                            p.peso ??
+                            0
+                        ),
+
+                    active:
+                        p.active !== false,
+
+                    migratedAt:
+                        firebase.database.ServerValue.TIMESTAMP
+
+                };
+
+                total++;
+
+            });
+
+            await db
+                .ref("abella/products")
+                .update(updates);
+
+            log(
+                `✅ ${total} produtos migrados`
+            );
+
+        }
+
+        async function migrarPedidos() {
+
+            log("📦 Migrando pedidos...");
+
+            const snap =
+                await db
+                .ref("abella/orders")
+                .once("value");
+
+            const updates = {};
+
+            let total = 0;
+
+            snap.forEach(item => {
+
+                const p =
+                    item.val();
+
+                updates[item.key] = {
+
+                    cliente:
+                        p.cliente ||
+                        p.nome ||
+                        "",
+
+                    whats:
+                        p.whats ||
+                        p.contato ||
+                        "",
+
+                    cidade:
+                        p.cidade ||
+                        "",
+
+                    formaPagamento:
+                        p.formaPagamento ||
+                        p.metodo ||
+                        "",
+
+                    total:
+                        Number(
+                            p.total || 0
+                        ),
+
+                    pesoTotal:
+                        Number(
+                            p.pesoTotal || 0
+                        ),
+
+                    totalPecas:
+                        Number(
+                            p.totalPecas || 0
+                        ),
+
+                    status:
+                        p.status ||
+                        "Novo",
+
+                    criadoEm:
+                        p.criadoEm ||
+                        Date.now(),
+
+                    itens:
+                        p.itens ||
+                        p.produtos ||
+                        [],
+
+                    migratedAt:
+                        firebase.database.ServerValue.TIMESTAMP
+
+                };
+
+                total++;
+
+            });
+
+            await db
+                .ref("abella/orders")
+                .update(updates);
+
+            log(
+                `✅ ${total} pedidos migrados`
+            );
+
+        }
+
+        async function validarBanco() {
+
+            log("🔍 Validando banco...");
+
+            const problemas = [];
+
+            const produtos =
+                await db
+                .ref("abella/products")
+                .once("value");
+
+            produtos.forEach(item => {
+
+                const p =
+                    item.val();
+
+                if (p.nome)
+                    problemas.push(
+                        `Produto ${item.key} usa nome`
+                    );
+
+                if (p.imagem)
+                    problemas.push(
+                        `Produto ${item.key} usa imagem`
+                    );
+
+                if (p.precoFinal)
+                    problemas.push(
+                        `Produto ${item.key} usa precoFinal`
+                    );
+
+                if (p.peso)
+                    problemas.push(
+                        `Produto ${item.key} usa peso`
+                    );
+
+            });
+
+            const pedidos =
+                await db
+                .ref("abella/orders")
+                .once("value");
+
+            pedidos.forEach(item => {
+
+                const p =
+                    item.val();
+
+                if (p.nome)
+                    problemas.push(
+                        `Pedido ${item.key} usa nome`
+                    );
+
+                if (p.contato)
+                    problemas.push(
+                        `Pedido ${item.key} usa contato`
+                    );
+
+                if (p.produtos)
+                    problemas.push(
+                        `Pedido ${item.key} usa produtos`
+                    );
+
+            });
+
+            if (
+                problemas.length === 0
+            ) {
+
+                log(
+                    "✅ Banco padronizado"
+                );
+
+            } else {
+
+                problemas.forEach(
+                    p => log("⚠ " + p)
+                );
+
+            }
+
+        }
+
+        async function executarTudo() {
+
+            if (executando)
+                return;
+
+            const confirmar =
+                confirm(
+                    "Executar migração completa?"
+                );
+
+            if (!confirmar)
+                return;
+
+            executando = true;
+
+            try {
+
+                progresso(
+                    10,
+                    "Criando backup..."
+                );
+
+                await executarBackup();
+
+                progresso(
+                    35,
+                    "Migrando produtos..."
+                );
+
+                await migrarProdutos();
+
+                progresso(
+                    70,
+                    "Migrando pedidos..."
+                );
+
+                await migrarPedidos();
+
+                progresso(
+                    90,
+                    "Validando..."
+                );
+
+                await validarBanco();
+
+                progresso(
+                    100,
+                    "Concluído"
+                );
+
+                log(
+                    "🎉 MIGRAÇÃO FINALIZADA"
+                );
+
+            }
+            catch (err) {
+
+                console.error(err);
+
+                log(
+                    "❌ ERRO: " +
+                    err.message
+                );
+
+            }
+            finally {
+
+                executando = false;
+
+            }
+
+        }
+
+    </script>
+
+</body>
+
+</html>

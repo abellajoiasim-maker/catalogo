@@ -1,7 +1,7 @@
 const GalvanicaService = {
     async obterParceiros() {
         return new Promise((resolve) => {
-            database.ref('galvanicas_parceiras').once('value', (snapshot) => {
+            database.ref('abella/galvanicas').once('value', (snapshot) => {
                 const dados = snapshot.val();
                 resolve(dados ? Object.keys(dados).map(key => ({ id: key, ...dados[key] })) : []);
             });

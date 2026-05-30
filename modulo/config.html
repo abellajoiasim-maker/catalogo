@@ -1,242 +1,38 @@
-<div id="painel-config-container" class="max-w-5xl mx-auto space-y-6 text-zinc-100">
-    
-    <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
-        <div>
-            <h1 class="serif text-xl font-black text-[#caa85c] tracking-widest uppercase flex items-center gap-2">
-                <span>⚙️</span> Configurações do Catálogo
-            </h1>
-            <p class="text-xs text-zinc-400 mt-1">Altere as regras de checkout, frete e dados visuais integrados ao index.html</p>
-        </div>
-        <div class="flex flex-col items-end gap-1.5">
-          <button id="btnSalvarConfig" onclick="if(typeof window.salvarConfiguracoes === 'function') { window.salvarConfiguracoes(); } else { alert('⏳ O painel ainda está atualizando os scripts no cache. Por favor, pressione Ctrl+F5 e tente novamente em 15 segundos.'); }" class="bg-[#caa85c] hover:bg-[#b0904d] text-black font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2">
-    <span>💾</span> Salvar e Criar no Firebase
-</button>
-            <span id="cfgUltimaAtualizacao" class="text-[10px] text-zinc-400 font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-md">Conectando ao banco...</span>
-        </div>
-    </div>
+<div class="bg-white rounded-2xl shadow p-6 mt-6">
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        <div class="bg-black/40 border border-zinc-900 rounded-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between border-b border-zinc-900 pb-2">
-                <h2 class="serif text-xs font-bold tracking-wider text-[#caa85c] uppercase flex items-center gap-2">
-                    🏢 Identidade da Vitrine
-                </h2>
-                <span class="text-[9px] bg-amber-950/40 text-[#caa85c] border border-amber-900/60 font-mono px-2 py-0.5 rounded-full uppercase">Público</span>
-            </div>
-            
-            <div>
-                <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Nome da Loja</label>
-                <input type="text" id="cfgNome" value="Abella Joias" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-            </div>
+    <h2 class="text-xl font-bold mb-4">
+        Migração de Banco de Dados
+    </h2>
 
-            <div>
-                <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Slogan / Subtítulo Comercial</label>
-                <input type="text" id="cfgSlogan" value="Atacado de Joias no Bruto" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-            </div>
+    <p class="text-sm text-gray-500 mb-4">
+        Ferramentas de manutenção e padronização do Firebase.
+    </p>
 
-            <div>
-                <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">WhatsApp de Pedidos</label>
-                <input type="number" id="cfgWhatsapp" placeholder="Ex: 19999999999" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 font-mono focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-            </div>
-        </div>
+    <div class="flex flex-wrap gap-3">
 
-        <div class="bg-black/40 border border-zinc-900 rounded-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between border-b border-zinc-900 pb-2">
-                <h2 class="serif text-xs font-bold tracking-wider text-[#caa85c] uppercase flex items-center gap-2">
-                    💳 Checkout e Finanças
-                </h2>
-                <span class="text-[9px] bg-blue-950/40 text-blue-400 border border-blue-900/60 font-mono px-2 py-0.5 rounded-full uppercase">Ativo</span>
-            </div>
+        <button
+            onclick="migrarProdutos()"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+            Migrar Produtos
+        </button>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Desconto Pix</label>
-                    <div class="relative">
-                        <input type="number" id="cfgDescPix" value="5" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl pl-4 pr-8 py-2.5 text-zinc-200 font-mono focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-                        <span class="absolute right-3 top-2.5 text-zinc-500 text-sm font-medium">%</span>
-                    </div>
-                </div>
+        <button
+            onclick="migrarPedidos()"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg">
+            Migrar Pedidos
+        </button>
 
-                <div>
-                    <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Parcelamento Max</label>
-                    <div class="relative">
-                        <input type="number" id="cfgParcelas" value="6" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl pl-4 pr-8 py-2.5 text-zinc-200 font-mono focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-                        <span class="absolute right-3 top-2.5 text-zinc-500 text-xs font-medium">x</span>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Valor do Pedido Mínimo</label>
-                <div class="relative">
-                    <span class="absolute left-3 top-2.5 text-zinc-500 text-sm">R$</span>
-                    <input type="number" id="cfgValorMinimo" value="0" step="0.01" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-zinc-200 font-mono focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-black/40 border border-zinc-900 rounded-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between border-b border-zinc-900 pb-2">
-                <h2 class="serif text-xs font-bold tracking-wider text-[#caa85c] uppercase flex items-center gap-2">
-                    🚚 Logística e Envios
-                </h2>
-                <span class="text-[9px] bg-purple-950/40 text-purple-400 border border-purple-900/60 font-mono px-2 py-0.5 rounded-full uppercase">Entrega</span>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Frete Fixo Padrão</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-zinc-500 text-sm">R$</span>
-                        <input type="number" id="cfgFreteFixo" value="0" step="0.01" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-zinc-200 font-mono focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Meta Frete Grátis</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-zinc-500 text-sm">R$</span>
-                        <input type="number" id="cfgFreteGratisAlvo" value="100" step="0.01" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-zinc-200 font-mono focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-black/40 border border-zinc-900 rounded-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between border-b border-zinc-900 pb-2">
-                <h2 class="serif text-xs font-bold tracking-wider text-[#caa85c] uppercase flex items-center gap-2">
-                    🏪 Estado do Catálogo Virtual
-                </h2>
-                <span class="text-[9px] bg-indigo-950/40 text-indigo-400 border border-indigo-900/60 font-mono px-2 py-0.5 rounded-full uppercase">Status</span>
-            </div>
-            
-            <div>
-                <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Disponibilidade do Carrinho</label>
-                <select id="cfgStatusLoja" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 font-medium focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-                    <option value="aberto">🟢 Catálogo Ativo (Recebendo Pedidos)</option>
-                    <option value="manutencao">🟡 Modo Manutenção (Apenas Visualização)</option>
-                    <option value="fechado">🔴 Loja Fechada / Férias Temporárias</option>
-                </select>
-            </div>
-        </div>
+        <button
+            onclick="validarBanco()"
+            class="px-4 py-2 bg-purple-600 text-white rounded-lg">
+            Validar Banco
+        </button>
 
     </div>
 
-    <div class="bg-black/40 border border-zinc-900 rounded-2xl p-6 space-y-4">
-        <div class="flex items-center justify-between border-b border-zinc-900 pb-2">
-            <h2 class="serif text-xs font-bold tracking-wider text-[#caa85c] uppercase flex items-center gap-2">
-                📢 Banner de Avisos (Topo da Vitrine)
-            </h2>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="cfgAtivarAviso" class="sr-only peer">
-                <div class="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-zinc-950 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#caa85c] peer-checked:after:bg-black"></div>
-                <span class="ml-2 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Exibir Barra</span>
-            </label>
-        </div>
-
-        <div>
-            <label class="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Texto do Alerta Geral</label>
-            <input type="text" id="cfgTextoAviso" placeholder="Ex: Frete grátis para galvânicas de Limeira nas compras acima de R$100!" class="w-full bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-200 focus:border-[#caa85c] focus:bg-zinc-900 outline-none transition-all">
-        </div>
+    <div
+        id="resultadoMigracao"
+        class="mt-6 text-sm whitespace-pre-wrap">
     </div>
+
 </div>
-
-<script>
-    // Captura garantida do barramento do Firebase
-    function obterInstanciaBanco() {
-        if (window.db) return window.db;
-        if (typeof db !== "undefined") return db;
-        try {
-            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
-                return firebase.database();
-            }
-        } catch (e) { console.error("Erro Firebase:", e); }
-        return null;
-    }
-
-    // Carrega dados da nuvem para os inputs
-    window.buscarConfiguracoesFirebase = function() {
-        const database = obterInstanciaBanco();
-        if (!database) {
-            document.getElementById('cfgUltimaAtualizacao').innerText = "Aguardando inicialização...";
-            return;
-        }
-
-        database.ref('abella/settings').once('value').then((snapshot) => {
-            const config = snapshot.val();
-            if (!config) {
-                document.getElementById('cfgUltimaAtualizacao').innerText = "Banco vazio. Pronto para criar.";
-                return;
-            }
-
-            if (document.getElementById('cfgNome')) document.getElementById('cfgNome').value = config.name || "Abella Joias";
-            if (document.getElementById('cfgSlogan')) document.getElementById('cfgSlogan').value = config.slogan || "Atacado de Joias no Bruto";
-            if (document.getElementById('cfgWhatsapp')) document.getElementById('cfgWhatsapp').value = config.whatsapp || "";
-            if (document.getElementById('cfgDescPix')) document.getElementById('cfgDescPix').value = config.pix !== undefined ? config.pix : 5;
-            if (document.getElementById('cfgParcelas')) document.getElementById('cfgParcelas').value = config.parcelas || 6;
-            if (document.getElementById('cfgValorMinimo')) document.getElementById('cfgValorMinimo').value = config.pedidoMinimo || 0;
-            if (document.getElementById('cfgFreteFixo')) document.getElementById('cfgFreteFixo').value = config.freteFixo || 0;
-            if (document.getElementById('cfgFreteGratisAlvo')) document.getElementById('cfgFreteGratisAlvo').value = config.freteGratisAlvo !== undefined ? config.freteGratisAlvo : 100;
-            if (document.getElementById('cfgStatusLoja')) document.getElementById('cfgStatusLoja').value = config.statusLoja || 'aberto';
-            if (document.getElementById('cfgTextoAviso')) document.getElementById('cfgTextoAviso').value = config.bannerTexto || "";
-            if (document.getElementById('cfgAtivarAviso')) document.getElementById('cfgAtivarAviso').checked = !!config.bannerAtivo;
-
-            document.getElementById('cfgUltimaAtualizacao').innerText = config.ultimaAtualizacao ? `Sincronizado: ${config.ultimaAtualizacao}` : "Sincronizado";
-        }).catch(err => {
-            console.error("Erro na leitura:", err);
-            document.getElementById('cfgUltimaAtualizacao').innerText = "Erro ao carregar dados";
-        });
-    };
-
-    // Salva os dados forçando persistência imediata
-    window.salvarConfiguracoes = function() {
-        const btn = document.getElementById('btnSalvarConfig');
-        const nomeValidado = document.getElementById('cfgNome') ? document.getElementById('cfgNome').value.trim() : "Abella Joias";
-
-        if (btn) { btn.disabled = true; btn.innerText = "⏳ GRAVANDO NA NUVEM..."; }
-
-        const database = obterInstanciaBanco();
-        if (!database) {
-            alert("❌ Erro: O sistema não encontrou o banco de dados ativo. Atualize a página com Ctrl+F5.");
-            if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Criar no Firebase"; }
-            return;
-        }
-
-        const dataHoraAtual = new Date().toLocaleString('pt-BR');
-        
-        const pacoteDados = {
-            name: nomeValidado,
-            slogan: document.getElementById('cfgSlogan').value.trim(),
-            whatsapp: document.getElementById('cfgWhatsapp').value.trim(),
-            pix: parseFloat(document.getElementById('cfgDescPix').value) || 0,
-            parcelas: parseInt(document.getElementById('cfgParcelas').value) || 1,
-            pedidoMinimo: parseFloat(document.getElementById('cfgValorMinimo').value) || 0,
-            freteFixo: parseFloat(document.getElementById('cfgFreteFixo').value) || 0,
-            freteGratisAlvo: parseFloat(document.getElementById('cfgFreteGratisAlvo').value) || 0,
-            statusLoja: document.getElementById('cfgStatusLoja').value,
-            bannerTexto: document.getElementById('cfgTextoAviso').value.trim(),
-            bannerAtivo: document.getElementById('cfgAtivarAviso').checked,
-            ultimaAtualizacao: dataHoraAtual
-        };
-
-        console.log("Tentando gravar dados no nó abella/settings:", pacoteDados);
-
-        // Força a gravação direta com tratamento de erro absoluto
-        database.ref('abella/settings').set(pacoteDados)
-            .then(() => {
-                document.getElementById('cfgUltimaAtualizacao').innerText = `Salvo: ${dataHoraAtual}`;
-                alert("💎 Sucesso total! Dados salvos e gravados no Firebase.");
-            })
-            .catch(erro => {
-                console.error("Erro crítico ao gravar no Firebase:", erro);
-                alert("❌ O Firebase rejeitou a gravação!\nMotivo: " + erro.message);
-            })
-            .finally(() => {
-                if (btn) { btn.disabled = false; btn.innerText = "💾 Salvar e Criar no Firebase"; }
-            });
-    };
-
-    // Inicialização reativa segura
-    setTimeout(() => { window.buscarConfiguracoesFirebase(); }, 800);
-

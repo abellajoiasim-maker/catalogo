@@ -10,7 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
@@ -72,7 +72,7 @@
 
                     <div class="bg-zinc-900/40 border border-zinc-800 rounded-xl p-5 space-y-4 font-mono">
                         
-                        <div class="flex justify-between items-center text-zinc-500 pb-1">
+                        <div id="msLinhaPrecoBruto" class="flex justify-between items-center text-zinc-500 pb-1">
                             <span class="text-xs font-sans text-zinc-400">Preço Regular de Tabela:</span>
                             <span id="msPrecoBruto" class="text-lg font-bold line-through decoration-red-600 decoration-2 text-zinc-500">R$ 0,00</span>
                         </div>
@@ -85,18 +85,18 @@
                         <div class="bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                             <div>
                                 <span class="block text-xs font-sans text-emerald-400 font-bold tracking-wide">⚡ VALOR LÍQUIDO NO PIX</span>
-                                <span id="msLabelPixDesc" class="text-[10px] text-zinc-400 font-sans block">Com desconto aplicado sobre a tabela</span>
+                                <span id="msLabelPixDesc" class="text-[10px] text-zinc-400 font-sans block">Desconto direto aplicado</span>
                             </div>
                             <span id="msPrecoPix" class="text-2xl md:text-3xl font-black text-emerald-400">R$ 0,00</span>
                         </div>
 
-                        <div class="bg-black/40 border border-zinc-900 rounded-lg p-3 space-y-2 text-xs md:text-sm font-sans text-zinc-300">
+                        <div class="bg-black/40 border border-zinc-900 rounded-lg p-3 space-y-2 text-xs font-sans text-zinc-300">
                             <div class="flex justify-between items-center border-b border-zinc-900/60 pb-1.5">
                                 <span class="text-zinc-400">💳 Cartão de Crédito:</span>
                                 <span id="msParcelas" class="gold font-mono font-bold">ou 6x sem juros</span>
                             </div>
                             <div class="text-[11px] text-zinc-500 leading-relaxed italic pt-0.5">
-                                * Nota: Como trabalhamos estritamente com atacado de joias brutas, os valores financeiros acima referem-se à peça base, sem a inclusão de serviços galvânicos ou banhos posteriores.
+                                * Nota de Transparência: Como operamos no modelo de atacado de semijoias no bruto, os valores financeiros informados acima correspondem à peça base (fundição/estamparia) e não incluem taxas galvânicas ou custos de banho.
                             </div>
                         </div>
                     </div>
@@ -191,7 +191,7 @@
                 const grid = document.getElementById('grid-produtos');
                 grid.innerHTML = '';
                 if (!snap.exists()) {
-                    grid.innerHTML = '<p class="col-span-full text-zinc-500 italic text-xs">Nenhum produto cadastrado.</p>';
+                    grid.innerHTML = '<p class="col-span-full text-zinc-500 italic text-center py-8">Nenhum produto cadastrado.</p>';
                     return;
                 }
 
@@ -242,7 +242,7 @@
                     grid.appendChild(card);
                 });
 
-                if (total === 0) grid.innerHTML = '<p class="col-span-full text-zinc-500 italic text-center py-8">Nenhuma joia disponível.</p>';
+                if (total === 0) grid.innerHTML = '<p class="col-span-full text-zinc-500 italic text-center py-8">Nenhuma joia disponível nesta subcategoria.</p>';
             });
         }
 
@@ -270,19 +270,22 @@
                 
                 document.getElementById('msPrecoBruto').innerText = fM(precoBruto);
                 
+                // LÓGICA DE EXIBIÇÃO SEM DUPLICIDADE
                 if (temPromo) {
+                    document.getElementById('msLinhaPrecoBruto').classList.remove('hidden');
                     document.getElementById('msLinhaOferta').classList.remove('hidden');
                     document.getElementById('msPrecoOferta').innerText = fM(precoFinalOferta);
                     document.getElementById('msBadgePromoContainer').innerHTML = `<span class="bg-amber-500 text-black text-xs font-black px-3 py-1 rounded-full uppercase shadow-lg shadow-black/50 flex items-center gap-1">🔥 OFERTA -${descPromo}%</span>`;
                 } else {
+                    // Se não tiver promoção, esconde a linha de cima repetida e foca no preço base + PIX
+                    document.getElementById('msLinhaPrecoBruto').classList.add('hidden');
                     document.getElementById('msLinhaOferta').classList.add('hidden');
                     document.getElementById('msBadgePromoContainer').innerHTML = '';
                 }
 
                 document.getElementById('msPrecoPix').innerText = fM(precoPixFinal);
-                document.getElementById('msLabelPixDesc').innerText = `Garante o preço final com -${configGlobal.pixDesc}% de desconto aplicado`;
+                document.getElementById('msLabelPixDesc').innerText = `Preço final com -${configGlobal.pixDesc}% de desconto à vista aplicado`;
                 
-                // Exibe as parcelas exatas sem acréscimo baseadas no preço de tabela ou de oferta
                 const valorParcela = precoFinalOferta / configGlobal.parcelasMax;
                 document.getElementById('msParcelas').innerText = `ou ${configGlobal.parcelasMax}x de ${fM(valorParcela)} sem juros`;
 
@@ -321,7 +324,6 @@
                     grade.appendChild(row);
                 }
 
-                // Dispara o cálculo inicial
                 calcularResumoInstantaneo();
                 document.getElementById('modalSupremo').classList.remove('hidden');
             });

@@ -36,3 +36,291 @@
     </div>
 
 </div>
+<script>
+
+async function migrarProdutos() {
+
+    if (!confirm(
+        "Deseja migrar todos os produtos?"
+    )) return;
+
+    const output =
+        document.getElementById(
+            "resultadoMigracao"
+        );
+
+    output.innerHTML =
+        "Migrando produtos...";
+
+    try {
+
+        const snap = await db
+            .ref("abella/products")
+            .once("value");
+
+        let total = 0;
+
+        const updates = {};
+
+        snap.forEach(item => {
+
+            const p = item.val();
+
+            updates[item.key] = {
+
+                sku: p.sku || "",
+
+                name:
+                    p.name ||
+                    p.nome ||
+                    "",
+
+                category:
+                    p.category ||
+                    p.categoria ||
+                    "",
+
+                subcategory:
+                    p.subcategory ||
+                    p.subcategoria ||
+                    "",
+
+                image:
+                    p.image ||
+                    p.imagem ||
+                    "",
+
+                price: Number(
+                    p.price ??
+                    p.preco ??
+                    p.precoFinal ??
+                    0
+                ),
+
+                weight: Number(
+                    p.weight ??
+                    p.peso ??
+                    0
+                ),
+
+                active:
+                    p.active !== false
+            };
+
+            total++;
+
+        });
+
+        await db
+            .ref("abella/products")
+            .update(updates);
+
+        output.innerHTML =
+            `✅ ${total} produtos migrados`;
+
+    } catch (err) {
+
+        console.error(err);
+
+        output.innerHTML =
+            "❌ Erro na migração";
+
+    }
+
+}
+
+async function migrarPedidos() {
+
+    if (!confirm(
+        "Deseja migrar todos os pedidos?"
+    )) return;
+
+    const output =
+        document.getElementById(
+            "resultadoMigracao"
+        );
+
+    output.innerHTML =
+        "Migrando pedidos...";
+
+    try {
+
+        const snap = await db
+            .ref("abella/orders")
+            .once("value");
+
+        let total = 0;
+
+        const updates = {};
+
+        snap.forEach(item => {
+
+            const p = item.val();
+
+            updates[item.key] = {
+
+                cliente:
+                    p.cliente ||
+                    p.nome ||
+                    "",
+
+                whats:
+                    p.whats ||
+                    p.contato ||
+                    "",
+
+                cidade:
+                    p.cidade ||
+                    "",
+
+                formaPagamento:
+                    p.formaPagamento ||
+                    p.metodo ||
+                    "",
+
+                total:
+                    Number(
+                        p.total || 0
+                    ),
+
+                pesoTotal:
+                    Number(
+                        p.pesoTotal || 0
+                    ),
+
+                totalPecas:
+                    Number(
+                        p.totalPecas || 0
+                    ),
+
+                status:
+                    p.status ||
+                    "Novo",
+
+                criadoEm:
+                    p.criadoEm ||
+                    Date.now(),
+
+                itens:
+                    p.itens ||
+                    p.produtos ||
+                    []
+            };
+
+            total++;
+
+        });
+
+        await db
+            .ref("abella/orders")
+            .update(updates);
+
+        output.innerHTML =
+            `✅ ${total} pedidos migrados`;
+
+    } catch (err) {
+
+        console.error(err);
+
+        output.innerHTML =
+            "❌ Erro na migração";
+
+    }
+
+}
+
+async function validarBanco() {
+
+    const output =
+        document.getElementById(
+            "resultadoMigracao"
+        );
+
+    output.innerHTML =
+        "Validando banco...";
+
+    const problemas = [];
+
+    try {
+
+        const produtos = await db
+            .ref("abella/products")
+            .once("value");
+
+        produtos.forEach(item => {
+
+            const p = item.val();
+
+            if (p.nome)
+                problemas.push(
+                    `Produto ${item.key} usa nome`
+                );
+
+            if (p.imagem)
+                problemas.push(
+                    `Produto ${item.key} usa imagem`
+                );
+
+            if (p.precoFinal)
+                problemas.push(
+                    `Produto ${item.key} usa precoFinal`
+                );
+
+            if (p.peso)
+                problemas.push(
+                    `Produto ${item.key} usa peso`
+                );
+
+        });
+
+        const pedidos = await db
+            .ref("abella/orders")
+            .once("value");
+
+        pedidos.forEach(item => {
+
+            const p = item.val();
+
+            if (p.nome)
+                problemas.push(
+                    `Pedido ${item.key} usa nome`
+                );
+
+            if (p.contato)
+                problemas.push(
+                    `Pedido ${item.key} usa contato`
+                );
+
+            if (p.produtos)
+                problemas.push(
+                    `Pedido ${item.key} usa produtos`
+                );
+
+        });
+
+        if (
+            problemas.length === 0
+        ) {
+
+            output.innerHTML =
+                "✅ Banco totalmente padronizado";
+
+        } else {
+
+            output.innerHTML =
+                problemas.join("\n");
+
+        }
+
+    } catch (err) {
+
+        console.error(err);
+
+        output.innerHTML =
+            "❌ Erro na validação";
+
+    }
+
+}
+
+</script>

@@ -19,33 +19,12 @@
 <body>
 
     <header class="border-b border-zinc-900 bg-black/50 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto p-5 flex justify-between items-center gap-4">
+        <div class="max-w-7xl mx-auto p-5 flex justify-between items-center">
             <div>
                 <h1 class="serif gold text-lg uppercase tracking-wider">Abella Joias</h1>
                 <p id="slogan-sub" class="text-[9px] text-zinc-500 uppercase tracking-widest">Aguardando mapeamento...</p>
             </div>
-            
-            <div class="flex items-center gap-4">
-                <a href="carrinho.html" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] px-4 py-2 rounded-xl transition-all flex items-center gap-4 text-left font-mono text-xs">
-                    <div class="flex items-center gap-1.5 border-r border-zinc-800 pr-3">
-                        <span>🛒</span>
-                        <div>
-                            <span class="block text-zinc-500 text-[8px] uppercase font-sans">Itens</span>
-                            <span id="cart-count" class="gold font-bold">0 pçs</span>
-                        </div>
-                    </div>
-                    <div class="hidden sm:block border-r border-zinc-800 pr-3">
-                        <span class="block text-zinc-500 text-[8px] uppercase font-sans">Peso Total</span>
-                        <span id="cart-weight" class="text-amber-400 font-bold">0.00g</span>
-                    </div>
-                    <div>
-                        <span class="block text-zinc-500 text-[8px] uppercase font-sans">Total Bruto</span>
-                        <span id="cart-total" class="text-emerald-400 font-bold">R$ 0,00</span>
-                    </div>
-                </a>
-
-                <a href="index.html" class="text-xs bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-zinc-400 hover:text-white transition-all">✖ Voltar</a>
-            </div>
+            <a href="index.html" class="text-xs bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-zinc-400 hover:text-white transition-all">✖ Voltar</a>
         </div>
     </header>
 
@@ -55,7 +34,7 @@
         </div>
 
         <div id="grid-subcategorias" class="hidden grid grid-cols-2 md:grid-cols-4 gap-6 text-left">
-        </div>
+            </div>
     </main>
 
     <script>
@@ -68,41 +47,6 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const catId = urlParams.get('id');
-
-        // Dispara a contagem e soma assim que a página abre
-        document.addEventListener('DOMContentLoaded', () => {
-            atualizarResumoDoCarrinho();
-        });
-
-        // Lógica para varrer o carrinho e somar quantidade, peso e valor total bruto
-        function atualizarResumoDoCarrinho() {
-            const carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            let totalPecas = 0;
-            let totalPeso = 0;
-            let totalValorCheio = 0;
-
-            carrinho.forEach(item => {
-                const qtd = parseInt(item.quantidade) || 0;
-                totalPecas += qtd;
-                
-                // Mapeia o peso unitário da joia
-                const pesoUnitario = parseFloat(item.peso || item.weight || 0);
-                totalPeso += (pesoUnitario * qtd);
-
-                // Força o cálculo com base no preço cheio de tabela do bruto
-                const precoUnitario = parseFloat(item.price || item.precoFinal || 0);
-                totalValorCheio += (precoUnitario * qtd);
-            });
-
-            // Injeta as informações em tempo real nos elementos criados
-            const elCount = document.getElementById('cart-count');
-            const elWeight = document.getElementById('cart-weight');
-            const elTotal = document.getElementById('cart-total');
-
-            if (elCount) elCount.innerText = `${totalPecas} pçs`;
-            if (elWeight) elWeight.innerText = `${totalPeso.toFixed(2)}g`;
-            if (elTotal) elTotal.innerText = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValorCheio);
-        }
 
         if(!catId) {
             window.location.href = 'index.html';
@@ -123,17 +67,21 @@
         }
 
         function verificarEstruturaDeSubcategorias() {
+            // Busca o nome mestre da Categoria-Mãe primeiro
             db.ref(`abella/categories/${catId}`).once('value', snapMae => {
                 const maeData = snapMae.val() || {};
                 document.getElementById('slogan-sub').innerText = (maeData.name || maeData.nome || catId).toUpperCase();
                 
+                // Mapeia o subnó exatamente como o módulo de categorias grava
                 const subcategorias = maeData.subcategories;
 
+                // 🌟 REGRA DE PULO AUTOMÁTICO: Se não contiver subcategorias cadastradas, pula direto para a vitrine
                 if (!subcategorias || Object.keys(subcategorias).length === 0) {
                     window.location.href = `produtos.html?id=${catId}`;
                     return;
                 }
 
+                // Se houver subcategorias filhas estruturadas, exibe a tela e renderiza
                 document.getElementById('loader-sub').classList.add('hidden');
                 const grid = document.getElementById('grid-subcategorias');
                 grid.classList.remove('hidden');

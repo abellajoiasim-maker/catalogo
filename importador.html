@@ -4,551 +4,128 @@
     <meta charset="UTF-8">
     <title>Super Importador • Abella Joias</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
-
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #0a0a0a;
-            min-height: 100vh;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 40px 16px 60px;
-            color: #adadad;
-        }
-
-        .box {
-            width: 100%;
-            max-width: 780px;
-            background: #111;
-            border: 1px solid #222;
-            border-radius: 20px;
-            padding: 36px 32px;
-            box-shadow: 0 20px 60px rgba(0,0,0,.7);
-        }
-
-        /* HEADER */
-        .header { text-align: center; margin-bottom: 28px; }
-        .header h1 {
-            font-size: 22px;
-            font-weight: 900;
-            color: #caa85c;
-            letter-spacing: -0.03em;
-            text-transform: uppercase;
-        }
-        .header p {
-            margin-top: 6px;
-            font-size: 11px;
-            font-family: monospace;
-            color: #555;
-        }
-        .header p span { color: #caa85c; }
-
-        /* AVISO DE COLUNAS */
-        .col-map {
-            background: #0d0d0d;
-            border: 1px solid #1e1e1e;
-            border-radius: 12px;
-            padding: 14px 18px;
-            margin-bottom: 22px;
-            font-size: 11px;
-            font-family: monospace;
-            line-height: 1.9;
-        }
-        .col-map strong {
-            display: block;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            color: #caa85c;
-            margin-bottom: 6px;
-        }
-        .col-map .col-row { display: flex; gap: 8px; align-items: baseline; }
-        .col-map .badge {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 1px 6px;
-            font-size: 10px;
-            color: #caa85c;
-            white-space: nowrap;
-            min-width: 28px;
-            text-align: center;
-        }
-        .col-map .req { color: #f44336; font-size: 9px; }
-        .col-map .opt { color: #555; font-size: 9px; }
-
-        /* UPLOAD */
-        .upload-area {
-            border: 2px dashed #2a2a2a;
-            border-radius: 14px;
-            padding: 24px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color .25s, background .25s;
-            margin-bottom: 16px;
-            background: #0d0d0d;
-            position: relative;
-        }
-        .upload-area:hover, .upload-area.drag-over {
-            border-color: #caa85c;
-            background: #161208;
-        }
-        .upload-area input[type="file"] {
-            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-        }
-        .upload-icon { font-size: 32px; margin-bottom: 8px; }
-        .upload-area p { font-size: 12px; color: #666; }
-        .upload-area .file-name {
-            margin-top: 8px;
-            font-size: 12px;
-            font-family: monospace;
-            color: #caa85c;
-            font-weight: bold;
-        }
-
-        /* OPÇÕES */
-        .options-row {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-        }
-        .option-card {
-            flex: 1;
-            min-width: 200px;
-            background: #0d0d0d;
-            border: 1px solid #1e1e1e;
-            border-radius: 12px;
-            padding: 14px 16px;
-        }
-        .option-card label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-            color: #ccc;
-        }
-        .option-card input[type="checkbox"] {
-            width: 16px; height: 16px; accent-color: #caa85c; cursor: pointer;
-        }
-        .option-card small {
-            display: block;
-            margin-top: 4px;
-            font-size: 10px;
-            color: #555;
-            line-height: 1.5;
-            padding-left: 26px;
-        }
-
-        /* BOTÃO */
-        #btn {
-            width: 100%;
-            background: linear-gradient(135deg, #caa85c, #8c6a1e);
-            color: #000;
-            font-size: 13px;
-            font-weight: 900;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            border: none;
-            border-radius: 12px;
-            padding: 16px;
-            cursor: pointer;
-            transition: opacity .2s, transform .15s;
-            margin-bottom: 18px;
-        }
-        #btn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
-        #btn:disabled { background: #222; color: #555; cursor: not-allowed; transform: none; }
-
-        /* PROGRESSO */
-        .progress-wrap { margin-bottom: 12px; display: none; }
-        .progress-bar-bg {
-            background: #1a1a1a;
-            border-radius: 8px;
-            height: 8px;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #caa85c, #f0c060);
-            border-radius: 8px;
-            width: 0%;
-            transition: width .3s;
-        }
-        .progress-label {
-            font-size: 10px;
-            font-family: monospace;
-            color: #666;
-            text-align: right;
-            margin-top: 4px;
-        }
-
-        /* LOG */
-        #log {
-            background: #000;
-            border: 1px solid #1e1e1e;
-            border-radius: 12px;
-            padding: 16px;
-            height: 320px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 11px;
-            line-height: 1.7;
-            color: #adadad;
-        }
-        #log::-webkit-scrollbar { width: 5px; }
-        #log::-webkit-scrollbar-track { background: #000; }
-        #log::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
-        #log::-webkit-scrollbar-thumb:hover { background: #caa85c; }
-
+        body { background: #0b0b0b; color: #eee; font-family: monospace; }
+        .gold { color: #caa85c; }
         .success { color: #4caf50; font-weight: bold; }
-        .warn    { color: #ff9800; }
-        .error   { color: #f44336; font-weight: bold; }
-        .info    { color: #64b5f6; }
-        .gold    { color: #caa85c; font-weight: bold; }
-
-        /* SUMÁRIO FINAL */
-        #sumario {
-            display: none;
-            margin-top: 16px;
-            background: #0d0d0d;
-            border: 1px solid #1e1e1e;
-            border-radius: 12px;
-            padding: 16px 20px;
-            font-size: 12px;
-        }
-        #sumario h3 { color: #caa85c; font-size: 13px; margin-bottom: 10px; }
-        #sumario .sum-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #1a1a1a; }
-        #sumario .sum-row:last-child { border-bottom: none; }
-        #sumario .sum-val { font-weight: bold; font-family: monospace; color: #fff; }
+        .error { color: #f44336; font-weight: bold; }
     </style>
 </head>
-<body>
+<body class="p-6">
+    <div class="max-w-3xl mx-auto bg-zinc-950 border border-zinc-900 rounded-2xl p-6 space-y-6">
+        <div>
+            <h1 class="text-lg font-bold gold uppercase tracking-wider">📦 Super Importador Catalogo</h1>
+            <p class="text-xs text-zinc-500">Mapeamento estruturado direto para os nós oficiais da Abella Joias.</p>
+        </div>
 
-<div class="box">
+        <div class="bg-zinc-900 p-4 rounded-xl space-y-2 text-xs text-left">
+            <p class="font-bold gold">📋 Formato Esperado do Arquivo CSV:</p>
+            <p class="text-zinc-400">Nome; SKU; Categoria; Subcategoria; Preço; Peso; URL_Imagem; Variação; Opções; Pausado</p>
+        </div>
 
-    <div class="header">
-        <h1>📦 Super Importador Abella Joias</h1>
-        <p>Destino: <span>/abella/products</span> &amp; <span>/abella/categories</span> &nbsp;•&nbsp; Firebase Realtime Database</p>
-    </div>
-
-    <div class="col-map">
-        <strong>📋 Ordem exata das colunas no CSV (separador: ponto-e-vírgula)</strong>
-        <div class="col-row"><span class="badge">A</span> <b>Nome da Joia</b> &nbsp;<span class="req">obrigatório</span></div>
-        <div class="col-row"><span class="badge">B</span> <b>SKU / Código</b> &nbsp;<span class="req">obrigatório — deve ser único</span></div>
-        <div class="col-row"><span class="badge">C</span> <b>Categoria</b> &nbsp;<span class="req">obrigatório</span></div>
-        <div class="col-row"><span class="badge">D</span> <b>Subcategoria</b> &nbsp;<span class="opt">opcional — deixe vazio se não houver</span></div>
-        <div class="col-row"><span class="badge">E</span> <b>Preço (R$)</b> &nbsp;<span class="req">obrigatório — use ponto decimal: 49.90</span></div>
-        <div class="col-row"><span class="badge">F</span> <b>Peso (g)</b> &nbsp;<span class="req">obrigatório — ex: 4.50</span></div>
-        <div class="col-row"><span class="badge">G</span> <b>URL Imagem</b> &nbsp;<span class="opt">opcional — https://... ou gs://...</span></div>
-        <div class="col-row"><span class="badge">H</span> <b>Variação</b> &nbsp;<span class="opt">opcional — Padrão | Aro | Lista | Texto</span></div>
-        <div class="col-row"><span class="badge">I</span> <b>Opções (Lista/Aro)</b> &nbsp;<span class="opt">opcional — ex: P,M,G,GG ou 14,15,16,17</span></div>
-        <div class="col-row"><span class="badge">J</span> <b>Pausado</b> &nbsp;<span class="opt">opcional — TRUE | FALSE (padrão: FALSE)</span></div>
-    </div>
-
-    <div class="upload-area" id="dropZone">
-        <input type="file" id="csv" accept=".csv" onchange="onFileSelect(this)">
-        <div class="upload-icon">📂</div>
-        <p>Arraste o arquivo CSV aqui ou clique para selecionar</p>
-        <div class="file-name" id="fileName">Nenhum arquivo selecionado</div>
-    </div>
-
-    <div class="options-row">
-        <div class="option-card">
-            <label>
-                <input type="checkbox" id="optMantCateg">
-                Manter categorias existentes
+        <div class="border border-dashed border-zinc-800 rounded-xl p-8 text-center bg-black">
+            <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="atualizarLabelArquivo(this)">
+            <label id="csvLabel" for="csvFile" class="cursor-pointer text-xs text-zinc-400 hover:text-white transition-all block">
+                📂 Clique aqui para selecionar o arquivo .CSV do seu computador
             </label>
-            <small>Se marcado, não apaga as categorias já cadastradas — apenas adiciona/atualiza.</small>
         </div>
-        <div class="option-card">
-            <label>
-                <input type="checkbox" id="optSoAddUpd">
-                Modo incremental (não apaga produtos)
-            </label>
-            <small>Se marcado, adiciona e atualiza sem apagar o catálogo inteiro. Útil para importações parciais.</small>
+
+        <div class="flex items-center gap-4 text-xs">
+            <label class="flex items-center gap-2"><input type="checkbox" id="incrementalMode" checked> Modo Incremental (Não apagar catálogo atual)</label>
+        </div>
+
+        <button id="btnImportar" onclick="executarImportacaoCSV()" class="w-full bg-[#caa85c] text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider hover:bg-[#bda152] transition-all">
+            🚀 Executar Carga no Firebase Realtime
+        </button>
+
+        <div id="logConsole" class="bg-black border border-zinc-900 rounded-xl p-4 h-48 overflow-y-auto text-left text-[11px] text-zinc-400 space-y-1 font-mono">
+            Pronto para inicialização. Selecione um arquivo de dados.
         </div>
     </div>
 
-    <div class="progress-wrap" id="progressWrap">
-        <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="progressFill"></div>
-        </div>
-        <div class="progress-label" id="progressLabel">0 / 0</div>
-    </div>
-
-    <button id="btn" onclick="importarTudo()">🚀 Importar para o Catálogo</button>
-
-    <div id="log">Pronto para processamento. Selecione um arquivo CSV e clique em Importar...</div>
-
-    <div id="sumario">
-        <h3>✅ Importação Concluída</h3>
-        <div class="sum-row"><span>Produtos importados:</span><span class="sum-val" id="sumProd">0</span></div>
-        <div class="sum-row"><span>Categorias criadas/atualizadas:</span><span class="sum-val" id="sumCat">0</span></div>
-        <div class="sum-row"><span>Linhas com erro:</span><span class="sum-val" id="sumErr">0</span></div>
-        <div class="sum-row"><span>Linhas ignoradas (vazias/inválidas):</span><span class="sum-val" id="sumSkip">0</span></div>
-    </div>
-
-</div><script>
-// ─────────────────────────────────────────────────────────────────────────────
-// FIREBASE — CONFIGURAÇÃO GUARDADA
-// ─────────────────────────────────────────────────────────────────────────────
-const firebaseConfig = {
-    apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-    databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
-    storageBucket: "catalogo-abella-joias.firebasestorage.app"
-};
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db      = firebase.database();
-const storage = firebase.storage();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UI — DRAG & DROP
-// ─────────────────────────────────────────────────────────────────────────────
-const dropZone = document.getElementById('dropZone');
-dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.name.endsWith('.csv')) {
-        document.getElementById('csv').files;
-        window._droppedFile = file;
-        document.getElementById('fileName').textContent = '📄 ' + file.name;
-    } else {
-        alert('Selecione um arquivo .csv válido.');
-    }
-});
-
-function onFileSelect(input) {
-    window._droppedFile = null;
-    const f = input.files[0];
-    document.getElementById('fileName').textContent = f ? '📄 ' + f.name : 'Nenhum arquivo selecionado';
-}
-
-function getFile() {
-    return window._droppedFile || document.getElementById('csv').files[0];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UTILITÁRIOS
-// ─────────────────────────────────────────────────────────────────────────────
-function gerarSlug(txt) {
-    if (!txt) return "";
-    return txt.toString()
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-}
-
-function limpar(str) {
-    return (str || "").replace(/"/g, "").trim();
-}
-
-function parseNum(str) {
-    const s = limpar(str).replace('R$', '').replace('g', '').replace(',', '.').trim();
-    const n = parseFloat(s);
-    return isNaN(n) ? 0 : n;
-}
-
-function parseBool(str) {
-    const s = limpar(str).toLowerCase();
-    return s === 'true' || s === '1' || s === 'sim' || s === 'yes';
-}
-
-function log(msg) {
-    const el = document.getElementById('log');
-    el.innerHTML += msg + '<br>';
-    el.scrollTop = el.scrollHeight;
-}
-
-function setProgress(atual, total) {
-    const pct = total > 0 ? Math.round((atual / total) * 100) : 0;
-    document.getElementById('progressFill').style.width  = pct + '%';
-    document.getElementById('progressLabel').textContent = `${atual} / ${total} (${pct}%)`;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// IMPORTAÇÃO PRINCIPAL
-// ─────────────────────────────────────────────────────────────────────────────
-async function importarTudo() {
-    const file = getFile();
-    if (!file) return alert("Selecione o arquivo CSV primeiro.");
-
-    const modoIncremental = document.getElementById('optSoAddUpd').checked;
-    const manterCategorias = document.getElementById('optMantCateg').checked;
-
-    const avisoApagar = modoIncremental
-        ? "Modo INCREMENTAL: os produtos existentes NÃO serão apagados.\nApenas os SKUs do arquivo serão adicionados/atualizados. Confirmar?"
-        : "⚠ ATENÇÃO: Isso vai APAGAR TODOS os produtos (e categorias, se não marcado) do banco antes de importar.\n\nDeseja continuar?";
-
-    if (!confirm(avisoApagar)) return;
-
-    const btn = document.getElementById('btn');
-    const logEl = document.getElementById('log');
-    btn.disabled = true;
-    logEl.innerHTML = '';
-    document.getElementById('sumario').style.display = 'none';
-    document.getElementById('progressWrap').style.display = 'block';
-    setProgress(0, 1);
-
-    let totalProd = 0, totalErros = 0, totalSkip = 0;
-    const categoriasSet = new Set();
-
-    try {
-        if (!modoIncremental) {
-            log("🗑️ Limpando catálogo antigo...");
-            await db.ref('abella/products').remove();
-            if (!manterCategorias) {
-                await db.ref('abella/categories').remove();
-                log("<span class='success'>✅ Produtos e categorias zerados.</span>");
-            } else {
-                log("<span class='success'>✅ Produtos zerados. Categorias mantidas.</span>");
-            }
-        } else {
-            log("<span class='info'>ℹ Modo incremental — nenhum dado será apagado.</span>");
+    <script src="js/firebase/firebase-config.js"></script>
+    <script>
+        function atualizarLabelArquivo(input) {
+            const f = input.files[0];
+            document.getElementById('csvLabel').innerText = f ? `📄 Arquivo Pronto: ${f.name}` : `📂 Selecionar arquivo .CSV`;
         }
 
-        const text = await file.text();
-        const linhas = text.trim().replace(/^\uFEFF/, '').split(/\r?\n/);
-        const separador = linhas[0].includes(';') ? ';' : ',';
-        log(`<span class='info'>ℹ Separador detectado: "${separador === ';' ? 'ponto-e-vírgula' : 'vírgula'}" &nbsp;|&nbsp; Total de linhas: ${linhas.length - 1}</span>`);
+        function log(msg, classe = '') {
+            const consoleEl = document.getElementById('logConsole');
+            consoleEl.innerHTML += `<p class="${classe}">${msg}</p>`;
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
 
-        const linhasDados = linhas.slice(1).filter(l => l.trim());
-        const total = linhasDados.length;
+        async function executarImportacaoCSV() {
+            const input = document.getElementById('csvFile');
+            const file = input.files[0];
+            if(!file) { alert("Por favor, selecione o arquivo CSV antes."); return; }
 
-        log(`🚀 Processando <b class='gold'>${total}</b> linhas de dados...<br>`);
+            const incremental = document.getElementById('incrementalMode').checked;
+            const btn = document.getElementById('btnImportar');
+            btn.disabled = true;
 
-        for (let i = 0; i < linhasDados.length; i++) {
-            const linha = linhasDados[i];
-            setProgress(i + 1, total);
-
-            const col = splitCSVLine(linha, separador);
-
-            // Mapeamento Atualizado para 10 colunas (Subcategoria adicionada na Coluna D / Índice 3)
-            const nome           = limpar(col[0] || "");
-            const skuOriginal    = limpar(col[1] || "");
-            const nomeCategoria  = limpar(col[2] || "") || "Geral";
-            const nomeSubcat     = limpar(col[3] || ""); 
-            const preco          = parseNum(col[4]);
-            const peso           = parseNum(col[5]);
-            const urlImagem      = limpar(col[6] || "");
-            const variacaoTipo   = limpar(col[7] || "") || "Padrão";
-            const opcoesPersonal = limpar(col[8] || "");
-            const pausado        = col[9] !== undefined ? parseBool(col[9]) : false;
-
-            if (!skuOriginal || !nome || skuOriginal.toLowerCase() === "sku") {
-                totalSkip++;
-                continue;
-            }
-
-            const skuID   = skuOriginal.replace(/[\.\$#\[\]\/]/g, "-");
-            const catSlug = gerarSlug(nomeCategoria);
-            const subSlug = gerarSlug(nomeSubcat);
-
-            log(`<span class='gold'>›</span> SKU: <b>${skuOriginal}</b> | ${nome.substring(0,30)}... `);
+            const db = firebase.database();
+            const logConsole = document.getElementById('logConsole');
+            logConsole.innerHTML = '';
 
             try {
-                // Estrutura a categoria pai
-                await db.ref('abella/categories/' + catSlug).update({
-                    name: nomeCategoria,
-                    slug: catSlug,
-                    paused: false
-                });
-                categoriasSet.add(nomeCategoria);
+                if(!incremental) {
+                    log("🗑️ Limpando catálogo anterior do banco...", "error");
+                    await db.ref('abella/products').remove();
+                }
 
-                // Se houver subcategoria na linha, injeta aninhada dentro da categoria pai
-                if (subSlug) {
-                    await db.ref(`abella/categories/${catSlug}/subcategories/${subSlug}`).update({
-                        name: nomeSubcat,
-                        slug: subSlug
+                const texto = await file.text();
+                const linhas = texto.split(/\r?\n/).filter(l => l.trim());
+                log(`ℹ️ Total de linhas lidas: ${linhas.length - 1}`, 'gold');
+
+                for (let i = 1; i < linhas.length; i++) {
+                    const colunas = linhas[i].split(';');
+                    if(colunas.length < 3) continue;
+
+                    const nome = colunas[0]?.trim();
+                    const sku = colunas[1]?.trim();
+                    const categoria = colunas[2]?.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
+                    const subcategoria = colunas[3]?.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-") || "";
+                    const preco = parseFloat(colunas[4]?.replace(',', '.') || 0);
+                    const peso = parseFloat(colunas[5]?.replace(',', '.') || 0);
+                    const img = colunas[6]?.trim() || "";
+
+                    if(!sku || !nome) { continue; }
+
+                    const skuLimpo = sku.replace(/[\.\$#\[\]\/]/g, "-");
+                    
+                    // Garante nó estruturado da categoria pai
+                    await db.ref(`abella/categories/${categoria}`).update({ name: colunas[2]?.trim(), slug: categoria, paused: false });
+                    
+                    if(subcategoria) {
+                        await db.ref(`abella/categories/${categoria}/subcategories/${subcategoria}`).update({ name: colunas[3]?.trim(), slug: subcategoria });
+                    }
+
+                    await db.ref(`abella/products/${skuLimpo}`).set({
+                        name: nome, nome: nome,
+                        sku: sku,
+                        category: categoria,
+                        subcategory: subcategoria,
+                        price: preco, precoFinal: preco,
+                        weight: peso, peso: peso,
+                        image: img, imagem: img,
+                        paused: false, promo: 0
                     });
+
+                    log(`✅ SKU [${sku}] Processado com Sucesso.`, 'success');
                 }
 
-                // Monta o objeto final do produto para o banco
-                const produto = {
-                    name:                 nome,
-                    sku:                  skuOriginal,
-                    category:             catSlug,
-                    subcategory:          subSlug || "", // Salva a referência se houver
-                    price:                parseFloat(preco.toFixed(2)),
-                    precoFinal:           parseFloat(preco.toFixed(2)),
-                    weight:               parseFloat(peso.toFixed(2)),
-                    peso:                 parseFloat(peso.toFixed(2)),
-                    image:                urlImagem,
-                    imagem:               urlImagem,
-                    variacaoTipo:         variacaoTipo,
-                    opcoesPersonalizadas: opcoesPersonal,
-                    paused:               pausado,
-                    promo:                0
-                };
-
-                if (modoIncremental) {
-                    await db.ref('abella/products/' + skuID).update(produto);
-                } else {
-                    await db.ref('abella/products/' + skuID).set(produto);
-                }
-
-                log(`<span class='success'>OK 💎</span>`);
-                totalProd++;
-
+                log("🚀 PROCESSO DE CARGA CONCLUÍDO TOTALMENTE!", "success");
             } catch (e) {
-                log(`<span class='error'>ERRO: ${e.message}</span>`);
-                totalErros++;
+                log(`❌ Erro Fatal Operacional: ${e.message}`, "error");
+            } finally {
+                btn.disabled = false;
             }
         }
-
-        setProgress(total, total);
-        log('');
-        log(`<span class='success'>✅ PROCESSO CONCLUÍDO!</span>`);
-
-        document.getElementById('sumario').style.display  = 'block';
-        document.getElementById('sumProd').textContent    = totalProd;
-        document.getElementById('sumCat').textContent     = categoriasSet.size;
-        document.getElementById('sumErr').textContent     = totalErros;
-        document.getElementById('sumSkip').textContent    = totalSkip;
-
-    } catch (err) {
-        log(`<span class='error'>ERRO CRÍTICO: ${err.message}</span>`);
-    } finally {
-        btn.disabled = false;
-    }
-}
-
-function splitCSVLine(line, sep) {
-    const result = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-                cur += '"';
-                i++;
-            } else {
-                inQuotes = !inQuotes;
-            }
-        } else if (ch === sep && !inQuotes) {
-            result.push(cur);
-            cur = '';
-        } else {
-            cur += ch;
-        }
-    }
-    result.push(cur);
-    return result;
-}
-</script>
+    </script>
 </body>
 </html>

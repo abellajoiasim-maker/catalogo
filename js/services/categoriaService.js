@@ -1,6 +1,6 @@
 // ======================================================================
 // js/firebase/services/categoriaService.js
-// Abella Joias - CategoriaService v2.0
+// Abella Joias - CategoriaService v3.0
 // ======================================================================
 
 const CategoriaService = {
@@ -44,6 +44,21 @@ const CategoriaService = {
     },
 
     // ==========================================================
+    // Utilidades
+    // ==========================================================
+
+    gerarSlug(texto = '') {
+
+        return texto
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    },
+
+    // ==========================================================
     // Normalização
     // ==========================================================
 
@@ -69,6 +84,14 @@ const CategoriaService = {
 
             active:
                 raw.active !== false,
+
+            createdAt:
+                raw.createdAt ||
+                null,
+
+            updatedAt:
+                raw.updatedAt ||
+                null,
 
             subcategories:
                 raw.subcategories ||
@@ -129,6 +152,23 @@ const CategoriaService = {
     },
 
     // ==========================================================
+    // Lista Ordenada
+    // ==========================================================
+
+    async getList(forceRefresh = false) {
+
+        const categorias =
+            await this.getAll(forceRefresh);
+
+        return Object.values(categorias)
+            .sort(
+                (a, b) =>
+                    (a.order || 0) -
+                    (b.order || 0)
+            );
+    },
+
+    // ==========================================================
     // Buscar Categoria
     // ==========================================================
 
@@ -182,6 +222,18 @@ const CategoriaService = {
     },
 
     // ==========================================================
+    // Verificar Existência
+    // ==========================================================
+
+    async exists(slug) {
+
+        const categoria =
+            await this.getBySlug(slug);
+
+        return categoria !== null;
+    },
+
+    // ==========================================================
     // Salvar
     // ==========================================================
 
@@ -213,6 +265,9 @@ const CategoriaService = {
                 );
             }
 
+            const existente =
+                await this.getBySlug(slug);
+
             const node = {
 
                 name,
@@ -231,7 +286,15 @@ const CategoriaService = {
 
                 subcategories:
                     categoryData.subcategories ||
-                    {}
+                    existente?.subcategories ||
+                    {},
+
+                createdAt:
+                    existente?.createdAt ||
+                    Date.now(),
+
+                updatedAt:
+                    Date.now()
             };
 
             await this
@@ -287,14 +350,19 @@ const CategoriaService = {
                     `abella/categories/${slug}`
                 )
                 .update({
-                    active: novoStatus
+                    active: novoStatus,
+                    updatedAt: Date.now()
                 });
 
             if (
                 this._cache[slug]
             ) {
+
                 this._cache[slug].active =
                     novoStatus;
+
+                this._cache[slug].updatedAt =
+                    Date.now();
             }
 
             return true;

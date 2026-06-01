@@ -9,8 +9,13 @@ const firebaseConfig = {
     appId: "1:727568435294:web:442c0179ecf0686dff4ccf"
 };
 
-// Inicializa o Firebase globalmente
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
-const database = firebase.database();
+
+const db = firebase.database();
+const storage = typeof firebase.storage !== 'undefined' ? firebase.storage() : null;
+
+// Exportação global para retrocompatibilidade sem quebrar escopo do Vanilla
+window.db = db;
+window.storage = storage;

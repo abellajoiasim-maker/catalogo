@@ -5,47 +5,31 @@
     <title>Abella Joias • Catálogo Oficial</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-
-    <!--
-      CORRIGIDO: Cinzel usava wght=600 (sem @) que é sintaxe inválida para variable fonts.
-      O correto é wght@600. Sem isso a fonte Cinzel não carregava e o fallback
-      genérico era aplicado, alterando o visual do header.
-    -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    
     <style>
         body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
         .serif { font-family:'Cinzel', serif; }
         .gold { color:#caa85c; }
         .card { background:#141414; border:1px solid #2a2a2a; border-radius:20px; overflow:hidden; transition:.3s; }
         .card:hover { transform:translateY(-5px); border-color:#caa85c; }
-        .badge { position:absolute; top:12px; right:12px; font-size:9px; padding:4px 10px; border-radius:20px; font-weight:800; color:#000; z-index: 10; }
-        
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
-
-        .catalogo-suspenso .card { opacity: 0.6; pointer-events: none; cursor: not-allowed; }
-        .catalogo-suspenso .card:hover { transform: none; border-color: #2a2a2a; }
     </style>
 </head>
 <body>
-
     <header class="sticky top-0 bg-black/90 backdrop-blur border-b border-[#222] z-50">
         <div class="max-w-7xl mx-auto p-5 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="text-center md:text-left">
                 <h1 id="nome" class="serif gold text-xl uppercase tracking-wide">Abella Joias</h1>
                 <p id="slogan" class="text-[9px] text-gray-400 uppercase tracking-widest">Carregando catálogo corporativo...</p>
             </div>
-            
             <a href="galvanicas.html" class="flex items-center gap-2 bg-gradient-to-r from-zinc-900 to-black border border-zinc-800 hover:border-[#caa85c] px-4 py-2.5 rounded-xl transition-all group">
                 <span class="text-[11px] uppercase tracking-wider text-gray-300 group-hover:text-white">✨ Galvânicas Parceiras</span>
                 <span class="gold text-xs font-bold bg-zinc-950 px-2 py-0.5 rounded-md border border-zinc-800 group-hover:border-[#caa85c]">Limeira ➔</span>
             </a>
-            
             <a href="carrinho.html" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2">
                 🛒 Carrinho (<span id="cart-count" class="gold font-bold">0</span>) <span id="cart-total" class="text-gray-400 font-normal ml-1">R$ 0,00</span>
             </a>
@@ -71,147 +55,91 @@
         </div>
     </div>
 
-    <main class="max-w-7xl mx-auto p-6 mb-12">
-        <h2 class="serif text-xl mb-6 tracking-wider uppercase border-b border-zinc-900 pb-3">Nossas Coleções</h2>
-        <div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <div id="status-carregamento" class="text-center py-10 text-gray-600 italic col-span-full">Aguardando resposta do Firebase...</div>
+    <main class="max-w-7xl mx-auto p-6">
+        <div id="loading" class="text-center py-12 text-zinc-500 font-medium text-xs tracking-widest uppercase">
+            ⏳ Carregando Categorias Oficiais...
         </div>
+        <div id="grid-categorias" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
     </main>
 
+    <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/utils/money.js"></script>
+    <script src="js/utils/storage.js"></script>
+    <script src="js/services/carrinhoService.js"></script>
+    <script src="js/services/categoriaService.js"></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        
-        const fM = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-        window.configuracoesAtivas = {};
+        document.addEventListener('DOMContentLoaded', async () => {
+            atualizarMiniCarrinho();
+            await carregarConfiguracoesVitrine();
+            await carregarCategorias();
+        });
 
-        /* CORRIGIDO: converte gs:// para URL HTTP pública do Storage.
-           Categorias gravadas com gs:// não apareciam pois o <img> não
-           entende esse protocolo — só o SDK do Firebase Storage entende. */
-        function converterUrlImagem(url) {
-            if (!url) return '';
-            const s = url.trim();
-            if (!s.startsWith('gs://')) return s;
-            const sem = s.replace('gs://', '');
-            const bar = sem.indexOf('/');
-            if (bar === -1) return s;
-            return 'https://firebasestorage.googleapis.com/v0/b/' +
-                   sem.substring(0, bar) + '/o/' +
-                   encodeURIComponent(sem.substring(bar + 1)) + '?alt=media';
+        function atualizarMiniCarrinho() {
+            const resumo = carrinhoService.obterResumo();
+            document.getElementById('cart-count').innerText = resumo.totalItens;
+            document.getElementById('cart-total').innerText = money.formatar(resumo.subtotal);
         }
 
-        async function init(){
-            db.ref('abella/settings').on('value', snap => {
-                if(!snap.exists()) {
-                    document.getElementById("slogan").innerText = "Atacado de Joias no Bruto";
-                    return;
-                }
-                const s = snap.val() || {};
-                window.configuracoesAtivas = s;
-                document.getElementById("nome").innerText    = s.name   || "Abella Joias";
-                document.getElementById("slogan").innerText  = s.slogan || "Atacado de Joias no Bruto";
-                if(s.bannerAtivo && s.bannerTexto) {
-                    document.getElementById("bannerTexto").innerText = s.bannerTexto;
-                    document.getElementById("banner").classList.remove("hidden");
-                } else {
-                    document.getElementById("banner").classList.add("hidden");
-                }
-                document.getElementById("parcelamento").innerText = `Até ${s.parcelas || 6}x no cartão`;
-                document.getElementById("pix").innerText = `${s.pix !== undefined ? s.pix : 5}% OFF no PIX`;
-                const wpp = s.whatsapp;
-                if(wpp) {
-                    document.getElementById("whats").href = `https://wa.me/${wpp.replace(/\D/g, '')}`;
-                } else {
-                    document.getElementById("whats").removeAttribute('href');
-                }
-                if (s.statusLoja && s.statusLoja !== 'aberto') {
-                    document.body.classList.add('catalogo-suspenso');
-                    if (s.statusLoja === 'manutencao') {
-                        document.getElementById("slogan").innerText = "🔧 AMBIENTE EM MANUTENÇÃO REATIVA";
-                    } else if (s.statusLoja === 'fechado') {
-                        document.getElementById("slogan").innerText = "🚪 CATÁLOGO FECHADO TEMPORARIAMENTE";
+        async function carregarConfiguracoesVitrine() {
+            try {
+                const snap = await firebase.database().ref('abella/settings').once('value');
+                if(snap.exists()) {
+                    const cfg = snap.val() || {};
+                    const emp = cfg.empresa || {};
+                    document.getElementById('nome').innerText = emp.nome || "Abella Joias";
+                    document.getElementById('slogan').innerText = emp.slogan || "Catálogo de Joias no Bruto";
+                    document.getElementById('parcelamento').innerText = `Até ${cfg.parcelas || emp.parcelas || 6}x no cartão`;
+                    document.getElementById('pix').innerText = `${cfg.pix || emp.pix || 5}% OFF no PIX`;
+                    const fone = (cfg.whatsapp || emp.whatsapp || "5519988207658").replace(/\D/g, '');
+                    document.getElementById('whats').href = `https://wa.me/${fone}`;
+                    
+                    if (cfg.bannerAtivo === true || cfg.bannerAtivo === "true") {
+                        document.getElementById('bannerTexto').innerText = cfg.bannerTexto || "";
+                        document.getElementById('banner').classList.remove('hidden');
                     }
-                } else {
-                    document.body.classList.remove('catalogo-suspenso');
                 }
-            });
+            } catch(e) {
+                console.error("Erro ao ler configurações da vitrine", e);
+            }
+        }
 
-            db.ref('abella/categories').on('value', snap => {
-                const grid = document.getElementById('grid');
+        async function carregarCategorias() {
+            const grid = document.getElementById('grid-categorias');
+            const loading = document.getElementById('loading');
+            try {
+                const categorias = await categoriaService.listarTodas();
                 grid.innerHTML = '';
-                
-                if(!snap.exists()) {
-                    grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-10 italic">Nenhuma coleção ativa configurada no momento.</p>';
+                loading.classList.add('hidden');
+
+                if(!categorias || categorias.length === 0) {
+                    grid.innerHTML = `<p class="col-span-full text-zinc-500 text-xs italic py-6">Nenhuma categoria ativa cadastrada.</p>`;
                     return;
                 }
 
-                let totalRenderizados = 0;
-
-                snap.forEach(child => {
-                    const id  = child.key;
-                    const cat = child.val() || {};
-
-                    if(cat.paused === true || cat.paused === "true") return;
-
-                    // Ignora nós que são subcategorias (têm parentId) — não aparecem no index
-                    if(cat.parentId) return;
-
-                    totalRenderizados++;
+                categorias.forEach(cat => {
+                    if(cat.paused) return;
+                    const card = document.createElement('div');
+                    card.className = "card cursor-pointer flex flex-col justify-between animate-fade-in";
+                    card.setAttribute('onclick', `window.location.href='subcategorias.html?id=${cat.id}'`);
                     
-                    const isPromo  = cat.promoAtiva === true || cat.promoAtiva === "true";
-                    const promoTag = isPromo ? `<span class="badge" style="background:${cat.promoColor || '#caa85c'}">${cat.promoTag || 'OFERTA'}</span>` : '';
+                    const img = cat.image || cat.imagem || 'https://via.placeholder.com/400/141414/818cf8?text=Abella+Joias';
                     
-                    /* CORRIGIDO: lê image OU imagem (dupla gravação do categorias.html)
-                       e converte gs:// para URL HTTP para que o <img> consiga carregar */
-                    const urlImagem = converterUrlImagem(cat.image || cat.imagem || '');
-                    const urlFallback = `https://via.placeholder.com/400/141414/555555?text=${encodeURIComponent(cat.name || id)}`;
-
-                    grid.innerHTML += `
-                        <div class="card relative cursor-pointer animate-fade-in" onclick="location.href='produtos.html?id=${id}'">
-                            ${promoTag}
-                            <div class="overflow-hidden aspect-square w-full bg-zinc-950 flex items-center justify-center">
-                                <img src="${urlImagem || urlFallback}"
-                                     class="w-full h-full object-cover hover:scale-105 transition-all duration-500"
-                                     loading="lazy"
-                                     onerror="this.src='${urlFallback}'">
-                            </div>
-                            <div class="p-4 bg-zinc-900/40 border-t border-zinc-900">
-                                <h3 class="font-bold text-xs truncate text-white uppercase tracking-wider">${cat.name || cat.nome || id.replace(/-/g, ' ')}</h3>
-                                <p class="text-[10px] text-gray-500 mt-1 flex items-center justify-between">Explorar modelos <span class="gold text-xs">➔</span></p>
-                            </div>
+                    card.innerHTML = `
+                        <div class="aspect-square bg-zinc-950 overflow-hidden flex items-center justify-center">
+                            <img src="${img}" class="w-full h-full object-cover hover:scale-105 transition-all duration-300" onerror="this.src='https://via.placeholder.com/400/141414/818cf8?text=Sem+Imagem'">
+                        </div>
+                        <div class="p-4 bg-zinc-900/20 border-t border-zinc-900/60 flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase text-white truncate tracking-wide">${cat.name}</span>
+                            <span class="gold text-xs">➔</span>
                         </div>
                     `;
+                    grid.appendChild(card);
                 });
-
-                if(totalRenderizados === 0) {
-                    grid.innerHTML = '<p class="text-xs text-gray-500 col-span-full py-10 italic">Nenhuma coleção disponível para exibição.</p>';
-                }
-            });
-            
-            atualizarCarrinho();
+            } catch (error) {
+                console.error("Erro ao listar categorias na UI:", error);
+                loading.innerText = "❌ Falha ao carregar as categorias da vitrine.";
+            }
         }
-
-        function atualizarCarrinho(){
-            const cart = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            let totalPecas = 0, valorTotal = 0;
-            cart.forEach(item => {
-                const qtd   = parseInt(item.quantidade) || 1;
-                const preco = parseFloat(item.precoFinal || item.preco || 0);
-                totalPecas += qtd;
-                valorTotal += (preco * qtd);
-            });
-            const elCount = document.getElementById('cart-count');
-            const elTotal = document.getElementById('cart-total');
-            if(elCount) elCount.innerText = totalPecas;
-            if(elTotal) elTotal.innerText = fM(valorTotal);
-        }
-
-        window.addEventListener('pageshow', atualizarCarrinho);
-        window.onload = init;
     </script>
 </body>
 </html>

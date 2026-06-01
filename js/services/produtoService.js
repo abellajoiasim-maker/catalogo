@@ -573,4 +573,21 @@ const ProdutoService = {
     }
 };
 
-window.ProdutoService = ProdutoService;
+// ==========================================================
+// Compatibilidade Legado
+// ==========================================================
+
+window.produtoService =
+    ProdutoService;
+
+ProdutoService.listarTodos =
+    ProdutoService.getAll;
+
+ProdutoService.buscarPorId =
+    ProdutoService.getById;
+
+ProdutoService.salvarProduto =
+    ProdutoService.save;
+
+ProdutoService.excluirProduto =
+    ProdutoService.delete;

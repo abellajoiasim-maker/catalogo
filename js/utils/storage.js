@@ -1,14 +1,46 @@
+// js/utils/storage.js
+
 const StorageUtils = {
-    salvar(chave, dados) {
-        localStorage.setItem(chave, JSON.stringify(dados));
+    converterUrlStorage: function(url) {
+        if (!url) return 'https://via.placeholder.com/400/141414/818cf8?text=Sem+Imagem';
+        const s = url.trim();
+        if (!s.startsWith('gs://')) return s;
+        
+        try {
+            const semPrefixo = s.replace('gs://', '');
+            const primeiraBarra = semPrefixo.indexOf('/');
+            if (primeiraBarra === -1) return s;
+            
+            const bucket = semPrefixo.substring(0, primeiraBarra);
+            const caminho = semPrefixo.substring(primeiraBarra + 1);
+            return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
+        } catch (e) {
+            console.error("Erro ao converter URL gs://", e);
+            return s;
+        }
     },
-
-    obter(chave) {
-        const dados = localStorage.getItem(chave);
-        return dados ? JSON.parse(dados) : null;
-    },
-
-    remover(chave) {
-        localStorage.removeItem(chave);
+    
+    carregarImagemBase64: function(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.setAttribute('crossOrigin', 'anonymous');
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                try {
+                    resolve(canvas.toDataURL('image/jpeg', 0.85).split(',')[1]);
+                } catch (e) {
+                    resolve(null);
+                }
+            };
+            img.onerror = () => resolve(null);
+            img.src = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+        });
     }
 };
+
+window.StorageUtils = StorageUtils;
+window.converterUrlStorage = StorageUtils.converterUrlStorage;

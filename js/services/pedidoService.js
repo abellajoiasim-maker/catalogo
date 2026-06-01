@@ -133,11 +133,81 @@ const PedidoService = {
                     )
                     .push();
 
-            const payload =
-                this.normalizarPedido(
-                    ref.key,
-                    pedidoData
-                );
+            const payload = {
+
+    numeroPedido:
+        pedidoData.numeroPedido || "",
+
+    cliente:
+        pedidoData.cliente || "",
+
+    whats:
+        pedidoData.whats || "",
+
+    cidade:
+        pedidoData.cidade || "",
+
+    formaPagamento:
+        pedidoData.formaPagamento || "PIX",
+
+    observacoes:
+        pedidoData.observacoes || "",
+
+    subtotal:
+        Number(
+            pedidoData.subtotal ?? 0
+        ),
+
+    desconto:
+        Number(
+            pedidoData.desconto ?? 0
+        ),
+
+    frete:
+        Number(
+            pedidoData.frete ?? 0
+        ),
+
+    total:
+        Number(
+            pedidoData.total ?? 0
+        ),
+
+    pesoTotal:
+        Number(
+            pedidoData.pesoTotal ?? 0
+        ),
+
+    totalPecas:
+        Number(
+            pedidoData.totalPecas ?? 0
+        ),
+
+    status:
+        pedidoData.status || "Novo",
+
+    entrega: {
+
+        nome:
+            pedidoData.entrega?.nome || "",
+
+        endereco:
+            pedidoData.entrega?.endereco || "",
+
+        numero:
+            pedidoData.entrega?.numero || "",
+
+        bairro:
+            pedidoData.entrega?.bairro || ""
+    },
+
+    itens:
+        Array.isArray(
+            pedidoData.itens
+        )
+            ? pedidoData.itens
+            : []
+};
 
             delete payload.id;
 

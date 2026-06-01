@@ -494,13 +494,6 @@ const CategoriaService = {
     }
 };
 
-window.CategoriaService =
-    CategoriaService;
-
-// ==========================================================
-// Compatibilidade Legado
-// ==========================================================
-
 window.categoriaService =
     CategoriaService;
 
@@ -508,6 +501,10 @@ CategoriaService.listarTodas =
     CategoriaService.getList;
 
 CategoriaService.buscarPorSlug =
+    CategoriaService.getBySlug;
+
+// Compatibilidade legado
+CategoriaService.obterPorId =
     CategoriaService.getBySlug;
 
 CategoriaService.salvarCategoria =

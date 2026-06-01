@@ -1,20 +1,4 @@
-// ==========================================================================
-// ARQUIVO: admin/admin-logic.js
-// CORREÇÕES APLICADAS:
-// 1. CRÍTICO: Script agora inicializa o Firebase ele mesmo (auto-suficiente).
-//    O admin.html carregava este arquivo como type="module", que tem escopo
-//    isolado e não garante acesso ao window.firebase dos CDN scripts.
-//    Solução: inicialização própria aqui + remoção do type="module" no HTML.
-// 2. Corrigido: abrirDetalhesPedidoModal usava variável 'p' inexistente
-//    (deveria ser 'pedido').
-// 3. Adicionado: alias window.salvarDadosProdutoDoForm → window.salvarProdutoFirebase
-// 4. Adicionado: alias window.salvarNovaCategoriaItem → window.salvarCategoriaFirebase
-// 5. Bootstrap duplo eliminado (usava DOMContentLoaded + readyState simultâneos)
-// ==========================================================================
 
-// CORRIGIDO: O Firebase é inicializado aqui, dentro do próprio script.
-// Isso elimina a dependência de ordem de carregamento e torna o arquivo
-// totalmente independente do type="module" do admin.html.
 (function inicializarFirebaseAdmin() {
     var firebaseConfig = {
         apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",

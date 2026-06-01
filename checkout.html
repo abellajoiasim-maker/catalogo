@@ -101,61 +101,206 @@
             });
         });
 
-        async function processarEEnviarPedido() {
-            const nome = document.getElementById('cliNome').value.trim();
-            const whats = document.getElementById('cliWhats').value.trim();
-            const local = document.getElementById('entLocal').value.trim();
-            const cidade = document.getElementById('entCidade').value.trim();
-            const pagamento = document.getElementById('cliPagamento').value;
+async function processarEEnviarPedido() {
 
-            if(!nome || !whats || !local) {
-                alert("Por favor, preencha todos os campos obrigatórios identificados.");
-                return;
-            }
+    const nome =
+        document.getElementById('cliNome')
+        .value.trim();
 
-            const itens = carrinhoService.getItens();
-            if(itens.length === 0) {
-                alert("Seu carrinho está vazio.");
-                return;
-            }
+    const whats =
+        document.getElementById('cliWhats')
+        .value.trim();
 
-            const resumo = carrinhoService.getResumo();
-            
-            try {
-                const novoPedidoRef = firebase.database().ref('abella/orders').push();
-                await novoPedidoRef.set({
-                    cliente: nome,
-                    whats: whats,
-                    cidade: cidade,
-                    formaPagamento: pagamento,
-                    total: resumo.subtotal,
-                    totalPecas: resumo.totalItens,
-                    pesoTotal: parseFloat(resumo.pesoTotal.toFixed(2)),
-                    status: "Novo",
-                    data: new Date().toISOString().split('T')[0],
-                    entrega: { local, cidade },
-                    itens: Object.assign({}, itens)
-                });
+    const localEntrega =
+        document.getElementById('entLocal')
+        .value.trim();
 
-                let msg = `*NOVO PEDIDO - ABELLA JOIAS*\n\n`;
-                msg += `*Cliente:* ${nome}\n`;
-                msg += `*WhatsApp:* ${whats}\n`;
-                msg += `*Local Entrega:* ${local} - ${cidade}\n`;
-                msg += `*Pagamento:* ${pagamento}\n`;
-                msg += `*Total Itens:* ${resumo.totalItens} peças\n`;
-                msg += `*Valor:* *${money.formatar(resumo.subtotal)}*\n\n`;
-                msg += `_Aguardando conferência do financeiro para liberação da carga bruto._`;
+    const cidade =
+        document.getElementById('entCidade')
+        .value.trim();
 
-                carrinhoService.limparCarrinho();
-                const url = `https://api.whatsapp.com/send?phone=5519988207658&text=${encodeURIComponent(msg)}`;
-                window.open(url, '_blank');
-                window.location.href = 'index.html';
+    const pagamento =
+        document.getElementById('cliPagamento')
+        .value;
 
-            } catch (e) {
-                console.error("Erro crítico ao gravar pedido no banco", e);
-                alert("Ocorreu uma falha sistêmica ao salvar o seu checkout.");
-            }
+    if (!nome || !whats || !localEntrega) {
+
+        alert(
+            "Preencha Nome, WhatsApp e Local de Entrega."
+        );
+
+        return;
+    }
+
+    const itens =
+        CarrinhoService.getItens();
+
+    if (!itens.length) {
+
+        alert(
+            "Seu carrinho está vazio."
+        );
+
+        return;
+    }
+
+    const resumo =
+        CarrinhoService.calcularTotais();
+
+    const desconto =
+        pagamento === "PIX"
+            ? resumo.descontoPix
+            : 0;
+
+    const totalFinal =
+        pagamento === "PIX"
+            ? resumo.totalPix
+            : resumo.subtotal;
+
+    try {
+
+        const totalPedidosSnapshot =
+            await firebase
+                .database()
+                .ref('abella/orders')
+                .once('value');
+
+        const quantidadePedidos =
+            totalPedidosSnapshot.numChildren();
+
+        const numeroPedido =
+            `AB-${String(
+                quantidadePedidos + 1
+            ).padStart(6, '0')}`;
+
+        const novoPedidoRef =
+            firebase
+                .database()
+                .ref('abella/orders')
+                .push();
+
+        const pedido = {
+
+            numeroPedido,
+
+            cliente: nome,
+
+            whats,
+
+            cidade,
+
+            formaPagamento:
+                pagamento,
+
+            observacoes: "",
+
+            subtotal:
+                resumo.subtotal,
+
+            desconto,
+
+            frete: 0,
+
+            total:
+                totalFinal,
+
+            pesoTotal:
+                Number(
+                    resumo.pesoTotal
+                    .toFixed(2)
+                ),
+
+            totalPecas:
+                resumo.totalPecas,
+
+            status: "Novo",
+
+            entrega: {
+
+                nome:
+                    localEntrega,
+
+                endereco: "",
+
+                numero: "",
+
+                bairro: ""
+            },
+
+            itens
+        };
+
+        await novoPedidoRef.set(
+            pedido
+        );
+
+        let msg =
+            `*NOVO PEDIDO - ABELLA JOIAS*\n\n`;
+
+        msg +=
+            `*Pedido:* ${numeroPedido}\n`;
+
+        msg +=
+            `*Cliente:* ${nome}\n`;
+
+        msg +=
+            `*WhatsApp:* ${whats}\n`;
+
+        msg +=
+            `*Cidade:* ${cidade}\n`;
+
+        msg +=
+            `*Local Entrega:* ${localEntrega}\n`;
+
+        msg +=
+            `*Pagamento:* ${pagamento}\n`;
+
+        msg +=
+            `*Peças:* ${resumo.totalPecas}\n`;
+
+        msg +=
+            `*Peso:* ${resumo.pesoTotal.toFixed(2)}g\n`;
+
+        msg +=
+            `*Subtotal:* ${money.formatar(resumo.subtotal)}\n`;
+
+        if (desconto > 0) {
+
+            msg +=
+                `*Desconto PIX:* ${money.formatar(desconto)}\n`;
         }
+
+        msg +=
+            `*Total:* ${money.formatar(totalFinal)}\n\n`;
+
+        msg +=
+            `_Pedido aguardando conferência financeira._`;
+
+        CarrinhoService.limpar();
+
+        const url =
+            `https://api.whatsapp.com/send?phone=5519988207658&text=${encodeURIComponent(msg)}`;
+
+        window.open(
+            url,
+            '_blank'
+        );
+
+        window.location.href =
+            'index.html';
+
+    } catch (erro) {
+
+        console.error(
+            "Erro ao criar pedido:",
+            erro
+        );
+
+        alert(
+            "Não foi possível concluir o pedido."
+        );
+    }
+}
     </script>
 </body>
 </html>

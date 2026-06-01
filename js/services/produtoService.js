@@ -573,6 +573,10 @@ const ProdutoService = {
     }
 };
 
+window.ProdutoService =
+    ProdutoService;
+
+
 // ==========================================================
 // Compatibilidade Legado
 // ==========================================================

@@ -1,353 +1,141 @@
-<div class="space-y-6 animate-fadeIn text-left p-2">
-    <div class="flex flex-wrap items-center justify-between gap-4 bg-[#0a0a0a] border border-zinc-900 p-4 rounded-2xl">
-        <div>
-            <h2 class="text-lg font-black text-white uppercase tracking-tight font-sans flex items-center gap-2">
-                📦 Painel de Pedidos <span class="text-xs text-[#caa85c] font-mono font-normal lowercase">(/abella/orders)</span>
-            </h2>
-            <p class="text-zinc-500 text-[11px] font-mono mt-0.5">Gestão unificada de fluxo físico e romaneios para Limeira</p>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
+
+    <div class="max-w-7xl mx-auto space-y-4">
+        <div class="text-left bg-zinc-950 p-6 rounded-2xl border border-zinc-800">
+            <h2 class="text-xl font-bold text-white">📦 Dashboard de Pedidos & Romaneios</h2>
+            <p class="text-xs text-zinc-500 mt-1">Monitore faturamento, altere o status logístico e imprima guias de expedição no bruto.</p>
         </div>
+
+        <div id="loading" class="text-center py-12 text-zinc-500 text-xs uppercase tracking-widest">⏳ Mapeando registros de ordens de compra...</div>
         
-        <div class="flex flex-wrap gap-2" id="botoes-filtro-pedidos">
-            <button id="filter-ped-todos" onclick="window.mudarFiltroStatusPedido('Todos')" class="btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black">
-                Todos
-            </button>
-            <button id="filter-ped-novo" onclick="window.mudarFiltroStatusPedido('Novo')" class="btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
-                Novos
-            </button>
-            <button id="filter-ped-separacao" onclick="window.mudarFiltroStatusPedido('Separação')" class="btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
-                Em Separação
-            </button>
-            <button id="filter-ped-faturado" onclick="window.mudarFiltroStatusPedido('Faturado')" class="btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white">
-                Faturados
-            </button>
-        </div>
+        <div id="container-pedidos" class="grid grid-cols-1 gap-4 text-left"></div>
     </div>
 
-    <div id="listaPedidos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <div class="col-span-full text-center py-12 text-zinc-600 font-mono italic text-xs animate-pulse">
-            A aguardar resposta do barramento Realtime...
-        </div>
-    </div>
-</div>
+    <script src="../js/firebase/firebase-config.js"></script>
+    <script src="../js/utils/money.js"></script>
+    <script src="../js/services/pedidoService.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => { carregarPainelPedidos(); });
 
-<div id="modalEditarPedido" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto animate-fade-in">
-    <div class="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 text-white">
-        <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 class="text-sm font-black text-[#caa85c] uppercase font-mono tracking-wider">✏️ Editar Pedido & Fluxo Físico</h3>
-            <button onclick="window.fecharModalEditarPedido()" class="text-zinc-500 hover:text-white text-xl font-bold">&times;</button>
-        </div>
+        async function carregarPainelPedidos() {
+            const container = document.getElementById('container-pedidos');
+            const loading = document.getElementById('loading');
+            container.innerHTML = '';
+            loading.classList.remove('hidden');
 
-        <input type="hidden" id="editPedidoId">
+            try {
+                const pedidos = await pedidoService.listarTodos();
+                loading.classList.add('hidden');
 
-        <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-3">
-                <h4 class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-900 pb-1">👤 Dados do Cliente</h4>
-                <div>
-                    <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Nome do Cliente</label>
-                    <input type="text" id="editPedidoCliente" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
-                </div>
-                <div>
-                    <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">WhatsApp / Contato</label>
-                    <input type="text" id="editPedidoContato" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono outline-none focus:border-[#caa85c]">
-                </div>
-            </div>
+                const keys = Object.keys(pedidos).reverse(); // Mais recentes primeiro
 
-            <div class="space-y-3">
-                <h4 class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-900 pb-1">📍 Local de Entrega / Galvânica</h4>
-                <div>
-                    <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Endereço / Galvânica Parceira</label>
-                    <input type="text" id="editPedidoEntrega" placeholder="Ex: Galvânica X - Limeira" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
-                </div>
-                <div>
-                    <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Cidade / Estado</label>
-                    <input type="text" id="editPedidoCidade" placeholder="Ex: Limeira - SP" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
-                </div>
-            </div>
-        </div>
+                if(keys.length === 0) {
+                    container.innerHTML = '<p class="text-zinc-500 text-xs italic py-8 text-center bg-zinc-950 rounded-2xl border border-zinc-800">Nenhum romaneio de compra registrado no banco.</p>';
+                    return;
+                }
 
-        <div class="space-y-2 pt-2">
-            <h4 class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-900 pb-1">💍 Itens e Peças no Pedido</h4>
-            <div id="editPedidoListaProdutos" class="border border-zinc-900 bg-[#090909] rounded-xl p-2 max-h-[180px] overflow-y-auto space-y-2">
-                </div>
-        </div>
+                keys.forEach(id => {
+                    const p = pedidos[id];
+                    const div = document.createElement('div');
+                    div.className = "bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-zinc-700";
+                    
+                    let statusColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                    if(p.status === "Aprovado") statusColor = "text-green-400 bg-green-500/10 border-green-500/20";
+                    if(p.status === "Cancelado") statusColor = "text-red-400 bg-red-500/10 border-red-500/20";
 
-        <div class="flex items-center justify-between border-t border-zinc-900 pt-3 mt-4">
-            <button onclick="window.excluirPedidoCompleto()" class="bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900 text-rose-400 font-bold px-4 py-2 rounded-xl text-[11px] transition-all uppercase font-mono">
-                🚨 Excluir Pedido
-            </button>
-            <div class="flex gap-2">
-                <button onclick="window.fecharModalEditarPedido()" class="border border-zinc-800 hover:bg-zinc-900 text-zinc-400 font-medium px-4 py-2 rounded-xl text-xs transition-all">Cancelar</button>
-                <button onclick="window.salvarAlteracoesPedido()" class="bg-[#caa85c] hover:bg-[#b5944f] text-black font-bold px-5 py-2 rounded-xl text-xs transition-all">Salvar Pedido</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="modalRomaneioMenu" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-    <div class="bg-zinc-950 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl text-white space-y-4">
-        <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-            <h3 class="text-sm font-black text-[#caa85c] uppercase font-mono tracking-wider">🖨️ Emitir Romaneio Comercial</h3>
-            <button onclick="window.fecharModalRomaneio()" class="text-zinc-500 hover:text-white text-xl font-bold">&times;</button>
-        </div>
-        
-        <p class="text-xs text-zinc-400">Selecione o modelo estrutural de romaneio de impressão para enviar à produção ou conferência em Limeira:</p>
-        
-        <input type="hidden" id="romaneioPedidoId">
-
-        <div class="grid grid-cols-1 gap-2 font-mono text-[11px]">
-            <div class="text-[9px] text-zinc-500 uppercase tracking-widest mt-1">📋 Modelos em Lista Linear</div>
-            <button onclick="window.gerarRomaneio('lista', 'conferencia')" class="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-left px-3 py-2.5 rounded-xl flex justify-between items-center transition-all">
-                <span>Lista Conferência <span class="text-zinc-500">(Qtd + Nome)</span></span> <span>➔</span>
-            </button>
-            <button onclick="window.gerarRomaneio('lista', 'financeiro')" class="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-left px-3 py-2.5 rounded-xl flex justify-between items-center transition-all">
-                <span>Lista Financeiro <span class="text-zinc-500">(Preços + Totais)</span></span> <span>➔</span>
-            </button>
-            <button onclick="window.gerarRomaneio('lista', 'foto')" class="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-left px-3 py-2.5 rounded-xl flex justify-between items-center transition-all">
-                <span>Lista Financeiro + Foto do Produto</span> <span>➔</span>
-            </button>
-
-            <div class="text-[9px] text-zinc-500 uppercase tracking-widest mt-2">📊 Modelos em Grade Visual (Cards)</div>
-            <button onclick="window.gerarRomaneio('grade', 'conferencia')" class="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-left px-3 py-2.5 rounded-xl flex justify-between items-center transition-all">
-                <span>Grade Conferência</span> <span>➔</span>
-            </button>
-            <button onclick="window.gerarRomaneio('grade', 'financeiro')" class="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-left px-3 py-2.5 rounded-xl flex justify-between items-center transition-all">
-                <span>Grade Financeiro</span> <span>➔</span>
-            </button>
-            <button onclick="window.gerarRomaneio('grade', 'foto')" class="w-full bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-left px-3 py-2.5 rounded-xl flex justify-between items-center transition-all">
-                <span>Grade Financeiro + Foto do Produto</span> <span>➔</span>
-            </button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // Estado Global do Filtro e Cache Interno
-    window.statusFiltroAtual = "Todos";
-    var _PEDIDOS_CACHE = {};
-
-    // Inicializador contínuo do barramento Realtime
-    var checadorPedidos = setInterval(function() {
-        if (typeof db !== "undefined") {
-            clearInterval(checadorPedidos);
-            console.log("🚀 Motor de Gestão de Pedidos Conectado com Funções Avançadas!");
-            escutarPedidosFirebase();
-        }
-    }, 300);
-
-    function escutarPedidosFirebase() {
-        db.ref('abella/orders').on('value', function(snapshot) {
-            var dados = snapshot.val();
-            var container = document.getElementById('listaPedidos');
-            if(!container) return;
-
-            if(!dados) {
-                container.innerHTML = `
-                    <div class="col-span-full text-center py-12 bg-[#111] border border-dashed border-zinc-800 rounded-2xl text-zinc-500 font-mono text-xs">
-                        📭 Nenhum pedido registrado no banco até o momento.
-                    </div>`;
-                return;
-            }
-
-            _PEDIDOS_CACHE = dados;
-            renderizarGradePedidos();
-        });
-    }
-
-    window.mudarFiltroStatusPedido = function(status) {
-        window.statusFiltroAtual = status;
-        document.querySelectorAll('.btn-filtro-pedido').forEach(function(btn) {
-            btn.className = "btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-zinc-900 text-gray-400 hover:text-white";
-        });
-        var idBtn = status === 'Todos' ? 'todos' : (status === 'Novo' ? 'novo' : (status === 'Separação' ? 'separacao' : 'faturado'));
-        var btnAtivo = document.getElementById('filter-ped-' + idBtn);
-        if(btnAtivo) btnAtivo.className = "btn-filtro-pedido px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black";
-        renderizarGradePedidos();
-    };
-
-    function renderizarGradePedidos() {
-        var container = document.getElementById('listaPedidos');
-        if(!container) return; container.innerHTML = '';
-        var totalRendados = 0;
-        var chavesOrdenadas = Object.keys(_PEDIDOS_CACHE).reverse();
-
-        chavesOrdenadas.forEach(function(id) {
-            var p = _PEDIDOS_CACHE[id];
-            var statusPedido = p.status || "Novo";
-            if(window.statusFiltroAtual !== "Todos" && statusPedido !== window.statusFiltroAtual) return;
-            totalRendados++;
-
-            var itensHTML = '';
-            var listaItens = p.produtos || p.itens || [];
-            if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
-
-            if(listaItens.length > 0) {
-                listaItens.forEach(function(item) {
-                    itensHTML += `<div class="text-[11px] text-zinc-400 font-mono truncate">• ${item.quantidade || 1}x ${item.nome || item.titulo || 'Item s/ Nome'}</div>`;
+                    div.innerHTML = `
+                        <div class="space-y-1 flex-1 min-w-0 w-full">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-xs text-white font-black uppercase truncate max-w-[200px] md:max-w-xs block">${p.cliente}</span>
+                                <span class="text-[9px] px-2.5 py-0.5 rounded-full font-bold border uppercase tracking-wider ${statusColor}">${p.status}</span>
+                                <span class="text-[9px] font-mono text-zinc-500 font-medium">Ref ID: ${id}</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-400 font-mono">⚡ Contato: ${p.whats} | Destino: ${p.cidade || 'Limeira/SP'} | Pagamento: ${p.formaPagamento}</p>
+                            <p class="text-[11px] text-[#caa85c] font-bold font-mono">📦 Total Peças: ${p.totalPecas || 0} u | Massa Bruta: ${(p.pesoTotal || 0).toFixed(2)}g | Faturamento: ${window.MoneyUtils.format(p.total)}</p>
+                        </div>
+                        <div class="flex flex-wrap md:flex-nowrap gap-2 w-full md:w-auto shrink-0 pt-3 md:pt-0 border-t md:border-t-0 border-zinc-900">
+                            <select onchange="alterarStatusPedidoUI('${id}', this.value)" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-[11px] px-3 py-1.5 rounded-xl font-bold outline-none focus:border-[#caa85c]">
+                                <option value="Novo" ${p.status === 'Novo' ? 'selected' : ''}>Novo</option>
+                                <option value="Aprovado" ${p.status === 'Aprovado' ? 'selected' : ''}>Aprovado</option>
+                                <option value="Cancelado" ${p.status === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
+                            </select>
+                            <button onclick="gerarRomaneioPDF('${id}')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-bold text-[11px] px-4 py-1.5 rounded-xl transition-all">🖨️ Romaneio</button>
+                            <button onclick="deletarPedidoUI('${id}')" class="bg-red-950/20 hover:bg-red-950/60 border border-red-900/40 text-red-400 font-bold text-[11px] px-3 py-1.5 rounded-xl transition-all">Deletar</button>
+                        </div>
+                    `;
+                    container.appendChild(div);
                 });
-            } else {
-                itensHTML = `<div class="text-[11px] text-zinc-600 font-mono italic">Nenhum item discriminado</div>`;
-            }
-
-            var badgeColor = statusPedido === "Separação" ? "bg-amber-950 text-amber-400 border-amber-900" : (statusPedido === "Faturado" ? "bg-emerald-950 text-emerald-400 border-emerald-900" : "bg-blue-950 text-blue-400 border-blue-900");
-            var valorFinal = parseFloat(p.total || p.valorTotal || 0);
-            var formatadoMoeda = typeof fM !== "undefined" ? fM(valorFinal) : "R$ " + valorFinal.toFixed(2);
-
-            var card = document.createElement('div');
-            card.className = "bg-[#121212] border border-zinc-800 hover:border-zinc-700 p-4 rounded-xl flex flex-col justify-between space-y-4 transition-all";
-            card.innerHTML = `
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between border-b border-zinc-900 pb-2">
-                        <span class="text-[10px] font-mono text-zinc-500 font-bold select-all">#${id.substring(1,7).toUpperCase()}</span>
-                        <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 border rounded ${badgeColor}">${statusPedido}</span>
-                    </div>
-                    <div class="space-y-0.5">
-                        <h4 class="text-xs font-bold text-white truncate">${p.cliente || p.nome || 'Cliente Oculto'}</h4>
-                        <p class="text-[10px] text-zinc-500 font-mono">📍 ${p.entrega || 'Não informada'}</p>
-                    </div>
-                    <div class="bg-[#090909] border border-zinc-900 p-2 rounded-lg max-h-[90px] overflow-y-auto space-y-1">${itensHTML}</div>
-                </div>
-                <div class="border-t border-zinc-900 pt-3 flex items-center justify-between">
-                    <div>
-                        <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">Total Geral</p>
-                        <p class="text-xs font-black text-[#caa85c] font-mono mt-0.5">${formatadoMoeda}</p>
-                    </div>
-                    <div class="flex gap-1">
-                        <button onclick="window.abrirModalEditarPedido('${id}')" class="bg-zinc-800 hover:bg-zinc-700 text-white px-2 py-1 rounded text-[10px] transition-all font-bold">✏️ Ver/Editar</button>
-                        <button onclick="window.abrirMenuRomaneio('${id}')" class="bg-zinc-800 hover:bg-zinc-700 text-white p-1 rounded transition-all text-xs" title="Imprimir Romaneios Avançados">🖨️</button>
-                    </div>
-                </div>
-            `;
-            container.appendChild(card);
-        });
-        if(totalRendados === 0) container.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-500 font-mono text-xs">📭 Nenhum pedido encontrado neste filtro.</div>`;
-    }
-
-    // ================= FUNÇÕES DE INTERATIVIDADE E EDIÇÃO AVANÇADA =================
-    window.abrirModalEditarPedido = function(id) {
-        var p = _PEDIDOS_CACHE[id];
-        if(!p) return;
-        document.getElementById('editPedidoId').value = id;
-        document.getElementById('editPedidoCliente').value = p.cliente || p.nome || '';
-        document.getElementById('editPedidoContato').value = p.contato || p.whatsapp || '';
-        document.getElementById('editPedidoEntrega').value = p.entrega || '';
-        document.getElementById('editPedidoCidade').value = p.cidade || '';
-
-        // Renderiza lista interna de itens com inputs de alteração e exclusão
-        var containerItens = document.getElementById('editPedidoListaProdutos');
-        containerItens.innerHTML = '';
-
-        var listaItens = p.produtos || p.itens || [];
-        if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
-
-        listaItens.forEach(function(item, index) {
-            var itemKey = item.id || index;
-            var div = document.createElement('div');
-            div.className = "flex items-center justify-between bg-zinc-900 border border-zinc-800 p-2 rounded-lg gap-2";
-            div.innerHTML = `
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold text-white truncate">${item.nome || item.titulo || 'Item'}</p>
-                    <p class="text-[10px] text-zinc-500 font-mono">Unid: R$ ${parseFloat(item.price || item.preco || 0).toFixed(2)}</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <input type="number" id="editItemQtd_${index}" value="${item.quantidade || 1}" min="1" class="w-12 bg-black border border-zinc-700 rounded text-center text-xs text-white p-1 font-mono">
-                    <button onclick="window.removerItemDoPedidoDoForm('${index}')" class="text-rose-500 hover:bg-rose-950/50 px-2 py-1 rounded text-xs">✕</button>
-                </div>
-            `;
-            containerItens.appendChild(div);
-        });
-
-        document.getElementById('modalEditarPedido').classList.remove('hidden');
-    };
-
-    window.fecharModalEditarPedido = function() { document.getElementById('modalEditarPedido').classList.add('hidden'); };
-
-    window.removerItemDoPedidoDoForm = function(index) {
-        if(confirm("Deseja remover esta peça/item do pedido?")) {
-            var id = document.getElementById('editPedidoId').value;
-            var p = _PEDIDOS_CACHE[id];
-            var listaItens = p.produtos || p.itens || [];
-            if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
-            
-            listaItens.splice(index, 1); // Remove do array temporário
-            
-            // Recalcula o total do pedido com base nos itens restantes
-            var novoTotal = 0;
-            listaItens.forEach(function(it) {
-                var pr = parseFloat(it.price || it.preco || 0);
-                var qt = parseInt(it.quantidade || 1);
-                novoTotal += (pr * qt);
-            });
-
-            db.ref(`abella/orders/${id}`).update({
-                produtos: listaItens,
-                itens: listaItens,
-                total: novoTotal,
-                valorTotal: novoTotal
-            }).then(function() {
-                window.abrirModalEditarPedido(id); // Recarrega o modal atualizado
-            });
+            } catch(e) { console.error(e); loading.innerText = "❌ Falha operacional ao processar painel de compras."; }
         }
-    };
 
-    window.salvarAlteracoesPedido = function() {
-        var id = document.getElementById('editPedidoId').value;
-        var p = _PEDIDOS_CACHE[id];
-        var listaItens = p.produtos || p.itens || [];
-        if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
-
-        // Atualiza as quantidades alteradas nos inputs
-        var novoTotal = 0;
-        listaItens.forEach(function(item, index) {
-            var inputQtd = document.getElementById(`editItemQtd_${index}`);
-            if(inputQtd) {
-                item.quantidade = parseInt(inputQtd.value) || 1;
-            }
-            var pr = parseFloat(item.price || item.preco || 0);
-            novoTotal += (pr * item.quantidade);
-        });
-
-        var dadosAtualizados = {
-            cliente: document.getElementById('editPedidoCliente').value.trim(),
-            nome: document.getElementById('editPedidoCliente').value.trim(),
-            contato: document.getElementById('editPedidoContato').value.trim(),
-            entrega: document.getElementById('editPedidoEntrega').value.trim(),
-            cidade: document.getElementById('editPedidoCidade').value.trim(),
-            produtos: listaItens,
-            itens: listaItens,
-            total: novoTotal,
-            valorTotal: novoTotal
-        };
-
-        db.ref(`abella/orders/${id}`).update(dadosAtualizados).then(function() {
-            window.fecharModalEditarPedido();
-            alert("✅ Pedido atualizado com sucesso!");
-        });
-    };
-
-    window.excluirPedidoCompleto = function() {
-        var id = document.getElementById('editPedidoId').value;
-        if(confirm("⚠️ ATENÇÃO: Tem certeza que deseja deletar este pedido permanentemente do Firebase?")) {
-            db.ref(`abella/orders/${id}`).remove().then(function() {
-                window.fecharModalEditarPedido();
-                alert("🗑️ Pedido excluído com sucesso.");
-            });
+        async function alterarStatusPedidoUI(id, valor) {
+            await pedidoService.atualizarStatus(id, valor);
+            await carregarPainelPedidos();
         }
-    };
 
-    // ================= SELETOR E EMISSOR DE ROMANEIOS IMPRESSOS =================
-    window.abrirMenuRomaneio = function(id) {
-        document.getElementById('romaneioPedidoId').value = id;
-        document.getElementById('modalRomaneioMenu').classList.remove('hidden');
-    };
+        async function deletarPedidoUI(id) {
+            if(confirm("Deseja expurgar permanentemente esta ordem de compra do histórico?")) {
+                await pedidoService.deletar(id);
+                await carregarPainelPedidos();
+            }
+        }
 
-    window.fecharModalRomaneio = function() { document.getElementById('modalRomaneioMenu').classList.add('hidden'); };
+        async function gerarRomaneioPDF(id) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: [80, 150] }); // Formato Cupom Térmico 80mm
+            
+            const peds = await pedidoService.listarTodos();
+            const p = peds[id];
+            if(!p) return;
 
-    window.gerarRomaneio = function(layoutEstrutura, tipoConteudo) {
-        var id = document.getElementById('romaneioPedidoId').value;
-        window.fecharModalRomaneio();
-        
-        // Dispara a abertura da página de impressão passando as flags via URL
-        // Ex: impressao-pedido.html?id=-Nj123&layout=grade&tipo=foto
-        window.open(`impressao-pedido.html?id=${id}&layout=${layoutEstrutura}&tipo=${tipoConteudo}`, '_blank');
-    };
-</script>
+            doc.setFont("courier", "bold");
+            doc.setFontSize(10);
+            doc.text("ABELLA JOIAS - BRUTO", 40, 10, { align: "center" });
+            doc.setFontSize(8);
+            doc.text("GUIA DE EXPEDICAO / ROMANEIO", 40, 14, { align: "center" });
+            doc.text("----------------------------------------", 40, 18, { align: "center" });
+            
+            doc.setFont("courier", "normal");
+            doc.text(`CLIENTE: ${p.cliente.toUpperCase().substring(0, 22)}`, 5, 24);
+            doc.text(`WHATSAPP: ${p.whats}`, 5, 28);
+            doc.text(`DESTINO: ${(p.cidade || 'LIMEIRA').toUpperCase()}`, 5, 32);
+            doc.text(`PAGAMENTO: ${p.formaPagamento.toUpperCase()}`, 5, 36);
+            doc.text("----------------------------------------", 40, 42, { align: "center" });
+            
+            doc.setFont("courier", "bold");
+            doc.text("ITENS DO PEDIDO:", 5, 48);
+            
+            let y = 54;
+            doc.setFont("courier", "normal");
+            
+            const itensLista = p.itens ? Object.values(p.itens) : [];
+            itensLista.forEach(item => {
+                if(y > 130) { doc.addPage(); y = 10; }
+                const nomeItem = String(item.nome || item.name || '').toUpperCase().substring(0, 18);
+                const qtd = item.quantidade || 1;
+                const totalLinha = window.MoneyUtils.format((item.price || item.precoFinal || 0) * qtd);
+                doc.text(`${qtd}x ${nomeItem} ${totalLinha}`, 5, y);
+                y += 5;
+            });
+            
+            doc.text("----------------------------------------", 40, y+2, { align: "center" });
+            doc.setFont("courier", "bold");
+            doc.text(`TOTAL PECAS : ${p.totalPecas || 0} pçs`, 5, y + 8);
+            doc.text(`MASSA BRUTA : ${(p.pesoTotal || 0).toFixed(2)}g`, 5, y + 12);
+            doc.text(`VALOR FINAL : ${window.MoneyUtils.format(p.total)}`, 5, y + 16);
+            
+            doc.autoPrint();
+            window.open(doc.output('bloburl'), '_blank');
+        }
+    </script>
+</body>
+</html>

@@ -2,35 +2,31 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <title>Galvânicas Parceiras • Abella Joias</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galvânicas Parceiras | Logística Limeira</title>
-    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .bg-premium-dark { background-color: #09090b; }
+        body { background: #09090b; color: #f4f4f5; font-family: 'Inter', sans-serif; }
+        .serif { font-family: 'Cinzel', serif; }
+        .gold { color: #caa85c; }
         .border-premium { border-color: #1e1e24; }
     </style>
 </head>
-<body class="bg-premium-dark text-zinc-100 min-h-screen">
-
+<body class="min-h-screen pb-12">
     <header class="border-b border-premium bg-zinc-950/50 backdrop-blur-md sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <a href="index.html" class="text-xs font-bold text-zinc-400 hover:text-white transition-all flex items-center gap-2">
                 <span>←</span> Voltar para a Loja
             </a>
-            <span class="text-xs font-mono tracking-widest text-amber-500 font-bold">ABELLA JOIAS</span>
+            <span class="text-xs font-mono tracking-widest text-[#caa85c] font-bold">ABELLA JOIAS</span>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-12 space-y-12">
-        
         <div class="text-center max-w-2xl mx-auto space-y-3">
             <span class="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-black px-3 py-1 rounded-full uppercase tracking-widest">
                 Logística Integrada
@@ -39,120 +35,72 @@
                 Galvânicas Parceiras em Limeira
             </h1>
             <p class="text-sm text-zinc-400 leading-relaxed">
-    Compre no bruto e nós entregamos direto na galvânica da sua preferência em Limeira.
-    <span class="text-amber-400 font-semibold block mt-1">Frete grátis para compras acima de R$100.</span>
-</p>
+                Compre no bruto e nós entregamos direto na galvânica da sua preferência em Limeira. 
+                <span class="text-[#caa85c] font-semibold block mt-1">Frete grátis para compras acima de R$100.</span>
+            </p>
         </div>
 
-        <div id="grid-clientes-galvanicas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="col-span-full text-center py-12 text-zinc-500 font-medium text-sm">
-                ⏳ Mapeando rotas e parceiros ativos...
-            </div>
+        <div id="loading" class="text-center py-12 text-zinc-600 font-mono text-xs uppercase tracking-widest">
+            ⏳ Carregando mapa de galvânicas parceiras...
         </div>
 
+        <div id="grid-galvanicas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
     </main>
 
-    <footer class="border-t border-premium mt-24 py-6 text-center text-xs text-zinc-600 font-mono">
-        &copy; 2026 Abella Joias - Atacado de Joias no Bruto. Todos os direitos reservados.
-    </footer>
-
+    <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/services/galvanicaService.js"></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
-            projectId: "catalogo-abella-joias"
-        };
-        
-        // CORRIGIDO: Adicionado guard 'if (!firebase.apps.length)' que estava ausente.
-        // Sem isso, ao navegar de volta para a página, o Firebase lançava:
-        // "Firebase App named '[DEFAULT]' already exists"
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const database = firebase.database();
-
-        // Escuta o nó 'galvanicas' alimentado pelo Painel Admin
-        database.ref('abella/galvanicas').on('value', function(snapshot) {
-            const dados = snapshot.val();
-            const container = document.getElementById('grid-clientes-galvanicas');
-            if(!container) return;
-
-            if(!dados) {
-                container.innerHTML = `
-                    <div class="col-span-full text-center py-12 bg-zinc-900/50 border border-dashed border-zinc-800 rounded-2xl text-zinc-500 text-sm">
-                        🚚 Nenhuma galvânica disponível no momento. Consulte o nosso suporte.
-                    </div>`;
-                return;
-            }
-
-            container.innerHTML = '';
-            let temParceiroAtivo = false;
-
-            Object.keys(dados).forEach(function(id) {
-                const g = dados[id];
-                
-                // Se desativado no Admin (active === false), não aparece para o cliente
-                if(g.active === false || g.active === "false") return;
-                
-                temParceiroAtivo = true;
-                const fotoPadrao = 'https://via.placeholder.com/400x200/18181b/a1a1aa?text=Abella+Joias+Parceiro';
-
-                const card = document.createElement('div');
-                card.className = "bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-xl hover:border-zinc-700/80 transition-all flex flex-col justify-between group";
-                card.innerHTML = `
-                    <div>
-                        <div class="w-full h-36 bg-zinc-950 relative overflow-hidden flex items-center justify-center p-4 border-b border-zinc-800/50">
-                            <img src="${g.imagem || fotoPadrao}" class="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" onerror="this.src='${fotoPadrao}'">
-                            ${g.selo ? `
-                                <span class="absolute top-3 right-3 bg-amber-500 text-zinc-950 text-[9px] font-black px-2 py-0.5 rounded shadow-md uppercase tracking-wider">
-                                    ${g.selo}
-                                </span>
-                            ` : ''}
-                        </div>
-                        
-                        <div class="p-6 space-y-4">
-                            <div>
-                                <h3 class="font-bold text-white text-lg uppercase tracking-wide truncate">${g.nome || 'Parceiro Homologado'}</h3>
-                                <p class="text-xs text-zinc-400 mt-1 font-medium leading-relaxed italic">
-                                    "${g.descricao || 'Disponível para recebimento e conferência de mercadorias no bruto.'}"
-                                </p>
-                            </div>
-
-                            <div class="bg-zinc-950/60 border border-zinc-800/40 p-3.5 rounded-xl text-xs font-mono space-y-2 text-zinc-400">
-                                <div class="flex items-start gap-2">
-                                    <span class="text-zinc-500 shrink-0">📍</span>
-                                    <span class="text-zinc-300 leading-normal">${g.endereco || 'Consultar endereço com o suporte'}</span>
-                                </div>
-                                <div class="flex justify-between border-t border-zinc-800/60 pt-2 mt-2">
-                                    <span class="text-zinc-500">📞 Fixo:</span>
-                                    <span class="text-zinc-200 font-semibold">${g.telefone || 'Não informado'}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="px-6 pb-6 pt-2">
-                        ${g.whatsapp ? `
-                            <a href="https://wa.me/${g.whatsapp.replace(/\D/g, '')}" target="_blank" class="w-full bg-zinc-800 hover:bg-emerald-600 hover:text-white text-zinc-200 text-center text-xs font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 border border-zinc-700/60 hover:border-emerald-500">
-                                📲 Falar com esta Galvânica
-                            </a>
-                        ` : `
-                            <button disabled class="w-full bg-zinc-900 text-zinc-600 text-center text-xs font-bold py-2.5 px-4 rounded-xl cursor-not-allowed border border-zinc-800">
-                                Contato direto indisponível
-                            </button>
-                        `}
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-
-            if(!temParceiroAtivo) {
-                container.innerHTML = `
-                    <div class="col-span-full text-center py-12 bg-zinc-900/50 border border-dashed border-zinc-800 rounded-2xl text-zinc-500 text-sm">
-                        🚚 Nenhuma galvânica liberada para exibição no momento.
-                    </div>`;
-            }
+        document.addEventListener('DOMContentLoaded', async () => {
+            await carregarParceirosGalvanica();
         });
+
+        async function carheiroGalvanica() {} 
+        
+        async function carregarParceirosGalvanica() {
+            const grid = document.getElementById('grid-galvanicas');
+            const loading = document.getElementById('loading');
+            try {
+                const parceiros = await galvanicaService.listarTodas();
+                loading.classList.add('hidden');
+                grid.innerHTML = '';
+
+                if(!parceiros || parceiros.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-span-full bg-zinc-900/20 border border-zinc-800 rounded-2xl p-8 text-center text-zinc-500 text-xs italic">
+                            Nenhuma galvânica credenciada para entrega direta no momento.
+                        </div>
+                    `;
+                    return;
+                }
+
+                parceiros.forEach(g => {
+                    if(g.paused) return;
+                    const card = document.createElement('div');
+                    card.className = "bg-zinc-950 border border-zinc-900 rounded-2xl p-6 space-y-4 flex flex-col justify-between hover:border-zinc-800 transition-all";
+                    
+                    card.innerHTML = `
+                        <div class="space-y-2">
+                            <div class="flex items-start justify-between">
+                                <h3 class="text-white font-bold text-base tracking-tight">${g.name || g.nome}</h3>
+                                <span class="text-[9px] bg-zinc-900 text-zinc-400 px-2 py-0.5 rounded font-mono border border-zinc-800">Ativa</span>
+                            </div>
+                            <p class="text-xs text-zinc-500 leading-normal">${g.address || g.endereco || 'Bairro Industrial - Limeira/SP'}</p>
+                        </div>
+                        <div class="pt-4 border-t border-zinc-900 flex items-center justify-between">
+                            <span class="text-[10px] font-mono text-[#caa85c]">⚡ Coleta Diária</span>
+                            ${g.phone || g.whatsapp ? `
+                            <a href="https://wa.me/${(g.phone || g.whatsapp).replace(/\D/g,'')}" target="_blank" class="text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-200 px-3 py-1.5 rounded-xl border border-zinc-800 transition-all">
+                                Contato ➔
+                            </a>` : ''}
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch(e) {
+                console.error("Erro ao processar galvânicas parceiras:", e);
+                loading.innerText = "❌ Falha na conexão com o banco de logística.";
+            }
+        }
     </script>
 </body>
 </html>

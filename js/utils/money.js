@@ -19,3 +19,12 @@ const MoneyUtils = {
 
 window.MoneyUtils = MoneyUtils;
 window.fM = MoneyUtils.format;
+
+// ==========================================================
+// Compatibilidade Legado
+// ==========================================================
+
+window.money = {
+    formatar: MoneyUtils.format,
+    parsear: MoneyUtils.parse
+};

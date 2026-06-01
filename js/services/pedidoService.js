@@ -50,58 +50,70 @@ const PedidoService = {
 
     normalizarPedido(id, raw = {}) {
 
-        return {
+    return {
 
-            id,
+        id,
 
-            cliente:
-                raw.cliente ||
-                raw.nome ||
-                "",
+        numeroPedido:
+            raw.numeroPedido || "",
 
-            whats:
-                raw.whats ||
-                raw.contato ||
-                "",
+        cliente:
+            raw.cliente || "",
 
-            cidade:
-                raw.cidade ||
-                "",
+        whats:
+            raw.whats || "",
 
-            formaPagamento:
-                raw.formaPagamento ||
-                raw.metodo ||
-                "PIX",
+        cidade:
+            raw.cidade || "",
 
-            total: Number(
-                raw.total ?? 0
-            ),
+        formaPagamento:
+            raw.formaPagamento || "PIX",
 
-            pesoTotal: Number(
-                raw.pesoTotal ?? 0
-            ),
+        observacoes:
+            raw.observacoes || "",
 
-            totalPecas: Number(
-                raw.totalPecas ?? 0
-            ),
+        subtotal:
+            Number(raw.subtotal ?? 0),
 
-            status:
-                raw.status ||
-                "Novo",
+        desconto:
+            Number(raw.desconto ?? 0),
 
-            criadoEm:
-                raw.criadoEm ||
-                Date.now(),
+        frete:
+            Number(raw.frete ?? 0),
 
-            entrega:
-                raw.entrega || {},
+        total:
+            Number(raw.total ?? 0),
 
-            itens:
-                raw.itens ||
-                raw.produtos ||
-                []
-        };
-    },
+        pesoTotal:
+            Number(raw.pesoTotal ?? 0),
+
+        totalPecas:
+            Number(raw.totalPecas ?? 0),
+
+        status:
+            raw.status || "Novo",
+
+        entrega: {
+
+            nome:
+                raw.entrega?.nome || "",
+
+            endereco:
+                raw.entrega?.endereco || "",
+
+            numero:
+                raw.entrega?.numero || "",
+
+            bairro:
+                raw.entrega?.bairro || ""
+        },
+
+        itens:
+            Array.isArray(raw.itens)
+                ? raw.itens
+                : []
+    };
+}
 
     // ==========================================================
     // Criar Pedido

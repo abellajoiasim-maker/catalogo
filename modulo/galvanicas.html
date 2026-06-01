@@ -1,245 +1,114 @@
-<div class="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-100 pb-4 gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <span>🚚</span> Painel Galvânicas Parceiras
-            </h1>
-            <p class="text-sm text-gray-500 mt-1">Cadastre, edite e gerencie os parceiros de banho de Limeira que aparecem no catálogo do cliente.</p>
-        </div>
-        <button onclick="abrirModalGalvanicaAd()" class="bg-gray-900 hover:bg-gray-800 text-white font-medium px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 text-sm whitespace-nowrap md:self-center">
-            <span>➕</span> Cadastrar Novo Parceiro
-        </button>
-    </div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
 
-    <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-5 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div class="space-y-1">
-            <h2 class="text-xs font-bold uppercase tracking-widest font-mono text-amber-100">Regra Ativa de Checkout</h2>
-            <p class="text-base font-black">Frete Grátis para Galvânicas de Limeira nas compras acima de R$ 100,00</p>
-            <p class="text-xs text-amber-100/80">Sincronizado automaticamente com o carrinho de compras do cliente final.</p>
-        </div>
-        <div class="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-xl border border-white/20 text-xs font-mono font-bold">
-            ⚙️ Sincronização Ativa
-        </div>
-    </div>
-
-    <div class="space-y-3">
-        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider font-mono">Empresas Parceiras Cadastradas</h3>
-        <div id="grid-galvanicas-admin" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="col-span-full text-center py-12 text-gray-400 font-medium">
-                ⏳ Buscando dados no Firebase...
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="modalGalvanicaAdmin" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 relative my-8">
-        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-            <h3 id="modalGalvanicaAdminTitulo" class="text-base font-bold text-gray-800">Nova Galvânica Parceira</h3>
-            <button onclick="fecharModalGalvanicaAd()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
-        </div>
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        <input type="hidden" id="adminGalvanicaId">
-
-        <div class="space-y-3">
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nome da Empresa / Galvânica</label>
-                <input type="text" id="adminGalvanicaNome" placeholder="Ex: Franco Galvânica" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none">
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Selo / Tarja Visual</label>
-                    <input type="text" id="adminGalvanicaSelo" placeholder="Ex: PARCEIRO" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none uppercase font-bold text-amber-600">
+        <div class="md:col-span-1 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl h-fit space-y-4 text-left">
+            <h3 id="formTitulo" class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2">Cadastrar Parceiro Galvânica</h3>
+            <form id="formGalv" onsubmit="salvarGalvanicaUI(event)" class="space-y-4">
+                <input type="hidden" id="galvId">
+                <div class="space-y-1">
+                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Razão Social / Nome Fantasia *</label>
+                    <input type="text" id="galvNome" required placeholder="Ex: Galvânica Limeira Gold" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">WhatsApp (Com DDD, só números)</label>
-                    <input type="text" id="adminGalvanicaWhatsapp" placeholder="Ex: 5519984202600" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none font-mono">
+                <div class="space-y-1">
+                    <label class="text-[10px] uppercase text-zinc-400 font-bold">WhatsApp / Telefone Comercial *</label>
+                    <input type="tel" id="galvWhats" required placeholder="19988207658" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
                 </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Descrição Comercial / Slogan</label>
-                <input type="text" id="adminGalvanicaDescricao" placeholder="Ex: Mais de 20 anos de tradição em Ouro e Prata." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Endereço de Entrega (Limeira)</label>
-                <input type="text" id="adminGalvanicaEndereco" placeholder="Ex: R: José Motta dos Santos, 113" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none">
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Telefone Fixo</label>
-                    <input type="text" id="adminGalvanicaTelefone" placeholder="Ex: (19) 3451-6246" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none">
+                <div class="space-y-1">
+                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Endereço de Entrega (Limeira) *</label>
+                    <input type="text" id="galvEnd" required placeholder="Av. Industrial, 450 - Distrito" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status de Exibição</label>
-                    <select id="adminGalvanicaActive" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-amber-500 outline-none">
-                        <option value="true">🟢 Ativa no App</option>
-                        <option value="false">⚪ Ocultar/Suspensa</option>
-                    </select>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">URL da Logotipo (Imagem)</label>
-                <input type="text" id="adminGalvanicaImagem" placeholder="https://exemplo.com/logo.jpg" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none font-mono">
-            </div>
+                <button type="submit" class="w-full bg-[#caa85c] text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all">
+                    Salvar Parceiro Logístico
+                </button>
+            </form>
         </div>
 
-        <div class="flex items-center justify-end gap-2 border-t border-gray-50 pt-3 mt-4">
-            <button onclick="fecharModalGalvanicaAd()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2 rounded-xl text-xs transition-all">Cancelar</button>
-            <button id="btnSalvarGalvanicaAdmin" onclick="salvarGalvanicaAdminFirebase()" class="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 py-2 rounded-xl text-xs transition-all">Salvar Dados</button>
+        <div class="md:col-span-2 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl flex flex-col">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2 mb-4 text-left">Galvânicas Credenciadas</h3>
+            <div id="loading" class="text-center py-6 text-zinc-500 text-xs uppercase tracking-widest">⏳ Carregando dados...</div>
+            <div id="lista-galvanicas" class="space-y-2 text-left"></div>
         </div>
     </div>
-</div>
 
-<script>
-    var _ADMIN_GALVANICAS_CACHE = {};
+    <script src="../js/firebase/firebase-config.js"></script>
+    <script src="../js/services/galvanicaService.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => { carregarGalvanicasUI(); });
 
-    // Checa a existência da variável global 'db' instanciada no seu ecossistema admin
-    var checadorAdminGalvanicas = setInterval(function() {
-        if (typeof db !== "undefined") {
-            clearInterval(checadorAdminGalvanicas);
-            console.log("🚚 Módulo de Cadastro Administrativo vinculado ao nó 'galvanicas'!");
-            escutarGalvanicasNoAdmin();
-        }
-    }, 300);
-
-    // Escuta em tempo real o nó de produção 'galvanicas'
-    function escutarGalvanicasNoAdmin() {
-        db.ref('abella/galvanicas').on('value', function(snapshot) {
-            var dados = snapshot.val();
-            var container = document.getElementById('grid-galvanicas-admin');
-            if(!container) return;
-
-            if(!dados) {
-                container.innerHTML = `
-                    <div class="col-span-full text-center py-12 bg-white border border-dashed border-gray-200 rounded-2xl text-gray-400 font-medium">
-                        🚚 Nenhuma empresa cadastrada. Clique no botão superior para adicionar o primeiro parceiro!
-                    </div>`;
-                return;
-            }
-
-            _ADMIN_GALVANICAS_CACHE = dados;
+        async function carregarGalvanicasUI() {
+            const container = document.getElementById('lista-galvanicas');
+            const loading = document.getElementById('loading');
             container.innerHTML = '';
+            loading.classList.remove('hidden');
 
-            Object.keys(dados).forEach(function(id) {
-                var g = dados[id];
-                var statusAtivo = g.active !== false && g.active !== "false";
-                var fotoPadrao = 'https://via.placeholder.com/300x150?text=Sem+Logotipo';
+            try {
+                const list = await galvanicaService.listarTodas();
+                loading.classList.add('hidden');
 
-                var card = document.createElement('div');
-                card.className = `bg-white border border-gray-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs hover:shadow-md transition-all ${!statusAtivo ? 'opacity-60':''}`;
-                card.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded ${statusAtivo ? 'bg-emerald-50 text-emerald-700':'bg-zinc-100 text-zinc-400'}">
-                                ${statusAtivo ? '🟢 ATIVO' : '⚪ OCULTO'}
-                            </span>
-                            ${g.selo ? `<span class="bg-amber-100 text-amber-800 text-[9px] font-bold px-2 py-0.5 rounded uppercase">${g.selo}</span>` : ''}
-                        </div>
-                        
-                        <div class="w-full h-20 bg-zinc-900 rounded-xl overflow-hidden flex items-center justify-center p-2">
-                            <img src="${g.imagem || fotoPadrao}" class="w-full h-full object-contain" onerror="this.src='${fotoPadrao}'">
-                        </div>
+                const keys = Object.keys(list);
+                if(keys.length === 0) {
+                    container.innerHTML = '<p class="text-zinc-600 text-xs italic py-4">Nenhuma galvânica credenciada no sistema.</p>';
+                    return;
+                }
 
+                keys.forEach(id => {
+                    const g = list[id];
+                    const div = document.createElement('div');
+                    div.className = "p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex justify-between items-center";
+                    div.innerHTML = `
                         <div>
-                            <h4 class="font-bold text-gray-800 text-sm uppercase tracking-wide truncate">${g.nome || 'Sem Nome'}</h4>
-                            <p class="text-xs text-gray-500 mt-0.5 truncate italic">"${g.descricao || 'Sem descrição.'}"</p>
+                            <span class="text-xs text-white font-bold uppercase">${g.nome}</span>
+                            <p class="text-[9px] text-zinc-500 font-mono">📍 Endereço: ${g.endereco} | Tel: ${g.whatsapp}</p>
                         </div>
-
-                        <div class="bg-gray-50 p-2.5 rounded-xl text-[11px] font-mono text-gray-600 space-y-1">
-                            <div class="truncate">📍 ${g.endereco || 'Endereço não informado'}</div>
-                            <div class="flex justify-between border-t border-gray-200/50 pt-1 mt-1"><span>📞 Fixo:</span> <span class="font-bold text-gray-700">${g.telefone || 'N/A'}</span></div>
-                            <div class="flex justify-between text-emerald-600"><span>📲 WhatsApp:</span> <span class="font-bold">${g.whatsapp || 'N/A'}</span></div>
+                        <div class="flex gap-2">
+                            <button onclick="editarGalvUI('${id}','${g.nome}','${g.whatsapp}','${g.endereco}')" class="bg-zinc-800 hover:bg-zinc-700 px-3 py-1 text-[10px] font-bold rounded-lg transition-all">Editar</button>
+                            <button onclick="deletarGalvUI('${id}')" class="bg-red-950/20 border border-red-900/40 text-red-400 px-3 py-1 text-[10px] font-bold rounded-lg transition-all">Excluir</button>
                         </div>
-                    </div>
-
-                    <div class="flex items-center justify-end gap-3 border-t border-gray-50 pt-3 mt-4">
-                        <button onclick="editarGalvanicaAdmin('${id}')" class="text-xs font-semibold text-gray-600 hover:text-gray-800 transition-all">Editar</button>
-                        <button onclick="deletarGalvanicaAdmin('${id}')" class="text-xs font-semibold text-rose-600 hover:bg-rose-50 px-2 py-1 rounded-md transition-all">Excluir</button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        });
-    }
-
-    // MANIPULAÇÃO DO MODAL ADMINISTRATIVO
-    function abrirModalGalvanicaAd() {
-        document.getElementById('adminGalvanicaId').value = '';
-        document.getElementById('adminGalvanicaNome').value = '';
-        document.getElementById('adminGalvanicaSelo').value = 'PARCEIRO';
-        document.getElementById('adminGalvanicaWhatsapp').value = '';
-        document.getElementById('adminGalvanicaDescricao').value = '';
-        document.getElementById('adminGalvanicaEndereco').value = '';
-        document.getElementById('adminGalvanicaTelefone').value = '';
-        document.getElementById('adminGalvanicaActive').value = 'true';
-        document.getElementById('adminGalvanicaImagem').value = '';
-        
-        document.getElementById('modalGalvanicaAdminTitulo').innerText = "Nova Galvânica Parceira";
-        document.getElementById('modalGalvanicaAdmin').classList.remove('hidden');
-    }
-
-    function fecharModalGalvanicaAd() {
-        document.getElementById('modalGalvanicaAdmin').classList.add('hidden');
-    }
-
-    function editarGalvanicaAdmin(id) {
-        var g = _ADMIN_GALVANICAS_CACHE[id];
-        if(!g) return;
-
-        document.getElementById('adminGalvanicaId').value = id;
-        document.getElementById('adminGalvanicaNome').value = g.nome || '';
-        document.getElementById('adminGalvanicaSelo').value = g.selo || '';
-        document.getElementById('adminGalvanicaWhatsapp').value = g.whatsapp || '';
-        document.getElementById('adminGalvanicaDescricao').value = g.descricao || '';
-        document.getElementById('adminGalvanicaEndereco').value = g.endereco || '';
-        document.getElementById('adminGalvanicaTelefone').value = g.telefone || '';
-        document.getElementById('adminGalvanicaActive').value = g.active !== false && g.active !== "false" ? "true" : "false";
-        document.getElementById('adminGalvanicaImagem').value = g.imagem || '';
-        
-        document.getElementById('modalGalvanicaAdminTitulo').innerText = "Editar Cadastro de Galvânica";
-        document.getElementById('modalGalvanicaAdmin').classList.remove('hidden');
-    }
-
-    // ENVIO DE DADOS DIRETOS AO NÓ 'galvanicas'
-    function salvarGalvanicaAdminFirebase() {
-        var id = document.getElementById('adminGalvanicaId').value;
-        var nome = document.getElementById('adminGalvanicaNome').value.trim();
-        var selo = document.getElementById('adminGalvanicaSelo').value.trim();
-        var whatsapp = document.getElementById('adminGalvanicaWhatsapp').value.trim();
-        var descricao = document.getElementById('adminGalvanicaDescricao').value.trim();
-        var endereco = document.getElementById('adminGalvanicaEndereco').value.trim();
-        var telefone = document.getElementById('adminGalvanicaTelefone').value.trim();
-        var activeStatus = document.getElementById('adminGalvanicaActive').value === "true";
-        var imagem = document.getElementById('adminGalvanicaImagem').value.trim();
-
-        if(!nome) { alert("⚠️ O nome da empresa é obrigatório!"); return; }
-
-        var dados = {
-            nome: nome,
-            selo: selo,
-            whatsapp: whatsapp,
-            descricao: descricao,
-            endereco: endereco,
-            telefone: telefone,
-            active: activeStatus,
-            imagem: imagem
-        };
-
-        if(id) {
-            db.ref(`abella/galvanicas/${id}`).update(dados).then(function() { fecharModalGalvanicaAd(); });
-        } else {
-            db.ref('abella/galvanicas').push(dados).then(function() { fecharModalGalvanicaAd(); });
+                    `;
+                    container.appendChild(div);
+                });
+            } catch(e) { loading.innerText = "❌ Falha ao processar tabela de parceiros."; }
         }
-    }
 
-    function deletarGalvanicaAdmin(id) {
-        if(confirm("⚠️ Deseja remover permanentemente esse parceiro?\nEsta ação apagará o registro no Firebase e ele sumirá do catálogo do cliente.")) {
-            db.ref(`abella/galvanicas/${id}`).remove();
+        function editarGalvUI(id, nome, whats, endereco) {
+            document.getElementById('galvId').value = id;
+            document.getElementById('galvNome').value = nome;
+            document.getElementById('galvWhats').value = whats;
+            document.getElementById('galvEnd').value = endereco;
+            document.getElementById('formTitulo').innerText = "Modificar Parceiro Galvânica";
         }
-    }
-</script>
+
+        async function salvarGalvanicaUI(e) {
+            e.preventDefault();
+            const payload = {
+                nome: document.getElementById('galvNome').value.trim(),
+                whatsapp: document.getElementById('galvWhats').value.trim().replace(/\D/g, ''),
+                endereco: document.getElementById('galvEnd').value.trim(),
+                active: true
+            };
+
+            await galvanicaService.salvar(document.getElementById('galvId').value, payload);
+            document.getElementById('formGalv').reset();
+            document.getElementById('galvId').value = '';
+            document.getElementById('formTitulo').innerText = "Cadastrar Parceiro Galvânica";
+            await carregarGalvanicasUI();
+        }
+
+        async function deletarGalvUI(id) {
+            if(confirm("Deseja expurgar esta galvânica do mapa de frete integrado?")) {
+                await galvanicaService.deletar(id);
+                await carregarGalvanicasUI();
+            }
+        }
+    </script>
+</body>
+</html>

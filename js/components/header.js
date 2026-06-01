@@ -1,17 +1,28 @@
-const ComponenteHeader = {
-    render(containerId, titulo = "Abella Joias") {
-        const container = document.getElementById(containerId);
-        if (!container) return;
+// js/components/header.js
 
-        container.innerHTML = `
-            <header class="bg-gray-900 text-white p-4 shadow-md flex justify-between items-center">
-                <h1 class="text-xl font-bold tracking-wide">${titulo}</h1>
-                <nav class="flex gap-4">
-                    <a href="index.html" class="hover:text-amber-400 transition">Início</a>
-                    <a href="produtos.html" class="hover:text-amber-400 transition">Produtos</a>
-                    <a href="carrinho.html" class="hover:text-amber-400 transition">Carrinho</a>
-                </nav>
-            </header>
-        `;
+const HeaderComponent = {
+    renderCounters: function() {
+        const totais = window.CarrinhoService.calcularTotais();
+        
+        const countEl = document.getElementById('cart-count');
+        const weightEl = document.getElementById('cart-weight');
+        const totalEl = document.getElementById('cart-total');
+
+        if (countEl) countEl.innerText = `${totais.totalPecas} pçs`;
+        if (weightEl) weightEl.innerText = `${totais.pesoTotal.toFixed(2)}g`;
+        if (totalEl) totalEl.innerText = window.MoneyUtils.format(totais.subtotal);
+    },
+
+    init: function() {
+        this.renderCounters();
+        window.removeEventListener('carrinhoAtualizado', this.renderCounters);
+        window.addEventListener('carrinhoAtualizado', this.renderCounters);
     }
 };
+
+window.HeaderComponent = HeaderComponent;
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.CarrinhoService !== 'undefined') {
+        window.HeaderComponent.init();
+    }
+});

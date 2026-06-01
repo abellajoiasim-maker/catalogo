@@ -82,27 +82,51 @@
                     return;
                 }
 
-                Object.keys(subcategories).forEach(subKey => {
-                    const sub = subcategories[subKey];
-                    if (sub.paused === true || sub.paused === "true") return;
+               Object.keys(subcategorias).forEach(subKey => {
 
-                    const card = document.createElement('div');
-                    card.className = "card cursor-pointer flex flex-col justify-between animate-fade-in";
-                    card.setAttribute('onclick', `window.location.href='produtos.html?id=${catId}&sub=${subKey}'`);
-                    
-                    const img = sub.image || sub.imagem || 'https://via.placeholder.com/400/141414/818cf8?text=Abella+Joias';
-                    
-                    card.innerHTML = `
-                        <div class="aspect-square bg-zinc-950 overflow-hidden flex items-center justify-center">
-                            <img src="${img}" class="w-full h-full object-cover hover:scale-105 transition-all duration-300" onerror="this.src='https://via.placeholder.com/400/141414/818cf8?text=Sem+Imagem'">
-                        </div>
-                        <div class="p-4 bg-zinc-900/20 border-t border-zinc-900/60 flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase text-white truncate tracking-wide">${sub.name || sub.nome || subKey}</span>
-                            <span class="gold text-xs">➔</span>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
+    const sub = subcategorias[subKey];
+
+    if (
+        sub.paused === true ||
+        sub.paused === "true"
+    ) return;
+
+    const card =
+        document.createElement('div');
+
+    card.className =
+        "card cursor-pointer flex flex-col justify-between animate-fade-in";
+
+    card.onclick = () => {
+
+        window.location.href =
+            `produtos.html?id=${catId}&sub=${subKey}`;
+    };
+
+    const img =
+        sub.image ||
+        sub.imagem ||
+        'https://via.placeholder.com/400/141414/818cf8?text=Abella+Joias';
+
+    card.innerHTML = `
+        <div class="aspect-square bg-zinc-950 overflow-hidden flex items-center justify-center">
+            <img
+                src="${img}"
+                class="w-full h-full object-cover hover:scale-105 transition-all duration-300"
+                onerror="this.src='https://via.placeholder.com/400/141414/818cf8?text=Sem+Imagem'">
+        </div>
+
+        <div class="p-4 bg-zinc-900/20 border-t border-zinc-900/60 flex items-center justify-between">
+            <span class="text-xs font-bold uppercase text-white truncate tracking-wide">
+                ${sub.name || sub.nome || subKey}
+            </span>
+
+            <span class="gold text-xs">➔</span>
+        </div>
+    `;
+
+    grid.appendChild(card);
+});
             } catch (error) {
                 console.error("Erro ao ler subcategorias da UI:", error);
                 loading.innerText = "❌ Erro ao processar subcategorias da loja.";

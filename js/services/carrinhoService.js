@@ -1,124 +1,63 @@
 // ======================================================================
 // js/firebase/services/carrinhoService.js
-// Abella Joias - CarrinhoService v3.0
+// Abella Joias - CarrinhoService v2.0
 // ======================================================================
 
 const CarrinhoService = {
 
-    STORAGE_KEY: "carrinho",
+    STORAGE_KEY: 'carrinho',
 
     // ==========================================================
     // Helpers
     // ==========================================================
 
-    _normalizarProduto(
-        produto = {},
-        quantidade = 1,
-        variacao = null
-    ) {
-
-        const preco = Number(
-            produto.price ??
-            produto.precoFinal ??
-            produto.preco ??
-            0
-        );
-
-        const peso = Number(
-            produto.weight ??
-            produto.peso ??
-            0
-        );
-
-        return {
-
-            sku:
-                produto.sku || "",
-
-            nome:
-                produto.name ||
-                produto.nome ||
-                "",
-
-            name:
-                produto.name ||
-                produto.nome ||
-                "",
-
-            image:
-                produto.image ||
-                produto.imagem ||
-                "",
-
-            price: preco,
-
-            precoFinal: preco,
-
-            weight: peso,
-
-            peso: peso,
-
-            quantidade: Math.max(
-                1,
-                Number(quantidade) || 1
-            ),
-
-            variacao:
-                variacao || null
-        };
-    },
-
-    // ==========================================================
-    // Buscar Itens
-    // ==========================================================
-
-    getItens() {
+    _safeParse(json) {
 
         try {
-
-            return JSON.parse(
-                localStorage.getItem(
-                    this.STORAGE_KEY
-                ) || "[]"
-            );
-
-        } catch (error) {
-
-            console.error(
-                "[CarrinhoService:getItens]",
-                error
-            );
-
+            return JSON.parse(json);
+        } catch {
             return [];
         }
     },
 
+    _safeNumber(value, fallback = 0) {
+
+        const n = Number(value);
+
+        return Number.isFinite(n)
+            ? n
+            : fallback;
+    },
+
     // ==========================================================
-    // Salvar
+    // Obter Itens
+    // ==========================================================
+
+    getItens() {
+
+        return this._safeParse(
+            localStorage.getItem(
+                this.STORAGE_KEY
+            ) || '[]'
+        );
+    },
+
+    // ==========================================================
+    // Salvar Carrinho
     // ==========================================================
 
     salvarTodos(itens = []) {
 
-        try {
+        localStorage.setItem(
+            this.STORAGE_KEY,
+            JSON.stringify(itens)
+        );
 
-            localStorage.setItem(
-                this.STORAGE_KEY,
-                JSON.stringify(itens)
-            );
-
-            this.notificarMudanca();
-
-        } catch (error) {
-
-            console.error(
-                "[CarrinhoService:salvarTodos]",
-                error
-            );
-        }
+        this.notificarMudanca();
     },
 
     // ==========================================================
-    // Adicionar
+    // Adicionar Produto
     // ==========================================================
 
     adicionar(
@@ -127,82 +66,107 @@ const CarrinhoService = {
         variacao = null
     ) {
 
+        if (!produto) {
+            return;
+        }
+
         let itens =
             this.getItens();
 
-        const item =
-            this._normalizarProduto(
-                produto,
-                quantidade,
-                variacao
+        quantidade =
+            Math.max(
+                1,
+                parseInt(quantidade) || 1
             );
 
-        const index =
-            itens.findIndex(i =>
+        const precoUnitario =
+            this._safeNumber(
+                produto.price ??
+                produto.precoFinal ??
+                produto.preco
+            );
 
-                i.sku === item.sku &&
-                i.variacao === item.variacao
+        const pesoUnitario =
+            this._safeNumber(
+                produto.weight ??
+                produto.peso
+            );
+
+        const sku =
+            produto.sku || '';
+
+        const index =
+            itens.findIndex(item =>
+                item.sku === sku &&
+                item.variacao === variacao
             );
 
         if (index >= 0) {
 
             itens[index].quantidade +=
-                item.quantidade;
+                quantidade;
 
         } else {
 
-            itens.push(item);
+            itens.push({
+
+                sku,
+
+                nome:
+                    produto.name ||
+                    produto.nome ||
+                    '',
+
+                name:
+                    produto.name ||
+                    produto.nome ||
+                    '',
+
+                image:
+                    produto.image ||
+                    produto.imagem ||
+                    '',
+
+                price:
+                    precoUnitario,
+
+                precoFinal:
+                    precoUnitario,
+
+                weight:
+                    pesoUnitario,
+
+                peso:
+                    pesoUnitario,
+
+                quantidade,
+
+                variacao
+            });
         }
 
         this.salvarTodos(itens);
-
-        return itens;
     },
 
     // ==========================================================
-    // Remover
+    // Remover Produto
     // ==========================================================
 
     remover(index) {
 
-        let itens =
+        const itens =
             this.getItens();
 
         if (
             index < 0 ||
             index >= itens.length
         ) {
-            return false;
+            return;
         }
 
-        itens.splice(
-            index,
-            1
-        );
+        itens.splice(index, 1);
 
         this.salvarTodos(itens);
-
-        return true;
-    },
-
-    // ==========================================================
-    // Buscar Item
-    // ==========================================================
-
-    buscarPorSku(
-        sku,
-        variacao = null
-    ) {
-
-        return this
-            .getItens()
-            .find(
-
-                item =>
-
-                    item.sku === sku &&
-                    item.variacao === variacao
-            );
     },
 
     // ==========================================================
@@ -214,70 +178,43 @@ const CarrinhoService = {
         quantidade
     ) {
 
-        let itens =
+        const itens =
             this.getItens();
 
         if (!itens[index]) {
-            return false;
+            return;
         }
 
         itens[index].quantidade =
             Math.max(
                 1,
-                Number(quantidade) || 1
+                parseInt(
+                    quantidade
+                ) || 1
             );
 
         this.salvarTodos(itens);
-
-        return true;
     },
 
     // ==========================================================
-    // Incrementar
+    // Verificar Existência
     // ==========================================================
 
-    incrementar(index) {
+    existeProduto(
+        sku,
+        variacao = null
+    ) {
 
-        let itens =
-            this.getItens();
-
-        if (!itens[index]) {
-            return false;
-        }
-
-        itens[index].quantidade++;
-
-        this.salvarTodos(itens);
-
-        return true;
-    },
-
-    // ==========================================================
-    // Decrementar
-    // ==========================================================
-
-    decrementar(index) {
-
-        let itens =
-            this.getItens();
-
-        if (!itens[index]) {
-            return false;
-        }
-
-        itens[index].quantidade =
-            Math.max(
-                1,
-                itens[index].quantidade - 1
+        return this
+            .getItens()
+            .some(item =>
+                item.sku === sku &&
+                item.variacao === variacao
             );
-
-        this.salvarTodos(itens);
-
-        return true;
     },
 
     // ==========================================================
-    // Limpar
+    // Limpar Carrinho
     // ==========================================================
 
     limpar() {
@@ -287,6 +224,37 @@ const CarrinhoService = {
         );
 
         this.notificarMudanca();
+    },
+
+    // ==========================================================
+    // Quantidade de Produtos
+    // ==========================================================
+
+    getQuantidadeProdutos() {
+
+        return this
+            .getItens()
+            .length;
+    },
+
+    // ==========================================================
+    // Quantidade Total de Peças
+    // ==========================================================
+
+    getQuantidadeItens() {
+
+        return this
+            .getItens()
+            .reduce(
+                (acc, item) =>
+                    acc +
+                    (
+                        parseInt(
+                            item.quantidade
+                        ) || 0
+                    ),
+                0
+            );
     },
 
     // ==========================================================
@@ -301,40 +269,41 @@ const CarrinhoService = {
             this.getItens();
 
         let subtotal = 0;
-        let totalItens = 0;
         let totalPecas = 0;
         let pesoTotal = 0;
 
         itens.forEach(item => {
 
             const preco =
-                Number(
+                this._safeNumber(
                     item.price ??
-                    item.precoFinal ??
-                    0
+                    item.precoFinal
                 );
 
-            const qtd =
-                Number(
-                    item.quantidade ?? 1
+            const quantidade =
+                Math.max(
+                    1,
+                    parseInt(
+                        item.quantidade
+                    ) || 1
                 );
 
             const peso =
-                Number(
+                this._safeNumber(
                     item.weight ??
-                    item.peso ??
-                    0
+                    item.peso
                 );
 
             subtotal +=
-                preco * qtd;
+                preco *
+                quantidade;
 
-            totalPecas += qtd;
-
-            totalItens++;
+            totalPecas +=
+                quantidade;
 
             pesoTotal +=
-                peso * qtd;
+                peso *
+                quantidade;
         });
 
         subtotal =
@@ -352,9 +321,8 @@ const CarrinhoService = {
                 (
                     subtotal *
                     (
-                        Number(
-                            pixDescPorcentagem
-                        ) / 100
+                        pixDescPorcentagem /
+                        100
                     )
                 ).toFixed(2)
             );
@@ -371,8 +339,6 @@ const CarrinhoService = {
 
             subtotal,
 
-            totalItens,
-
             totalPecas,
 
             pesoTotal,
@@ -384,66 +350,35 @@ const CarrinhoService = {
     },
 
     // ==========================================================
-    // Quantidade Total
-    // ==========================================================
-
-    getQuantidadeTotal() {
-
-        return this
-            .getItens()
-            .reduce(
-
-                (acc, item) =>
-
-                    acc +
-                    Number(
-                        item.quantidade || 0
-                    ),
-
-                0
-            );
-    },
-
-    // ==========================================================
     // Eventos
     // ==========================================================
 
     notificarMudanca() {
 
-        try {
+        window.dispatchEvent(
+            new Event(
+                'carrinhoAtualizado'
+            )
+        );
 
-            window.dispatchEvent(
-                new Event(
-                    "carrinhoAtualizado"
-                )
-            );
+        if (
+            typeof window
+                .atualizarContadorCarrinho ===
+            'function'
+        ) {
 
-            if (
-                typeof window
-                    .atualizarContadorCarrinho ===
-                "function"
-            ) {
+            window
+                .atualizarContadorCarrinho();
+        }
 
-                window
-                    .atualizarContadorCarrinho();
-            }
+        if (
+            typeof window
+                .carregarItensCarrinho ===
+            'function'
+        ) {
 
-            if (
-                typeof window
-                    .carregarItensCarrinho ===
-                "function"
-            ) {
-
-                window
-                    .carregarItensCarrinho();
-            }
-
-        } catch (error) {
-
-            console.error(
-                "[CarrinhoService:notificarMudanca]",
-                error
-            );
+            window
+                .carregarItensCarrinho();
         }
     }
 };

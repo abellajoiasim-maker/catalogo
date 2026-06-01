@@ -388,5 +388,20 @@ const CarrinhoService = {
     }
 };
 
-window.CarrinhoService =
-    CarrinhoService;
+// ==========================================================
+// Compatibilidade Legado
+// ==========================================================
+
+window.carrinhoService = CarrinhoService;
+
+CarrinhoService.obterItens =
+    CarrinhoService.getItens;
+
+CarrinhoService.obterResumo =
+    CarrinhoService.getResumo;
+
+CarrinhoService.adicionarItem =
+    CarrinhoService.adicionar;
+
+CarrinhoService.limparCarrinho =
+    CarrinhoService.limpar;

@@ -1,52 +1,480 @@
-// js/services/pedidoService.js
+// ======================================================================
+// js/firebase/services/pedidoService.js
+// Abella Joias - PedidoService v3.0
+// ======================================================================
 
 const PedidoService = {
-    create: async function(pedidoData) {
-        const ref = window.db.ref('abella/orders').push();
-        const payload = {
-            cliente: pedidoData.cliente || pedidoData.nome || '',
-            whats: pedidoData.whats || pedidoData.contato || '',
-            cidade: pedidoData.cidade || '',
-            formaPagamento: pedidoData.formaPagamento || 'PIX',
-            total: parseFloat(pedidoData.total) || 0,
-            pesoTotal: parseFloat(pedidoData.pesoTotal) || 0,
-            totalPecas: parseInt(pedidoData.totalPecas) || 0,
-            status: pedidoData.status || "Novo",
-            criadoEm: pedidoData.criadoEm || Date.now(),
-            entrega: pedidoData.entrega || {},
-            itens: pedidoData.itens || []
+
+    _cache: {},
+    _cacheTimestamp: 0,
+    _cacheTTL: 30000,
+
+    // ==========================================================
+    // Firebase
+    // ==========================================================
+
+    _db() {
+
+        if (!window.db) {
+
+            throw new Error(
+                "Firebase Database não inicializado."
+            );
+        }
+
+        return window.db;
+    },
+
+    // ==========================================================
+    // Cache
+    // ==========================================================
+
+    _isCacheValid() {
+
+        return (
+            Object.keys(this._cache).length > 0 &&
+            (Date.now() - this._cacheTimestamp) <
+            this._cacheTTL
+        );
+    },
+
+    invalidateCache() {
+
+        this._cache = {};
+        this._cacheTimestamp = 0;
+    },
+
+    // ==========================================================
+    // Normalização
+    // ==========================================================
+
+    normalizarPedido(id, raw = {}) {
+
+        return {
+
+            id,
+
+            cliente:
+                raw.cliente ||
+                raw.nome ||
+                "",
+
+            whats:
+                raw.whats ||
+                raw.contato ||
+                "",
+
+            cidade:
+                raw.cidade ||
+                "",
+
+            formaPagamento:
+                raw.formaPagamento ||
+                raw.metodo ||
+                "PIX",
+
+            total: Number(
+                raw.total ?? 0
+            ),
+
+            pesoTotal: Number(
+                raw.pesoTotal ?? 0
+            ),
+
+            totalPecas: Number(
+                raw.totalPecas ?? 0
+            ),
+
+            status:
+                raw.status ||
+                "Novo",
+
+            criadoEm:
+                raw.criadoEm ||
+                Date.now(),
+
+            entrega:
+                raw.entrega || {},
+
+            itens:
+                raw.itens ||
+                raw.produtos ||
+                []
         };
-        await ref.set(payload);
-        return ref.key;
     },
 
-    getAll: async function() {
-        const snapshot = await window.db.ref('abella/orders').once('value');
-        const data = snapshot.val() || {};
-        
-        // Garante a migração em tempo de leitura para compatibilidade total
-        Object.keys(data).forEach(id => {
-            if (data[id] && !data[id].cliente && data[id].nome) {
-                data[id].cliente = data[id].nome;
-            }
-            if (data[id] && !data[id].whats && data[id].contato) {
-                data[id].whats = data[id].contato;
-            }
-            if (data[id] && !data[id].itens && data[id].produtos) {
-                data[id].itens = data[id].produtos;
-            }
-        });
-        
-        return data;
+    // ==========================================================
+    // Criar Pedido
+    // ==========================================================
+
+    async create(
+        pedidoData = {}
+    ) {
+
+        try {
+
+            const ref =
+                this
+                    ._db()
+                    .ref(
+                        "abella/orders"
+                    )
+                    .push();
+
+            const payload =
+                this.normalizarPedido(
+                    ref.key,
+                    pedidoData
+                );
+
+            delete payload.id;
+
+            await ref.set(
+                payload
+            );
+
+            this._cache[ref.key] = {
+                id: ref.key,
+                ...payload
+            };
+
+            return ref.key;
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:create]",
+                error
+            );
+
+            throw error;
+        }
     },
 
-    updateStatus: async function(id, novoStatus) {
-        await window.db.ref(`abella/orders/${id}/status`).set(novoStatus);
+    // ==========================================================
+    // Buscar Todos
+    // ==========================================================
+
+    async getAll(
+        forceRefresh = false
+    ) {
+
+        try {
+
+            if (
+                !forceRefresh &&
+                this._isCacheValid()
+            ) {
+
+                return this._cache;
+            }
+
+            const snapshot =
+                await this
+                    ._db()
+                    .ref(
+                        "abella/orders"
+                    )
+                    .once("value");
+
+            const data =
+                snapshot.val() || {};
+
+            this._cache = {};
+
+            Object.entries(data)
+                .forEach(
+                    ([id, raw]) => {
+
+                        this._cache[id] =
+                            this.normalizarPedido(
+                                id,
+                                raw
+                            );
+                    }
+                );
+
+            this._cacheTimestamp =
+                Date.now();
+
+            return this._cache;
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:getAll]",
+                error
+            );
+
+            return {};
+        }
     },
 
-    delete: async function(id) {
-        await window.db.ref(`abella/orders/${id}`).remove();
+    // ==========================================================
+    // Buscar Pedido
+    // ==========================================================
+
+    async getById(id) {
+
+        if (!id) return null;
+
+        try {
+
+            if (
+                this._cache[id]
+            ) {
+
+                return this._cache[id];
+            }
+
+            const snapshot =
+                await this
+                    ._db()
+                    .ref(
+                        `abella/orders/${id}`
+                    )
+                    .once("value");
+
+            const data =
+                snapshot.val();
+
+            if (!data) {
+
+                return null;
+            }
+
+            const pedido =
+                this.normalizarPedido(
+                    id,
+                    data
+                );
+
+            this._cache[id] =
+                pedido;
+
+            return pedido;
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:getById]",
+                error
+            );
+
+            return null;
+        }
+    },
+
+    // ==========================================================
+    // Atualizar Status
+    // ==========================================================
+
+    async updateStatus(
+        id,
+        novoStatus
+    ) {
+
+        try {
+
+            await this
+                ._db()
+                .ref(
+                    `abella/orders/${id}`
+                )
+                .update({
+
+                    status:
+                        novoStatus
+                });
+
+            if (
+                this._cache[id]
+            ) {
+
+                this._cache[id]
+                    .status =
+                    novoStatus;
+            }
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:updateStatus]",
+                error
+            );
+
+            return false;
+        }
+    },
+
+    // ==========================================================
+    // Atualizar Pedido
+    // ==========================================================
+
+    async update(
+        id,
+        dados = {}
+    ) {
+
+        try {
+
+            if (!id) {
+
+                throw new Error(
+                    "ID inválido."
+                );
+            }
+
+            await this
+                ._db()
+                .ref(
+                    `abella/orders/${id}`
+                )
+                .update(
+                    dados
+                );
+
+            if (
+                this._cache[id]
+            ) {
+
+                this._cache[id] = {
+
+                    ...this._cache[id],
+
+                    ...dados
+                };
+            }
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:update]",
+                error
+            );
+
+            return false;
+        }
+    },
+
+    // ==========================================================
+    // Excluir Pedido
+    // ==========================================================
+
+    async delete(id) {
+
+        try {
+
+            await this
+                ._db()
+                .ref(
+                    `abella/orders/${id}`
+                )
+                .remove();
+
+            delete this._cache[id];
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:delete]",
+                error
+            );
+
+            return false;
+        }
+    },
+
+    // ==========================================================
+    // Realtime Listener
+    // ==========================================================
+
+    subscribe(callback) {
+
+        try {
+
+            const ref =
+                this
+                    ._db()
+                    .ref(
+                        "abella/orders"
+                    );
+
+            ref.on(
+                "value",
+                snapshot => {
+
+                    const data =
+                        snapshot.val() || {};
+
+                    this._cache = {};
+
+                    Object.entries(data)
+                        .forEach(
+                            ([id, raw]) => {
+
+                                this._cache[id] =
+                                    this.normalizarPedido(
+                                        id,
+                                        raw
+                                    );
+                            }
+                        );
+
+                    this._cacheTimestamp =
+                        Date.now();
+
+                    if (
+                        typeof callback ===
+                        "function"
+                    ) {
+
+                        callback(
+                            this._cache
+                        );
+                    }
+                }
+            );
+
+            return ref;
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:subscribe]",
+                error
+            );
+        }
+    },
+
+    // ==========================================================
+    // Remover Listener
+    // ==========================================================
+
+    unsubscribe(ref) {
+
+        try {
+
+            if (ref) {
+
+                ref.off();
+            }
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:unsubscribe]",
+                error
+            );
+        }
     }
 };
 
-window.PedidoService = PedidoService;
+window.PedidoService =
+    PedidoService;

@@ -496,3 +496,22 @@ const CategoriaService = {
 
 window.CategoriaService =
     CategoriaService;
+
+// ==========================================================
+// Compatibilidade Legado
+// ==========================================================
+
+window.categoriaService =
+    CategoriaService;
+
+CategoriaService.listarTodas =
+    CategoriaService.getList;
+
+CategoriaService.buscarPorSlug =
+    CategoriaService.getBySlug;
+
+CategoriaService.salvarCategoria =
+    CategoriaService.save;
+
+CategoriaService.excluirCategoria =
+    CategoriaService.delete;

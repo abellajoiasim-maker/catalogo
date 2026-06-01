@@ -62,43 +62,44 @@ const CategoriaService = {
     // Normalização
     // ==========================================================
 
-    normalizarCategoria(slug, raw = {}) {
+ normalizarCategoria(slug, raw = {}) {
 
-        return {
+    return {
 
-            slug,
+        // Compatibilidade nova + legado
+        id: slug,
+        slug: slug,
 
-            name:
-                raw.name ||
-                raw.nome ||
-                '',
+        name:
+            raw.name ||
+            raw.nome ||
+            '',
 
-            image:
-                raw.image ||
-                raw.imagem ||
-                '',
+        image:
+            raw.image ||
+            raw.imagem ||
+            '',
 
-            order: Number(
-                raw.order ?? 0
-            ),
+        order: Number(
+            raw.order ?? 0
+        ),
 
-            active:
-                raw.active !== false,
+        active:
+            raw.active !== false,
 
-            createdAt:
-                raw.createdAt ||
-                null,
+        createdAt:
+            raw.createdAt ||
+            null,
 
-            updatedAt:
-                raw.updatedAt ||
-                null,
+        updatedAt:
+            raw.updatedAt ||
+            null,
 
-            subcategories:
-                raw.subcategories ||
-                {}
-        };
-    },
-
+        subcategories:
+            raw.subcategories ||
+            {}
+    };
+},
     // ==========================================================
     // Buscar Todas
     // ==========================================================

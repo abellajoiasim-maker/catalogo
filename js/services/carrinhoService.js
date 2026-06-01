@@ -388,6 +388,10 @@ const CarrinhoService = {
     }
 };
 
+window.CarrinhoService =
+    CarrinhoService;
+
+
 // ==========================================================
 // Compatibilidade Legado
 // ==========================================================

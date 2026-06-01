@@ -2,114 +2,125 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Abella Joias • Subcoleções</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
-        .serif { font-family:'Cinzel', serif; }
-        .gold { color:#caa85c; }
-        .card { background:#141414; border:1px solid #2a2a2a; border-radius:20px; overflow:hidden; transition:.3s; }
-        .card:hover { border-color:#caa85c; transform: translateY(-3px); }
-    </style>
 </head>
-<body>
+<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
 
-    <header class="border-b border-zinc-900 bg-black/50 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto p-5 flex justify-between items-center">
-            <div>
-                <h1 class="serif gold text-lg uppercase tracking-wider">Abella Joias</h1>
-                <p id="slogan-sub" class="text-[9px] text-zinc-500 uppercase tracking-widest">Aguardando mapeamento...</p>
+    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <div class="md:col-span-1 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl h-fit space-y-4 text-left">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2">Vincular Subcategoria</h3>
+            
+            <div class="space-y-1">
+                <label class="text-[10px] uppercase text-zinc-400 font-bold">Selecione a Categoria Mãe *</label>
+                <select id="selectCatMae" onchange="mudarCategoriaMaeFiltro()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#caa85c]"></select>
             </div>
-            <a href="index.html" class="text-xs bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-zinc-400 hover:text-white transition-all">✖ Voltar</a>
+
+            <form id="formSubcat" onsubmit="salvarSubcategoriaUI(event)" class="space-y-4 pt-2">
+                <input type="hidden" id="subOldSlug">
+                <div class="space-y-1">
+                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Nome da Subcategoria *</label>
+                    <input type="text" id="subName" required placeholder="Ex: Cravejados" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Imagem Opcional (URL)</label>
+                    <input type="text" id="subImage" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                </div>
+                <button type="submit" class="w-full bg-[#caa85c] text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all">
+                    Gravar Subcategoria
+                </button>
+            </form>
         </div>
-    </header>
 
-    <main class="max-w-7xl mx-auto p-6 text-center">
-        <div id="loader-sub" class="py-20 text-zinc-500 font-mono text-xs italic animate-pulse">
-            🔍 Verificando estrutura de subcoleções no banco...
+        <div class="md:col-span-2 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl flex flex-col">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2 mb-4 text-left">Subcategorias da Seção</h3>
+            <div id="lista-subcategorias" class="space-y-2 text-left text-xs text-zinc-500 italic py-4">Selecione uma categoria mãe para expandir a subárvore.</div>
         </div>
+    </div>
 
-        <div id="grid-subcategorias" class="hidden grid grid-cols-2 md:grid-cols-4 gap-6 text-left">
-            </div>
-    </main>
-
+    <script src="../js/firebase/firebase-config.js"></script>
+    <script src="../js/services/categoriaService.js"></script>
+    <script src="../js/services/subcategoriaService.js"></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        document.addEventListener('DOMContentLoaded', async () => { await popularCategoriasMae(); });
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const catId = urlParams.get('id');
-
-        if(!catId) {
-            window.location.href = 'index.html';
-        } else {
-            verificarEstruturaDeSubcategorias();
+        async function popularCategoriasMae() {
+            const select = document.getElementById('selectCatMae');
+            select.innerHTML = '<option value="" disabled selected>Escolha uma categoria...</option>';
+            try {
+                const list = await categoriaService.listarTodas();
+                Object.keys(list).forEach(key => {
+                    select.innerHTML += `<option value="${key}">${list[key].name || key}</option>`;
+                });
+            } catch(e) { console.error(e); }
         }
 
-        function converterGsParaHttp(url) {
-            if (!url) return '';
-            var s = (url || '').trim();
-            if (!s.startsWith('gs://')) return s;
-            var sem = s.replace('gs://', '');
-            var bar = sem.indexOf('/');
-            if (bar === -1) return s;
-            return 'https://firebasestorage.googleapis.com/v0/b/' +
-                   sem.substring(0, bar) + '/o/' +
-                   encodeURIComponent(sem.substring(bar + 1)) + '?alt=media';
-        }
+        async function mudarCategoriaMaeFiltro() {
+            const catSlug = document.getElementById('selectCatMae').value;
+            const container = document.getElementById('lista-subcategorias');
+            container.innerHTML = '<div class="text-zinc-500 text-xs">⏳ Mapeando subitens...</div>';
 
-        function verificarEstruturaDeSubcategorias() {
-            // Busca o nome mestre da Categoria-Mãe primeiro
-            db.ref(`abella/categories/${catId}`).once('value', snapMae => {
-                const maeData = snapMae.val() || {};
-                document.getElementById('slogan-sub').innerText = (maeData.name || maeData.nome || catId).toUpperCase();
-                
-                // Mapeia o subnó exatamente como o módulo de categorias grava
-                const subcategorias = maeData.subcategories;
+            try {
+                const subs = await subcategoriaService.obterPorCategoria(catSlug);
+                container.innerHTML = '';
 
-                // 🌟 REGRA DE PULO AUTOMÁTICO: Se não contiver subcategorias cadastradas, pula direto para a vitrine
-                if (!subcategorias || Object.keys(subcategorias).length === 0) {
-                    window.location.href = `produtos.html?id=${catId}`;
+                if(!subs || Object.keys(subs).length === 0) {
+                    container.innerHTML = '<p class="text-zinc-600 text-xs italic py-2">Nenhuma subcategoria vinculada a esta raiz.</p>';
                     return;
                 }
 
-                // Se houver subcategorias filhas estruturadas, exibe a tela e renderiza
-                document.getElementById('loader-sub').classList.add('hidden');
-                const grid = document.getElementById('grid-subcategorias');
-                grid.classList.remove('hidden');
-                grid.innerHTML = '';
-
-                Object.keys(subcategorias).forEach(subKey => {
-                    const sub = subcategorias[subKey];
-                    if(sub.paused === true || sub.paused === "true") return;
-
-                    const imgRaw = sub.image || sub.imagem || '';
-                    const img = converterGsParaHttp(imgRaw) || 'https://via.placeholder.com/400/141414/818cf8?text=Abella+Joias';
-                    
-                    const card = document.createElement('div');
-                    card.className = "card cursor-pointer flex flex-col justify-between";
-                    card.setAttribute('onclick', `window.location.href='produtos.html?id=${catId}&sub=${subKey}'`);
-                    
-                    card.innerHTML = `
-                        <div class="aspect-square bg-zinc-950 overflow-hidden flex items-center justify-center">
-                            <img src="${img}" class="w-full h-full object-cover hover:scale-105 transition-all duration-300" onerror="this.src='https://via.placeholder.com/400/141414/818cf8?text=Sem+Imagem'">
+                Object.keys(subs).forEach(subSlug => {
+                    const s = subs[subSlug];
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-xl";
+                    div.innerHTML = `
+                        <div>
+                            <span class="text-xs text-white font-bold uppercase">${s.name || subSlug}</span>
+                            <p class="text-[9px] text-zinc-500 font-mono">Caminho: /categories/${catSlug}/subcategories/${subSlug}</p>
                         </div>
-                        <div class="p-4 bg-zinc-900/20 border-t border-zinc-900/60 flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase text-white truncate tracking-wide">${sub.name || sub.nome || subKey}</span>
-                            <span class="gold text-xs">➔</span>
+                        <div class="flex gap-2">
+                            <button onclick="editarSubcatUI('${subSlug}', '${s.name || ''}', '${s.image || ''}')" class="bg-zinc-800 hover:bg-zinc-700 px-3 py-1 text-[10px] font-bold rounded-lg transition-all">Editar</button>
+                            <button onclick="deletarSubcatUI('${subSlug}')" class="bg-red-950/20 border border-red-900/40 text-red-400 px-3 py-1 text-[10px] font-bold rounded-lg transition-all">Excluir</button>
                         </div>
                     `;
-                    grid.appendChild(card);
+                    container.appendChild(div);
                 });
-            });
+            } catch(e) { container.innerHTML = '❌ Falha ao processar nós internos.'; }
+        }
+
+        function editarSubcatUI(slug, name, img) {
+            document.getElementById('subOldSlug').value = slug;
+            document.getElementById('subName').value = name;
+            document.getElementById('subImage').value = img;
+        }
+
+        async function salvarSubcategoriaUI(e) {
+            e.preventDefault();
+            const catSlug = document.getElementById('selectCatMae').value;
+            if(!catSlug) { alert("Escolha a categoria antes de salvar."); return; }
+
+            const name = document.getElementById('subName').value.trim();
+            const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
+            const oldSlug = document.getElementById('subOldSlug').value;
+
+            if(oldSlug && oldSlug !== slug) {
+                await subcategoriaService.deletar(catSlug, oldSlug);
+            }
+
+            await subcategoriaService.salvar(catSlug, slug, { name: name, image: document.getElementById('subImage').value.trim() });
+            document.getElementById('formSubcat').reset();
+            document.getElementById('subOldSlug').value = '';
+            await mudarCategoriaMaeFiltro();
+        }
+
+        async function deletarSubcatUI(subSlug) {
+            const catSlug = document.getElementById('selectCatMae').value;
+            if(confirm("Deseja deletar permanentemente o vínculo desta subcategoria?")) {
+                await subcategoriaService.deletar(catSlug, subSlug);
+                await mudarCategoriaMaeFiltro();
+            }
         }
     </script>
 </body>

@@ -1,18 +1,28 @@
-const ComponenteProgresso = {
-    mostrar(containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        container.innerHTML = `
-            <div class="flex items-center justify-center space-x-2 p-4">
-                <div class="w-4 h-4 bg-amber-500 rounded-full animate-pulse"></div>
-                <div class="w-4 h-4 bg-amber-500 rounded-full animate-pulse delay-75"></div>
-                <div class="w-4 h-4 bg-amber-500 rounded-full animate-pulse delay-150"></div>
-                <span class="text-sm text-gray-500 font-medium pl-2">Carregando dados...</span>
-            </div>
-        `;
+// js/components/progresso.js
+
+const ProgressoComponent = {
+    show: function(message = "Processando requisição...") {
+        let overlay = document.getElementById('global-progress-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'global-progress-overlay';
+            overlay.className = "fixed inset-0 bg-black/80 backdrop-blur-xs z-[9999] flex flex-col items-center justify-center space-y-4 font-sans";
+            overlay.innerHTML = `
+                <div class="w-12 h-12 border-4 border-[#caa85c]/20 border-t-[#caa85c] rounded-full animate-spin"></div>
+                <p id="global-progress-text" class="text-xs font-mono tracking-widest text-gray-300 uppercase animate-pulse"></p>
+            `;
+            document.body.appendChild(overlay);
+        }
+        document.getElementById('global-progress-text').innerText = message;
+        overlay.classList.remove('hidden');
     },
-    esconder(containerId) {
-        const container = document.getElementById(containerId);
-        if (container) container.innerHTML = '';
+
+    hide: function() {
+        const overlay = document.getElementById('global-progress-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
     }
 };
+
+window.ProgressoComponent = ProgressoComponent;

@@ -44,3 +44,23 @@ const StorageUtils = {
 
 window.StorageUtils = StorageUtils;
 window.converterUrlStorage = StorageUtils.converterUrlStorage;
+StorageUtils.uploadImagemProduto =
+async function(file){
+
+    if(!window.storage)
+        throw new Error(
+            "Firebase Storage não iniciado"
+        );
+
+    const nomeArquivo =
+        `produtos/${
+            Date.now()
+        }_${file.name}`;
+
+    const ref =
+        storage.ref(nomeArquivo);
+
+    await ref.put(file);
+
+    return await ref.getDownloadURL();
+};

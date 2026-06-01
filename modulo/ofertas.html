@@ -3,7 +3,82 @@
     <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-gray-100 pb-4 gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <span>🎯</span> Central Avançada de Campanhas e Cupons
+                <span>🎯</span> Central Avança<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
+
+    <div class="max-w-4xl mx-auto space-y-6 text-left">
+        <div class="bg-zinc-950 p-6 rounded-2xl border border-zinc-800">
+            <h2 class="text-xl font-bold text-white">🏷️ Gestor de Campanhas & Liquidação em Massa</h2>
+            <p class="text-xs text-zinc-500 mt-1">Aplique ou remova selos de descontos em percentual por categoria em lote no banco.</p>
+        </div>
+
+        <div class="bg-zinc-950 border border-zinc-800 p-6 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+            <div class="space-y-1">
+                <label class="text-[10px] uppercase text-zinc-400 font-bold">Selecione a Categoria Alvo</label>
+                <select id="ofertaCat" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-[#caa85c]"></select>
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] uppercase text-zinc-400 font-bold">Porcentagem de Desconto (% OFF)</label>
+                <input type="number" id="ofertaPorcentagem" min="0" max="99" value="0" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+            </div>
+            <button onclick="aplicarDescontoLoteUI()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all">
+                ⚡ Executar Ação em Lote
+            </button>
+        </div>
+
+        <div class="bg-zinc-950 border border-zinc-800 p-6 rounded-2xl">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2 mb-4">Avisos Operacionais</h3>
+            <ul class="text-xs text-zinc-400 space-y-2 list-disc pl-4">
+                <li>Definir a porcentagem como <span class="text-red-400 font-bold">0</span> removerá qualquer etiqueta de oferta da categoria selecionada.</li>
+                <li>Esta ação altera imediatamente o preço calculado de exibição na vitrine pública dos clientes.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="../js/firebase/firebase-config.js"></script>
+    <script src="../js/services/categoriaService.js"></script>
+    <script src="../js/services/produtoService.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const select = document.getElementById('ofertaCat');
+            select.innerHTML = '<option value="" disabled selected>Escolha a categoria...</option>';
+            const cats = await categoriaService.listarTodas();
+            Object.keys(cats).forEach(k => {
+                select.innerHTML += `<option value="${k}">${cats[k].name || k}</option>`;
+            });
+        });
+
+        async function aplicarDescontoLoteUI() {
+            const cat = document.getElementById('ofertaCat').value;
+            const desc = parseInt(document.getElementById('ofertaPorcentagem').value) || 0;
+
+            if(!cat) { alert("Selecione a categoria alvo antes de prosseguir."); return; }
+
+            if(confirm(`Deseja forçar o desconto de ${desc}% para todos os produtos da categoria ${cat.toUpperCase()}?`)) {
+                try {
+                    const todosProds = await produtoService.listarTodos();
+                    const filtrados = todosProds.filter(p => p.category === cat);
+
+                    for (let p of filtrados) {
+                        await firebase.database().ref(`abella/products/${p.id}/promo`).set(desc);
+                    }
+
+                    alert(`✨ Sucesso! Campanha de ${desc}% aplicada em lote.`);
+                } catch(e) {
+                    alert("Erro operacional ao atualizar lote.");
+                }
+            }
+        }
+    </script>
+</body>
+</html>da de Campanhas e Cupons
             </h1>
             <p class="text-sm text-gray-500 mt-1">Gerencie cupons inteligentes, incentivos de primeira compra, frete grátis e descontos em lote.</p>
         </div>

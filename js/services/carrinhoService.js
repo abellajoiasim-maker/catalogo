@@ -256,6 +256,11 @@ const CarrinhoService = {
                 0
             );
     },
+    getResumo() {
+
+    return this.calcularTotais();
+
+},
 
     // ==========================================================
     // Totais

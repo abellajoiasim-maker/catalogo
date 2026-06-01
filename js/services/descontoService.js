@@ -1,18 +1,20 @@
+// js/services/descontoService.js
+
 const DescontoService = {
-    async obterPromocoesAtivas() {
-        return new Promise((resolve) => {
-            database.ref('promocoes').once('value', (snapshot) => {
-                const dados = snapshot.val();
-                const ativas = dados ? Object.keys(dados)
-                    .map(key => ({ id: key, ...dados[key] }))
-                    .filter(p => p.ativa === true) : [];
-                resolve(ativas);
-            });
-        });
+    calcularDescontoPix: function(subtotal, porcentagem) {
+        const taxa = parseFloat(porcentagem) || 0;
+        const total = parseFloat(subtotal) || 0;
+        return parseFloat((total * (taxa / 100)).toFixed(2));
     },
 
-    calcularDesconto(precoOriginal, porcentagem) {
-        if (!porcentagem || porcentagem <= 0) return precoOriginal;
-        return precoOriginal * (1 - (porcentagem / 100));
+    obterEtiquetaOferta: function(produto) {
+        if (!produto) return null;
+        if (produto.price < (produto.oldPrice || 0)) {
+            const economia = ((produto.oldPrice - produto.price) / produto.oldPrice) * 100;
+            return `-${Math.round(economia)}% OFF`;
+        }
+        return null;
     }
 };
+
+window.DescontoService = DescontoService;

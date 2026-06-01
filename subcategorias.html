@@ -2,150 +2,95 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Abella Joias • Subcoleções</title>
+    <title>Subcategorias • Abella Joias</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght=300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
         .serif { font-family:'Cinzel', serif; }
         .gold { color:#caa85c; }
         .card { background:#141414; border:1px solid #2a2a2a; border-radius:20px; overflow:hidden; transition:.3s; }
-        .card:hover { border-color:#caa85c; transform: translateY(-3px); }
+        .card:hover { transform:translateY(-5px); border-color:#caa85c; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
     </style>
 </head>
 <body>
-
-    <header class="border-b border-zinc-900 bg-black/50 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto p-5 flex justify-between items-center gap-4">
-            <div>
-                <h1 class="serif gold text-lg uppercase tracking-wider">Abella Joias</h1>
-                <p id="slogan-sub" class="text-[9px] text-zinc-500 uppercase tracking-widest">Aguardando mapeamento...</p>
-            </div>
-            
-            <div class="flex items-center gap-4">
-                <a href="carrinho.html" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] px-4 py-2 rounded-xl transition-all flex items-center gap-4 text-left font-mono text-xs">
-                    <div class="flex items-center gap-1.5 border-r border-zinc-800 pr-3">
-                        <span>🛒</span>
-                        <div>
-                            <span class="block text-zinc-500 text-[8px] uppercase font-sans">Itens</span>
-                            <span id="cart-count" class="gold font-bold">0 pçs</span>
-                        </div>
-                    </div>
-                    <div class="hidden sm:block border-r border-zinc-800 pr-3">
-                        <span class="block text-zinc-500 text-[8px] uppercase font-sans">Peso Total</span>
-                        <span id="cart-weight" class="text-amber-400 font-bold">0.00g</span>
-                    </div>
-                    <div>
-                        <span class="block text-zinc-500 text-[8px] uppercase font-sans">Total Bruto</span>
-                        <span id="cart-total" class="text-emerald-400 font-bold">R$ 0,00</span>
-                    </div>
-                </a>
-
-                <a href="index.html" class="text-xs bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-zinc-400 hover:text-white transition-all">✖ Voltar</a>
-            </div>
+    <header class="sticky top-0 bg-black/90 backdrop-blur border-b border-[#222] z-50">
+        <div class="max-w-7xl mx-auto p-5 flex justify-between items-center">
+            <a href="index.html" class="text-xs text-gray-400 hover:text-white transition-all flex items-center gap-1">
+                ← Voltar para Categorias
+            </a>
+            <h1 id="titulo-categoria" class="serif gold text-sm uppercase tracking-widest">Subcategorias</h1>
+            <a href="carrinho.html" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2">
+                🛒 Carrinho (<span id="cart-count" class="gold font-bold">0</span>)
+            </a>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-6 text-center">
-        <div id="loader-sub" class="py-20 text-zinc-500 font-mono text-xs italic animate-pulse">
-            🔍 Verificando estrutura de subcoleções no banco...
+    <main class="max-w-7xl mx-auto p-6">
+        <div id="loading" class="text-center py-12 text-zinc-500 font-medium text-xs tracking-widest uppercase">
+            ⏳ Carregando Subcategorias Disponíveis...
         </div>
-
-        <div id="grid-subcategorias" class="hidden grid grid-cols-2 md:grid-cols-4 gap-6 text-left">
-        </div>
+        <div id="grid-subcategorias" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
     </main>
 
+    <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/utils/money.js"></script>
+    <script src="js/utils/storage.js"></script>
+    <script src="js/services/carrinhoService.js"></script>
+    <script src="js/services/categoriaService.js"></script>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        document.addEventListener('DOMContentLoaded', async () => {
+            const resumo = carrinhoService.obterResumo();
+            document.getElementById('cart-count').innerText = resumo.totalItens;
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const catId = urlParams.get('id');
+            const urlParams = new URLSearchParams(window.location.search);
+            const catId = urlParams.get('id');
 
-        document.addEventListener('DOMContentLoaded', () => {
-            atualizarResumoDoCarrinho();
+            if (!catId) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            await carregarSubcategorias(catId);
         });
 
-        // Varre o LocalStorage somando as informações brutas
-        function atualizarResumoDoCarrinho() {
-            const carrinho = JSON.parse(localStorage.getItem('carrinho') || '[]');
-            let totalPecas = 0;
-            let totalPeso = 0;
-            let totalValorCheio = 0;
+        async function carregarSubcategorias(catId) {
+            const grid = document.getElementById('grid-subcategorias');
+            const loading = document.getElementById('loading');
+            const titulo = document.getElementById('titulo-categoria');
 
-            carrinho.forEach(item => {
-                const qtd = parseInt(item.quantidade) || 0;
-                totalPecas += qtd;
-                
-                const pesoUnitario = parseFloat(item.peso || item.weight || 0);
-                totalPeso += (pesoUnitario * qtd);
+            try {
+                const categoria = await categoriaService.obterPorId(catId);
+                loading.classList.add('hidden');
 
-                const precoUnitario = parseFloat(item.price || item.precoFinal || 0);
-                totalValorCheio += (precoUnitario * qtd);
-            });
+                if (!categoria) {
+                    grid.innerHTML = `<p class="col-span-full text-zinc-500 text-xs italic py-6">Categoria inválida ou não encontrada.</p>`;
+                    return;
+                }
 
-            const elCount = document.getElementById('cart-count');
-            const elWeight = document.getElementById('cart-weight');
-            const elTotal = document.getElementById('cart-total');
+                titulo.innerText = categoria.name || categoria.nome;
 
-            if (elCount) elCount.innerText = `${totalPecas} pçs`;
-            if (elWeight) elWeight.innerText = `${totalPeso.toFixed(2)}g`;
-            if (elTotal) elTotal.innerText = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValorCheio);
-        }
-
-        if(!catId) {
-            window.location.href = 'index.html';
-        } else {
-            verificarEstruturaDeSubcategorias();
-        }
-
-        function converterGsParaHttp(url) {
-            if (!url) return '';
-            var s = (url || '').trim();
-            if (!s.startsWith('gs://')) return s;
-            var sem = s.replace('gs://', '');
-            var bar = sem.indexOf('/');
-            if (bar === -1) return s;
-            return 'https://firebasestorage.googleapis.com/v0/b/' +
-                   sem.substring(0, bar) + '/o/' +
-                   encodeURIComponent(sem.substring(bar + 1)) + '?alt=media';
-        }
-
-        function verificarEstruturaDeSubcategorias() {
-            db.ref(`abella/categories/${catId}`).once('value', snapMae => {
-                const maeData = snapMae.val() || {};
-                document.getElementById('slogan-sub').innerText = (maeData.name || maeData.nome || catId).toUpperCase();
-                
-                const subcategorias = maeData.subcategories;
-
-                // Como o arquivo está na raiz, aponta direto para produtos.html da raiz
+                const subcategorias = categoria.subcategories;
                 if (!subcategorias || Object.keys(subcategorias).length === 0) {
                     window.location.href = `produtos.html?id=${catId}`;
                     return;
                 }
 
-                document.getElementById('loader-sub').classList.add('hidden');
-                const grid = document.getElementById('grid-subcategorias');
-                grid.classList.remove('hidden');
-                grid.innerHTML = '';
+                Object.keys(subcategories).forEach(subKey => {
+                    const sub = subcategories[subKey];
+                    if (sub.paused === true || sub.paused === "true") return;
 
-                Object.keys(subcategorias).forEach(subKey => {
-                    const sub = subcategorias[subKey];
-                    if(sub.paused === true || sub.paused === "true") return;
-
-                    const imgRaw = sub.image || sub.imagem || '';
-                    const img = converterGsParaHttp(imgRaw) || 'https://via.placeholder.com/400/141414/818cf8?text=Abella+Joias';
-                    
                     const card = document.createElement('div');
-                    card.className = "card cursor-pointer flex flex-col justify-between";
+                    card.className = "card cursor-pointer flex flex-col justify-between animate-fade-in";
                     card.setAttribute('onclick', `window.location.href='produtos.html?id=${catId}&sub=${subKey}'`);
+                    
+                    const img = sub.image || sub.imagem || 'https://via.placeholder.com/400/141414/818cf8?text=Abella+Joias';
                     
                     card.innerHTML = `
                         <div class="aspect-square bg-zinc-950 overflow-hidden flex items-center justify-center">
@@ -158,7 +103,10 @@
                     `;
                     grid.appendChild(card);
                 });
-            });
+            } catch (error) {
+                console.error("Erro ao ler subcategorias da UI:", error);
+                loading.innerText = "❌ Erro ao processar subcategorias da loja.";
+            }
         }
     </script>
 </body>

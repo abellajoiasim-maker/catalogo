@@ -481,3 +481,31 @@ const SubcategoriaService = {
 
 window.SubcategoriaService =
     SubcategoriaService;
+
+// ==========================================================
+// Compatibilidade Legado
+// ==========================================================
+
+window.subcategoriaService =
+    SubcategoriaService;
+
+SubcategoriaService.listarTodas =
+    SubcategoriaService.getList;
+
+SubcategoriaService.buscarPorSlug =
+    SubcategoriaService.getBySlug;
+
+SubcategoriaService.salvarSubcategoria =
+    SubcategoriaService.save;
+
+SubcategoriaService.excluirSubcategoria =
+    SubcategoriaService.delete;
+
+SubcategoriaService.existe =
+    SubcategoriaService.exists;
+
+SubcategoriaService.inscrever =
+    SubcategoriaService.subscribe;
+
+SubcategoriaService.removerInscricao =
+    SubcategoriaService.unsubscribe;

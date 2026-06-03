@@ -1,9 +1,4 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Meu Carrinho • Abella Joias</title>
-<!DOCTYPE html>
 
 <html lang="pt-BR">
 <head>
@@ -536,86 +531,5 @@
 
 </script>
 
-</body>
-</html>
-
-    </main>
-
-    <script src="js/firebase/firebase-config.js"></script>
-    <script src="js/utils/money.js"></script>
-    <script src="js/utils/storage.js"></script>
-    <script src="js/services/carrinhoService.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            renderizarItensCarrinho();
-        });
-
-        function renderizarItensCarrinho() {
-            const container = document.getElementById('itens-carrinho');
-            const lista = carrinhoService.obterItens();
-            const resumo = carrinhoService.obterResumo();
-
-            container.innerHTML = '';
-
-            if(lista.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 text-zinc-500">
-                        <p class="text-xs italic">Seu carrinho está vazio.</p>
-                        <a href="produtos.html" class="inline-block mt-4 text-xs border border-[#caa85c]/30 text-[#caa85c] px-4 py-2 rounded-xl">Ir para Vitrine</a>
-                    </div>
-                `;
-                document.getElementById('resumo-itens').innerText = "0 pçs";
-                document.getElementById('resumo-peso').innerText = "0.00g";
-                document.getElementById('resumo-subtotal').innerText = money.formatar(0);
-                return;
-            }
-
-            lista.forEach((item, index) => {
-                const prc = parseFloat(item.precoFinal || item.price || 0);
-                const itemDiv = document.createElement('div');
-                itemDiv.className = "flex items-center gap-4 bg-zinc-950 p-3 rounded-xl border border-zinc-900";
-                
-                itemDiv.innerHTML = `
-                    <img src="${item.image || item.imagem || 'https://via.placeholder.com/150'}" class="w-12 h-12 rounded-lg object-cover shrink-0 bg-zinc-900">
-                    <div class="flex-1 min-w-0 text-left">
-                        <h4 class="text-white text-xs font-bold truncate">${item.nome}</h4>
-                        <p class="text-[10px] text-zinc-500 font-mono">SKU: ${item.sku} | ⚖️ ${(parseFloat(item.peso || 0) * item.quantidade).toFixed(2)}g</p>
-                        <div class="flex items-center gap-2 mt-1">
-                            <button onclick="alterarQtd(${index}, -1)" class="w-5 h-5 bg-zinc-900 text-white rounded text-xs">-</button>
-                            <span class="text-xs text-white font-mono w-6 text-center">${item.quantidade}</span>
-                            <button onclick="alterarQtd(${index}, 1)" class="w-5 h-5 bg-zinc-900 text-white rounded text-xs">+</button>
-                        </div>
-                    </div>
-                    <div class="text-right font-mono pr-2">
-                        <p class="text-white font-bold text-xs">${money.formatar(prc * item.quantidade)}</p>
-                    </div>
-                    <button onclick="removerDoCarrinho(${index})" class="text-zinc-600 hover:text-red-500 text-xs">✕</button>
-                `;
-                container.appendChild(itemDiv);
-            });
-
-            document.getElementById('resumo-itens').innerText = `${resumo.totalItens} pçs`;
-            document.getElementById('resumo-peso').innerText = `${resumo.pesoTotal.toFixed(2)}g`;
-            document.getElementById('resumo-subtotal').innerText = money.formatar(resumo.subtotal);
-        }
-
-        function alterarQtd(idx, fator) {
-            const lista = carrinhoService.obterItens();
-            const item = lista[idx];
-            if(!item) return;
-            const novaQtd = item.quantidade + fator;
-            if(novaQtd <= 0) {
-                carrinhoService.removerItem(idx);
-            } else {
-                carrinhoService.atualizarQuantidade(idx, novaQtd);
-            }
-            renderizarItensCarrinho();
-        }
-
-        function removerDoCarrinho(idx) {
-            carrinhoService.removerItem(idx);
-            renderizarItensCarrinho();
-        }
-    </script>
 </body>
 </html>

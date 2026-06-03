@@ -1,74 +1,160 @@
 // ======================================================================
-// js/firebase/services/carrinhoService.js
-// Abella Joias - CarrinhoService v2.0
+// js/services/carrinhoService.js
+// Abella Joias • CarrinhoService Premium v3.0
 // ======================================================================
 
 const CarrinhoService = {
 
-    STORAGE_KEY: 'carrinho',
+    STORAGE_KEY: 'abella_carrinho',
 
     // ==========================================================
-    // Helpers
+    // HELPERS
     // ==========================================================
 
-    _safeParse(json) {
+    _safeParse(json){
 
-        try {
+        try{
+
             return JSON.parse(json);
-        } catch {
+
+        }catch(e){
+
             return [];
+
         }
+
     },
 
-    _safeNumber(value, fallback = 0) {
+    _safeNumber(valor, fallback = 0){
 
-        const n = Number(value);
+        const n = Number(valor);
 
         return Number.isFinite(n)
             ? n
             : fallback;
+
+    },
+
+    _resolverPreco(produto){
+
+        return this._safeNumber(
+
+            produto.precoFinal ??
+            produto.price ??
+            produto.preco ??
+            produto.valor ??
+            0
+
+        );
+
+    },
+
+    _resolverPeso(produto){
+
+        return this._safeNumber(
+
+            produto.weight ??
+            produto.peso ??
+            0
+
+        );
+
+    },
+
+    _resolverImagem(produto){
+
+        return (
+            produto.image ||
+            produto.imagem ||
+            produto.foto ||
+            ''
+        );
+
+    },
+
+    _resolverNome(produto){
+
+        return (
+            produto.nome ||
+            produto.name ||
+            'Produto'
+        );
+
+    },
+
+    _resolverCategoria(produto){
+
+        return (
+            produto.category ||
+            produto.categoria ||
+            ''
+        );
+
+    },
+
+    _resolverSubcategoria(produto){
+
+        return (
+            produto.subcategory ||
+            produto.subcategoria ||
+            ''
+        );
+
     },
 
     // ==========================================================
-    // Obter Itens
+    // GET ITENS
     // ==========================================================
 
-    getItens() {
+    getItens(){
 
         return this._safeParse(
+
             localStorage.getItem(
                 this.STORAGE_KEY
             ) || '[]'
+
         );
+
+    },
+
+    obterItens(){
+
+        return this.getItens();
+
     },
 
     // ==========================================================
-    // Salvar Carrinho
+    // SALVAR
     // ==========================================================
 
-    salvarTodos(itens = []) {
+    salvarTodos(itens = []){
 
         localStorage.setItem(
+
             this.STORAGE_KEY,
+
             JSON.stringify(itens)
+
         );
 
         this.notificarMudanca();
+
     },
 
     // ==========================================================
-    // Adicionar Produto
+    // ADICIONAR ITEM
     // ==========================================================
 
     adicionar(
+
         produto,
         quantidade = 1,
         variacao = null
-    ) {
 
-        if (!produto) {
-            return;
-        }
+    ){
+
+        if(!produto) return;
 
         let itens =
             this.getItens();
@@ -79,196 +165,298 @@ const CarrinhoService = {
                 parseInt(quantidade) || 1
             );
 
-        const precoUnitario =
-            this._safeNumber(
-                produto.price ??
-                produto.precoFinal ??
-                produto.preco
-            );
-
-        const pesoUnitario =
-            this._safeNumber(
-                produto.weight ??
-                produto.peso
-            );
-
         const sku =
-            produto.sku || '';
+            (
+                produto.sku ||
+                produto.id ||
+                ''
+            )
+            .toString()
+            .trim();
+
+        if(!sku){
+
+            console.error(
+                'Produto sem SKU:',
+                produto
+            );
+
+            return;
+
+        }
+
+        const preco =
+            this._resolverPreco(produto);
+
+        const peso =
+            this._resolverPeso(produto);
+
+        const variacaoFinal =
+            variacao ||
+            produto.variacao ||
+            null;
 
         const index =
             itens.findIndex(item =>
+
                 item.sku === sku &&
-                item.variacao === variacao
+                (
+                    item.variacao || null
+                ) === (
+                    variacaoFinal || null
+                )
+
             );
 
-        if (index >= 0) {
+        // ==========================================
+        // ITEM EXISTE
+        // ==========================================
+
+        if(index >= 0){
 
             itens[index].quantidade +=
                 quantidade;
 
-        } else {
+        }
+
+        // ==========================================
+        // NOVO ITEM
+        // ==========================================
+
+        else{
 
             itens.push({
+
+                id:
+                    produto.id ||
+                    sku,
 
                 sku,
 
                 nome:
-                    produto.name ||
-                    produto.nome ||
-                    '',
+                    this._resolverNome(produto),
 
                 name:
-                    produto.name ||
-                    produto.nome ||
-                    '',
+                    this._resolverNome(produto),
 
                 image:
-                    produto.image ||
-                    produto.imagem ||
-                    '',
+                    this._resolverImagem(produto),
+
+                imagem:
+                    this._resolverImagem(produto),
+
+                category:
+                    this._resolverCategoria(produto),
+
+                categoria:
+                    this._resolverCategoria(produto),
+
+                subcategory:
+                    this._resolverSubcategoria(produto),
+
+                subcategoria:
+                    this._resolverSubcategoria(produto),
 
                 price:
-                    precoUnitario,
+                    preco,
 
                 precoFinal:
-                    precoUnitario,
+                    preco,
+
+                preco:
+                    preco,
 
                 weight:
-                    pesoUnitario,
+                    peso,
 
                 peso:
-                    pesoUnitario,
+                    peso,
 
                 quantidade,
 
-                variacao
+                variacao:
+                    variacaoFinal,
+
+                addedAt:
+                    Date.now()
+
             });
+
         }
 
         this.salvarTodos(itens);
+
+        return true;
+
+    },
+
+    adicionarItem(produto){
+
+        if(!produto) return;
+
+        return this.adicionar(
+
+            produto,
+
+            produto.quantidade || 1,
+
+            produto.variacao || null
+
+        );
+
     },
 
     // ==========================================================
-    // Remover Produto
+    // REMOVER ITEM
     // ==========================================================
 
-    remover(index) {
+    remover(index){
 
         const itens =
             this.getItens();
 
-        if (
+        if(
             index < 0 ||
             index >= itens.length
-        ) {
+        ){
+
             return;
+
         }
 
         itens.splice(index, 1);
 
         this.salvarTodos(itens);
+
+    },
+
+    removerItem(index){
+
+        this.remover(index);
+
     },
 
     // ==========================================================
-    // Atualizar Quantidade
+    // ATUALIZAR QUANTIDADE
     // ==========================================================
 
     atualizarQuantidade(
+
         index,
         quantidade
-    ) {
+
+    ){
 
         const itens =
             this.getItens();
 
-        if (!itens[index]) {
+        if(!itens[index]){
+
             return;
+
         }
 
-        itens[index].quantidade =
+        quantidade =
             Math.max(
                 1,
-                parseInt(
-                    quantidade
-                ) || 1
+                parseInt(quantidade) || 1
             );
 
+        itens[index].quantidade =
+            quantidade;
+
         this.salvarTodos(itens);
+
     },
 
     // ==========================================================
-    // Verificar Existência
+    // EXISTE PRODUTO
     // ==========================================================
 
     existeProduto(
+
         sku,
         variacao = null
-    ) {
+
+    ){
 
         return this
             .getItens()
             .some(item =>
+
                 item.sku === sku &&
-                item.variacao === variacao
+                (
+                    item.variacao || null
+                ) === (
+                    variacao || null
+                )
+
             );
+
     },
 
     // ==========================================================
-    // Limpar Carrinho
+    // LIMPAR
     // ==========================================================
 
-    limpar() {
+    limpar(){
 
         localStorage.removeItem(
             this.STORAGE_KEY
         );
 
         this.notificarMudanca();
+
+    },
+
+    limparCarrinho(){
+
+        this.limpar();
+
     },
 
     // ==========================================================
-    // Quantidade de Produtos
+    // CONTADORES
     // ==========================================================
 
-    getQuantidadeProdutos() {
+    getQuantidadeProdutos(){
 
         return this
             .getItens()
             .length;
+
     },
 
-    // ==========================================================
-    // Quantidade Total de Peças
-    // ==========================================================
-
-    getQuantidadeItens() {
+    getQuantidadeItens(){
 
         return this
             .getItens()
             .reduce(
+
                 (acc, item) =>
+
                     acc +
                     (
                         parseInt(
                             item.quantidade
                         ) || 0
                     ),
+
                 0
+
             );
+
     },
-    getResumo() {
-
-    return this.calcularTotais();
-
-},
 
     // ==========================================================
-    // Totais
+    // TOTAIS
     // ==========================================================
 
     calcularTotais(
+
         pixDescPorcentagem = 5
-    ) {
+
+    ){
 
         const itens =
             this.getItens();
@@ -281,34 +469,41 @@ const CarrinhoService = {
 
             const preco =
                 this._safeNumber(
-                    item.price ??
-                    item.precoFinal
-                );
 
-            const quantidade =
-                Math.max(
-                    1,
-                    parseInt(
-                        item.quantidade
-                    ) || 1
+                    item.precoFinal ??
+                    item.price ??
+                    item.preco
+
                 );
 
             const peso =
                 this._safeNumber(
-                    item.weight ??
-                    item.peso
+
+                    item.peso ??
+                    item.weight
+
+                );
+
+            const qtd =
+                Math.max(
+
+                    1,
+
+                    parseInt(
+                        item.quantidade
+                    ) || 1
+
                 );
 
             subtotal +=
-                preco *
-                quantidade;
-
-            totalPecas +=
-                quantidade;
+                preco * qtd;
 
             pesoTotal +=
-                peso *
-                quantidade;
+                peso * qtd;
+
+            totalPecas +=
+                qtd;
+
         });
 
         subtotal =
@@ -323,21 +518,26 @@ const CarrinhoService = {
 
         const descontoPix =
             Number(
+
                 (
                     subtotal *
                     (
-                        pixDescPorcentagem /
-                        100
+                        pixDescPorcentagem / 100
                     )
-                ).toFixed(2)
+                )
+                .toFixed(2)
+
             );
 
         const totalPix =
             Number(
+
                 (
                     subtotal -
                     descontoPix
-                ).toFixed(2)
+                )
+                .toFixed(2)
+
             );
 
         return {
@@ -350,62 +550,139 @@ const CarrinhoService = {
 
             descontoPix,
 
-            totalPix
+            totalPix,
+
+            parcelamento6x:
+                Number(
+                    (
+                        subtotal / 6
+                    ).toFixed(2)
+                )
+
         };
+
+    },
+
+    getResumo(){
+
+        return this.calcularTotais();
+
+    },
+
+    obterResumo(){
+
+        return this.getResumo();
+
     },
 
     // ==========================================================
-    // Eventos
+    // EVENTOS
     // ==========================================================
 
-    notificarMudanca() {
+    notificarMudanca(){
+
+        // EVENTO GLOBAL
 
         window.dispatchEvent(
+
             new Event(
                 'carrinhoAtualizado'
             )
+
         );
 
-        if (
+        // CALLBACKS LEGADOS
+
+        if(
             typeof window
                 .atualizarContadorCarrinho ===
             'function'
-        ) {
+        ){
 
             window
                 .atualizarContadorCarrinho();
+
         }
 
-        if (
+        if(
             typeof window
                 .carregarItensCarrinho ===
             'function'
-        ) {
+        ){
 
             window
                 .carregarItensCarrinho();
+
         }
+
+        if(
+            typeof window
+                .atualizarResumoCarrinho ===
+            'function'
+        ){
+
+            window
+                .atualizarResumoCarrinho();
+
+        }
+
     }
+
 };
+
+// ==========================================================
+// EXPORT GLOBAL
+// ==========================================================
 
 window.CarrinhoService =
     CarrinhoService;
 
+window.carrinhoService =
+    CarrinhoService;
 
 // ==========================================================
-// Compatibilidade Legado
+// COMPATIBILIDADE TOTAL
 // ==========================================================
-
-window.carrinhoService = CarrinhoService;
 
 CarrinhoService.obterItens =
-    CarrinhoService.getItens;
+    CarrinhoService.getItens.bind(CarrinhoService);
 
 CarrinhoService.obterResumo =
-    CarrinhoService.getResumo;
+    CarrinhoService.getResumo.bind(CarrinhoService);
 
 CarrinhoService.adicionarItem =
-    CarrinhoService.adicionar;
+    CarrinhoService.adicionarItem.bind(CarrinhoService);
+
+CarrinhoService.removerItem =
+    CarrinhoService.removerItem.bind(CarrinhoService);
 
 CarrinhoService.limparCarrinho =
-    CarrinhoService.limpar;
+    CarrinhoService.limparCarrinho.bind(CarrinhoService);
+
+// ==========================================================
+// AUTO SYNC ENTRE ABAS
+// ==========================================================
+
+window.addEventListener(
+
+    'storage',
+
+    e => {
+
+        if(
+            e.key ===
+            CarrinhoService.STORAGE_KEY
+        ){
+
+            CarrinhoService
+                .notificarMudanca();
+
+        }
+
+    }
+
+);
+
+console.log(
+    '🛒 CarrinhoService Premium v3.0 carregado.'
+);

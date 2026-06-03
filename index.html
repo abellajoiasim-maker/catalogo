@@ -1,161 +1,908 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
     <meta charset="UTF-8">
-    <title>Abella Joias • Catálogo Oficial</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+    <title>Abella Joias • Catálogo Premium</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <meta
+        http-equiv="Cache-Control"
+        content="no-cache, no-store, must-revalidate">
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
     <style>
-        body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
-        .serif { font-family:'Cinzel', serif; }
-        .gold { color:#caa85c; }
-        .card { background:#141414; border:1px solid #2a2a2a; border-radius:20px; overflow:hidden; transition:.3s; }
-        .card:hover { transform:translateY(-5px); border-color:#caa85c; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+
+        *{
+            box-sizing:border-box;
+        }
+
+        html{
+            scroll-behavior:smooth;
+        }
+
+        body{
+            background:#070707;
+            color:#fff;
+            font-family:'Inter',sans-serif;
+            overflow-x:hidden;
+        }
+
+        .serif{
+            font-family:'Cinzel',serif;
+        }
+
+        .gold{
+            color:#caa85c;
+        }
+
+        .bg-card{
+            background:#111;
+            border:1px solid #222;
+        }
+
+        .glass{
+            background:rgba(10,10,10,.82);
+            backdrop-filter:blur(18px);
+        }
+
+        .card-hover{
+            transition:.35s;
+        }
+
+        .card-hover:hover{
+            transform:translateY(-6px);
+            border-color:#caa85c;
+        }
+
+        .hero-gradient{
+            background:
+            radial-gradient(circle at top left,#2d220f 0%,transparent 35%),
+            radial-gradient(circle at bottom right,#1a1a1a 0%,transparent 35%),
+            #070707;
+        }
+
+        ::-webkit-scrollbar{
+            width:8px;
+        }
+
+        ::-webkit-scrollbar-thumb{
+            background:#2a2a2a;
+            border-radius:999px;
+        }
+
     </style>
+
 </head>
-<body>
-    <header class="sticky top-0 bg-black/90 backdrop-blur border-b border-[#222] z-50">
-        <div class="max-w-7xl mx-auto p-5 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="text-center md:text-left">
-                <h1 id="nome" class="serif gold text-xl uppercase tracking-wide">Abella Joias</h1>
-                <p id="slogan" class="text-[9px] text-gray-400 uppercase tracking-widest">Carregando catálogo corporativo...</p>
+
+<body class="min-h-screen pb-28">
+
+    <!-- HEADER -->
+
+    <header class="sticky top-0 z-50 border-b border-zinc-900 glass">
+
+        <div class="max-w-7xl mx-auto px-4 md:px-6">
+
+            <div class="h-20 flex items-center justify-between gap-4">
+
+                <!-- BRAND -->
+
+                <div>
+
+                    <h1
+                        id="nome"
+                        class="serif gold text-xl md:text-2xl uppercase tracking-[0.3em]">
+
+                        Abella Joias
+
+                    </h1>
+
+                    <p
+                        id="slogan"
+                        class="text-[10px] text-zinc-500 uppercase tracking-[0.2em] mt-1">
+
+                        Catálogo Premium
+
+                    </p>
+
+                </div>
+
+                <!-- ACTIONS -->
+
+                <div class="flex items-center gap-3">
+
+                    <!-- GALVANICAS -->
+
+                    <a
+                        href="galvanicas.html"
+                        class="hidden md:flex items-center gap-2 h-12 px-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] transition-all">
+
+                        <span class="text-xs font-bold uppercase tracking-[0.2em]">
+
+                            ✨ Galvânicas
+
+                        </span>
+
+                    </a>
+
+                    <!-- CARRINHO -->
+
+                    <a
+                        href="carrinho.html"
+                        class="flex items-center gap-3 h-12 px-5 rounded-2xl bg-[#caa85c] hover:bg-[#b89a54] text-black transition-all">
+
+                        <span class="text-sm font-black uppercase tracking-[0.2em]">
+
+                            🛒 Carrinho
+
+                        </span>
+
+                        <div class="h-7 px-3 rounded-full bg-black/20 flex items-center">
+
+                            <span
+                                id="cart-count"
+                                class="text-xs font-black">
+
+                                0
+
+                            </span>
+
+                        </div>
+
+                    </a>
+
+                </div>
+
             </div>
-            <a href="galvanicas.html" class="flex items-center gap-2 bg-gradient-to-r from-zinc-900 to-black border border-zinc-800 hover:border-[#caa85c] px-4 py-2.5 rounded-xl transition-all group">
-                <span class="text-[11px] uppercase tracking-wider text-gray-300 group-hover:text-white">✨ Galvânicas Parceiras</span>
-                <span class="gold text-xs font-bold bg-zinc-950 px-2 py-0.5 rounded-md border border-zinc-800 group-hover:border-[#caa85c]">Limeira ➔</span>
-            </a>
-            <a href="carrinho.html" class="bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-2">
-                🛒 Carrinho (<span id="cart-count" class="gold font-bold">0</span>) <span id="cart-total" class="text-gray-400 font-normal ml-1">R$ 0,00</span>
-            </a>
+
         </div>
+
     </header>
 
-    <div id="banner" class="hidden text-center py-3 border-b border-[#caa85c] bg-gradient-to-r from-black to-[#1a1a1a]">
-        <span id="bannerTexto" class="gold font-bold text-xs uppercase tracking-widest"></span>
-    </div>
+    <!-- HERO -->
 
-    <div class="max-w-7xl mx-auto p-6 grid grid-cols-3 gap-4 text-center text-xs">
-        <div class="card p-4 flex flex-col justify-center">
-            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Faturamento</p>
-            <p id="parcelamento" class="gold font-black mt-1 text-sm">Até 6x no cartão</p>
+    <section class="hero-gradient border-b border-zinc-900">
+
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-20">
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+                <!-- LEFT -->
+
+                <div>
+
+                    <div class="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-[#caa85c]/10 border border-[#caa85c]/20 mb-6">
+
+                        <span class="text-[#caa85c] text-xs font-black uppercase tracking-[0.2em]">
+
+                            Catálogo Corporativo Premium
+
+                        </span>
+
+                    </div>
+
+                    <h2 class="text-4xl md:text-6xl leading-tight font-black">
+
+                        Seu novo
+                        <span class="gold">
+                            showroom digital
+                        </span>
+                        de joias no bruto.
+                    </h2>
+
+                    <p class="text-zinc-400 text-base md:text-lg leading-relaxed mt-6 max-w-2xl">
+
+                        Escolha categorias, visualize produtos,
+                        calcule quantidades, veja descontos,
+                        peso total, parcelamento e finalize pedidos
+                        sem precisar entrar em contato para tirar dúvidas.
+
+                    </p>
+
+                    <!-- CTA -->
+
+                    <div class="flex flex-wrap gap-4 mt-8">
+
+                        <a
+                            href="#categorias"
+                            class="h-14 px-8 rounded-2xl bg-[#caa85c] hover:bg-[#b89a54] text-black font-black uppercase tracking-[0.2em] flex items-center justify-center transition-all">
+
+                            Explorar Catálogo
+
+                        </a>
+
+                        <a
+                            id="whats"
+                            target="_blank"
+                            class="h-14 px-8 rounded-2xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-black uppercase tracking-[0.2em] flex items-center justify-center transition-all">
+
+                            WhatsApp
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+                <!-- RIGHT -->
+
+                <div class="grid grid-cols-2 gap-4">
+
+                    <div class="bg-card rounded-[2rem] p-6">
+
+                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+
+                            Parcelamento
+
+                        </p>
+
+                        <p
+                            id="parcelamento"
+                            class="text-3xl font-black gold mt-4">
+
+                            6x sem juros
+
+                        </p>
+
+                    </div>
+
+                    <div class="bg-card rounded-[2rem] p-6">
+
+                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+
+                            Desconto PIX
+
+                        </p>
+
+                        <p
+                            id="pix"
+                            class="text-3xl font-black text-emerald-400 mt-4">
+
+                            5% OFF
+
+                        </p>
+
+                    </div>
+
+                    <div class="bg-card rounded-[2rem] p-6">
+
+                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+
+                            Compra Inteligente
+
+                        </p>
+
+                        <p class="text-lg font-black mt-4 leading-snug">
+
+                            Peso, economia e parcelamento claros.
+
+                        </p>
+
+                    </div>
+
+                    <div class="bg-card rounded-[2rem] p-6">
+
+                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+
+                            Experiência Premium
+
+                        </p>
+
+                        <p class="text-lg font-black mt-4 leading-snug">
+
+                            Desktop e mobile perfeitamente alinhados.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
         </div>
-        <div class="card p-4 flex flex-col justify-center">
-            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Liquidação à Vista</p>
-            <p id="pix" class="gold font-black mt-1 text-sm">5% OFF no PIX</p>
+
+    </section>
+
+    <!-- BANNER -->
+
+    <section
+        id="banner"
+        class="hidden border-b border-[#caa85c]/20 bg-[#caa85c]/10">
+
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center">
+
+            <span
+                id="bannerTexto"
+                class="gold text-sm md:text-base font-black uppercase tracking-[0.2em]">
+            </span>
+
         </div>
-        <div class="card p-4 flex flex-col justify-center">
-            <p class="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Suporte Direto</p>
-            <a id="whats" target="_blank" class="gold font-black mt-1 text-sm block hover:underline">WhatsApp</a>
+
+    </section>
+
+    <!-- SEARCH -->
+
+    <section class="border-b border-zinc-900">
+
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-6">
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                <!-- SEARCH -->
+
+                <div class="lg:col-span-2">
+
+                    <div class="relative">
+
+                        <input
+                            id="busca"
+                            type="text"
+                            placeholder="Buscar categorias..."
+                            class="w-full h-14 rounded-2xl bg-[#111] border border-zinc-800 pl-14 pr-5 text-white outline-none focus:border-[#caa85c]">
+
+                        <div class="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500">
+
+                            🔍
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- GALVANICAS MOBILE -->
+
+                <a
+                    href="galvanicas.html"
+                    class="flex md:hidden items-center justify-center h-14 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-black uppercase tracking-[0.2em]">
+
+                    ✨ Galvânicas Parceiras
+
+                </a>
+
+            </div>
+
         </div>
-    </div>
 
-    <main class="max-w-7xl mx-auto p-6">
-        <div id="loading" class="text-center py-12 text-zinc-500 font-medium text-xs tracking-widest uppercase">
-            ⏳ Carregando Categorias Oficiais...
+    </section>
+
+    <!-- CATEGORIAS -->
+
+    <section
+        id="categorias"
+        class="max-w-7xl mx-auto px-4 md:px-6 py-10">
+
+        <!-- TITLE -->
+
+        <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
+
+            <div>
+
+                <p class="gold text-xs uppercase tracking-[0.3em] font-black">
+
+                    Catálogo Oficial
+
+                </p>
+
+                <h2 class="text-4xl font-black mt-3">
+
+                    Escolha uma categoria
+                </h2>
+
+            </div>
+
+            <p class="text-zinc-500 max-w-xl">
+
+                Navegue pelas categorias premium da Abella
+                e encontre rapidamente os produtos ideais
+                para sua revenda.
+
+            </p>
+
         </div>
-        <div id="grid-categorias" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
-    </main>
 
-   <script src="js/firebase/firebase-config.js"></script>
+        <!-- LOADING -->
 
-<script src="js/utils/money.js"></script>
+        <div
+            id="loading"
+            class="text-center py-20 text-zinc-500 uppercase tracking-[0.3em] text-xs font-bold">
 
-<script src="js/utils/storage.js"></script>
+            Carregando Categorias...
 
-<script src="js/services/carrinhoService.js"></script>
+        </div>
 
-<script src="js/services/categoriaService.js"></script>
+        <!-- GRID -->
 
-<script src="js/services/produtoService.js"></script>
+        <div
+            id="grid-categorias"
+            class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
+        </div>
+
+    </section>
+
+    <!-- BENEFÍCIOS -->
+
+    <section class="border-t border-zinc-900">
+
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-14">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+                <div class="bg-card rounded-[2rem] p-7">
+
+                    <div class="text-4xl">
+
+                        🚚
+
+                    </div>
+
+                    <h3 class="text-xl font-black mt-5">
+
+                        Entrega Organizada
+
+                    </h3>
+
+                    <p class="text-zinc-500 mt-3 leading-relaxed">
+
+                        Informe galvânica, bairro, cidade e logística completa diretamente no checkout.
+
+                    </p>
+
+                </div>
+
+                <div class="bg-card rounded-[2rem] p-7">
+
+                    <div class="text-4xl">
+
+                        💎
+
+                    </div>
+
+                    <h3 class="text-xl font-black mt-5">
+
+                        Catálogo Inteligente
+
+                    </h3>
+
+                    <p class="text-zinc-500 mt-3 leading-relaxed">
+
+                        Produtos organizados com imagens premium, peso, preços e descontos claros.
+
+                    </p>
+
+                </div>
+
+                <div class="bg-card rounded-[2rem] p-7">
+
+                    <div class="text-4xl">
+
+                        📦
+
+                    </div>
+
+                    <h3 class="text-xl font-black mt-5">
+
+                        Pedido Autoexplicativo
+
+                    </h3>
+
+                    <p class="text-zinc-500 mt-3 leading-relaxed">
+
+                        O cliente entende exatamente o que está comprando antes de finalizar.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- FOOTER -->
+
+    <footer class="border-t border-zinc-900">
+
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-10">
+
+            <div class="flex flex-col md:flex-row items-center justify-between gap-5">
+
+                <div>
+
+                    <h3 class="serif gold text-xl uppercase tracking-[0.3em]">
+
+                        Abella Joias
+
+                    </h3>
+
+                    <p class="text-zinc-500 text-sm mt-2">
+
+                        Plataforma premium de pedidos B2B.
+
+                    </p>
+
+                </div>
+
+                <div class="flex items-center gap-4">
+
+                    <a
+                        href="galvanicas.html"
+                        class="h-12 px-5 rounded-2xl bg-zinc-900 border border-zinc-800 text-white font-bold flex items-center">
+
+                        ✨ Galvânicas
+
+                    </a>
+
+                    <a
+                        href="carrinho.html"
+                        class="h-12 px-5 rounded-2xl bg-[#caa85c] text-black font-black flex items-center">
+
+                        🛒 Carrinho
+
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </footer>
+
+    <!-- FLOATING CART -->
+
+    <a
+        href="carrinho.html"
+        class="fixed bottom-5 right-5 z-50">
+
+        <div class="w-16 h-16 rounded-full bg-[#caa85c] shadow-2xl shadow-[#caa85c]/20 flex items-center justify-center relative">
+
+            <span class="text-2xl">
+
+                🛒
+
+            </span>
+
+            <div
+                id="cart-floating"
+                class="absolute -top-2 -right-2 min-w-[28px] h-7 rounded-full bg-white text-black text-xs font-black flex items-center justify-center px-2">
+
+                0
+
+            </div>
+
+        </div>
+
+    </a>
+
+    <!-- SCRIPTS -->
+
+    <script src="js/firebase/firebase-config.js"></script>
+
+    <script src="js/utils/money.js"></script>
+
+    <script src="js/utils/storage.js"></script>
+
+    <script src="js/services/carrinhoService.js"></script>
+
+    <script src="js/services/categoriaService.js"></script>
+
+    <script src="js/services/produtoService.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            atualizarMiniCarrinho();
-            await carregarConfiguracoesVitrine();
-            await carregarCategorias();
-        });
 
-       function atualizarMiniCarrinho() {
+        let TODAS_CATEGORIAS = [];
 
-    const resumo =
-        carrinhoService.obterResumo();
+        document.addEventListener(
+            'DOMContentLoaded',
+            async () => {
 
-    document.getElementById('cart-count').innerText =
-        resumo.totalItens;
+                atualizarMiniCarrinho();
 
-    document.getElementById('cart-total').innerText =
-        MoneyUtils.format(
-            resumo.subtotal
+                await carregarConfiguracoes();
+
+                await carregarCategorias();
+
+                iniciarBusca();
+
+            }
         );
-}
-        async function carregarConfiguracoesVitrine() {
-            try {
-                const snap = await firebase.database().ref('abella/settings').once('value');
-                if(snap.exists()) {
-                    const cfg = snap.val() || {};
-                    const emp = cfg.empresa || {};
-                    document.getElementById('nome').innerText = emp.nome || "Abella Joias";
-                    document.getElementById('slogan').innerText = emp.slogan || "Catálogo de Joias no Bruto";
-                    document.getElementById('parcelamento').innerText = `Até ${cfg.parcelas || emp.parcelas || 6}x no cartão`;
-                    document.getElementById('pix').innerText = `${cfg.pix || emp.pix || 5}% OFF no PIX`;
-                    const fone = (cfg.whatsapp || emp.whatsapp || "5519988207658").replace(/\D/g, '');
-                    document.getElementById('whats').href = `https://wa.me/${fone}`;
-                    
-                    if (cfg.bannerAtivo === true || cfg.bannerAtivo === "true") {
-                        document.getElementById('bannerTexto').innerText = cfg.bannerTexto || "";
-                        document.getElementById('banner').classList.remove('hidden');
+
+        function atualizarMiniCarrinho(){
+
+            const resumo =
+                carrinhoService.obterResumo();
+
+            document.getElementById(
+                'cart-count'
+            ).innerText =
+                resumo.totalItens || 0;
+
+            document.getElementById(
+                'cart-floating'
+            ).innerText =
+                resumo.totalItens || 0;
+
+        }
+
+        async function carregarConfiguracoes(){
+
+            try{
+
+                const snap =
+                    await firebase
+                    .database()
+                    .ref('abella/settings')
+                    .once('value');
+
+                if(!snap.exists()) return;
+
+                const cfg =
+                    snap.val() || {};
+
+                const emp =
+                    cfg.empresa || {};
+
+                document.getElementById(
+                    'nome'
+                ).innerText =
+                    emp.nome || 'Abella Joias';
+
+                document.getElementById(
+                    'slogan'
+                ).innerText =
+                    emp.slogan ||
+                    'Catálogo Premium';
+
+                document.getElementById(
+                    'parcelamento'
+                ).innerText =
+                    `Até ${cfg.parcelas || 6}x`;
+
+                document.getElementById(
+                    'pix'
+                ).innerText =
+                    `${cfg.pix || 5}% OFF`;
+
+                const whats =
+                    (
+                        cfg.whatsapp ||
+                        emp.whatsapp ||
+                        '5519988207658'
+                    ).replace(/\D/g,'');
+
+                document.getElementById(
+                    'whats'
+                ).href =
+                    `https://wa.me/${whats}`;
+
+                if(
+                    cfg.bannerAtivo === true ||
+                    cfg.bannerAtivo === "true"
+                ){
+
+                    document.getElementById(
+                        'banner'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'bannerTexto'
+                    ).innerText =
+                        cfg.bannerTexto || '';
+
+                }
+
+            }catch(e){
+
+                console.error(
+                    'Erro config:',
+                    e
+                );
+
+            }
+
+        }
+
+        async function carregarCategorias(){
+
+            try{
+
+                const grid =
+                    document.getElementById(
+                        'grid-categorias'
+                    );
+
+                const categorias =
+                    await categoriaService
+                    .listarTodas();
+
+                TODAS_CATEGORIAS =
+                    categorias || [];
+
+                document.getElementById(
+                    'loading'
+                ).classList.add('hidden');
+
+                renderizarCategorias(
+                    TODAS_CATEGORIAS
+                );
+
+            }catch(e){
+
+                console.error(
+                    'Erro categorias:',
+                    e
+                );
+
+                document.getElementById(
+                    'loading'
+                ).innerText =
+                    'Erro ao carregar categorias';
+
+            }
+
+        }
+
+        function renderizarCategorias(lista){
+
+            const grid =
+                document.getElementById(
+                    'grid-categorias'
+                );
+
+            grid.innerHTML = '';
+
+            if(!lista.length){
+
+                grid.innerHTML = `
+
+                    <div class="col-span-full text-center py-20">
+
+                        <p class="text-zinc-500 text-sm">
+
+                            Nenhuma categoria encontrada.
+
+                        </p>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+            lista.forEach(cat => {
+
+                if(cat.paused) return;
+
+                const img =
+                    cat.image ||
+                    cat.imagem ||
+                    'https://via.placeholder.com/600';
+
+                grid.innerHTML += `
+
+                    <div
+                        onclick="abrirCategoria('${cat.slug}')"
+                        class="bg-card rounded-[2rem] overflow-hidden cursor-pointer card-hover">
+
+                        <div class="aspect-square overflow-hidden bg-black">
+
+                            <img
+                                src="${img}"
+                                class="w-full h-full object-cover hover:scale-105 transition-all duration-500">
+
+                        </div>
+
+                        <div class="p-5">
+
+                            <div class="flex items-center justify-between gap-4">
+
+                                <div>
+
+                                    <h3 class="text-sm md:text-base font-black uppercase tracking-[0.1em]">
+
+                                        ${cat.name}
+
+                                    </h3>
+
+                                    <p class="text-zinc-500 text-xs mt-2">
+
+                                        Explorar categoria
+
+                                    </p>
+
+                                </div>
+
+                                <div class="text-2xl gold">
+
+                                    →
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            });
+
+        }
+
+        function iniciarBusca(){
+
+            const busca =
+                document.getElementById(
+                    'busca'
+                );
+
+            busca.addEventListener(
+                'input',
+                e => {
+
+                    const termo =
+                        e.target.value
+                        .toLowerCase()
+                        .trim();
+
+                    if(!termo){
+
+                        renderizarCategorias(
+                            TODAS_CATEGORIAS
+                        );
+
+                        return;
+
                     }
+
+                    const filtradas =
+                        TODAS_CATEGORIAS.filter(
+                            c =>
+                            (
+                                c.name || ''
+                            )
+                            .toLowerCase()
+                            .includes(termo)
+                        );
+
+                    renderizarCategorias(
+                        filtradas
+                    );
+
                 }
-            } catch(e) {
-                console.error("Erro ao ler configurações da vitrine", e);
-            }
+            );
+
         }
 
-        async function carregarCategorias() {
-            const grid = document.getElementById('grid-categorias');
-            const loading = document.getElementById('loading');
-            try {
-                const categorias = await categoriaService.listarTodas();
-                grid.innerHTML = '';
-                loading.classList.add('hidden');
+        function abrirCategoria(slug){
 
-                if(!categorias || categorias.length === 0) {
-                    grid.innerHTML = `<p class="col-span-full text-zinc-500 text-xs italic py-6">Nenhuma categoria ativa cadastrada.</p>`;
-                    return;
-                }
+            window.location.href =
+                `subcategorias.html?id=${slug}`;
 
-                categorias.forEach(cat => {
-                    if(cat.paused) return;
-                    const card = document.createElement('div');
-                    card.className = "card cursor-pointer flex flex-col justify-between animate-fade-in";
-                   card.onclick = () => {
-    window.location.href =
-        `subcategorias.html?id=${cat.slug}`;
-};
-                    
-                    const img = cat.image || cat.imagem || 'https://via.placeholder.com/400/141414/818cf8?text=Abella+Joias';
-                    
-                    card.innerHTML = `
-                        <div class="aspect-square bg-zinc-950 overflow-hidden flex items-center justify-center">
-                            <img src="${img}" class="w-full h-full object-cover hover:scale-105 transition-all duration-300" onerror="this.src='https://via.placeholder.com/400/141414/818cf8?text=Sem+Imagem'">
-                        </div>
-                        <div class="p-4 bg-zinc-900/20 border-t border-zinc-900/60 flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase text-white truncate tracking-wide">${cat.name}</span>
-                            <span class="gold text-xs">➔</span>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
-            } catch (error) {
-                console.error("Erro ao listar categorias na UI:", error);
-                loading.innerText = "❌ Falha ao carregar as categorias da vitrine.";
-            }
         }
+
     </script>
+
 </body>
 </html>

@@ -1,4 +1,3 @@
-```html
 <!-- ===================================================================== -->
 <!-- carrinho.html -->
 <!-- Abella Joias • Carrinho Premium v3.0 -->
@@ -660,6 +659,351 @@
             carrinhoService.limpar();
 
         }
+
+        function visualizarRomaneio(){
+
+    const itens =
+        carrinhoService.getItens();
+
+    const resumo =
+        carrinhoService.calcularTotais();
+
+    const nome =
+        document.getElementById('clienteNome')?.value || '';
+
+    const whatsapp =
+        document.getElementById('clienteWhatsapp')?.value || '';
+
+    const cidade =
+        document.getElementById('clienteCidade')?.value || '';
+
+    const localEntrega =
+        document.getElementById('entregaNome')?.value || '';
+
+    const endereco =
+        document.getElementById('endereco')?.value || '';
+
+    const numero =
+        document.getElementById('numero')?.value || '';
+
+    const bairro =
+        document.getElementById('bairro')?.value || '';
+
+    const cidadeEntrega =
+        document.getElementById('cidadeEntrega')?.value || '';
+
+    const pagamento =
+        document.getElementById('formaPagamento')?.value || '';
+
+    const observacoes =
+        document.getElementById('observacoes')?.value || '';
+
+    let linhas = '';
+
+    itens.forEach(item => {
+
+        const preco =
+            Number(
+                item.precoFinal ||
+                item.price ||
+                0
+            );
+
+        const qtd =
+            Number(
+                item.quantidade || 0
+            );
+
+        const subtotal =
+            preco * qtd;
+
+        linhas += `
+
+            <tr>
+
+                <td>${item.sku || ''}</td>
+
+                <td>${item.nome || ''}</td>
+
+                <td style="text-align:center">
+                    ${qtd}
+                </td>
+
+                <td style="text-align:right">
+                    ${preco.toFixed(2)}
+                </td>
+
+                <td style="text-align:right">
+                    ${subtotal.toFixed(2)}
+                </td>
+
+            </tr>
+
+        `;
+
+    });
+
+    const janela =
+        window.open(
+            '',
+            '_blank'
+        );
+
+    janela.document.write(`
+
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>
+Romaneio
+</title>
+
+<style>
+
+body{
+    font-family:Arial,sans-serif;
+    font-size:11px;
+    color:#000;
+    margin:10mm;
+}
+
+h1{
+    margin:0;
+    font-size:18px;
+}
+
+h2{
+    margin:0;
+    font-size:12px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,
+td{
+    border:1px solid #000;
+    padding:4px;
+}
+
+.compacto{
+    margin-top:8px;
+}
+
+.flex{
+    display:flex;
+    justify-content:space-between;
+}
+
+@media print{
+
+    body{
+        margin:5mm;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>
+ABELLA JOIAS
+</h1>
+
+<h2>
+ROMANEIO DE PEDIDO
+</h2>
+
+<hr>
+
+<div class="compacto">
+
+<b>Cliente:</b>
+${nome}
+
+<br>
+
+<b>WhatsApp:</b>
+${whatsapp}
+
+<br>
+
+<b>Cidade:</b>
+${cidade}
+
+</div>
+
+<div class="compacto">
+
+<b>Entrega:</b>
+${localEntrega}
+
+<br>
+
+${endereco},
+${numero}
+
+<br>
+
+${bairro}
+
+<br>
+
+${cidadeEntrega}
+
+</div>
+
+<div class="compacto">
+
+<b>Pagamento:</b>
+${pagamento}
+
+</div>
+
+<table class="compacto">
+
+<thead>
+
+<tr>
+
+<th style="width:90px">
+SKU
+</th>
+
+<th>
+Produto
+</th>
+
+<th style="width:50px">
+Qtd
+</th>
+
+<th style="width:80px">
+Unit.
+</th>
+
+<th style="width:90px">
+Total
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+${linhas}
+
+</tbody>
+
+</table>
+
+<div class="compacto">
+
+<table>
+
+<tr>
+
+<td>
+Peças
+</td>
+
+<td>
+${resumo.totalPecas}
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+Peso
+</td>
+
+<td>
+${resumo.pesoTotal.toFixed(2)} g
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+Subtotal
+</td>
+
+<td>
+R$ ${resumo.subtotal.toFixed(2)}
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+Desconto PIX
+</td>
+
+<td>
+R$ ${resumo.descontoPix.toFixed(2)}
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+Total PIX
+</td>
+
+<td>
+R$ ${resumo.totalPix.toFixed(2)}
+</td>
+
+</tr>
+
+</table>
+
+</div>
+
+<div class="compacto">
+
+<b>Observações:</b>
+
+<br>
+
+${observacoes || '-'}
+
+</div>
+
+<script>
+
+window.onload = function(){
+
+    window.print();
+
+};
+
+<\/script>
+
+</body>
+
+</html>
+
+    `);
+
+    janela.document.close();
+
+}
 
         function finalizarPedido(){
 

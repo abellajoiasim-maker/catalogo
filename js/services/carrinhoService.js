@@ -88,12 +88,17 @@ const CarrinhoService = {
 
     ){
 
-        if(!produto){
+      if(
+    !produto ||
+    typeof produto !== 'object'
+){
+    console.error(
+        'Produto inválido:',
+        produto
+    );
 
-            return false;
-
-        }
-
+    return false;
+}
         let itens =
             this.getItens();
 
@@ -109,15 +114,16 @@ const CarrinhoService = {
 
             );
 
-        const sku =
-            (
-                produto.sku ||
-                produto.id ||
-                ''
-            )
-            .toString()
-            .trim();
-
+    const sku =
+(
+    produto.sku ||
+    produto.id ||
+    ''
+)
+.toString()
+.trim()
+.toUpperCase();
+        
         if(!sku){
 
             console.error(
@@ -129,8 +135,10 @@ const CarrinhoService = {
 
         }
 
-        const preco =
-            this._safeNumber(
+    const preco =
+    Math.max(
+        0,
+        this._safeNumber(
 
                 produto.precoFinal ??
                 produto.price ??
@@ -162,12 +170,27 @@ const CarrinhoService = {
 
         // ITEM EXISTE
 
-        if(index >= 0){
+  if(index >= 0){
 
-            itens[index].quantidade +=
-                quantidade;
+    itens[index].quantidade += quantidade;
 
-        }
+    itens[index].precoFinal = preco;
+    itens[index].price = preco;
+
+    itens[index].peso = peso;
+    itens[index].weight = peso;
+
+    itens[index].image =
+        produto.image ||
+        produto.imagem ||
+        '';
+
+    itens[index].imagem =
+        produto.image ||
+        produto.imagem ||
+        '';
+
+}
 
         // NOVO ITEM
 
@@ -371,7 +394,13 @@ const CarrinhoService = {
                 );
 
             const peso =
-                this._safeNumber(
+    Math.min(
+
+        10000,
+
+        Math.max(
+            0,
+            this._safeNumber(
 
                     item.peso ??
                     item.weight ??

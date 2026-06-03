@@ -1,11 +1,12 @@
+```javascript
 // ======================================================================
 // js/services/carrinhoService.js
-// Abella Joias • CarrinhoService Premium v3.0
+// Abella Joias • CarrinhoService Premium v3.0 FINAL
 // ======================================================================
 
 const CarrinhoService = {
 
-    STORAGE_KEY: 'abella_carrinho',
+    STORAGE_KEY:'abella_carrinho',
 
     // ==========================================================
     // HELPERS
@@ -25,80 +26,14 @@ const CarrinhoService = {
 
     },
 
-    _safeNumber(valor, fallback = 0){
+    _safeNumber(valor,fallback = 0){
 
-        const n = Number(valor);
+        const n =
+            Number(valor);
 
         return Number.isFinite(n)
             ? n
             : fallback;
-
-    },
-
-    _resolverPreco(produto){
-
-        return this._safeNumber(
-
-            produto.precoFinal ??
-            produto.price ??
-            produto.preco ??
-            produto.valor ??
-            0
-
-        );
-
-    },
-
-    _resolverPeso(produto){
-
-        return this._safeNumber(
-
-            produto.weight ??
-            produto.peso ??
-            0
-
-        );
-
-    },
-
-    _resolverImagem(produto){
-
-        return (
-            produto.image ||
-            produto.imagem ||
-            produto.foto ||
-            ''
-        );
-
-    },
-
-    _resolverNome(produto){
-
-        return (
-            produto.nome ||
-            produto.name ||
-            'Produto'
-        );
-
-    },
-
-    _resolverCategoria(produto){
-
-        return (
-            produto.category ||
-            produto.categoria ||
-            ''
-        );
-
-    },
-
-    _resolverSubcategoria(produto){
-
-        return (
-            produto.subcategory ||
-            produto.subcategoria ||
-            ''
-        );
 
     },
 
@@ -125,7 +60,7 @@ const CarrinhoService = {
     },
 
     // ==========================================================
-    // SALVAR
+    // SAVE
     // ==========================================================
 
     salvarTodos(itens = []){
@@ -143,7 +78,7 @@ const CarrinhoService = {
     },
 
     // ==========================================================
-    // ADICIONAR ITEM
+    // ADD ITEM
     // ==========================================================
 
     adicionar(
@@ -154,15 +89,25 @@ const CarrinhoService = {
 
     ){
 
-        if(!produto) return;
+        if(!produto){
+
+            return false;
+
+        }
 
         let itens =
             this.getItens();
 
         quantidade =
-            Math.max(
-                1,
-                parseInt(quantidade) || 1
+            Math.min(
+
+                999,
+
+                Math.max(
+                    1,
+                    parseInt(quantidade) || 1
+                )
+
             );
 
         const sku =
@@ -177,24 +122,32 @@ const CarrinhoService = {
         if(!sku){
 
             console.error(
-                'Produto sem SKU:',
+                'Produto sem SKU',
                 produto
             );
 
-            return;
+            return false;
 
         }
 
         const preco =
-            this._resolverPreco(produto);
+            this._safeNumber(
+
+                produto.precoFinal ??
+                produto.price ??
+                produto.preco ??
+                0
+
+            );
 
         const peso =
-            this._resolverPeso(produto);
+            this._safeNumber(
 
-        const variacaoFinal =
-            variacao ||
-            produto.variacao ||
-            null;
+                produto.peso ??
+                produto.weight ??
+                0
+
+            );
 
         const index =
             itens.findIndex(item =>
@@ -203,14 +156,12 @@ const CarrinhoService = {
                 (
                     item.variacao || null
                 ) === (
-                    variacaoFinal || null
+                    variacao || null
                 )
 
             );
 
-        // ==========================================
         // ITEM EXISTE
-        // ==========================================
 
         if(index >= 0){
 
@@ -219,9 +170,7 @@ const CarrinhoService = {
 
         }
 
-        // ==========================================
         // NOVO ITEM
-        // ==========================================
 
         else{
 
@@ -234,51 +183,51 @@ const CarrinhoService = {
                 sku,
 
                 nome:
-                    this._resolverNome(produto),
+                    produto.nome ||
+                    produto.name ||
+                    'Produto',
 
                 name:
-                    this._resolverNome(produto),
+                    produto.nome ||
+                    produto.name ||
+                    'Produto',
 
                 image:
-                    this._resolverImagem(produto),
+                    produto.image ||
+                    produto.imagem ||
+                    '',
 
                 imagem:
-                    this._resolverImagem(produto),
-
-                category:
-                    this._resolverCategoria(produto),
+                    produto.image ||
+                    produto.imagem ||
+                    '',
 
                 categoria:
-                    this._resolverCategoria(produto),
-
-                subcategory:
-                    this._resolverSubcategoria(produto),
+                    produto.category ||
+                    produto.categoria ||
+                    '',
 
                 subcategoria:
-                    this._resolverSubcategoria(produto),
-
-                price:
-                    preco,
+                    produto.subcategory ||
+                    produto.subcategoria ||
+                    '',
 
                 precoFinal:
                     preco,
 
-                preco:
+                price:
                     preco,
 
-                weight:
+                peso:
                     peso,
 
-                peso:
+                weight:
                     peso,
 
                 quantidade,
 
                 variacao:
-                    variacaoFinal,
-
-                addedAt:
-                    Date.now()
+                    variacao || null
 
             });
 
@@ -292,7 +241,11 @@ const CarrinhoService = {
 
     adicionarItem(produto){
 
-        if(!produto) return;
+        if(!produto){
+
+            return false;
+
+        }
 
         return this.adicionar(
 
@@ -307,7 +260,7 @@ const CarrinhoService = {
     },
 
     // ==========================================================
-    // REMOVER ITEM
+    // REMOVE
     // ==========================================================
 
     remover(index){
@@ -324,7 +277,7 @@ const CarrinhoService = {
 
         }
 
-        itens.splice(index, 1);
+        itens.splice(index,1);
 
         this.salvarTodos(itens);
 
@@ -337,7 +290,7 @@ const CarrinhoService = {
     },
 
     // ==========================================================
-    // ATUALIZAR QUANTIDADE
+    // UPDATE QTD
     // ==========================================================
 
     atualizarQuantidade(
@@ -356,42 +309,19 @@ const CarrinhoService = {
 
         }
 
-        quantidade =
-            Math.max(
-                1,
-                parseInt(quantidade) || 1
-            );
-
         itens[index].quantidade =
-            quantidade;
+            Math.min(
 
-        this.salvarTodos(itens);
+                999,
 
-    },
-
-    // ==========================================================
-    // EXISTE PRODUTO
-    // ==========================================================
-
-    existeProduto(
-
-        sku,
-        variacao = null
-
-    ){
-
-        return this
-            .getItens()
-            .some(item =>
-
-                item.sku === sku &&
-                (
-                    item.variacao || null
-                ) === (
-                    variacao || null
+                Math.max(
+                    1,
+                    parseInt(quantidade) || 1
                 )
 
             );
+
+        this.salvarTodos(itens);
 
     },
 
@@ -416,54 +346,19 @@ const CarrinhoService = {
     },
 
     // ==========================================================
-    // CONTADORES
-    // ==========================================================
-
-    getQuantidadeProdutos(){
-
-        return this
-            .getItens()
-            .length;
-
-    },
-
-    getQuantidadeItens(){
-
-        return this
-            .getItens()
-            .reduce(
-
-                (acc, item) =>
-
-                    acc +
-                    (
-                        parseInt(
-                            item.quantidade
-                        ) || 0
-                    ),
-
-                0
-
-            );
-
-    },
-
-    // ==========================================================
-    // TOTAIS
+    // TOTALS
     // ==========================================================
 
     calcularTotais(
-
-        pixDescPorcentagem = 5
-
+        descontoPixPercentual = 5
     ){
 
         const itens =
             this.getItens();
 
         let subtotal = 0;
-        let totalPecas = 0;
         let pesoTotal = 0;
+        let totalPecas = 0;
 
         itens.forEach(item => {
 
@@ -472,7 +367,7 @@ const CarrinhoService = {
 
                     item.precoFinal ??
                     item.price ??
-                    item.preco
+                    0
 
                 );
 
@@ -480,19 +375,17 @@ const CarrinhoService = {
                 this._safeNumber(
 
                     item.peso ??
-                    item.weight
+                    item.weight ??
+                    0
 
                 );
 
             const qtd =
                 Math.max(
-
                     1,
-
                     parseInt(
                         item.quantidade
                     ) || 1
-
                 );
 
             subtotal +=
@@ -522,7 +415,7 @@ const CarrinhoService = {
                 (
                     subtotal *
                     (
-                        pixDescPorcentagem / 100
+                        descontoPixPercentual / 100
                     )
                 )
                 .toFixed(2)
@@ -544,15 +437,15 @@ const CarrinhoService = {
 
             subtotal,
 
-            totalPecas,
-
             pesoTotal,
+
+            totalPecas,
 
             descontoPix,
 
             totalPix,
 
-            parcelamento6x:
+            parcelado6x:
                 Number(
                     (
                         subtotal / 6
@@ -576,12 +469,10 @@ const CarrinhoService = {
     },
 
     // ==========================================================
-    // EVENTOS
+    // EVENTS
     // ==========================================================
 
     notificarMudanca(){
-
-        // EVENTO GLOBAL
 
         window.dispatchEvent(
 
@@ -591,47 +482,12 @@ const CarrinhoService = {
 
         );
 
-        // CALLBACKS LEGADOS
-
-        if(
-            typeof window
-                .atualizarContadorCarrinho ===
-            'function'
-        ){
-
-            window
-                .atualizarContadorCarrinho();
-
-        }
-
-        if(
-            typeof window
-                .carregarItensCarrinho ===
-            'function'
-        ){
-
-            window
-                .carregarItensCarrinho();
-
-        }
-
-        if(
-            typeof window
-                .atualizarResumoCarrinho ===
-            'function'
-        ){
-
-            window
-                .atualizarResumoCarrinho();
-
-        }
-
     }
 
 };
 
 // ==========================================================
-// EXPORT GLOBAL
+// EXPORT
 // ==========================================================
 
 window.CarrinhoService =
@@ -641,7 +497,7 @@ window.carrinhoService =
     CarrinhoService;
 
 // ==========================================================
-// COMPATIBILIDADE TOTAL
+// LEGACY
 // ==========================================================
 
 CarrinhoService.obterItens =
@@ -659,30 +515,7 @@ CarrinhoService.removerItem =
 CarrinhoService.limparCarrinho =
     CarrinhoService.limparCarrinho.bind(CarrinhoService);
 
-// ==========================================================
-// AUTO SYNC ENTRE ABAS
-// ==========================================================
-
-window.addEventListener(
-
-    'storage',
-
-    e => {
-
-        if(
-            e.key ===
-            CarrinhoService.STORAGE_KEY
-        ){
-
-            CarrinhoService
-                .notificarMudanca();
-
-        }
-
-    }
-
-);
-
 console.log(
-    '🛒 CarrinhoService Premium v3.0 carregado.'
+    '🛒 CarrinhoService Premium carregado.'
 );
+```

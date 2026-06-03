@@ -1,76 +1,1181 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
     <meta charset="UTF-8">
+
+    <title>Ofertas Premium • Abella Joias</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+
+        body{
+            font-family:'Inter',sans-serif;
+            background:#050505;
+            color:#fff;
+            overflow-x:hidden;
+        }
+
+        .glass{
+            background:rgba(18,18,18,0.92);
+            backdrop-filter:blur(20px);
+            border:1px solid rgba(255,255,255,0.05);
+        }
+
+        .gold{
+            color:#caa85c;
+        }
+
+        .gold-bg{
+            background:#caa85c;
+        }
+
+        .border-gold{
+            border-color:#caa85c;
+        }
+
+        .input{
+            width:100%;
+            background:#0f0f0f;
+            border:1px solid #272727;
+            border-radius:18px;
+            padding:14px 16px;
+            color:white;
+            outline:none;
+            transition:.2s;
+            font-size:13px;
+        }
+
+        .input:focus{
+            border-color:#caa85c;
+            box-shadow:0 0 0 3px rgba(202,168,92,0.15);
+        }
+
+        .btn-gold{
+            background:#caa85c;
+            color:black;
+            font-weight:900;
+            letter-spacing:.12em;
+            transition:.2s;
+        }
+
+        .btn-gold:hover{
+            transform:translateY(-2px);
+            filter:brightness(1.05);
+        }
+
+        .card{
+            background:#101010;
+            border:1px solid #222;
+            border-radius:28px;
+        }
+
+        .badge{
+            padding:6px 10px;
+            border-radius:999px;
+            font-size:10px;
+            font-weight:800;
+            letter-spacing:.12em;
+            text-transform:uppercase;
+        }
+
+        .scrollbar::-webkit-scrollbar{
+            width:6px;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb{
+            background:#333;
+            border-radius:20px;
+        }
+
+        .animate-fade{
+            animation:fade .3s ease;
+        }
+
+        @keyframes fade{
+            from{
+                opacity:0;
+                transform:translateY(10px);
+            }
+            to{
+                opacity:1;
+                transform:translateY(0);
+            }
+        }
+
+    </style>
+
 </head>
-<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
 
-    <div class="max-w-4xl mx-auto space-y-6 text-left">
-        <div class="bg-zinc-950 p-6 rounded-2xl border border-zinc-800">
-            <h2 class="text-xl font-bold text-white">🏷️ Gestor de Campanhas & Liquidação em Massa</h2>
-            <p class="text-xs text-zinc-500 mt-1">Aplique ou remova selos de descontos em percentual por categoria em lote no banco.</p>
-        </div>
+<body>
 
-        <div class="bg-zinc-950 border border-zinc-800 p-6 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-            <div class="space-y-1">
-                <label class="text-[10px] uppercase text-zinc-400 font-bold">Selecione a Categoria Alvo</label>
-                <select id="ofertaCat" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-[#caa85c]"></select>
+    <div class="min-h-screen p-4 md:p-8">
+
+        <div class="max-w-7xl mx-auto space-y-6">
+
+            <!-- HEADER -->
+
+            <div class="glass rounded-[2rem] p-6 md:p-8 flex flex-col xl:flex-row justify-between gap-6 items-start xl:items-center">
+
+                <div>
+
+                    <div class="flex items-center gap-3 flex-wrap">
+
+                        <div class="w-14 h-14 rounded-2xl bg-[#caa85c] flex items-center justify-center text-black text-2xl font-black">
+                            %
+                        </div>
+
+                        <div>
+
+                            <h1 class="text-3xl md:text-4xl font-black">
+                                Ofertas Premium
+                            </h1>
+
+                            <p class="text-zinc-500 mt-1 text-sm">
+                                Central completa de campanhas, descontos, cupons, etiquetas e promoções automáticas.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full xl:w-auto">
+
+                    <div class="card p-4 text-center">
+                        <p class="text-zinc-500 text-[10px] uppercase font-bold">
+                            Campanhas
+                        </p>
+                        <h2 id="totalCampanhas" class="text-2xl font-black gold mt-1">
+                            0
+                        </h2>
+                    </div>
+
+                    <div class="card p-4 text-center">
+                        <p class="text-zinc-500 text-[10px] uppercase font-bold">
+                            Cupons
+                        </p>
+                        <h2 id="totalCupons" class="text-2xl font-black gold mt-1">
+                            0
+                        </h2>
+                    </div>
+
+                    <div class="card p-4 text-center">
+                        <p class="text-zinc-500 text-[10px] uppercase font-bold">
+                            Flash
+                        </p>
+                        <h2 id="totalFlash" class="text-2xl font-black gold mt-1">
+                            0
+                        </h2>
+                    </div>
+
+                    <div class="card p-4 text-center">
+                        <p class="text-zinc-500 text-[10px] uppercase font-bold">
+                            Selos
+                        </p>
+                        <h2 id="totalBadges" class="text-2xl font-black gold mt-1">
+                            0
+                        </h2>
+                    </div>
+
+                </div>
+
             </div>
-            <div class="space-y-1">
-                <label class="text-[10px] uppercase text-zinc-400 font-bold">Porcentagem de Desconto (% OFF)</label>
-                <input type="number" id="ofertaPorcentagem" min="0" max="99" value="0" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+
+            <!-- GRID -->
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+                <!-- LEFT -->
+
+                <div class="xl:col-span-2 space-y-6">
+
+                    <!-- CAMPANHA -->
+
+                    <div class="card p-6 md:p-8">
+
+                        <div class="flex items-center justify-between gap-4 flex-wrap">
+
+                            <div>
+
+                                <h2 class="text-2xl font-black">
+                                    🏷️ Campanha por Categoria
+                                </h2>
+
+                                <p class="text-zinc-500 text-sm mt-1">
+                                    Crie liquidações em lote com selos automáticos.
+                                </p>
+
+                            </div>
+
+                            <div class="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                EM MASSA
+                            </div>
+
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Categoria
+                                </label>
+
+                                <select id="categoriaCampanha" class="input mt-2">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Subcategoria
+                                </label>
+
+                                <select id="subcategoriaCampanha" class="input mt-2">
+                                    <option value="">Todas</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Desconto %
+                                </label>
+
+                                <input type="number" id="descontoCampanha" value="10" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Nome da Oferta
+                                </label>
+
+                                <input type="text" id="nomeCampanha" value="SUPER OFERTA" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Cor do Selo
+                                </label>
+
+                                <input type="color" id="corCampanha" value="#caa85c" class="input mt-2 h-14">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Ícone
+                                </label>
+
+                                <select id="iconeCampanha" class="input mt-2">
+                                    <option value="🔥">🔥 Relâmpago</option>
+                                    <option value="💎">💎 Luxo</option>
+                                    <option value="🏷️">🏷️ Oferta</option>
+                                    <option value="⚡">⚡ Flash</option>
+                                    <option value="🛍️">🛍️ Promo</option>
+                                </select>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-6 flex flex-wrap gap-3">
+
+                            <button onclick="aplicarCampanha()" class="btn-gold px-8 h-14 rounded-2xl">
+                                APLICAR CAMPANHA
+                            </button>
+
+                            <button onclick="removerCampanha()" class="bg-zinc-800 hover:bg-zinc-700 px-8 h-14 rounded-2xl font-black uppercase tracking-[0.15em]">
+                                REMOVER
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <!-- CUPONS -->
+
+                    <div class="card p-6 md:p-8">
+
+                        <div class="flex items-center justify-between flex-wrap gap-4">
+
+                            <div>
+
+                                <h2 class="text-2xl font-black">
+                                    🎟️ Gestão de Cupons
+                                </h2>
+
+                                <p class="text-zinc-500 text-sm mt-1">
+                                    Cupons por valor, primeira compra, PIX, aniversário e campanhas exclusivas.
+                                </p>
+
+                            </div>
+
+                            <div class="badge bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                                CUPONS
+                            </div>
+
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-8">
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Código
+                                </label>
+
+                                <input type="text" id="cupomCodigo" value="ABELLA10" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Tipo
+                                </label>
+
+                                <select id="cupomTipo" class="input mt-2">
+                                    <option value="percentual">Percentual %</option>
+                                    <option value="valor">Valor Fixo</option>
+                                    <option value="frete">Frete Grátis</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Desconto
+                                </label>
+
+                                <input type="number" id="cupomValor" value="10" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Compra Mínima
+                                </label>
+
+                                <input type="number" id="cupomMinimo" value="0" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Limite de Uso
+                                </label>
+
+                                <input type="number" id="cupomLimite" value="999" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Validade
+                                </label>
+
+                                <input type="date" id="cupomValidade" class="input mt-2">
+                            </div>
+
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
+
+                            <label class="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+                                <input type="checkbox" id="cupomPrimeiraCompra">
+                                <span class="text-sm">
+                                    Primeira Compra
+                                </span>
+                            </label>
+
+                            <label class="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+                                <input type="checkbox" id="cupomPix">
+                                <span class="text-sm">
+                                    Exclusivo PIX
+                                </span>
+                            </label>
+
+                            <label class="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
+                                <input type="checkbox" id="cupomAtivo" checked>
+                                <span class="text-sm">
+                                    Cupom Ativo
+                                </span>
+                            </label>
+
+                        </div>
+
+                        <div class="mt-6">
+
+                            <button onclick="criarCupom()" class="btn-gold px-8 h-14 rounded-2xl">
+                                CRIAR CUPOM
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <!-- FLASH -->
+
+                    <div class="card p-6 md:p-8">
+
+                        <div class="flex items-center justify-between flex-wrap gap-4">
+
+                            <div>
+
+                                <h2 class="text-2xl font-black">
+                                    ⚡ Oferta Relâmpago
+                                </h2>
+
+                                <p class="text-zinc-500 text-sm mt-1">
+                                    Promoções com contagem regressiva automática.
+                                </p>
+
+                            </div>
+
+                            <div class="badge bg-red-500/20 text-red-400 border border-red-500/30">
+                                FLASH SALE
+                            </div>
+
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Título
+                                </label>
+
+                                <input type="text" id="flashTitulo" value="OFERTA RELÂMPAGO" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Desconto %
+                                </label>
+
+                                <input type="number" id="flashDesconto" value="15" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Início
+                                </label>
+
+                                <input type="datetime-local" id="flashInicio" class="input mt-2">
+                            </div>
+
+                            <div>
+                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
+                                    Encerramento
+                                </label>
+
+                                <input type="datetime-local" id="flashFim" class="input mt-2">
+                            </div>
+
+                        </div>
+
+                        <div class="mt-6">
+
+                            <button onclick="criarFlash()" class="btn-gold px-8 h-14 rounded-2xl">
+                                PUBLICAR OFERTA FLASH
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- RIGHT -->
+
+                <div class="space-y-6">
+
+                    <!-- PREVIEW -->
+
+                    <div class="card p-6">
+
+                        <h2 class="text-xl font-black">
+                            👁️ Preview da Oferta
+                        </h2>
+
+                        <div class="mt-6 bg-black rounded-[2rem] border border-zinc-900 overflow-hidden">
+
+                            <div class="aspect-square relative">
+
+                                <img
+                                    src="https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1200&auto=format&fit=crop"
+                                    class="w-full h-full object-cover">
+
+                                <div id="previewBadge"
+                                     class="absolute top-4 left-4 px-4 py-2 rounded-full text-xs font-black uppercase tracking-[0.15em]"
+                                     style="background:#caa85c;color:black;">
+
+                                    🔥 10% OFF
+
+                                </div>
+
+                            </div>
+
+                            <div class="p-5">
+
+                                <h3 class="text-xl font-black">
+                                    Gargantilha Premium
+                                </h3>
+
+                                <div class="flex items-end justify-between mt-5">
+
+                                    <div>
+
+                                        <p class="text-zinc-500 line-through text-sm">
+                                            R$ 99,90
+                                        </p>
+
+                                        <h4 class="text-3xl font-black gold">
+                                            R$ 79,90
+                                        </h4>
+
+                                    </div>
+
+                                    <div class="text-right">
+
+                                        <p class="text-emerald-400 font-black text-sm">
+                                            Você economiza
+                                        </p>
+
+                                        <p class="text-emerald-400 font-black text-xl">
+                                            R$ 20,00
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- LOG -->
+
+                    <div class="card p-6">
+
+                        <div class="flex items-center justify-between">
+
+                            <h2 class="text-xl font-black">
+                                📜 Log Operacional
+                            </h2>
+
+                            <button onclick="limparLog()" class="text-xs text-red-400">
+                                Limpar
+                            </button>
+
+                        </div>
+
+                        <div id="log"
+                             class="mt-5 bg-black rounded-2xl border border-zinc-900 p-4 h-[420px] overflow-y-auto text-xs space-y-2 scrollbar">
+
+                            <p class="text-zinc-500">
+                                Sistema inicializado.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
-            <button onclick="aplicarDescontoLoteUI()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all">
-                ⚡ Executar Ação em Lote
-            </button>
+
         </div>
 
-        <div class="bg-zinc-950 border border-zinc-800 p-6 rounded-2xl">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2 mb-4">Avisos Operacionais</h3>
-            <ul class="text-xs text-zinc-400 space-y-2 list-disc pl-4">
-                <li>Definir a porcentagem como <span class="text-red-400 font-bold">0</span> removerá qualquer etiqueta de oferta da categoria selecionada.</li>
-                <li>Esta ação altera imediatamente o preço calculado de exibição na vitrine pública dos clientes.</li>
-            </ul>
-        </div>
     </div>
 
     <script src="../js/firebase/firebase-config.js"></script>
-    <script src="../js/services/categoriaService.js"></script>
-    <script src="../js/services/produtoService.js"></script>
+
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const select = document.getElementById('ofertaCat');
-            select.innerHTML = '<option value="" disabled selected>Escolha a categoria...</option>';
-            const cats = await categoriaService.listarTodas();
-            Object.keys(cats).forEach(k => {
-                select.innerHTML += `<option value="${k}">${cats[k].name || k}</option>`;
-            });
-        });
 
-        async function aplicarDescontoLoteUI() {
-            const cat = document.getElementById('ofertaCat').value;
-            const desc = parseInt(document.getElementById('ofertaPorcentagem').value) || 0;
+        const db =
+            firebase.database();
 
-            if(!cat) { alert("Selecione a categoria alvo antes de prosseguir."); return; }
+        const categoriasSelect =
+            document.getElementById(
+                'categoriaCampanha'
+            );
 
-            if(confirm(`Deseja forçar o desconto de ${desc}% para todos os produtos da categoria ${cat.toUpperCase()}?`)) {
-                try {
-                    const todosProds = await produtoService.listarTodos();
-                    const filtrados = todosProds.filter(p => p.category === cat);
+        const subcategoriasSelect =
+            document.getElementById(
+                'subcategoriaCampanha'
+            );
 
-                    for (let p of filtrados) {
-                        await firebase.database().ref(`abella/products/${p.id}/promo`).set(desc);
+        document.addEventListener(
+            'DOMContentLoaded',
+            async () => {
+
+                await carregarCategorias();
+
+                atualizarPreview();
+
+            }
+        );
+
+        async function carregarCategorias(){
+
+            try{
+
+                const snap =
+                    await db.ref(
+                        'abella/categories'
+                    ).once('value');
+
+                const cats =
+                    snap.val() || {};
+
+                categoriasSelect.innerHTML =
+                    `<option value="">Selecione...</option>`;
+
+                Object.keys(cats).forEach(key => {
+
+                    categoriasSelect.innerHTML += `
+
+                        <option value="${key}">
+                            ${cats[key].name || key}
+                        </option>
+
+                    `;
+
+                });
+
+            }catch(e){
+
+                console.error(e);
+
+            }
+
+        }
+
+        categoriasSelect.addEventListener(
+            'change',
+            async function(){
+
+                const cat =
+                    this.value;
+
+                subcategoriasSelect.innerHTML =
+                    `<option value="">Todas</option>`;
+
+                if(!cat) return;
+
+                const snap =
+                    await db.ref(
+                        `abella/categories/${cat}/subcategories`
+                    ).once('value');
+
+                const subs =
+                    snap.val() || {};
+
+                Object.keys(subs).forEach(key => {
+
+                    subcategoriasSelect.innerHTML += `
+
+                        <option value="${key}">
+                            ${subs[key].name || key}
+                        </option>
+
+                    `;
+
+                });
+
+            }
+        );
+
+        function log(msg,color='text-zinc-400'){
+
+            const el =
+                document.getElementById(
+                    'log'
+                );
+
+            el.innerHTML =
+                `
+
+                    <div class="${color}">
+                        ${new Date().toLocaleTimeString()} • ${msg}
+                    </div>
+
+                ` + el.innerHTML;
+
+        }
+
+        function limparLog(){
+
+            document.getElementById(
+                'log'
+            ).innerHTML = '';
+
+        }
+
+        function atualizarPreview(){
+
+            const desconto =
+                document.getElementById(
+                    'descontoCampanha'
+                ).value || 10;
+
+            const nome =
+                document.getElementById(
+                    'nomeCampanha'
+                ).value || 'OFERTA';
+
+            const cor =
+                document.getElementById(
+                    'corCampanha'
+                ).value;
+
+            const icone =
+                document.getElementById(
+                    'iconeCampanha'
+                ).value;
+
+            const badge =
+                document.getElementById(
+                    'previewBadge'
+                );
+
+            badge.innerText =
+                `${icone} ${desconto}% OFF`;
+
+            badge.style.background =
+                cor;
+
+            badge.style.color =
+                '#000';
+
+        }
+
+        document.getElementById('descontoCampanha').addEventListener('input', atualizarPreview);
+        document.getElementById('nomeCampanha').addEventListener('input', atualizarPreview);
+        document.getElementById('corCampanha').addEventListener('input', atualizarPreview);
+        document.getElementById('iconeCampanha').addEventListener('change', atualizarPreview);
+
+        async function aplicarCampanha(){
+
+            const categoria =
+                categoriasSelect.value;
+
+            if(!categoria){
+
+                alert(
+                    'Selecione uma categoria.'
+                );
+
+                return;
+
+            }
+
+            const subcategoria =
+                subcategoriasSelect.value;
+
+            const desconto =
+                parseFloat(
+                    document.getElementById(
+                        'descontoCampanha'
+                    ).value || 0
+                );
+
+            const nome =
+                document.getElementById(
+                    'nomeCampanha'
+                ).value;
+
+            const cor =
+                document.getElementById(
+                    'corCampanha'
+                ).value;
+
+            const icone =
+                document.getElementById(
+                    'iconeCampanha'
+                ).value;
+
+            try{
+
+                log(
+                    'Buscando produtos...',
+                    'text-yellow-400'
+                );
+
+                const snap =
+                    await db.ref(
+                        'abella/products'
+                    ).once('value');
+
+                const prods =
+                    snap.val() || {};
+
+                let count = 0;
+
+                for(const id in prods){
+
+                    const p =
+                        prods[id];
+
+                    const matchCategoria =
+                        p.category === categoria;
+
+                    const matchSub =
+                        !subcategoria ||
+                        p.subcategory === subcategoria;
+
+                    if(matchCategoria && matchSub){
+
+                        await db.ref(
+                            `abella/products/${id}`
+                        ).update({
+
+                            promo:
+                                desconto,
+
+                            badge:
+                                `${icone} ${nome}`,
+
+                            badgeColor:
+                                cor,
+
+                            ofertaAtiva:
+                                true
+
+                        });
+
+                        count++;
+
                     }
 
-                    alert(`✨ Sucesso! Campanha de ${desc}% aplicada em lote.`);
-                } catch(e) {
-                    alert("Erro operacional ao atualizar lote.");
                 }
+
+                log(
+                    `✅ ${count} produtos atualizados.`,
+                    'text-emerald-400'
+                );
+
+                atualizarContadores();
+
+                alert(
+                    'Campanha aplicada com sucesso.'
+                );
+
+            }catch(e){
+
+                console.error(e);
+
+                log(
+                    'Erro ao aplicar campanha.',
+                    'text-red-400'
+                );
+
             }
+
         }
+
+        async function removerCampanha(){
+
+            const categoria =
+                categoriasSelect.value;
+
+            if(!categoria){
+
+                alert(
+                    'Selecione uma categoria.'
+                );
+
+                return;
+
+            }
+
+            try{
+
+                const snap =
+                    await db.ref(
+                        'abella/products'
+                    ).once('value');
+
+                const prods =
+                    snap.val() || {};
+
+                let count = 0;
+
+                for(const id in prods){
+
+                    const p =
+                        prods[id];
+
+                    if(p.category === categoria){
+
+                        await db.ref(
+                            `abella/products/${id}`
+                        ).update({
+
+                            promo:0,
+                            badge:'',
+                            badgeColor:'',
+                            ofertaAtiva:false
+
+                        });
+
+                        count++;
+
+                    }
+
+                }
+
+                log(
+                    `🗑️ Campanha removida de ${count} produtos.`,
+                    'text-red-400'
+                );
+
+                alert(
+                    'Campanha removida.'
+                );
+
+            }catch(e){
+
+                console.error(e);
+
+            }
+
+        }
+
+        async function criarCupom(){
+
+            const codigo =
+                document.getElementById(
+                    'cupomCodigo'
+                ).value.trim().toUpperCase();
+
+            if(!codigo){
+
+                alert(
+                    'Digite um código.'
+                );
+
+                return;
+
+            }
+
+            const payload = {
+
+                codigo,
+
+                tipo:
+                    document.getElementById(
+                        'cupomTipo'
+                    ).value,
+
+                valor:
+                    parseFloat(
+                        document.getElementById(
+                            'cupomValor'
+                        ).value || 0
+                    ),
+
+                minimo:
+                    parseFloat(
+                        document.getElementById(
+                            'cupomMinimo'
+                        ).value || 0
+                    ),
+
+                limite:
+                    parseInt(
+                        document.getElementById(
+                            'cupomLimite'
+                        ).value || 0
+                    ),
+
+                validade:
+                    document.getElementById(
+                        'cupomValidade'
+                    ).value,
+
+                primeiraCompra:
+                    document.getElementById(
+                        'cupomPrimeiraCompra'
+                    ).checked,
+
+                pix:
+                    document.getElementById(
+                        'cupomPix'
+                    ).checked,
+
+                ativo:
+                    document.getElementById(
+                        'cupomAtivo'
+                    ).checked,
+
+                criadoEm:
+                    Date.now()
+
+            };
+
+            try{
+
+                await db.ref(
+                    `abella/cupons/${codigo}`
+                ).set(payload);
+
+                log(
+                    `🎟️ Cupom ${codigo} criado.`,
+                    'text-indigo-400'
+                );
+
+                atualizarContadores();
+
+                alert(
+                    'Cupom salvo.'
+                );
+
+            }catch(e){
+
+                console.error(e);
+
+            }
+
+        }
+
+        async function criarFlash(){
+
+            const payload = {
+
+                titulo:
+                    document.getElementById(
+                        'flashTitulo'
+                    ).value,
+
+                desconto:
+                    parseFloat(
+                        document.getElementById(
+                            'flashDesconto'
+                        ).value || 0
+                    ),
+
+                inicio:
+                    document.getElementById(
+                        'flashInicio'
+                    ).value,
+
+                fim:
+                    document.getElementById(
+                        'flashFim'
+                    ).value,
+
+                ativo:true,
+                criadoEm:Date.now()
+
+            };
+
+            try{
+
+                const ref =
+                    db.ref(
+                        'abella/ofertasFlash'
+                    ).push();
+
+                await ref.set(payload);
+
+                log(
+                    `⚡ Oferta relâmpago criada.`,
+                    'text-red-400'
+                );
+
+                atualizarContadores();
+
+                alert(
+                    'Oferta Flash publicada.'
+                );
+
+            }catch(e){
+
+                console.error(e);
+
+            }
+
+        }
+
+        async function atualizarContadores(){
+
+            try{
+
+                const cupons =
+                    await db.ref(
+                        'abella/cupons'
+                    ).once('value');
+
+                const flash =
+                    await db.ref(
+                        'abella/ofertasFlash'
+                    ).once('value');
+
+                const prods =
+                    await db.ref(
+                        'abella/products'
+                    ).once('value');
+
+                let badges = 0;
+
+                prods.forEach(p => {
+
+                    if(
+                        p.val().badge
+                    ){
+
+                        badges++;
+
+                    }
+
+                });
+
+                document.getElementById(
+                    'totalCupons'
+                ).innerText =
+                    cupons.exists()
+                    ? Object.keys(cupons.val()).length
+                    : 0;
+
+                document.getElementById(
+                    'totalFlash'
+                ).innerText =
+                    flash.exists()
+                    ? Object.keys(flash.val()).length
+                    : 0;
+
+                document.getElementById(
+                    'totalBadges'
+                ).innerText =
+                    badges;
+
+                document.getElementById(
+                    'totalCampanhas'
+                ).innerText =
+                    badges;
+
+            }catch(e){
+
+                console.error(e);
+
+            }
+
+        }
+
+        atualizarContadores();
+
     </script>
+
 </body>
 </html>

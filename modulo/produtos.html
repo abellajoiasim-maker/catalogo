@@ -2,90 +2,150 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Catálogo • Abella Joias</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { background: transparent; color: #eee; font-family: 'Inter', sans-serif; }
+        .serif { font-family: 'Cinzel', serif; }
+        .gold { color: #caa85c; }
+        .bg-card { background: #141414; border: 1px solid #222; }
+        input, select {
+            background: #1a1a1a !important;
+            border: 1px solid #333 !important;
+            color: #fff !important;
+            transition: all 0.2s ease;
+        }
+        input:focus, select:focus {
+            border-color: #caa85c !important;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(202, 168, 92, 0.1);
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #caa85c; }
+    </style>
 </head>
-<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
+<body class="p-1 md:p-4">
 
     <div class="max-w-7xl mx-auto space-y-6">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-950 p-6 rounded-2xl border border-zinc-800">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-950 p-6 rounded-2xl border border-zinc-900 shadow-xl">
             <div>
-                <h2 class="text-xl font-bold text-white">💎 Gerenciamento de Catálogo</h2>
-                <p class="text-xs text-zinc-500 mt-1">Insira, edite, filtre e faça upload de imagens para seus produtos brutas.</p>
+                <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-4 bg-[#caa85c] rounded-full"></span>
+                    <h2 class="serif text-base font-bold text-white uppercase tracking-wider">💎 Gerenciamento de Catálogo de Joias</h2>
+                </div>
+                <p class="text-xs text-zinc-500 mt-1">Insira, edite, controle estados de veiculação e trate mídias no nó centralizado abella/products.</p>
             </div>
-            <button onclick="abrirModalProduto()" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-bold text-xs px-4 py-2.5 rounded-xl uppercase tracking-wider transition-all">
+            <button id="btnNovoProduto" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-black text-xs px-5 py-3 rounded-xl uppercase tracking-wider transition-all shadow-md shadow-amber-500/5">
                 + Novo Produto
             </button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-800">
-            <input type="text" id="filtroTexto" oninput="mudarPagina(1)" placeholder="Buscar por Nome ou SKU..." class="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-xs outline-none focus:border-[#caa85c]">
-            <select id="filtroCategoria" onchange="mudarPagina(1)" class="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-xs outline-none focus:border-[#caa85c]"><option value="">Todas as Categorias</option></select>
-            <select id="filtroSubcategoria" onchange="mudarPagina(1)" class="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 text-xs outline-none focus:border-[#caa85c]"><option value="">Todas as Subcategorias</option></select>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-900">
+            <div class="flex flex-col space-y-1">
+                <label class="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Termo de Pesquisa</label>
+                <input type="text" id="filtroTexto" placeholder="Buscar por Nome ou SKU..." class="w-full rounded-xl px-4 py-2.5 text-xs">
+            </div>
+            <div class="flex flex-col space-y-1">
+                <label class="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Filtrar Categoria</label>
+                <select id="filtroCategoria" class="w-full rounded-xl px-4 py-2.5 text-xs">
+                    <option value="">Todas as Categorias</option>
+                </select>
+            </div>
+            <div class="flex flex-col space-y-1">
+                <label class="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Filtrar Subcategoria</label>
+                <select id="filtroSubcategoria" class="w-full rounded-xl px-4 py-2.5 text-xs">
+                    <option value="">Todas as Subcategorias</option>
+                </select>
+            </div>
         </div>
 
-        <div id="loading" class="text-center py-12 text-zinc-500 text-xs uppercase tracking-widest">⏳ Processando catálogo de joias...</div>
-        <div id="grid-produtos" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+        <div id="loading" class="text-center py-16 text-zinc-500 text-xs font-mono uppercase tracking-widest animate-pulse">⏳ Indexando referências no Realtime Database...</div>
+        <div id="grid-produtos" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
 
         <div class="flex justify-center items-center gap-4 pt-4">
-            <button onclick="retrocederPagina()" class="bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-white px-4 py-2 rounded-xl text-xs transition-all">Anterior</button>
-            <span id="infoPagina" class="text-xs font-mono text-zinc-500">Página 1 de 1</span>
-            <button onclick="avancarPagina()" class="bg-zinc-950 border border-zinc-800 text-zinc-400 hover:text-white px-4 py-2 rounded-xl text-xs transition-all">Próxima</button>
+            <button id="btnPagAnt" class="bg-zinc-950 border border-zinc-900 text-zinc-400 hover:text-white px-4 py-2 rounded-xl text-xs font-medium transition-all hover:bg-zinc-900">Anterior</button>
+            <span id="infoPagina" class="text-xs font-mono text-zinc-500 bg-zinc-950 px-3 py-1 rounded-md border border-zinc-900">Página 1 de 1</span>
+            <button id="btnPagProx" class="bg-zinc-950 border border-zinc-900 text-zinc-400 hover:text-white px-4 py-2 rounded-xl text-xs font-medium transition-all hover:bg-zinc-900">Próxima</button>
         </div>
     </div>
 
-    <div id="modalProduto" class="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b border-zinc-900 flex justify-between items-center">
-                <h3 id="modalTitulo" class="text-sm font-bold text-white uppercase tracking-wider">Novo Registro de Produto</h3>
-                <button onclick="fecharModalProduto()" class="text-zinc-500 hover:text-white text-xs">✕</button>
+    <div id="modalProduto" class="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 flex items-center justify-center hidden p-4 animate-fade-in">
+        <div class="bg-zinc-950 border border-zinc-900 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+            <div class="p-5 border-b border-zinc-900 flex justify-between items-center bg-zinc-950">
+                <h3 id="modalTitulo" class="serif text-xs font-bold text-white uppercase tracking-wider">Novo Registro de Produto</h3>
+                <button id="btnFecharModalTopo" class="text-zinc-500 hover:text-white text-sm transition-all p-1">✕</button>
             </div>
-            <form id="formProduto" onsubmit="salvarProdutoForm(event)" class="p-6 space-y-4 overflow-y-auto flex-1 text-left">
+            
+            <form id="formProduto" class="p-6 space-y-4 overflow-y-auto flex-1 text-left">
                 <input type="hidden" id="prodId">
+                
                 <div class="grid grid-cols-3 gap-4">
                     <div class="col-span-1 space-y-1">
-                        <label class="text-[10px] uppercase text-zinc-400 font-bold">Código SKU *</label>
-                        <input type="text" id="prodSku" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Código SKU *</label>
+                        <input type="text" id="prodSku" required placeholder="Ex: AN-0021" class="w-full rounded-xl px-3 py-2.5 text-xs">
                     </div>
                     <div class="col-span-2 space-y-1">
-                        <label class="text-[10px] uppercase text-zinc-400 font-bold">Nome Completo do Produto *</label>
-                        <input type="text" id="prodName" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Nome do Produto Bruto *</label>
+                        <input type="text" id="prodName" required placeholder="Ex: Anel Solitário Cravejado" class="w-full rounded-xl px-3 py-2.5 text-xs">
                     </div>
                 </div>
+                
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
-                        <label class="text-[10px] uppercase text-zinc-400 font-bold">Categoria Mãe *</label>
-                        <select id="prodCategory" required onchange="sincronizarSubcategoriasForm()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-[#caa85c]"></select>
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Categoria Mãe *</label>
+                        <select id="prodCategory" required class="w-full rounded-xl px-3 py-2.5 text-xs"></select>
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] uppercase text-zinc-400 font-bold">Subcategoria Vinculada</label>
-                        <select id="prodSubcategory" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-[#caa85c]"><option value="">Nenhuma</option></select>
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Subcategoria Vinculada</label>
+                        <select id="prodSubcategory" class="w-full rounded-xl px-3 py-2.5 text-xs">
+                            <option value="">Nenhuma</option>
+                        </select>
                     </div>
                 </div>
+                
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1">
-                        <label class="text-[10px] uppercase text-zinc-400 font-bold">Preço de Tabela (R$) *</label>
-                        <input type="number" step="0.01" id="prodPrice" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Preço de Atacado / Tabela (R$) *</label>
+                        <input type="number" step="0.001" id="prodPrice" required placeholder="0.00" class="w-full rounded-xl px-3 py-2.5 text-xs font-mono">
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] uppercase text-zinc-400 font-bold">Peso Bruto (Gramas) *</label>
-                        <input type="number" step="0.01" id="prodWeight" required class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Peso Bruto (Gramas) *</label>
+                        <input type="number" step="0.01" id="prodWeight" required placeholder="0.00" class="w-full rounded-xl px-3 py-2.5 text-xs font-mono">
                     </div>
                 </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Imagem do Produto (Upload para Storage Oficial)</label>
-                    <input type="file" id="prodFile" accept="image/*" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs text-zinc-400 file:bg-zinc-800 file:border-0 file:text-white file:rounded-lg file:px-2 file:py-1 file:mr-2">
-                    <input type="text" id="prodImageUrl" placeholder="Ou insira link HTTP / gs://" class="w-full mt-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                
+                <div class="bg-zinc-900/40 border border-zinc-900 p-4 rounded-xl space-y-3">
+                    <div class="space-y-1">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider block">Arquivo Físico (Upload Storage)</label>
+                        <input type="file" id="prodFile" accept="image/*" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-400 file:bg-zinc-800 file:border-0 file:text-white file:rounded-lg file:px-3 file:py-1 file:mr-2 file:text-[10px] file:font-bold file:uppercase file:cursor-pointer">
+                    </div>
+                    <div class="relative flex py-1 items-center">
+                        <div class="flex-grow border-t border-zinc-800/60"></div>
+                        <span class="flex-shrink mx-3 text-[9px] uppercase font-mono text-zinc-600">ou referência remota</span>
+                        <div class="flex-grow border-t border-zinc-800/60"></div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Endereço da Imagem (URL ou gs://)</label>
+                        <input type="text" id="prodImageUrl" placeholder="Ex: gs://catalogo-abella-joias... / http://..." class="w-full rounded-xl px-3 py-2.5 text-xs font-mono">
+                    </div>
                 </div>
-                <div class="flex items-center gap-2 pt-2">
-                    <input type="checkbox" id="prodActive" checked class="rounded border-zinc-800 text-[#caa85c] focus:ring-0">
-                    <label for="prodActive" class="text-xs text-zinc-300 font-medium">Disponível para venda imediata no catálogo</label>
+                
+                <div class="flex items-center gap-2.5 py-1">
+                    <input type="checkbox" id="prodActive" checked class="w-4 h-4 rounded border-zinc-800 text-[#caa85c] focus:ring-0 bg-zinc-900 cursor-pointer">
+                    <label for="prodActive" class="text-xs text-zinc-400 select-none cursor-pointer">Disponível para venda imediata na vitrine do catálogo</label>
                 </div>
-                <div class="pt-4 border-t border-zinc-900 flex justify-end gap-2">
-                    <button type="button" onclick="fecharModalProduto()" class="bg-zinc-900 text-zinc-400 px-4 py-2 rounded-xl text-xs font-semibold hover:text-white">Cancelar</button>
-                    <button type="submit" class="bg-[#caa85c] text-black font-bold px-5 py-2 rounded-xl text-xs uppercase tracking-wider">Salvar Registro</button>
+                
+                <div class="pt-4 border-t border-zinc-900 flex justify-end gap-2 bg-zinc-950">
+                    <button type="button" id="btnFecharModalForm" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 px-4 py-2.5 rounded-xl text-xs font-bold hover:text-white uppercase tracking-wider transition-all">Cancelar</button>
+                    <button type="submit" id="btnSalvarForm" class="bg-[#caa85c] hover:bg-[#bda152] text-black font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md">Salvar Registro</button>
                 </div>
             </form>
         </div>
@@ -94,165 +154,326 @@
     <script src="../js/firebase/firebase-config.js"></script>
     <script src="../js/utils/money.js"></script>
     <script src="../js/utils/storage.js"></script>
-    <script src="../js/services/produtoService.js"></script>
-    <script src="../js/services/categoriaService.js"></script>
+    
     <script>
+    window.produtoServiceBridge = window.produtoService || {
+        async listarTodos() {
+            const snap = await firebase.database().ref('abella/products').once('value');
+            const dados = snap.val() || {};
+            return Object.keys(dados).map(key => ({ id: key, ...dados[key] }));
+        },
+        async salvar(id, payload) {
+            if (id) {
+                await firebase.database().ref(`abella/products/${id}`).update(payload);
+            } else {
+                await firebase.database().ref('abella/products').push(payload);
+            }
+            return true;
+        },
+        async deletar(id) {
+            await firebase.database().ref(`abella/products/${id}`).remove();
+            return true;
+        }
+    };
+    window.categoriaServiceBridge = window.categoriaService || {
+        async listarTodas() {
+            const snap = await firebase.database().ref('abella/categories').once('value');
+            return snap.val() || {};
+        }
+    };
+    </script>
+
+    <script>
+    (function() {
+        'use strict';
+
         let paginaAtual = 1;
         const itensPorPagina = 12;
         let listaCategoriasCache = {};
+        let totalValoresFiltrados = [];
+
+        const DOM = {
+            grid: document.getElementById('grid-produtos'),
+            loading: document.getElementById('loading'),
+            infoPagina: document.getElementById('infoPagina'),
+            filtroTexto: document.getElementById('filtroTexto'),
+            filtroCategoria: document.getElementById('filtroCategoria'),
+            filtroSubcategoria: document.getElementById('filtroSubcategoria'),
+            btnNovo: document.getElementById('btnNovoProduto'),
+            btnAnt: document.getElementById('btnPagAnt'),
+            btnProx: document.getElementById('btnPagProx'),
+            modal: document.getElementById('modalProduto'),
+            modalTitulo: document.getElementById('modalTitulo'),
+            form: document.getElementById('formProduto'),
+            btnFecharTopo: document.getElementById('btnFecharModalTopo'),
+            btnFecharForm: document.getElementById('btnFecharModalForm'),
+            prodId: document.getElementById('prodId'),
+            prodSku: document.getElementById('prodSku'),
+            prodName: document.getElementById('prodName'),
+            prodCategory: document.getElementById('prodCategory'),
+            prodSubcategory: document.getElementById('prodSubcategory'),
+            prodPrice: document.getElementById('prodPrice'),
+            prodWeight: document.getElementById('prodWeight'),
+            prodFile: document.getElementById('prodFile'),
+            prodImageUrl: document.getElementById('prodImageUrl'),
+            prodActive: document.getElementById('prodActive')
+        };
 
         document.addEventListener('DOMContentLoaded', async () => {
-            await inicializarComponentesMapeamento();
-            await carregarProdutosTabela();
+            configurarEventos();
+            await carregarMapeamentoFiltros();
+            await sincronizarEfetivoCatálogo();
         });
 
-        async function inicializarComponentesMapeamento() {
+        function configurarEventos() {
+            DOM.btnNovo.addEventListener('click', abrirModalForm);
+            DOM.btnFecharTopo.addEventListener('click', fecharModalForm);
+            DOM.btnFecharForm.addEventListener('click', fecharModalForm);
+            DOM.form.addEventListener('submit', processarPersistenciaProduto);
+            
+            DOM.filtroTexto.addEventListener('input', () => { resetarPaginaESincronizar(); });
+            DOM.filtroCategoria.addEventListener('change', () => { 
+                sincronizarFiltroSubcategorias(); 
+                resetarPaginaESincronizar(); 
+            });
+            DOM.filtroSubcategoria.addEventListener('change', () => { resetarPaginaESincronizar(); });
+            
+            DOM.prodCategory.addEventListener('change', sincronizarSubcategoriasForm);
+
+            DOM.btnAnt.addEventListener('click', () => { if(paginaAtual > 1) { paginaAtual--; renderizarPaginaFiltrada(); } });
+            DOM.btnProx.addEventListener('click', () => {
+                const totalPaginas = Math.ceil(totalValoresFiltrados.length / itensPorPagina) || 1;
+                if(paginaAtual < totalPaginas) { paginaAtual++; renderizarPaginaFiltrada(); }
+            });
+        }
+
+        async function carregarMapeamentoFiltros() {
             try {
-                listaCategoriasCache = await categoriaService.listarTodas() || {};
-                const fCat = document.getElementById('filtroCategoria');
-                const pCat = document.getElementById('prodCategory');
+                listaCategoriasCache = await window.categoriaServiceBridge.listarTodas() || {};
                 
-                fCat.innerHTML = '<option value="">Todas as Categorias</option>';
-                pCat.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+                DOM.filtroCategoria.innerHTML = '<option value="">Todas as Categorias</option>';
+                DOM.prodCategory.innerHTML = '<option value="" disabled selected>Selecione...</option>';
 
                 Object.keys(listaCategoriasCache).forEach(key => {
                     const c = listaCategoriasCache[key];
-                    const nome = c.name || c.nome || key;
-                    fCat.innerHTML += `<option value="${key}">${nome}</option>`;
-                    pCat.innerHTML += `<option value="${key}">${nome}</option>`;
+                    const nome = c.name || key;
+                    DOM.filtroCategoria.innerHTML += `<option value="${key}">${nome.toUpperCase()}</option>`;
+                    DOM.prodCategory.innerHTML += `<option value="${key}">${nome.toUpperCase()}</option>`;
                 });
-            } catch(e) { console.error("Erro ao popular filtros", e); }
+            } catch(e) {
+                console.error("Falha ao mapear categorias nos filtros", e);
+            }
         }
 
-        function sincronizarSubcategoriasForm() {
-            const catKey = document.getElementById('prodCategory').value;
-            const subSelect = document.getElementById('prodSubcategory');
-            subSelect.innerHTML = '<option value="">Nenhuma</option>';
+        function sincronizarFiltroSubcategorias() {
+            const catKey = DOM.filtroCategoria.value;
+            DOM.filtroSubcategoria.innerHTML = '<option value="">Todas as Subcategorias</option>';
             
             if(catKey && listaCategoriasCache[catKey] && listaCategoriasCache[catKey].subcategories) {
                 const subs = listaCategoriasCache[catKey].subcategories;
                 Object.keys(subs).forEach(subKey => {
-                    subSelect.innerHTML += `<option value="${subKey}">${subs[subKey].name || subKey}</option>`;
+                    DOM.filtroSubcategoria.innerHTML += `<option value="${subKey}">${(subs[subKey].name || subKey).toUpperCase()}</option>`;
                 });
             }
         }
 
-        async function carregarProdutosTabela() {
-            const grid = document.getElementById('grid-produtos');
-            const loading = document.getElementById('loading');
-            grid.innerHTML = '';
-            loading.classList.remove('hidden');
+        function sincronizarSubcategoriasForm() {
+            const catKey = DOM.prodCategory.value;
+            DOM.prodSubcategory.innerHTML = '<option value="">Nenhuma</option>';
+            
+            if(catKey && listaCategoriasCache[catKey] && listaCategoriasCache[catKey].subcategories) {
+                const subs = listaCategoriasCache[catKey].subcategories;
+                Object.keys(subs).forEach(subKey => {
+                    DOM.prodSubcategory.innerHTML += `<option value="${subKey}">${subs[subKey].name || subKey}</option>`;
+                });
+            }
+        }
 
-            const filtros = {
-                text: document.getElementById('filtroTexto').value,
-                category: document.getElementById('filtroCategoria').value,
-                subcategory: document.getElementById('filtroSubcategory').value,
-                onlyActive: false
-            };
+        function resetarPaginaESincronizar() {
+            paginaAtual = 1;
+            renderizarPaginaFiltrada();
+        }
+
+        async function sincronizarEfetivoCatálogo() {
+            DOM.grid.innerHTML = '';
+            DOM.loading.classList.remove('hidden');
 
             try {
-                const res = await produtoService.obterPaginado(paginaAtual, itensPorPagina, filtros);
-                loading.classList.add('hidden');
-
-                document.getElementById('infoPagina').innerText = `Página ${res.currentPage} de ${res.totalPages || 1}`;
-
-                if(res.items.length === 0) {
-                    grid.innerHTML = '<p class="col-span-full text-zinc-500 text-xs italic text-center py-8">Nenhum item localizado no escopo atual.</p>';
-                    return;
-                }
-
-                res.items.forEach(p => {
-                    const card = document.createElement('div');
-                    card.className = `bg-zinc-950 border ${p.active ? 'border-zinc-800' : 'border-red-900/40'} rounded-xl p-3 flex flex-col justify-between text-left space-y-2 relative`;
-                    const srcImg = window.StorageUtils.converterUrlStorage(p.image);
-                    
-                    card.innerHTML = `
-                        <div class="aspect-square bg-zinc-900 rounded-lg overflow-hidden flex items-center justify-center">
-                            <img src="${srcImg}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150'">
-                        </div>
-                        <div>
-                            <span class="text-[8px] bg-zinc-900 text-zinc-400 font-mono px-1.5 py-0.5 rounded border border-zinc-800 block truncate">SKU: ${p.sku}</span>
-                            <h4 class="text-white font-bold text-xs mt-1 truncate uppercase">${p.name}</h4>
-                            <p class="text-[10px] text-[#caa85c] font-bold font-mono mt-0.5">${window.MoneyUtils.format(p.price)} | ${p.weight.toFixed(2)}g</p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-1 pt-1 border-t border-zinc-900">
-                            <button onclick="editarProdutoId('${p.id}')" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[10px] py-1 rounded-lg transition-all">Editar</button>
-                            <button onclick="deletarProdutoId('${p.id}')" class="bg-red-950/20 hover:bg-red-950/60 border border-red-900/40 text-red-400 text-[10px] py-1 rounded-lg transition-all">Excluir</button>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
+                const listaBruta = await window.produtoServiceBridge.listarTodos();
+                totalValoresFiltrados = listaBruta;
+                renderizarPaginaFiltrada();
             } catch(e) {
                 console.error(e);
-                loading.innerText = "❌ Falha crítica de comunicação na leitura do catálogo.";
+                DOM.loading.innerText = "❌ Falha crítica ao processar referências com Firebase RTDB.";
             }
         }
 
-        function mudarPagina(p) { paginaAtual = p; carregarProdutosTabela(); }
-        function retrocederPagina() { if(paginaAtual > 1) mudarPagina(paginaAtual - 1); }
-        function avancarPagina() { mudarPagina(paginaAtual + 1); }
+        function renderizarPaginaFiltrada() {
+            DOM.grid.innerHTML = '';
+            DOM.loading.classList.add('hidden');
 
-        function abrirModalProduto() {
-            document.getElementById('formProduto').reset();
-            document.getElementById('prodId').value = '';
-            document.getElementById('modalTitulo').innerText = "Novo Registro de Produto";
-            document.getElementById('modalProduto').classList.remove('hidden');
-        }
-        function fecharModalProduto() { document.getElementById('modalProduto').classList.add('hidden'); }
+            const txt = DOM.filtroTexto.value.toLowerCase().trim();
+            const cat = DOM.filtroCategoria.value;
+            const sub = DOM.filtroSubcategoria.value;
 
-        async function editarProdutoId(id) {
-            abrirModalProduto();
-            document.getElementById('modalTitulo').innerText = "Modificar Registro de Produto";
-            const prods = await produtoService.listarTodos();
-            const p = prods.find(item => item.id === id);
-            if(p) {
-                document.getElementById('prodId').value = p.id;
-                document.getElementById('prodSku').value = p.sku;
-                document.getElementById('prodName').value = p.name;
-                document.getElementById('prodCategory').value = p.category;
-                sincronizarSubcategoriasForm();
-                document.getElementById('prodSubcategory').value = p.subcategory;
-                document.getElementById('prodPrice').value = p.price;
-                document.getElementById('prodWeight').value = p.weight;
-                document.getElementById('prodImageUrl').value = p.image;
-                document.getElementById('prodActive').checked = p.active;
+            // Filtros encadeados em memória para resposta instantânea
+            let itensFiltrados = totalValoresFiltrados.filter(p => {
+                const matchTexto = !txt || (p.name && p.name.toLowerCase().includes(txt)) || (p.sku && p.sku.toLowerCase().includes(txt));
+                const matchCat = !cat || p.category === cat;
+                const matchSub = !sub || p.subcategory === sub;
+                return matchTexto && matchCat && matchSub;
+            });
+
+            const totalPaginas = Math.ceil(itensFiltrados.length / itensPorPagina) || 1;
+            DOM.infoPagina.innerText = `Página ${paginaAtual} de ${totalPaginas}`;
+
+            if(itensFiltrados.length === 0) {
+                DOM.grid.innerHTML = '<p class="col-span-full text-zinc-600 text-xs italic text-center py-12 font-mono">[Nenhum item localizado nos parâmetros informados]</p>';
+                return;
             }
+
+            // Segmentação por página
+            const inicio = (paginaAtual - 1) * itensPorPagina;
+            const fim = inicio + itensPorPagina;
+            const itensExibidos = itensFiltrados.slice(inicio, fim);
+
+            itensExibidos.forEach(p => {
+                const card = document.createElement('div');
+                const isAtivo = p.active === true || p.active === "true" || p.active === undefined;
+                
+                card.className = `bg-zinc-950/80 border rounded-2xl p-3 flex flex-col justify-between text-left space-y-2.5 transition-all hover:bg-zinc-950 ${isAtivo ? 'border-zinc-900' : 'border-amber-900/30 opacity-40 bg-zinc-950/20'}`;
+                
+                // Tratamento e renderização de imagens gs:// ou caminhos HTTP públicos
+                let srcImg = 'https://via.placeholder.com/150';
+                if(p.image) {
+                    srcImg = (window.StorageUtils && typeof window.StorageUtils.converterUrlStorage === 'function') 
+                        ? window.StorageUtils.converterUrlStorage(p.image) 
+                        : p.image.replace('gs://', 'https://storage.googleapis.com/');
+                }
+                
+                const formatadoPrice = (window.MoneyUtils && typeof window.MoneyUtils.format === 'function')
+                    ? window.MoneyUtils.format(p.price)
+                    : `R$ ${parseFloat(p.price || 0).toFixed(2)}`;
+
+                card.innerHTML = `
+                    <div class="aspect-square bg-zinc-900 rounded-xl overflow-hidden flex items-center justify-center border border-zinc-800/40 relative">
+                        <img src="${srcImg}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/200'">
+                        ${!isAtivo ? '<span class="absolute top-2 right-2 text-[8px] px-1.5 py-0.5 bg-amber-950 border border-amber-900/40 text-amber-400 rounded uppercase font-mono tracking-wider">Pausado</span>' : ''}
+                    </div>
+                    <div class="min-w-0">
+                        <span class="text-[8px] font-mono text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 tracking-wider">SKU: ${p.sku || 'N/A'}</span>
+                        <h4 class="text-white font-bold text-xs mt-2 truncate uppercase tracking-wide">${p.name || 'Sem nome'}</h4>
+                        <div class="flex items-center justify-between gap-1 mt-1 font-mono text-[10px]">
+                            <span class="text-[#caa85c] font-bold">${formatadoPrice}</span>
+                            <span class="text-zinc-500 text-[9px]">${parseFloat(p.weight || 0).toFixed(2)}g bruto</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-zinc-900">
+                        <button class="btn-editar-prod bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[10px] py-1.5 font-bold rounded-lg transition-all uppercase tracking-wider" data-id="${p.id}">Editar</button>
+                        <button class="btn-excluir-prod bg-red-950/10 hover:bg-red-950/40 border border-red-900/20 text-red-400 text-[10px] py-1.5 font-bold rounded-lg transition-all uppercase tracking-wider" data-id="${p.id}">Excluir</button>
+                    </div>
+                `;
+                DOM.grid.appendChild(card);
+            });
+
+            vincularEventosInternosGrid();
         }
 
-        async function salvarProdutoForm(e) {
+        function vincularEventosInternosGrid() {
+            DOM.grid.querySelectorAll('.btn-editar-prod').forEach(btn => {
+                btn.addEventListener('click', (e) => { executarMapeamentoEdicao(e.target.dataset.id); });
+            });
+            DOM.grid.querySelectorAll('.btn-excluir-prod').forEach(btn => {
+                btn.addEventListener('click', (e) => { apagarRegistroProduto(e.target.dataset.id); });
+            });
+        }
+
+        function abrirModalForm() {
+            DOM.form.reset();
+            DOM.prodId.value = '';
+            DOM.modalTitulo.innerText = "Novo Registro de Produto";
+            DOM.modal.classList.remove('hidden');
+            DOM.prodSku.focus();
+        }
+
+        function fecharModalForm() { DOM.modal.classList.add('hidden'); }
+
+        async function executarMapeamentoEdicao(id) {
+            const alvo = totalValoresFiltrados.find(item => item.id === id);
+            if(!alvo) return;
+
+            abrirModalForm();
+            DOM.modalTitulo.innerText = "Modificar Registro de Produto";
+
+            DOM.prodId.value = alvo.id || '';
+            DOM.prodSku.value = alvo.sku || '';
+            DOM.prodName.value = alvo.name || '';
+            DOM.prodCategory.value = alvo.category || '';
+            
+            sincronizarSubcategoriasForm();
+            DOM.prodSubcategory.value = alvo.subcategory || '';
+            
+            DOM.prodPrice.value = alvo.price || '';
+            DOM.prodWeight.value = alvo.weight || '';
+            DOM.prodImageUrl.value = alvo.image || '';
+            DOM.prodActive.checked = alvo.active !== false && alvo.active !== "false";
+        }
+
+        async function processarPersistenciaProduto(e) {
             e.preventDefault();
-            const fileInput = document.getElementById('prodFile');
-            let imgUrl = document.getElementById('prodImageUrl').value.trim();
+            const btnSalvar = document.getElementById('btnSalvarForm');
+            const textoOriginal = btnSalvar.innerText;
+            
+            btnSalvar.innerText = "⏳ SALVANDO...";
+            btnSalvar.disabled = true;
 
-            if(fileInput.files.length > 0 && typeof firebase !== 'undefined' && firebase.storage) {
-                const file = fileInput.files[0];
-                const refStorage = firebase.storage().ref(`images/produtos/${Date.now()}_${file.name}`);
-                const snap = await refStorage.put(file);
-                imgUrl = `gs://${snap.metadata.bucket}/${snap.metadata.fullPath}`;
+            let finalImgUrl = DOM.prodImageUrl.value.trim();
+
+            try {
+                // Upload para Firebase Storage oficial se houver arquivo anexado
+                if(DOM.prodFile.files.length > 0 && typeof firebase !== 'undefined' && firebase.storage) {
+                    const arquivo = DOM.prodFile.files[0];
+                    const pathRef = firebase.storage().ref(`images/produtos/${Date.now()}_${arquivo.name}`);
+                    const metadataSnap = await pathRef.put(arquivo);
+                    finalImgUrl = `gs://${metadataSnap.metadata.bucket}/${metadataSnap.metadata.fullPath}`;
+                }
+
+                const payload = {
+                    sku: DOM.prodSku.value.trim(),
+                    name: DOM.prodName.value.trim(),
+                    category: DOM.prodCategory.value,
+                    subcategory: DOM.prodSubcategory.value,
+                    price: parseFloat(DOM.prodPrice.value) || 0,
+                    weight: parseFloat(DOM.prodWeight.value) || 0,
+                    image: finalImgUrl,
+                    active: DOM.prodActive.checked,
+                    lastUpdate: Date.now()
+                };
+
+                await window.produtoServiceBridge.save(DOM.prodId.value, payload);
+                
+                fecharModalForm();
+                await sincronizarEfetivoCatálogo();
+            } catch(err) {
+                console.error(err);
+                alert("Erro ao persistir informações no Firebase.");
+            } finally {
+                btnSalvar.innerText = textoOriginal;
+                btnSalvar.disabled = false;
             }
-
-            const payload = {
-                sku: document.getElementById('prodSku').value.trim(),
-                name: document.getElementById('prodName').value.trim(),
-                category: document.getElementById('prodCategory').value,
-                subcategory: document.getElementById('prodSubcategory').value,
-                price: parseFloat(document.getElementById('prodPrice').value),
-                weight: parseFloat(document.getElementById('prodWeight').value),
-                active: document.getElementById('prodActive').checked
-            };
-            payload.image = imgUrl;
-
-            await produtoService.salvar(document.getElementById('prodId').value, payload);
-            fecharModalProduto();
-            await carregarProdutosTabela();
         }
 
-        async function deletarProdutoId(id) {
-            if(confirm("Deseja expurgar permanentemente este registro de produto?")) {
-                await produtoService.deletar(id);
-                await carregarProdutosTabela();
+        async function apagarRegistroProduto(id) {
+            if(confirm("Deseja expurgar permanentemente este registro de produto no Firebase?")) {
+                try {
+                    await window.produtoServiceBridge.deletar(id);
+                    await sincronizarEfetivoCatálogo();
+                } catch(err) {
+                    alert("Erro ao remover registro.");
+                }
             }
         }
+    })();
     </script>
 </body>
 </html>

@@ -669,152 +669,212 @@
 
         }
 
-        async function carregarProdutos(){
+async function carregarProdutos(){
 
-            const params =
-                new URLSearchParams(
-                    window.location.search
+    try{
+
+        // =========================
+        // URL PARAMS
+        // =========================
+
+        const urlParams =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        // ACEITA:
+        // ?categoria=
+        // ?cat=
+        const categoria = (
+            urlParams.get('categoria') ||
+            urlParams.get('cat') ||
+            ''
+        )
+        .toString()
+        .trim()
+        .toLowerCase();
+
+        // ACEITA:
+        // ?subcategoria=
+        // ?sub=
+        const subcategoria = (
+            decodeURIComponent(
+                urlParams.get('subcategoria') ||
+                urlParams.get('sub') ||
+                ''
+            )
+        )
+        .toString()
+        .trim()
+        .toLowerCase();
+
+        console.log(
+            'Categoria URL:',
+            categoria
+        );
+
+        console.log(
+            'Subcategoria URL:',
+            subcategoria
+        );
+
+        // =========================
+        // TITULOS
+        // =========================
+
+        const tituloExibicao =
+            subcategoria || categoria || 'Produtos';
+
+        document.getElementById(
+            'tituloPagina'
+        ).innerText =
+            tituloExibicao;
+
+        document.getElementById(
+            'heroTitulo'
+        ).innerText =
+            tituloExibicao;
+
+        // =========================
+        // CARREGA PRODUTOS
+        // =========================
+
+        const todos =
+            await produtoService.listarTodos();
+
+        console.log(
+            'TODOS PRODUTOS:',
+            todos
+        );
+
+        // =========================
+        // FILTRO
+        // =========================
+
+        produtos = todos.filter(p => {
+
+            // =========================
+            // NORMALIZAÇÃO SEGURA
+            // =========================
+
+            const catProduto = (
+                p.categorySlug ||
+                p.category ||
+                p.categoria ||
+                ''
+            )
+            .toString()
+            .trim()
+            .toLowerCase();
+
+            const subProduto = (
+                p.subcategorySlug ||
+                p.subcategory ||
+                p.subcategoria ||
+                ''
+            )
+            .toString()
+            .trim()
+            .toLowerCase();
+
+            // =========================
+            // VALIDA CATEGORIA
+            // =========================
+
+            if(!catProduto){
+
+                return false;
+
+            }
+
+            const categoriaOK =
+                catProduto === categoria;
+
+            if(!categoriaOK){
+
+                return false;
+
+            }
+
+            // =========================
+            // SEM SUBCATEGORIA
+            // =========================
+
+            if(!subcategoria){
+
+                return true;
+
+            }
+
+            // =========================
+            // COM SUBCATEGORIA
+            // =========================
+
+            return (
+                subProduto === subcategoria
+            );
+
+        });
+
+        console.log(
+            'PRODUTOS FILTRADOS:',
+            produtos
+        );
+
+        // =========================
+        // TOTAL
+        // =========================
+
+        document.getElementById(
+            'totalProdutos'
+        ).innerText =
+            produtos.length;
+
+        // =========================
+        // HERO IMAGE
+        // =========================
+
+        if(produtos.length){
+
+            const primeiraImagem =
+                resolverImagemFirebase(
+                    produtos[0].image ||
+                    produtos[0].imagem ||
+                    ''
                 );
 
-const params =
-    new URLSearchParams(
-        window.location.search
-    );
+            if(primeiraImagem){
 
-// ACEITA AMBOS FORMATOS
-const categoria =
-    params.get('categoria') ||
-    params.get('cat') ||
-    '';
+                document.getElementById(
+                    'heroImagem'
+                ).src =
+                    primeiraImagem;
 
-const subcategoria =
-    decodeURIComponent(
-        params.get('subcategoria') ||
-        params.get('sub') ||
-        ''
-    );
-
-console.log('Categoria:', categoria);
-console.log('Subcategoria:', subcategoria);
-
-document.getElementById(
-    'tituloPagina'
-).innerText =
-    subcategoria || categoria;
-
-document.getElementById(
-    'heroTitulo'
-).innerText =
-    subcategoria || categoria;
-
-try{
-
-    const todos =
-        await produtoService
-        .listarTodos();
-
-    console.log(
-        'TOTAL PRODUTOS:',
-        todos
-    );
-
-    produtos = todos.filter(p => {
-
-    // =========================
-    // NORMALIZAÇÃO SEGURA
-    // =========================
-
-    const catProduto = (
-        p.categorySlug ||
-        p.category ||
-        p.categoria ||
-        ''
-    )
-    .toString()
-    .trim()
-    .toLowerCase();
-
-    const subProduto = (
-        p.subcategorySlug ||
-        p.subcategory ||
-        p.subcategoria ||
-        ''
-    )
-    .toString()
-    .trim()
-    .toLowerCase();
-
-    const catBusca = (
-        categoria || ''
-    )
-    .toString()
-    .trim()
-    .toLowerCase();
-
-    const subBusca = (
-        subcategoria || ''
-    )
-    .toString()
-    .trim()
-    .toLowerCase();
-
-    // =========================
-    // VALIDA CATEGORIA
-    // =========================
-
-    if(!catProduto || !catBusca){
-        return false;
-    }
-
-    const categoriaOK =
-        catProduto === catBusca;
-
-    if(!categoriaOK){
-        return false;
-    }
-
-    // =========================
-    // SEM SUBCATEGORIA
-    // =========================
-
-    if(!subBusca){
-
-        return true;
-
-    }
-
-    // =========================
-    // COM SUBCATEGORIA
-    // =========================
-
-    return (
-        subProduto === subBusca
-    );
-
-});
-
-    console.log(
-        'PRODUTOS FILTRADOS:',
-        produtos
-    );
-
-    document.getElementById(
-        'totalProdutos'
-    ).innerText =
-        produtos.length;
-
-    renderizarProdutos();
-
-}catch(err){
-
-    console.error(
-        'ERRO AO CARREGAR PRODUTOS:',
-        err
-    );
-
-}
+            }
 
         }
+
+        // =========================
+        // RENDERIZA
+        // =========================
+
+        renderizarProdutos();
+
+    }catch(err){
+
+        console.error(
+            'ERRO AO CARREGAR PRODUTOS:',
+            err
+        );
+
+        document.getElementById(
+            'loading'
+        ).innerHTML =
+            'Erro ao carregar produtos.';
+
+    }
+
+}
 
        function renderizarProdutos(){
 

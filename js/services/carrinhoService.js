@@ -1,24 +1,303 @@
-javascript
 // ======================================================================
-// js/services/carrinhoService.js
-// Abella Joias • CarrinhoService Premium v3.0 FINAL
+// js/services/produtoService.js
+// Abella Joias - ProdutoService Premium v3.0
 // ======================================================================
 
-const CarrinhoService = {
-
-    STORAGE_KEY:'abella_carrinho',
+const produtoService = {
 
     // ==========================================================
     // HELPERS
     // ==========================================================
 
-    _safeParse(json){
+    _safeString(valor = ''){
+
+        return String(valor || '')
+            .trim();
+
+    },
+
+    _safeNumber(valor = 0){
+
+        const n =
+            parseFloat(valor);
+
+        return Number.isFinite(n)
+            ? n
+            : 0;
+
+    },
+
+    _slug(texto = ''){
+
+        return this
+            ._safeString(texto)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g,'')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g,'-')
+            .replace(/^-+|-+$/g,'');
+
+    },
+
+    _resolverImagem(produto){
+
+        const imagem =
+            produto.image ||
+            produto.imagem ||
+            produto.foto ||
+            produto.img ||
+            '';
+
+        if(!imagem){
+
+            return '';
+
+        }
+
+        // URL normal
+        if(imagem.startsWith('http')){
+
+            return imagem;
+
+        }
+
+        // Firebase gs://
+        if(imagem.startsWith('gs://')){
+
+            try{
+
+                const semGs =
+                    imagem.replace(
+                        'gs://',
+                        ''
+                    );
+
+                const partes =
+                    semGs.split('/');
+
+                const bucket =
+                    partes.shift();
+
+                const arquivo =
+                    partes.join('/');
+
+                return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
+
+            }catch(e){
+
+                console.error(
+                    'Erro converter imagem:',
+                    e
+                );
+
+                return '';
+
+            }
+
+        }
+
+        return imagem;
+
+    },
+
+    // ==========================================================
+    // NORMALIZADOR
+    // ==========================================================
+
+    normalizarProduto(id, produto = {}){
+
+        const nome =
+            this._safeString(
+                produto.nome ||
+                produto.name
+            );
+
+        const categoria =
+            this._safeString(
+                produto.category ||
+                produto.categoria ||
+                produto.categoryName
+            );
+
+        const subcategoria =
+            this._safeString(
+                produto.subcategory ||
+                produto.subcategoria ||
+                produto.subCategory
+            );
+
+        const preco =
+            this._safeNumber(
+                produto.precoFinal ??
+                produto.price ??
+                produto.preco
+            );
+
+        const peso =
+            this._safeNumber(
+                produto.peso ??
+                produto.weight
+            );
+
+        let variacoes =
+            produto.variacoes ||
+            produto.variantes ||
+            [];
+
+        // STRING → ARRAY
+        if(typeof variacoes === 'string'){
+
+            variacoes =
+                variacoes
+                .split(',')
+                .map(v => v.trim())
+                .filter(Boolean);
+
+        }
+
+        // GARANTE ARRAY
+        if(!Array.isArray(variacoes)){
+
+            variacoes = [];
+
+        }
+
+        return {
+
+            // IDs
+            id:
+                id ||
+                produto.id ||
+                crypto.randomUUID(),
+
+            // Nome
+            nome,
+            name:nome,
+
+            // SKU
+            sku:
+                this._safeString(
+                    produto.sku
+                ),
+
+            // Categoria
+            categoria,
+            category:categoria,
+
+            // Slugs
+            categorySlug:
+                produto.categorySlug ||
+                this._slug(categoria),
+
+            // Subcategoria
+            subcategoria,
+            subcategory:subcategoria,
+
+            subcategorySlug:
+                produto.subcategorySlug ||
+                this._slug(subcategoria),
+
+            // Preços
+            precoFinal:preco,
+            preco:preco,
+            price:preco,
+
+            // Peso
+            peso,
+            weight:peso,
+
+            // Descrição
+            descricao:
+                produto.descricao ||
+                produto.description ||
+                '',
+
+            description:
+                produto.description ||
+                produto.descricao ||
+                '',
+
+            // Imagem
+            image:
+                this._resolverImagem(produto),
+
+            imagem:
+                this._resolverImagem(produto),
+
+            // Promoções
+            promo:
+                this._safeNumber(
+                    produto.promo
+                ),
+
+            badge:
+                produto.badge ||
+                '',
+
+            // Estoque
+            estoque:
+                this._safeNumber(
+                    produto.estoque
+                ),
+
+            // Variações
+            variacoes,
+            variantes:variacoes,
+
+            // Status
+            ativo:
+                produto.ativo !== false,
+
+            createdAt:
+                produto.createdAt ||
+                Date.now()
+        };
+
+    },
+
+    // ==========================================================
+    // LISTAR TODOS
+    // ==========================================================
+
+    async listarTodos(){
 
         try{
 
-            return JSON.parse(json);
+            const snap =
+                await firebase
+                .database()
+                .ref('abella/products')
+                .once('value');
 
-        }catch(e){
+            const data =
+                snap.val() || {};
+
+            if(!data){
+
+                return [];
+
+            }
+
+            // FIREBASE OBJECT → ARRAY
+            const lista =
+                Object.keys(data).map(id => {
+
+                    return this.normalizarProduto(
+                        id,
+                        data[id]
+                    );
+
+                });
+
+            // SOMENTE PRODUTOS ATIVOS
+            return lista.filter(p => p.ativo);
+
+        }catch(err){
+
+            console.error(
+                '[produtoService] erro listarTodos:',
+                err
+            );
 
             return [];
 
@@ -26,496 +305,160 @@ const CarrinhoService = {
 
     },
 
-    _safeNumber(valor,fallback = 0){
-
-        const n =
-            Number(valor);
-
-        return Number.isFinite(n)
-            ? n
-            : fallback;
-
-    },
-
     // ==========================================================
-    // GET ITENS
+    // BUSCAR POR ID
     // ==========================================================
 
-    getItens(){
+    async buscarPorId(id){
 
-        return this._safeParse(
+        try{
 
-            localStorage.getItem(
-                this.STORAGE_KEY
-            ) || '[]'
+            if(!id){
 
-        );
+                return null;
 
-    },
+            }
 
-    obterItens(){
+            const snap =
+                await firebase
+                .database()
+                .ref(`abella/products/${id}`)
+                .once('value');
 
-        return this.getItens();
+            const produto =
+                snap.val();
 
-    },
+            if(!produto){
 
-    // ==========================================================
-    // SAVE
-    // ==========================================================
+                return null;
 
-    salvarTodos(itens = []){
+            }
 
-        localStorage.setItem(
-
-            this.STORAGE_KEY,
-
-            JSON.stringify(itens)
-
-        );
-
-        this.notificarMudanca();
-
-    },
-
-    // ==========================================================
-    // ADD ITEM
-    // ==========================================================
-
-    adicionar(
-
-        produto,
-        quantidade = 1,
-        variacao = null
-
-    ){
-
-        if(!produto){
-
-            return false;
-
-        }
-
-        let itens =
-            this.getItens();
-
-        quantidade =
-            Math.min(
-
-                999,
-
-                Math.max(
-                    1,
-                    parseInt(quantidade) || 1
-                )
-
-            );
-
-        const sku =
-            (
-                produto.sku ||
-                produto.id ||
-                ''
-            )
-            .toString()
-            .trim();
-
-        if(!sku){
-
-            console.error(
-                'Produto sem SKU',
+            return this.normalizarProduto(
+                id,
                 produto
             );
 
-            return false;
+        }catch(err){
+
+            console.error(
+                '[produtoService] erro buscarPorId:',
+                err
+            );
+
+            return null;
 
         }
 
-        const preco =
-            this._safeNumber(
+    },
 
-                produto.precoFinal ??
-                produto.price ??
-                produto.preco ??
-                0
+    // ==========================================================
+    // LISTAR POR CATEGORIA
+    // ==========================================================
 
-            );
+    async listarPorCategoria(categoriaSlug){
 
-        const peso =
-            this._safeNumber(
+        try{
 
-                produto.peso ??
-                produto.weight ??
-                0
+            const todos =
+                await this.listarTodos();
 
-            );
+            return todos.filter(p =>
 
-        const index =
-            itens.findIndex(item =>
-
-                item.sku === sku &&
                 (
-                    item.variacao || null
-                ) === (
-                    variacao || null
+                    p.categorySlug || ''
                 )
+                .toLowerCase()
+                ===
+                (
+                    categoriaSlug || ''
+                )
+                .toLowerCase()
 
             );
 
-        // ITEM EXISTE
+        }catch(err){
 
-        if(index >= 0){
+            console.error(
+                '[produtoService] erro categoria:',
+                err
+            );
 
-            itens[index].quantidade +=
-                quantidade;
+            return [];
 
         }
 
-        // NOVO ITEM
+    },
 
-        else{
+    // ==========================================================
+    // LISTAR POR SUBCATEGORIA
+    // ==========================================================
 
-            itens.push({
+    async listarPorSubcategoria(
+        categoriaSlug,
+        subcategoriaSlug
+    ){
 
-                id:
-                    produto.id ||
-                    sku,
+        try{
 
-                sku,
+            const todos =
+                await this.listarTodos();
 
-                nome:
-                    produto.nome ||
-                    produto.name ||
-                    'Produto',
+            return todos.filter(p => {
 
-                name:
-                    produto.nome ||
-                    produto.name ||
-                    'Produto',
+                const categoriaOK =
 
-                image:
-                    produto.image ||
-                    produto.imagem ||
-                    '',
+                    (
+                        p.categorySlug || ''
+                    )
+                    .toLowerCase()
 
-                imagem:
-                    produto.image ||
-                    produto.imagem ||
-                    '',
+                    ===
 
-                categoria:
-                    produto.category ||
-                    produto.categoria ||
-                    '',
+                    (
+                        categoriaSlug || ''
+                    )
+                    .toLowerCase();
 
-                subcategoria:
-                    produto.subcategory ||
-                    produto.subcategoria ||
-                    '',
+                const subcategoriaOK =
 
-                precoFinal:
-                    preco,
+                    (
+                        p.subcategorySlug || ''
+                    )
+                    .toLowerCase()
 
-                price:
-                    preco,
+                    ===
 
-                peso:
-                    peso,
+                    (
+                        subcategoriaSlug || ''
+                    )
+                    .toLowerCase();
 
-                weight:
-                    peso,
-
-                quantidade,
-
-                variacao:
-                    variacao || null
+                return (
+                    categoriaOK &&
+                    subcategoriaOK
+                );
 
             });
 
-        }
+        }catch(err){
 
-        this.salvarTodos(itens);
+            console.error(
+                '[produtoService] erro subcategoria:',
+                err
+            );
 
-        return true;
-
-    },
-
-    adicionarItem(produto){
-
-        if(!produto){
-
-            return false;
+            return [];
 
         }
-
-        return this.adicionar(
-
-            produto,
-
-            produto.quantidade || 1,
-
-            produto.variacao || null
-
-        );
-
-    },
-
-    // ==========================================================
-    // REMOVE
-    // ==========================================================
-
-    remover(index){
-
-        const itens =
-            this.getItens();
-
-        if(
-            index < 0 ||
-            index >= itens.length
-        ){
-
-            return;
-
-        }
-
-        itens.splice(index,1);
-
-        this.salvarTodos(itens);
-
-    },
-
-    removerItem(index){
-
-        this.remover(index);
-
-    },
-
-    // ==========================================================
-    // UPDATE QTD
-    // ==========================================================
-
-    atualizarQuantidade(
-
-        index,
-        quantidade
-
-    ){
-
-        const itens =
-            this.getItens();
-
-        if(!itens[index]){
-
-            return;
-
-        }
-
-        itens[index].quantidade =
-            Math.min(
-
-                999,
-
-                Math.max(
-                    1,
-                    parseInt(quantidade) || 1
-                )
-
-            );
-
-        this.salvarTodos(itens);
-
-    },
-
-    // ==========================================================
-    // LIMPAR
-    // ==========================================================
-
-    limpar(){
-
-        localStorage.removeItem(
-            this.STORAGE_KEY
-        );
-
-        this.notificarMudanca();
-
-    },
-
-    limparCarrinho(){
-
-        this.limpar();
-
-    },
-
-    // ==========================================================
-    // TOTALS
-    // ==========================================================
-
-    calcularTotais(
-        descontoPixPercentual = 5
-    ){
-
-        const itens =
-            this.getItens();
-
-        let subtotal = 0;
-        let pesoTotal = 0;
-        let totalPecas = 0;
-
-        itens.forEach(item => {
-
-            const preco =
-                this._safeNumber(
-
-                    item.precoFinal ??
-                    item.price ??
-                    0
-
-                );
-
-            const peso =
-                this._safeNumber(
-
-                    item.peso ??
-                    item.weight ??
-                    0
-
-                );
-
-            const qtd =
-                Math.max(
-                    1,
-                    parseInt(
-                        item.quantidade
-                    ) || 1
-                );
-
-            subtotal +=
-                preco * qtd;
-
-            pesoTotal +=
-                peso * qtd;
-
-            totalPecas +=
-                qtd;
-
-        });
-
-        subtotal =
-            Number(
-                subtotal.toFixed(2)
-            );
-
-        pesoTotal =
-            Number(
-                pesoTotal.toFixed(2)
-            );
-
-        const descontoPix =
-            Number(
-
-                (
-                    subtotal *
-                    (
-                        descontoPixPercentual / 100
-                    )
-                )
-                .toFixed(2)
-
-            );
-
-        const totalPix =
-            Number(
-
-                (
-                    subtotal -
-                    descontoPix
-                )
-                .toFixed(2)
-
-            );
-
-        return {
-
-            subtotal,
-
-            pesoTotal,
-
-            totalPecas,
-
-            descontoPix,
-
-            totalPix,
-
-            parcelado6x:
-                Number(
-                    (
-                        subtotal / 6
-                    ).toFixed(2)
-                )
-
-        };
-
-    },
-
-    getResumo(){
-
-        return this.calcularTotais();
-
-    },
-
-    obterResumo(){
-
-        return this.getResumo();
-
-    },
-
-    // ==========================================================
-    // EVENTS
-    // ==========================================================
-
-    notificarMudanca(){
-
-        window.dispatchEvent(
-
-            new Event(
-                'carrinhoAtualizado'
-            )
-
-        );
 
     }
 
 };
 
 // ==========================================================
-// EXPORT
+// EXPORT GLOBAL
 // ==========================================================
 
-window.CarrinhoService =
-    CarrinhoService;
-
-window.carrinhoService =
-    CarrinhoService;
-
-// ==========================================================
-// LEGACY
-// ==========================================================
-
-CarrinhoService.obterItens =
-    CarrinhoService.getItens.bind(CarrinhoService);
-
-CarrinhoService.obterResumo =
-    CarrinhoService.getResumo.bind(CarrinhoService);
-
-CarrinhoService.adicionarItem =
-    CarrinhoService.adicionarItem.bind(CarrinhoService);
-
-CarrinhoService.removerItem =
-    CarrinhoService.removerItem.bind(CarrinhoService);
-
-CarrinhoService.limparCarrinho =
-    CarrinhoService.limparCarrinho.bind(CarrinhoService);
-
-console.log(
-    '🛒 CarrinhoService Premium carregado.'
-);
-
+window.produtoService =
+    produtoService;

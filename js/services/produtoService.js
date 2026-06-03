@@ -1,6 +1,6 @@
 // ======================================================================
 // js/services/produtoService.js
-// Abella Joias - ProdutoService Premium v3.0
+// Abella Joias - ProdutoService Premium v3.1
 // ======================================================================
 
 const produtoService = {
@@ -9,17 +9,16 @@ const produtoService = {
     // HELPERS
     // ==========================================================
 
-    _safeString(valor = ''){
+    _safeString(valor = '') {
 
         return String(valor || '')
             .trim();
 
     },
 
-    _safeNumber(valor = 0){
+    _safeNumber(valor = 0) {
 
-        const n =
-            parseFloat(valor);
+        const n = parseFloat(valor);
 
         return Number.isFinite(n)
             ? n
@@ -27,19 +26,19 @@ const produtoService = {
 
     },
 
-    _slug(texto = ''){
+    _slug(texto = '') {
 
         return this
             ._safeString(texto)
             .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g,'')
+            .replace(/[\u0300-\u036f]/g, '')
             .toLowerCase()
-            .replace(/[^a-z0-9]+/g,'-')
-            .replace(/^-+|-+$/g,'');
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
 
     },
 
-    _resolverImagem(produto){
+    _resolverImagem(produto) {
 
         const imagem =
             produto.image ||
@@ -48,23 +47,21 @@ const produtoService = {
             produto.img ||
             '';
 
-        if(!imagem){
+        if (!imagem) {
 
             return '';
 
         }
 
-        // URL normal
-        if(imagem.startsWith('http')){
+        if (imagem.startsWith('http')) {
 
             return imagem;
 
         }
 
-        // Firebase gs://
-        if(imagem.startsWith('gs://')){
+        if (imagem.startsWith('gs://')) {
 
-            try{
+            try {
 
                 const semGs =
                     imagem.replace(
@@ -83,7 +80,7 @@ const produtoService = {
 
                 return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
 
-            }catch(e){
+            } catch (e) {
 
                 console.error(
                     'Erro converter imagem:',
@@ -104,7 +101,7 @@ const produtoService = {
     // NORMALIZADOR
     // ==========================================================
 
-    normalizarProduto(id, produto = {}){
+    normalizarProduto(id, produto = {}) {
 
         const nome =
             this._safeString(
@@ -123,20 +120,25 @@ const produtoService = {
             this._safeString(
                 produto.subcategory ||
                 produto.subcategoria ||
-                produto.subCategory
+                produto.subCategory ||
+                produto.subcategoryName
             );
 
         const preco =
             this._safeNumber(
                 produto.precoFinal ??
                 produto.price ??
-                produto.preco
+                produto.preco ??
+                produto.valor ??
+                0
             );
 
         const peso =
             this._safeNumber(
                 produto.peso ??
-                produto.weight
+                produto.weight ??
+                produto.gramas ??
+                0
             );
 
         let variacoes =
@@ -144,19 +146,17 @@ const produtoService = {
             produto.variantes ||
             [];
 
-        // STRING → ARRAY
-        if(typeof variacoes === 'string'){
+        if (typeof variacoes === 'string') {
 
             variacoes =
                 variacoes
-                .split(',')
-                .map(v => v.trim())
-                .filter(Boolean);
+                    .split(',')
+                    .map(v => v.trim())
+                    .filter(Boolean);
 
         }
 
-        // GARANTE ARRAY
-        if(!Array.isArray(variacoes)){
+        if (!Array.isArray(variacoes)) {
 
             variacoes = [];
 
@@ -164,49 +164,65 @@ const produtoService = {
 
         return {
 
-            // IDs
+            // ==================================================
+            // IDENTIFICAÇÃO
+            // ==================================================
+
             id:
                 id ||
                 produto.id ||
                 crypto.randomUUID(),
 
-            // Nome
-            nome,
-            name:nome,
-
-            // SKU
             sku:
                 this._safeString(
-                    produto.sku
+                    produto.sku ||
+                    id
                 ),
 
-            // Categoria
-            categoria,
-            category:categoria,
+            // ==================================================
+            // NOME
+            // ==================================================
 
-            // Slugs
+            nome,
+            name: nome,
+
+            // ==================================================
+            // CATEGORIAS
+            // ==================================================
+
+            categoria,
+            category: categoria,
+
             categorySlug:
                 produto.categorySlug ||
                 this._slug(categoria),
 
-            // Subcategoria
             subcategoria,
-            subcategory:subcategoria,
+            subcategory: subcategoria,
 
             subcategorySlug:
                 produto.subcategorySlug ||
                 this._slug(subcategoria),
 
-            // Preços
-            precoFinal:preco,
-            preco:preco,
-            price:preco,
+            // ==================================================
+            // PREÇOS
+            // ==================================================
 
-            // Peso
+            precoFinal: preco,
+            preco: preco,
+            price: preco,
+
+            // ==================================================
+            // PESO
+            // ==================================================
+
             peso,
-            weight:peso,
+            weight: peso,
 
-            // Descrição
+            // ==================================================
+            // DESCRIÇÃO
+            // ==================================================
+
             descricao:
                 produto.descricao ||
                 produto.description ||
@@ -217,14 +233,20 @@ const produtoService = {
                 produto.descricao ||
                 '',
 
-            // Imagem
+            // ==================================================
+            // IMAGEM
+            // ==================================================
+
             image:
                 this._resolverImagem(produto),
 
             imagem:
                 this._resolverImagem(produto),
 
-            // Promoções
+            // ==================================================
+            // PROMOÇÃO
+            // ==================================================
+
             promo:
                 this._safeNumber(
                     produto.promo
@@ -234,23 +256,48 @@ const produtoService = {
                 produto.badge ||
                 '',
 
-            // Estoque
+            // ==================================================
+            // ESTOQUE
+            // ==================================================
+
             estoque:
                 this._safeNumber(
                     produto.estoque
                 ),
 
-            // Variações
-            variacoes,
-            variantes:variacoes,
+            // ==================================================
+            // VARIAÇÕES
+            // ==================================================
 
-            // Status
+            variacoes,
+            variantes: variacoes,
+
+            // ==================================================
+            // STATUS
+            // ==================================================
+
+            paused:
+                produto.paused === true,
+
             ativo:
-                produto.ativo !== false,
+                (
+                    produto.paused !== true &&
+                    produto.ativo !== false
+                ),
+
+            // ==================================================
+            // DATAS
+            // ==================================================
 
             createdAt:
                 produto.createdAt ||
+                Date.now(),
+
+            updatedAt:
+                produto.updatedAt ||
+                produto.createdAt ||
                 Date.now()
+
         };
 
     },
@@ -259,26 +306,19 @@ const produtoService = {
     // LISTAR TODOS
     // ==========================================================
 
-    async listarTodos(){
+    async listarTodos() {
 
-        try{
+        try {
 
             const snap =
                 await firebase
-                .database()
-                .ref('abella/products')
-                .once('value');
+                    .database()
+                    .ref('abella/products')
+                    .once('value');
 
             const data =
                 snap.val() || {};
 
-            if(!data){
-
-                return [];
-
-            }
-
-            // FIREBASE OBJECT → ARRAY
             const lista =
                 Object.keys(data).map(id => {
 
@@ -289,10 +329,9 @@ const produtoService = {
 
                 });
 
-            // SOMENTE PRODUTOS ATIVOS
             return lista.filter(p => p.ativo);
 
-        }catch(err){
+        } catch (err) {
 
             console.error(
                 '[produtoService] erro listarTodos:',
@@ -309,11 +348,11 @@ const produtoService = {
     // BUSCAR POR ID
     // ==========================================================
 
-    async buscarPorId(id){
+    async buscarPorId(id) {
 
-        try{
+        try {
 
-            if(!id){
+            if (!id) {
 
                 return null;
 
@@ -321,14 +360,14 @@ const produtoService = {
 
             const snap =
                 await firebase
-                .database()
-                .ref(`abella/products/${id}`)
-                .once('value');
+                    .database()
+                    .ref(`abella/products/${id}`)
+                    .once('value');
 
             const produto =
                 snap.val();
 
-            if(!produto){
+            if (!produto) {
 
                 return null;
 
@@ -339,7 +378,7 @@ const produtoService = {
                 produto
             );
 
-        }catch(err){
+        } catch (err) {
 
             console.error(
                 '[produtoService] erro buscarPorId:',
@@ -356,9 +395,9 @@ const produtoService = {
     // LISTAR POR CATEGORIA
     // ==========================================================
 
-    async listarPorCategoria(categoriaSlug){
+    async listarPorCategoria(categoriaSlug) {
 
-        try{
+        try {
 
             const todos =
                 await this.listarTodos();
@@ -367,17 +406,17 @@ const produtoService = {
 
                 (
                     p.categorySlug || ''
-                )
-                .toLowerCase()
+                ).toLowerCase()
+
                 ===
+
                 (
                     categoriaSlug || ''
-                )
-                .toLowerCase()
+                ).toLowerCase()
 
             );
 
-        }catch(err){
+        } catch (err) {
 
             console.error(
                 '[produtoService] erro categoria:',
@@ -397,9 +436,9 @@ const produtoService = {
     async listarPorSubcategoria(
         categoriaSlug,
         subcategoriaSlug
-    ){
+    ) {
 
-        try{
+        try {
 
             const todos =
                 await this.listarTodos();
@@ -410,29 +449,25 @@ const produtoService = {
 
                     (
                         p.categorySlug || ''
-                    )
-                    .toLowerCase()
+                    ).toLowerCase()
 
                     ===
 
                     (
                         categoriaSlug || ''
-                    )
-                    .toLowerCase();
+                    ).toLowerCase();
 
                 const subcategoriaOK =
 
                     (
                         p.subcategorySlug || ''
-                    )
-                    .toLowerCase()
+                    ).toLowerCase()
 
                     ===
 
                     (
                         subcategoriaSlug || ''
-                    )
-                    .toLowerCase();
+                    ).toLowerCase();
 
                 return (
                     categoriaOK &&
@@ -441,7 +476,7 @@ const produtoService = {
 
             });
 
-        }catch(err){
+        } catch (err) {
 
             console.error(
                 '[produtoService] erro subcategoria:',
@@ -460,5 +495,8 @@ const produtoService = {
 // EXPORT GLOBAL
 // ==========================================================
 
-window.produtoService =
-    produtoService;
+window.produtoService = produtoService;
+
+console.log(
+    '📦 ProdutoService Premium v3.1 carregado.'
+);

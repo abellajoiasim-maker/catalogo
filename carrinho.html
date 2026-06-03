@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
     <meta charset="UTF-8">
 
     <title>Catálogo Premium • Abella Joias</title>
@@ -68,6 +69,7 @@
         }
 
     </style>
+
 </head>
 
 <body class="min-h-screen pb-32">
@@ -147,7 +149,7 @@
                     Escolha produtos, configure variações,
                     visualize descontos, acompanhe economia,
                     parcelamento e finalize pedidos de forma rápida,
-                    elegante e totalmente autoexplicativa.
+                    elegante e totalmente integrada ao Firebase.
 
                 </p>
 
@@ -157,11 +159,9 @@
 
     </section>
 
-    <!-- PRODUTOS -->
+    <!-- RESUMO -->
 
     <main class="max-w-7xl mx-auto px-4 md:px-6 py-8">
-
-        <!-- RESUMO TOPO -->
 
         <div class="bg-card rounded-3xl p-5 md:p-6 mb-8">
 
@@ -237,7 +237,7 @@
 
     </main>
 
-    <!-- BOTÃO FIXO MOBILE -->
+    <!-- BOTÃO MOBILE -->
 
     <div class="fixed bottom-0 left-0 right-0 z-50 p-3 md:hidden bg-gradient-to-t from-black to-transparent">
 
@@ -316,7 +316,7 @@
 
                                     <p
                                         id="modalPreco"
-                                        class="text-5xl font-black">
+                                        class="text-5xl font-black gold">
                                     </p>
 
                                     <p
@@ -477,61 +477,90 @@
 
     <script src="js/services/carrinhoService.js"></script>
 
+    <script src="js/services/produtoService.js"></script>
+
     <script>
 
-        const produtos = [
-
-            {
-                id:1,
-                nome:"Pulseira Riviera Luxo",
-                sku:"AB-001",
-                peso:5.3,
-                categoria:"Pulseiras",
-                precoOriginal:129.90,
-                precoFinal:89.90,
-                image:"https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1200&auto=format&fit=crop",
-                variacoes:["A","B","C"]
-            },
-
-            {
-                id:2,
-                nome:"Colar Premium Feminino",
-                sku:"AB-002",
-                peso:7.1,
-                categoria:"Colares",
-                precoOriginal:159.90,
-                precoFinal:119.90,
-                image:"https://images.unsplash.com/photo-1611085583191-a3b181a88401?q=80&w=1200&auto=format&fit=crop"
-            },
-
-            {
-                id:3,
-                nome:"Pingente Dizeres",
-                sku:"AB-003",
-                peso:3.8,
-                categoria:"Pingentes",
-                precoOriginal:99.90,
-                precoFinal:69.90,
-                image:"https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?q=80&w=1200&auto=format&fit=crop",
-                variacoes:["Amor","Fé","Mãe","Gratidão"]
-            }
-
-        ];
+        let produtos = [];
 
         let produtoModal = null;
 
+        function resolverImagemFirebase(path){
+
+            if(!path){
+                return 'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
+            }
+
+            if(path.startsWith('http')){
+                return path;
+            }
+
+            if(path.startsWith('gs://')){
+
+                try{
+
+                    const semGs =
+                        path.replace('gs://','');
+
+                    const partes =
+                        semGs.split('/');
+
+                    const bucket =
+                        partes.shift();
+
+                    const arquivo =
+                        partes.join('/');
+
+                    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
+
+                }catch(e){
+
+                    return 'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
+
+                }
+
+            }
+
+            return path;
+
+        }
+
         document.addEventListener(
             'DOMContentLoaded',
-            () => {
+            async () => {
 
-                renderizarProdutos();
+                await carregarProdutos();
 
                 atualizarResumoCarrinho();
 
             }
         );
 
-        function renderizarProdutos() {
+        async function carregarProdutos(){
+
+            try{
+
+                const todos =
+                    await produtoService
+                    .listarTodos();
+
+                produtos =
+                    todos.filter(p => !p.paused);
+
+                renderizarProdutos();
+
+            }catch(e){
+
+                console.error(
+                    'Erro ao carregar produtos',
+                    e
+                );
+
+            }
+
+        }
+
+        function renderizarProdutos(){
 
             const grid =
                 document.getElementById(
@@ -540,7 +569,49 @@
 
             grid.innerHTML = '';
 
+            if(!produtos.length){
+
+                grid.innerHTML = `
+
+                    <div class="col-span-full">
+
+                        <div class="bg-card rounded-[2rem] p-12 text-center">
+
+                            <h2 class="text-3xl font-black">
+                                Nenhum produto encontrado
+                            </h2>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
             produtos.forEach(produto => {
+
+                const preco =
+                    parseFloat(
+                        produto.precoFinal ||
+                        produto.price ||
+                        0
+                    );
+
+                const precoOriginal =
+                    parseFloat(
+                        produto.precoOriginal ||
+                        preco
+                    );
+
+                const imagem =
+                    resolverImagemFirebase(
+                        produto.image ||
+                        produto.imagem ||
+                        ''
+                    );
 
                 grid.innerHTML += `
 
@@ -549,18 +620,23 @@
                         <div class="relative aspect-square overflow-hidden bg-black">
 
                             <img
-                                src="${produto.image}"
-                                class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500">
+                                src="${imagem}"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
+                                onerror="this.src='https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA'">
 
-                            <div class="absolute top-3 left-3">
+                            ${produto.promo ? `
 
-                                <span class="bg-red-500 text-white text-[10px] px-3 py-1 rounded-full uppercase tracking-wider font-black">
+                                <div class="absolute top-3 left-3">
 
-                                    Oferta
+                                    <span class="bg-red-500 text-white text-[10px] px-3 py-1 rounded-full uppercase tracking-wider font-black">
 
-                                </span>
+                                        ${produto.promo}% OFF
 
-                            </div>
+                                    </span>
+
+                                </div>
+
+                            ` : ''}
 
                         </div>
 
@@ -570,13 +646,13 @@
 
                                 <h3 class="text-lg font-black leading-tight">
 
-                                    ${produto.nome}
+                                    ${produto.nome || produto.name || 'Produto'}
 
                                 </h3>
 
                                 <p class="text-[11px] text-zinc-500 mt-2">
 
-                                    SKU: ${produto.sku}
+                                    SKU: ${produto.sku || '--'}
 
                                 </p>
 
@@ -592,7 +668,7 @@
 
                                 <span class="gold font-bold">
 
-                                    ${produto.peso}g
+                                    ${parseFloat(produto.peso || 0).toFixed(2)}g
 
                                 </span>
 
@@ -600,11 +676,15 @@
 
                             <div class="space-y-1">
 
-                                <p class="text-sm line-through text-zinc-500">
+                                ${precoOriginal > preco ? `
 
-                                    ${money.formatar(produto.precoOriginal)}
+                                    <p class="text-sm line-through text-zinc-500">
 
-                                </p>
+                                        ${money.formatar(precoOriginal)}
+
+                                    </p>
+
+                                ` : ''}
 
                                 <div class="flex items-end justify-between">
 
@@ -612,7 +692,7 @@
 
                                         <p class="text-3xl font-black">
 
-                                            ${money.formatar(produto.precoFinal)}
+                                            ${money.formatar(preco)}
 
                                         </p>
 
@@ -644,19 +724,8 @@
 
                             </div>
 
-                            <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-3">
-
-                                <p class="text-[11px] text-emerald-400 font-bold">
-
-                                    Economize
-                                    ${money.formatar(produto.precoOriginal - produto.precoFinal)}
-
-                                </p>
-
-                            </div>
-
                             <button
-                                onclick="abrirModalCompra(${produto.id})"
+                                onclick="abrirModalCompra('${produto.id}')"
                                 class="w-full h-14 rounded-2xl bg-[#caa85c] hover:bg-[#b89a54] text-black text-xs font-black uppercase tracking-[0.2em] transition-all">
 
                                 Comprar
@@ -673,16 +742,32 @@
 
         }
 
-        function abrirModalCompra(id) {
+        function abrirModalCompra(id){
 
             const produto =
                 produtos.find(
                     p => p.id == id
                 );
 
-            if(!produto) return;
+            if(!produto){
+                return;
+            }
 
             produtoModal = produto;
+
+            const preco =
+                parseFloat(
+                    produto.precoFinal ||
+                    produto.price ||
+                    0
+                );
+
+            const imagem =
+                resolverImagemFirebase(
+                    produto.image ||
+                    produto.imagem ||
+                    ''
+                );
 
             document.getElementById(
                 'modalCompra'
@@ -690,40 +775,50 @@
 
             document.getElementById(
                 'modalImagem'
-            ).src = produto.image;
+            ).src = imagem;
 
             document.getElementById(
                 'modalNome'
-            ).innerText = produto.nome;
+            ).innerText =
+                produto.nome ||
+                produto.name ||
+                '';
 
             document.getElementById(
                 'modalSku'
-            ).innerText = `SKU: ${produto.sku}`;
+            ).innerText =
+                `SKU: ${produto.sku || '--'}`;
 
             document.getElementById(
                 'modalPreco'
             ).innerText =
-                money.formatar(produto.precoFinal);
+                money.formatar(preco);
 
             document.getElementById(
                 'modalPeso'
             ).innerText =
-                `${produto.peso}g`;
+                `${parseFloat(produto.peso || 0).toFixed(2)}g`;
 
             document.getElementById(
                 'modalCategoria'
             ).innerText =
-                produto.categoria;
+                produto.category ||
+                produto.categoria ||
+                'Geral';
 
             document.getElementById(
                 'modalParcelas'
             ).innerText =
-                `6x de ${money.formatar(produto.precoFinal / 6)}`;
+                `6x de ${money.formatar(preco / 6)}`;
 
             document.getElementById(
                 'modalPix'
             ).innerText =
-                `No PIX: ${money.formatar(produto.precoFinal * .95)}`;
+                `No PIX: ${money.formatar(preco * .95)}`;
+
+            document.getElementById(
+                'modalQtd'
+            ).value = 1;
 
             renderizarVariacoes(produto);
 
@@ -748,11 +843,23 @@
 
             container.innerHTML = '';
 
-            if(
-                !produto.variacoes
-                ||
-                !produto.variacoes.length
-            ){
+            let variacoes =
+                produto.variacoes ||
+                produto.variantes ||
+                produto.options ||
+                [];
+
+            if(typeof variacoes === 'string'){
+
+                variacoes =
+                    variacoes
+                    .split(',')
+                    .map(v => v.trim())
+                    .filter(Boolean);
+
+            }
+
+            if(!variacoes.length){
 
                 document.getElementById(
                     'quantidadeSimples'
@@ -766,7 +873,7 @@
                 'quantidadeSimples'
             ).style.display = 'none';
 
-            produto.variacoes.forEach(nome => {
+            variacoes.forEach(nome => {
 
                 container.innerHTML += `
 
@@ -800,7 +907,9 @@
 
         function atualizarResumoModal(){
 
-            if(!produtoModal) return;
+            if(!produtoModal){
+                return;
+            }
 
             let qtd = 0;
 
@@ -830,10 +939,18 @@
             }
 
             const peso =
-                qtd * parseFloat(produtoModal.peso);
+                qtd *
+                parseFloat(
+                    produtoModal.peso || 0
+                );
 
             const total =
-                qtd * parseFloat(produtoModal.precoFinal);
+                qtd *
+                parseFloat(
+                    produtoModal.precoFinal ||
+                    produtoModal.price ||
+                    0
+                );
 
             document.getElementById(
                 'resumoQtdModal'
@@ -854,7 +971,9 @@
 
         function adicionarProdutoModal(){
 
-            if(!produtoModal) return;
+            if(!produtoModal){
+                return;
+            }
 
             const inputs =
                 document.querySelectorAll(
@@ -868,11 +987,32 @@
                     const qtd =
                         parseInt(input.value) || 0;
 
-                    if(qtd <= 0) return;
+                    if(qtd <= 0){
+                        return;
+                    }
 
                     carrinhoService.adicionarItem({
 
-                        ...produtoModal,
+                        id:
+                            produtoModal.id,
+
+                        nome:
+                            produtoModal.nome ||
+                            produtoModal.name,
+
+                        sku:
+                            produtoModal.sku,
+
+                        peso:
+                            produtoModal.peso,
+
+                        precoFinal:
+                            produtoModal.precoFinal ||
+                            produtoModal.price,
+
+                        image:
+                            produtoModal.image ||
+                            produtoModal.imagem,
 
                         variacao:
                             input.dataset.variacao,
@@ -894,7 +1034,26 @@
 
                 carrinhoService.adicionarItem({
 
-                    ...produtoModal,
+                    id:
+                        produtoModal.id,
+
+                    nome:
+                        produtoModal.nome ||
+                        produtoModal.name,
+
+                    sku:
+                        produtoModal.sku,
+
+                    peso:
+                        produtoModal.peso,
+
+                    precoFinal:
+                        produtoModal.precoFinal ||
+                        produtoModal.price,
+
+                    image:
+                        produtoModal.image ||
+                        produtoModal.imagem,
 
                     quantidade:qtd
 
@@ -925,15 +1084,24 @@
 
             lista.forEach(item => {
 
-                qtd += item.quantidade;
+                qtd +=
+                    parseInt(
+                        item.quantidade || 0
+                    );
 
                 peso +=
-                    item.quantidade *
-                    parseFloat(item.peso || 0);
+                    (
+                        parseFloat(item.peso || 0)
+                        *
+                        parseInt(item.quantidade || 0)
+                    );
 
                 total +=
-                    item.quantidade *
-                    parseFloat(item.precoFinal || 0);
+                    (
+                        parseFloat(item.precoFinal || 0)
+                        *
+                        parseInt(item.quantidade || 0)
+                    );
 
             });
 

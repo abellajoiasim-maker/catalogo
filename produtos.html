@@ -718,61 +718,80 @@ try{
         todos
     );
 
-    produtos =
-        todos.filter(p => {
+    produtos = todos.filter(p => {
 
-            // NORMALIZA
-            const catProduto =
-                (
-                    p.category ||
-                    p.categoria ||
-                    ''
-                )
-                .toString()
-                .trim()
-                .toLowerCase();
+    // =========================
+    // NORMALIZAÇÃO SEGURA
+    // =========================
 
-            const subProduto =
-                (
-                    p.subcategory ||
-                    p.subcategoria ||
-                    ''
-                )
-                .toString()
-                .trim()
-                .toLowerCase();
+    const catProduto = (
+        p.categorySlug ||
+        p.category ||
+        p.categoria ||
+        ''
+    )
+    .toString()
+    .trim()
+    .toLowerCase();
 
-            const catBusca =
-                categoria
-                .trim()
-                .toLowerCase();
+    const subProduto = (
+        p.subcategorySlug ||
+        p.subcategory ||
+        p.subcategoria ||
+        ''
+    )
+    .toString()
+    .trim()
+    .toLowerCase();
 
-            const subBusca =
-                subcategoria
-                .trim()
-                .toLowerCase();
+    const catBusca = (
+        categoria || ''
+    )
+    .toString()
+    .trim()
+    .toLowerCase();
 
-            // FILTRO CATEGORIA
-            const categoriaOK =
-                catProduto === catBusca;
+    const subBusca = (
+        subcategoria || ''
+    )
+    .toString()
+    .trim()
+    .toLowerCase();
 
-            // SEM SUBCATEGORIA
-            if(!subBusca){
+    // =========================
+    // VALIDA CATEGORIA
+    // =========================
 
-                return categoriaOK;
+    if(!catProduto || !catBusca){
+        return false;
+    }
 
-            }
+    const categoriaOK =
+        catProduto === catBusca;
 
-            // COM SUBCATEGORIA
-            const subcategoriaOK =
-                subProduto === subBusca;
+    if(!categoriaOK){
+        return false;
+    }
 
-            return (
-                categoriaOK &&
-                subcategoriaOK
-            );
+    // =========================
+    // SEM SUBCATEGORIA
+    // =========================
 
-        });
+    if(!subBusca){
+
+        return true;
+
+    }
+
+    // =========================
+    // COM SUBCATEGORIA
+    // =========================
+
+    return (
+        subProduto === subBusca
+    );
+
+});
 
     console.log(
         'PRODUTOS FILTRADOS:',

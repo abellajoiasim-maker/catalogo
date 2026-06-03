@@ -676,59 +676,124 @@
                     window.location.search
                 );
 
-            const categoria =
-                params.get('categoria');
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
 
-            const subcategoria =
-                decodeURIComponent(
-                    params.get('subcategoria') || ''
-                );
+// ACEITA AMBOS FORMATOS
+const categoria =
+    params.get('categoria') ||
+    params.get('cat') ||
+    '';
 
-            document.getElementById(
-                'tituloPagina'
-            ).innerText =
-                subcategoria;
+const subcategoria =
+    decodeURIComponent(
+        params.get('subcategoria') ||
+        params.get('sub') ||
+        ''
+    );
 
-            document.getElementById(
-                'heroTitulo'
-            ).innerText =
-                subcategoria;
+console.log('Categoria:', categoria);
+console.log('Subcategoria:', subcategoria);
 
-            try{
+document.getElementById(
+    'tituloPagina'
+).innerText =
+    subcategoria || categoria;
 
-                const todos =
-                    await produtoService
-                    .listarTodos();
+document.getElementById(
+    'heroTitulo'
+).innerText =
+    subcategoria || categoria;
 
-                produtos =
-                    todos.filter(p => {
+try{
 
-                        const cat =
-                            p.categorySlug === categoria;
+    const todos =
+        await produtoService
+        .listarTodos();
 
-                        const sub =
-                            (
-                                p.subcategory ||
-                                p.subcategoria ||
-                                'Geral'
-                            ) === subcategoria;
+    console.log(
+        'TOTAL PRODUTOS:',
+        todos
+    );
 
-                        return cat && sub;
+    produtos =
+        todos.filter(p => {
 
-                    });
+            // NORMALIZA
+            const catProduto =
+                (
+                    p.category ||
+                    p.categoria ||
+                    ''
+                )
+                .toString()
+                .trim()
+                .toLowerCase();
 
-                document.getElementById(
-                    'totalProdutos'
-                ).innerText =
-                    produtos.length;
+            const subProduto =
+                (
+                    p.subcategory ||
+                    p.subcategoria ||
+                    ''
+                )
+                .toString()
+                .trim()
+                .toLowerCase();
 
-                renderizarProdutos();
+            const catBusca =
+                categoria
+                .trim()
+                .toLowerCase();
 
-            }catch(err){
+            const subBusca =
+                subcategoria
+                .trim()
+                .toLowerCase();
 
-                console.error(err);
+            // FILTRO CATEGORIA
+            const categoriaOK =
+                catProduto === catBusca;
+
+            // SEM SUBCATEGORIA
+            if(!subBusca){
+
+                return categoriaOK;
 
             }
+
+            // COM SUBCATEGORIA
+            const subcategoriaOK =
+                subProduto === subBusca;
+
+            return (
+                categoriaOK &&
+                subcategoriaOK
+            );
+
+        });
+
+    console.log(
+        'PRODUTOS FILTRADOS:',
+        produtos
+    );
+
+    document.getElementById(
+        'totalProdutos'
+    ).innerText =
+        produtos.length;
+
+    renderizarProdutos();
+
+}catch(err){
+
+    console.error(
+        'ERRO AO CARREGAR PRODUTOS:',
+        err
+    );
+
+}
 
         }
 

@@ -1,4 +1,4 @@
-```javascript
+javascript
 // ======================================================================
 // js/services/carrinhoService.js
 // Abella Joias • CarrinhoService Premium v3.0 FINAL
@@ -518,4 +518,4 @@ CarrinhoService.limparCarrinho =
 console.log(
     '🛒 CarrinhoService Premium carregado.'
 );
-```
+

@@ -1,6 +1,6 @@
 // ======================================================================
 // js/firebase/services/descontoService.js
-// Abella Joias - DescontoService v2.0
+// Abella Joias - DescontoService v3.0
 // ======================================================================
 
 const DescontoService = {
@@ -11,11 +11,66 @@ const DescontoService = {
 
     _safeNumber(valor, fallback = 0) {
 
-        const numero = Number(valor);
+        if (
+            valor === null ||
+            valor === undefined
+        ) {
+            return fallback;
+        }
+
+        const numero = Number(
+
+            String(valor)
+                .replace(/[^\d,.-]/g, '')
+                .replace(',', '.')
+
+        );
 
         return Number.isFinite(numero)
             ? numero
             : fallback;
+
+    },
+
+    _round(valor) {
+
+        return Math.round(
+            (valor + Number.EPSILON) * 100
+        ) / 100;
+
+    },
+
+    // ==========================================================
+    // Resumo PIX
+    // ==========================================================
+
+    obterResumoPix(
+        subtotal,
+        percentual = 0
+    ) {
+
+        const total =
+            this._safeNumber(subtotal);
+
+        const desconto =
+            this.calcularDescontoPix(
+                total,
+                percentual
+            );
+
+        return {
+
+            subtotal: total,
+
+            desconto,
+
+            totalPix:
+                this._round(
+                    total - desconto
+                )
+
+        };
+
     },
 
     // ==========================================================
@@ -30,17 +85,26 @@ const DescontoService = {
         const total =
             this._safeNumber(subtotal);
 
-        const taxa =
-            this._safeNumber(
-                porcentagem
-            );
+        const taxa = Math.min(
 
-        return Number(
-            (
-                total *
-                (taxa / 100)
-            ).toFixed(2)
+            100,
+
+            Math.max(
+
+                0,
+
+                this._safeNumber(
+                    porcentagem
+                )
+
+            )
+
         );
+
+        return this._round(
+            total * (taxa / 100)
+        );
+
     },
 
     // ==========================================================
@@ -61,12 +125,16 @@ const DescontoService = {
                 porcentagem
             );
 
-        return Number(
-            (
-                total -
-                desconto
-            ).toFixed(2)
+        return Math.max(
+
+            0,
+
+            this._round(
+                total - desconto
+            )
+
         );
+
     },
 
     // ==========================================================
@@ -95,12 +163,10 @@ const DescontoService = {
             return 0;
         }
 
-        return Number(
-            (
-                antigo -
-                atual
-            ).toFixed(2)
+        return this._round(
+            antigo - atual
         );
+
     },
 
     // ==========================================================
@@ -130,6 +196,7 @@ const DescontoService = {
         }
 
         return Math.round(
+
             (
                 (
                     antigo -
@@ -137,7 +204,9 @@ const DescontoService = {
                 ) /
                 antigo
             ) * 100
+
         );
+
     },
 
     // ==========================================================
@@ -148,22 +217,30 @@ const DescontoService = {
         produto
     ) {
 
-        if (!produto) {
+        if (
+            !produto ||
+            typeof produto !== 'object'
+        ) {
             return null;
         }
 
         const precoAtual =
             this._safeNumber(
+
                 produto.price ??
                 produto.precoFinal ??
-                produto.preco
+                produto.preco ??
+                produto.valor
+
             );
 
         const precoAnterior =
             this._safeNumber(
+
                 produto.oldPrice ??
                 produto.precoAntigo ??
                 produto.precoOriginal
+
             );
 
         if (
@@ -179,7 +256,12 @@ const DescontoService = {
                 precoAnterior
             );
 
+        if (percentual < 1) {
+            return null;
+        }
+
         return `-${percentual}% OFF`;
+
     },
 
     // ==========================================================
@@ -190,28 +272,39 @@ const DescontoService = {
         produto
     ) {
 
-        if (!produto) {
+        if (
+            !produto ||
+            typeof produto !== 'object'
+        ) {
             return false;
         }
 
         const precoAtual =
             this._safeNumber(
+
                 produto.price ??
                 produto.precoFinal ??
-                produto.preco
+                produto.preco ??
+                produto.valor
+
             );
 
         const precoAnterior =
             this._safeNumber(
+
                 produto.oldPrice ??
                 produto.precoAntigo ??
                 produto.precoOriginal
+
             );
 
         return (
+
             precoAnterior > 0 &&
             precoAtual < precoAnterior
+
         );
+
     },
 
     // ==========================================================
@@ -230,10 +323,22 @@ const DescontoService = {
             );
 
         return economia > 0
+
             ? `Economize R$ ${economia.toFixed(2)}`
+
             : null;
+
     }
+
 };
+
+Object.freeze(
+    DescontoService
+);
 
 window.DescontoService =
     DescontoService;
+
+console.log(
+    '💰 DescontoService v3.0 carregado.'
+);

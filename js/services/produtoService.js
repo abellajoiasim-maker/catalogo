@@ -1,597 +1,464 @@
 // ======================================================================
 // js/services/produtoService.js
-// Abella Joias - Versão Refatorada
+// Abella Joias - ProdutoService Premium v3.0
 // ======================================================================
 
-const ProdutoService = {
-
-    _cache: {},
-    _cacheTimestamp: 0,
-    _cacheTTL: 60000,
+const produtoService = {
 
     // ==========================================================
-    // Helpers
+    // HELPERS
     // ==========================================================
 
-    _db() {
-        if (!window.db) {
-            throw new Error("Firebase Database não inicializado.");
+    _safeString(valor = ''){
+
+        return String(valor || '')
+            .trim();
+
+    },
+
+    _safeNumber(valor = 0){
+
+        const n =
+            parseFloat(valor);
+
+        return Number.isFinite(n)
+            ? n
+            : 0;
+
+    },
+
+    _slug(texto = ''){
+
+        return this
+            ._safeString(texto)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g,'')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g,'-')
+            .replace(/^-+|-+$/g,'');
+
+    },
+
+    _resolverImagem(produto){
+
+        const imagem =
+            produto.image ||
+            produto.imagem ||
+            produto.foto ||
+            produto.img ||
+            '';
+
+        if(!imagem){
+
+            return '';
+
         }
-        return window.db;
-    },
 
-    _isCacheValid() {
-        return (
-            Object.keys(this._cache).length > 0 &&
-            (Date.now() - this._cacheTimestamp) < this._cacheTTL
-        );
-    },
+        // URL normal
+        if(imagem.startsWith('http')){
 
-    // ==========================================================
-    // Normalização
-    // ==========================================================
+            return imagem;
 
-    normalizarProduto(id, rawData = {}) {
+        }
 
-        return {
-            id,
+        // Firebase gs://
+        if(imagem.startsWith('gs://')){
 
-            sku: rawData.sku || '',
+            try{
 
-            name:
-                rawData.name ||
-                rawData.nome ||
-                '',
+                const semGs =
+                    imagem.replace(
+                        'gs://',
+                        ''
+                    );
 
-            category:
-                rawData.category ||
-                rawData.categoria ||
-                '',
+                const partes =
+                    semGs.split('/');
 
-            subcategory:
-                rawData.subcategory ||
-                rawData.subcategoria ||
-                '',
+                const bucket =
+                    partes.shift();
 
-            image:
-                rawData.image ||
-                rawData.imagem ||
-                '',
+                const arquivo =
+                    partes.join('/');
 
-            price: Number(
-                rawData.price ??
-                rawData.precoFinal ??
-                rawData.preco ??
-                0
-            ),
+                return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
 
-            weight: Number(
-                rawData.weight ??
-                rawData.peso ??
-                0
-            ),
+            }catch(e){
 
-            active:
-                rawData.active !== false &&
-                rawData.paused !== true,
+                console.error(
+                    'Erro converter imagem:',
+                    e
+                );
 
-            variacaoTipo:
-                rawData.variacaoTipo ||
-                'Padrão',
+                return '';
 
-            opcoesPersonalizadas:
-                rawData.opcoesPersonalizadas ||
-                ''
-        };
-    },
-
-    // ==========================================================
-    // Listagem
-    // ==========================================================
-
-    async getAll(forceRefresh = false) {
-
-        try {
-
-            if (
-                !forceRefresh &&
-                this._isCacheValid()
-            ) {
-                return Object.values(this._cache);
             }
 
-            const snapshot = await this
-                ._db()
+        }
+
+        return imagem;
+
+    },
+
+    // ==========================================================
+    // NORMALIZADOR
+    // ==========================================================
+
+    normalizarProduto(id, produto = {}){
+
+        const nome =
+            this._safeString(
+                produto.nome ||
+                produto.name
+            );
+
+        const categoria =
+            this._safeString(
+                produto.category ||
+                produto.categoria ||
+                produto.categoryName
+            );
+
+        const subcategoria =
+            this._safeString(
+                produto.subcategory ||
+                produto.subcategoria ||
+                produto.subCategory
+            );
+
+        const preco =
+            this._safeNumber(
+                produto.precoFinal ??
+                produto.price ??
+                produto.preco
+            );
+
+        const peso =
+            this._safeNumber(
+                produto.peso ??
+                produto.weight
+            );
+
+        let variacoes =
+            produto.variacoes ||
+            produto.variantes ||
+            [];
+
+        // STRING → ARRAY
+        if(typeof variacoes === 'string'){
+
+            variacoes =
+                variacoes
+                .split(',')
+                .map(v => v.trim())
+                .filter(Boolean);
+
+        }
+
+        // GARANTE ARRAY
+        if(!Array.isArray(variacoes)){
+
+            variacoes = [];
+
+        }
+
+        return {
+
+            // IDs
+            id:
+                id ||
+                produto.id ||
+                crypto.randomUUID(),
+
+            // Nome
+            nome,
+            name:nome,
+
+            // SKU
+            sku:
+                this._safeString(
+                    produto.sku
+                ),
+
+            // Categoria
+            categoria,
+            category:categoria,
+
+            // Slugs
+            categorySlug:
+                produto.categorySlug ||
+                this._slug(categoria),
+
+            // Subcategoria
+            subcategoria,
+            subcategory:subcategoria,
+
+            subcategorySlug:
+                produto.subcategorySlug ||
+                this._slug(subcategoria),
+
+            // Preços
+            precoFinal:preco,
+            preco:preco,
+            price:preco,
+
+            // Peso
+            peso,
+            weight:peso,
+
+            // Descrição
+            descricao:
+                produto.descricao ||
+                produto.description ||
+                '',
+
+            description:
+                produto.description ||
+                produto.descricao ||
+                '',
+
+            // Imagem
+            image:
+                this._resolverImagem(produto),
+
+            imagem:
+                this._resolverImagem(produto),
+
+            // Promoções
+            promo:
+                this._safeNumber(
+                    produto.promo
+                ),
+
+            badge:
+                produto.badge ||
+                '',
+
+            // Estoque
+            estoque:
+                this._safeNumber(
+                    produto.estoque
+                ),
+
+            // Variações
+            variacoes,
+            variantes:variacoes,
+
+            // Status
+            ativo:
+                produto.ativo !== false,
+
+            createdAt:
+                produto.createdAt ||
+                Date.now()
+        };
+
+    },
+
+    // ==========================================================
+    // LISTAR TODOS
+    // ==========================================================
+
+    async listarTodos(){
+
+        try{
+
+            const snap =
+                await firebase
+                .database()
                 .ref('abella/products')
                 .once('value');
 
             const data =
-                snapshot.val() || {};
+                snap.val() || {};
 
-            this._cache = {};
+            if(!data){
 
-            Object.entries(data).forEach(
-                ([id, raw]) => {
+                return [];
 
-                    const produto =
-                        this.normalizarProduto(
-                            id,
-                            raw
-                        );
+            }
 
-                    this._cache[id] =
-                        produto;
-                }
-            );
+            // FIREBASE OBJECT → ARRAY
+            const lista =
+                Object.keys(data).map(id => {
 
-            this._cacheTimestamp =
-                Date.now();
+                    return this.normalizarProduto(
+                        id,
+                        data[id]
+                    );
 
-            return Object.values(
-                this._cache
-            );
+                });
 
-        } catch (error) {
+            // SOMENTE PRODUTOS ATIVOS
+            return lista.filter(p => p.ativo);
+
+        }catch(err){
 
             console.error(
-                '[ProdutoService:getAll]',
-                error
+                '[produtoService] erro listarTodos:',
+                err
             );
 
             return [];
+
         }
+
     },
 
     // ==========================================================
-    // Buscar por ID
+    // BUSCAR POR ID
     // ==========================================================
 
-    async getById(id) {
+    async buscarPorId(id){
 
-        if (!id) return null;
+        try{
 
-        try {
+            if(!id){
 
-            if (
-                this._cache[id]
-            ) {
-                return this._cache[id];
-            }
-
-            const snapshot =
-                await this
-                    ._db()
-                    .ref(
-                        `abella/products/${id}`
-                    )
-                    .once('value');
-
-            const data =
-                snapshot.val();
-
-            if (!data) {
                 return null;
+
             }
+
+            const snap =
+                await firebase
+                .database()
+                .ref(`abella/products/${id}`)
+                .once('value');
 
             const produto =
-                this.normalizarProduto(
-                    id,
-                    data
-                );
+                snap.val();
 
-            this._cache[id] =
-                produto;
+            if(!produto){
 
-            return produto;
+                return null;
 
-        } catch (error) {
+            }
+
+            return this.normalizarProduto(
+                id,
+                produto
+            );
+
+        }catch(err){
 
             console.error(
-                '[ProdutoService:getById]',
-                error
+                '[produtoService] erro buscarPorId:',
+                err
             );
 
             return null;
+
         }
+
     },
 
     // ==========================================================
-    // Paginação
+    // LISTAR POR CATEGORIA
     // ==========================================================
 
-    async getPaginated(
-        page = 1,
-        limit = 15,
-        filters = {}
-    ) {
+    async listarPorCategoria(categoriaSlug){
 
-        limit =
-            Math.max(
-                1,
-                Number(limit) || 15
+        try{
+
+            const todos =
+                await this.listarTodos();
+
+            return todos.filter(p =>
+
+                (
+                    p.categorySlug || ''
+                )
+                .toLowerCase()
+                ===
+                (
+                    categoriaSlug || ''
+                )
+                .toLowerCase()
+
             );
 
-        page =
-            Math.max(
-                1,
-                Number(page) || 1
+        }catch(err){
+
+            console.error(
+                '[produtoService] erro categoria:',
+                err
             );
 
-        let list =
-            await this.getAll();
+            return [];
 
-        if (filters.text) {
+        }
 
-            const termo =
-                String(filters.text)
-                    .toUpperCase();
+    },
 
-            list = list.filter(p => {
+    // ==========================================================
+    // LISTAR POR SUBCATEGORIA
+    // ==========================================================
 
-                const sku =
-                    (p.sku || '')
-                    .toUpperCase();
+    async listarPorSubcategoria(
+        categoriaSlug,
+        subcategoriaSlug
+    ){
 
-                const nome =
-                    (p.name || '')
-                    .toUpperCase();
+        try{
+
+            const todos =
+                await this.listarTodos();
+
+            return todos.filter(p => {
+
+                const categoriaOK =
+
+                    (
+                        p.categorySlug || ''
+                    )
+                    .toLowerCase()
+
+                    ===
+
+                    (
+                        categoriaSlug || ''
+                    )
+                    .toLowerCase();
+
+                const subcategoriaOK =
+
+                    (
+                        p.subcategorySlug || ''
+                    )
+                    .toLowerCase()
+
+                    ===
+
+                    (
+                        subcategoriaSlug || ''
+                    )
+                    .toLowerCase();
 
                 return (
-                    sku.includes(termo) ||
-                    nome.includes(termo)
+                    categoriaOK &&
+                    subcategoriaOK
                 );
+
             });
-        }
 
-        if (filters.category) {
-
-            list = list.filter(
-                p =>
-                    p.category ===
-                    filters.category
-            );
-        }
-
-        if (filters.subcategory) {
-
-            list = list.filter(
-                p =>
-                    p.subcategory ===
-                    filters.subcategory
-            );
-        }
-
-        if (filters.onlyActive) {
-
-            list = list.filter(
-                p => p.active
-            );
-        }
-
-        const totalItems =
-            list.length;
-
-        const totalPages =
-            Math.max(
-                1,
-                Math.ceil(
-                    totalItems / limit
-                )
-            );
-
-        const start =
-            (page - 1) * limit;
-
-        return {
-
-            items:
-                list.slice(
-                    start,
-                    start + limit
-                ),
-
-            totalItems,
-
-            totalPages,
-
-            currentPage:
-                page
-        };
-    },
-
-    // ==========================================================
-    // Salvar
-    // ==========================================================
-
-    async save(id, itemData = {}) {
-
-        try {
-
-            const name =
-                (
-                    itemData.name ||
-                    itemData.nome ||
-                    ''
-                ).trim();
-
-            if (!name) {
-                throw new Error(
-                    'Nome obrigatório.'
-                );
-            }
-
-            const normalized = {
-
-                sku:
-                    itemData.sku || '',
-
-                name,
-
-                category:
-                    itemData.category ||
-                    itemData.categoria ||
-                    '',
-
-                subcategory:
-                    itemData.subcategory ||
-                    itemData.subcategoria ||
-                    '',
-
-                image:
-                    itemData.image ||
-                    itemData.imagem ||
-                    '',
-
-                price: Number(
-                    itemData.price ??
-                    itemData.precoFinal ??
-                    0
-                ),
-
-                weight: Number(
-                    itemData.weight ??
-                    itemData.peso ??
-                    0
-                ),
-
-                paused:
-                    itemData.active === false ||
-                    itemData.paused === true,
-
-                variacaoTipo:
-                    itemData.variacaoTipo ||
-                    'Padrão',
-
-                opcoesPersonalizadas:
-                    itemData.opcoesPersonalizadas ||
-                    ''
-            };
-
-            if (
-                Number.isNaN(
-                    normalized.price
-                )
-            ) {
-                normalized.price = 0;
-            }
-
-            if (
-                Number.isNaN(
-                    normalized.weight
-                )
-            ) {
-                normalized.weight = 0;
-            }
-
-            if (id) {
-
-                await this
-                    ._db()
-                    .ref(
-                        `abella/products/${id}`
-                    )
-                    .update(normalized);
-
-                this._cache[id] = {
-                    id,
-                    ...normalized,
-                    active:
-                        !normalized.paused
-                };
-
-                return id;
-            }
-
-            const ref =
-                this
-                    ._db()
-                    .ref(
-                        'abella/products'
-                    )
-                    .push();
-
-            await ref.set(
-                normalized
-            );
-
-            this._cache[ref.key] = {
-                id: ref.key,
-                ...normalized,
-                active:
-                    !normalized.paused
-            };
-
-            return ref.key;
-
-        } catch (error) {
+        }catch(err){
 
             console.error(
-                '[ProdutoService:save]',
-                error
+                '[produtoService] erro subcategoria:',
+                err
             );
 
-            throw error;
+            return [];
+
         }
-    },
 
-    // ==========================================================
-    // Ativar / Pausar
-    // ==========================================================
-
-    async toggleStatus(id) {
-
-        try {
-
-            const produto =
-                await this.getById(id);
-
-            if (!produto) {
-                throw new Error(
-                    'Produto não encontrado.'
-                );
-            }
-
-            const novoStatus =
-                produto.active;
-
-            await this
-                ._db()
-                .ref(
-                    `abella/products/${id}`
-                )
-                .update({
-                    paused: novoStatus
-                });
-
-            if (
-                this._cache[id]
-            ) {
-                this._cache[id].active =
-                    !novoStatus;
-            }
-
-            return true;
-
-        } catch (error) {
-
-            console.error(
-                '[ProdutoService:toggleStatus]',
-                error
-            );
-
-            return false;
-        }
-    },
-
-    // ==========================================================
-    // Excluir
-    // ==========================================================
-
-    async delete(id) {
-
-        try {
-
-            await this
-                ._db()
-                .ref(
-                    `abella/products/${id}`
-                )
-                .remove();
-
-            delete this._cache[id];
-
-            return true;
-
-        } catch (error) {
-
-            console.error(
-                '[ProdutoService:delete]',
-                error
-            );
-
-            return false;
-        }
-    },
-
-    // ==========================================================
-    // Realtime Listener
-    // ==========================================================
-
-    subscribe(callback) {
-
-        try {
-
-            return this
-                ._db()
-                .ref(
-                    'abella/products'
-                )
-                .on(
-                    'value',
-                    snapshot => {
-
-                        const data =
-                            snapshot.val() || {};
-
-                        this._cache = {};
-
-                        Object.entries(data)
-                            .forEach(
-                                ([id, raw]) => {
-
-                                    this._cache[id] =
-                                        this.normalizarProduto(
-                                            id,
-                                            raw
-                                        );
-                                }
-                            );
-
-                        this._cacheTimestamp =
-                            Date.now();
-
-                        if (
-                            typeof callback ===
-                            'function'
-                        ) {
-                            callback(
-                                Object.values(
-                                    this._cache
-                                )
-                            );
-                        }
-                    }
-                );
-
-        } catch (error) {
-
-            console.error(
-                '[ProdutoService:subscribe]',
-                error
-            );
-        }
     }
+
 };
 
-window.ProdutoService =
-    ProdutoService;
-
-
 // ==========================================================
-// Compatibilidade Legado
+// EXPORT GLOBAL
 // ==========================================================
 
 window.produtoService =
-    ProdutoService;
-
-ProdutoService.listarTodos =
-    ProdutoService.getAll;
-
-ProdutoService.buscarPorId =
-    ProdutoService.getById;
-
-ProdutoService.salvarProduto =
-    ProdutoService.save;
-
-ProdutoService.excluirProduto =
-    ProdutoService.delete;
+    produtoService;

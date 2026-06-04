@@ -1,6 +1,7 @@
 // ======================================================================
 // js/services/carrinhoService.js
-// Abella Joias • CarrinhoService Premium v4.0 IQ200
+// Abella Joias • CarrinhoService Premium v5.0 IQ200
+// TOTALMENTE AJUSTADO PARA O NÓ "abella"
 // ======================================================================
 
 const CarrinhoService = {
@@ -32,12 +33,22 @@ const CarrinhoService = {
 
     _safeNumber(valor, fallback = 0){
 
-        const n =
-            Number(valor);
+        const n = Number(valor);
 
         return Number.isFinite(n)
             ? n
             : fallback;
+
+    },
+
+    _normalizarTexto(valor){
+
+        return (
+            valor ||
+            ''
+        )
+        .toString()
+        .trim();
 
     },
 
@@ -69,15 +80,26 @@ const CarrinhoService = {
 
     salvarTodos(itens = []){
 
-        localStorage.setItem(
+        try{
 
-            this.STORAGE_KEY,
+            localStorage.setItem(
 
-            JSON.stringify(itens)
+                this.STORAGE_KEY,
 
-        );
+                JSON.stringify(itens)
 
-        this.notificarMudanca();
+            );
+
+            this.notificarMudanca();
+
+        }catch(e){
+
+            console.error(
+                '[Carrinho] Erro salvar:',
+                e
+            );
+
+        }
 
     },
 
@@ -105,11 +127,12 @@ const CarrinhoService = {
             ){
 
                 console.error(
-                    'Produto inválido:',
+                    '[Carrinho] Produto inválido:',
                     produto
                 );
 
                 return false;
+
             }
 
             let itens =
@@ -132,23 +155,24 @@ const CarrinhoService = {
             // ======================================================
 
             const sku =
-                (
+                this._normalizarTexto(
+
                     produto.sku ||
                     produto.id ||
-                    ''
+                    produto.codigo
+
                 )
-                .toString()
-                .trim()
                 .toUpperCase();
 
             if(!sku){
 
                 console.error(
-                    'Produto sem SKU:',
+                    '[Carrinho] Produto sem SKU:',
                     produto
                 );
 
                 return false;
+
             }
 
             // ======================================================
@@ -165,6 +189,7 @@ const CarrinhoService = {
                         produto.precoFinal ??
                         produto.price ??
                         produto.preco ??
+                        produto.valor ??
                         0
 
                     )
@@ -197,17 +222,38 @@ const CarrinhoService = {
                 );
 
             // ======================================================
-            // LOCALIZAR ITEM
+            // IMAGEM
+            // ======================================================
+
+            const imagem =
+
+                produto.image ||
+                produto.imagem ||
+                produto.foto ||
+                '';
+
+            // ======================================================
+            // VARIAÇÃO
+            // ======================================================
+
+            const variacaoFinal =
+                variacao ||
+                produto.variacao ||
+                null;
+
+            // ======================================================
+            // LOCALIZA ITEM
             // ======================================================
 
             const index =
                 itens.findIndex(item =>
 
-                    item.sku === sku &&
-                    (
-                        item.variacao || null
-                    ) === (
-                        variacao || null
+                    String(item.sku) === String(sku) &&
+
+                    String(
+                        item.variacao || ''
+                    ) === String(
+                        variacaoFinal || ''
                     )
 
                 );
@@ -226,18 +272,12 @@ const CarrinhoService = {
                 itens[index].peso = peso;
                 itens[index].weight = peso;
 
-                itens[index].image =
-                    produto.image ||
-                    produto.imagem ||
-                    '';
-
-                itens[index].imagem =
-                    produto.image ||
-                    produto.imagem ||
-                    '';
+                itens[index].image = imagem;
+                itens[index].imagem = imagem;
 
                 itens[index].updatedAt =
                     Date.now();
+
             }
 
             // ======================================================
@@ -248,12 +288,14 @@ const CarrinhoService = {
 
                 itens.push({
 
+                    // IDENTIDADE
                     id:
                         produto.id ||
                         sku,
 
                     sku,
 
+                    // NOME
                     nome:
                         produto.nome ||
                         produto.name ||
@@ -264,43 +306,55 @@ const CarrinhoService = {
                         produto.name ||
                         'Produto',
 
+                    // IMAGENS
                     image:
-                        produto.image ||
-                        produto.imagem ||
-                        '',
+                        imagem,
 
                     imagem:
-                        produto.image ||
-                        produto.imagem ||
-                        '',
+                        imagem,
 
+                    // CATEGORIAS
                     categoria:
+                        produto.categorySlug ||
                         produto.category ||
                         produto.categoria ||
                         '',
 
                     subcategoria:
+                        produto.subcategorySlug ||
                         produto.subcategory ||
                         produto.subcategoria ||
                         '',
 
+                    // PREÇOS
                     precoFinal:
                         preco,
 
                     price:
                         preco,
 
+                    // PESO
                     peso:
                         peso,
 
                     weight:
                         peso,
 
-                    quantidade,
+                    // QUANTIDADE
+                    quantidade:
+                        quantidade,
 
+                    // VARIAÇÃO
                     variacao:
-                        variacao || null,
+                        variacaoFinal,
 
+                    // DESCRIÇÃO
+                    descricao:
+                        produto.descricao ||
+                        produto.description ||
+                        '',
+
+                    // METADADOS
                     createdAt:
                         Date.now(),
 
@@ -332,6 +386,7 @@ const CarrinhoService = {
             );
 
             return false;
+
         }
 
     },
@@ -339,6 +394,10 @@ const CarrinhoService = {
     adicionarItem(produto){
 
         if(!produto){
+
+            console.error(
+                '[Carrinho] Produto vazio.'
+            );
 
             return false;
 
@@ -655,6 +714,5 @@ CarrinhoService.limparCarrinho =
 // ==========================================================
 
 console.log(
-    '🛒 CarrinhoService Premium v4.0 carregado.'
+    '🛒 CarrinhoService Premium v5.0 carregado.'
 );
-```

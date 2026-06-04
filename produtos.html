@@ -535,59 +535,72 @@
     <script src="js/services/carrinhoService.js"></script>
     <script src="js/services/produtoService.js"></script>
 
-    <script>
+   <script>
 
-        let produtos = [];
-        let produtoAtual = null;
+    let produtos = [];
+    let produtoAtual = null;
 
-        function resolverImagemFirebase(path){
+    // =========================================================
+    // IMG FIREBASE
+    // =========================================================
 
-            if(!path) return '';
+    function resolverImagemFirebase(path){
 
-            if(path.startsWith('http')){
-                return path;
-            }
+        if(!path){
+            return '';
+        }
 
-            if(path.startsWith('gs://')){
+        if(path.startsWith('http')){
+            return path;
+        }
 
-                try{
+        if(path.startsWith('gs://')){
 
-                    const semGs =
-                        path.replace(
-                            'gs://',
-                            ''
-                        );
+            try{
 
-                    const partes =
-                        semGs.split('/');
-
-                    const bucket =
-                        partes.shift();
-
-                    const arquivo =
-                        partes.join('/');
-
-                    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
-
-                }catch(e){
-
-                    console.error(
-                        'Erro ao converter imagem Firebase',
-                        e
+                const semGs =
+                    path.replace(
+                        'gs://',
+                        ''
                     );
 
-                    return '';
-                }
+                const partes =
+                    semGs.split('/');
+
+                const bucket =
+                    partes.shift();
+
+                const arquivo =
+                    partes.join('/');
+
+                return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
+
+            }catch(e){
+
+                console.error(
+                    'Erro imagem Firebase:',
+                    e
+                );
+
+                return '';
 
             }
-
-            return path;
 
         }
 
-        document.addEventListener(
-            'DOMContentLoaded',
-            async () => {
+        return path;
+
+    }
+
+    // =========================================================
+    // INIT
+    // =========================================================
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        async () => {
+
+            try{
 
                 atualizarMiniCarrinho();
 
@@ -595,10 +608,29 @@
 
                 iniciarBusca();
 
-            }
-        );
+                console.log(
+                    '✅ Página carregada'
+                );
 
-        function atualizarMiniCarrinho(){
+            }catch(e){
+
+                console.error(
+                    'Erro init:',
+                    e
+                );
+
+            }
+
+        }
+    );
+
+    // =========================================================
+    // MINI CART
+    // =========================================================
+
+    function atualizarMiniCarrinho(){
+
+        try{
 
             const resumo =
                 carrinhoService.obterResumo();
@@ -606,7 +638,7 @@
             document.getElementById(
                 'cart-count'
             ).innerText =
-                resumo.totalItens || 0;
+                resumo.totalPecas || 0;
 
             document.getElementById(
                 'cart-total'
@@ -615,81 +647,145 @@
                     resumo.subtotal || 0
                 );
 
+        }catch(e){
+
+            console.error(
+                'Erro mini carrinho:',
+                e
+            );
+
         }
 
-        async function carregarProdutos(){
+    }
 
-            try{
+    // =========================================================
+    // NORMALIZA TEXTO
+    // =========================================================
 
-                const urlParams =
-                    new URLSearchParams(
-                        window.location.search
-                    );
+    function normalizarTexto(texto){
 
-                const categoria = (
-                    urlParams.get('categoria') ||
-                    urlParams.get('cat') ||
-                    ''
-                )
-                .toString()
-                .trim()
-                .toLowerCase();
+        return (
+            texto || ''
+        )
+        .toString()
+        .trim()
+        .toLowerCase();
 
-                const subcategoria = (
+    }
+
+    // =========================================================
+    // LOAD PRODUTOS
+    // =========================================================
+
+    async function carregarProdutos(){
+
+        try{
+
+            const loading =
+                document.getElementById(
+                    'loading'
+                );
+
+            loading.innerHTML =
+                'Carregando produtos premium...';
+
+            const params =
+                new URLSearchParams(
+                    window.location.search
+                );
+
+            const categoria =
+                normalizarTexto(
+                    params.get('categoria') ||
+                    params.get('cat')
+                );
+
+            const subcategoria =
+                normalizarTexto(
                     decodeURIComponent(
-                        urlParams.get('subcategoria') ||
-                        urlParams.get('sub') ||
+                        params.get('subcategoria') ||
+                        params.get('sub') ||
                         ''
                     )
-                )
-                .toString()
-                .trim()
-                .toLowerCase();
+                );
 
-                const tituloExibicao =
-                    subcategoria || categoria || 'Produtos';
+            console.log(
+                'Categoria:',
+                categoria
+            );
 
-                document.getElementById(
-                    'tituloPagina'
-                ).innerText =
-                    tituloExibicao;
+            console.log(
+                'Subcategoria:',
+                subcategoria
+            );
 
-                document.getElementById(
-                    'heroTitulo'
-                ).innerText =
-                    tituloExibicao;
+            document.getElementById(
+                'tituloPagina'
+            ).innerText =
+                subcategoria ||
+                categoria ||
+                'Produtos';
 
-                const todos =
-                    await produtoService.listarTodos();
+            document.getElementById(
+                'heroTitulo'
+            ).innerText =
+                subcategoria ||
+                categoria ||
+                'Produtos';
 
-                produtos = todos.filter(p => {
+            // =====================================================
+            // FIREBASE
+            // =====================================================
 
-                    const catProduto = (
-                        p.categorySlug ||
-                        p.category ||
-                        p.categoria ||
-                        ''
-                    )
-                    .toString()
-                    .trim()
-                    .toLowerCase();
+            const todos =
+                await produtoService.listarTodos();
 
-                    const subProduto = (
-                        p.subcategorySlug ||
-                        p.subcategory ||
-                        p.subcategoria ||
-                        ''
-                    )
-                    .toString()
-                    .trim()
-                    .toLowerCase();
+            console.log(
+                'Produtos Firebase:',
+                todos
+            );
 
-                    if(!catProduto){
-                        return false;
+            if(
+                !Array.isArray(todos)
+            ){
+
+                throw new Error(
+                    'produtoService.listarTodos() não retornou array'
+                );
+
+            }
+
+            // =====================================================
+            // FILTRO FLEXÍVEL
+            // =====================================================
+
+            produtos =
+                todos.filter(prod => {
+
+                    const catProduto =
+                        normalizarTexto(
+                            prod.categorySlug ||
+                            prod.category ||
+                            prod.categoria ||
+                            prod.categoriaSlug
+                        );
+
+                    const subProduto =
+                        normalizarTexto(
+                            prod.subcategorySlug ||
+                            prod.subcategory ||
+                            prod.subcategoria
+                        );
+
+                    // sem categoria URL
+                    if(!categoria){
+                        return true;
                     }
 
                     const categoriaOK =
-                        catProduto === categoria;
+                        catProduto.includes(
+                            categoria
+                        );
 
                     if(!categoriaOK){
                         return false;
@@ -700,409 +796,405 @@
                     }
 
                     return (
-                        subProduto === subcategoria
+                        subProduto.includes(
+                            subcategoria
+                        )
                     );
 
                 });
 
-                document.getElementById(
-                    'totalProdutos'
-                ).innerText =
-                    produtos.length;
-
-                if(produtos.length){
-
-                    const primeiraImagem =
-                        resolverImagemFirebase(
-                            produtos[0].image ||
-                            produtos[0].imagem ||
-                            ''
-                        );
-
-                    if(primeiraImagem){
-
-                        document.getElementById(
-                            'heroImagem'
-                        ).src =
-                            primeiraImagem;
-
-                    }
-
-                }
-
-                renderizarProdutos();
-
-            }catch(err){
-
-                console.error(
-                    'ERRO AO CARREGAR PRODUTOS:',
-                    err
-                );
-
-                document.getElementById(
-                    'loading'
-                ).innerHTML =
-                    'Erro ao carregar produtos.';
-
-            }
-
-        }
-
-        function renderizarProdutos(){
-
-            const grid =
-                document.getElementById(
-                    'grid-produtos'
-                );
-
-            const loading =
-                document.getElementById(
-                    'loading'
-                );
-
-            loading.classList.add(
-                'hidden'
+            console.log(
+                'Produtos filtrados:',
+                produtos
             );
 
-            grid.innerHTML = '';
+            document.getElementById(
+                'totalProdutos'
+            ).innerText =
+                produtos.length;
 
-            if(!produtos.length){
+            // HERO IMAGE
 
-                grid.innerHTML = `
-                    <div class="col-span-full">
-                        <div class="bg-card rounded-[2rem] p-10 md:p-14 text-center border border-zinc-900">
-                            <div class="w-20 h-20 mx-auto rounded-full bg-zinc-950 border border-zinc-800 flex items-center justify-center text-3xl mb-6">
-                                💎
-                            </div>
+            if(produtos.length){
 
-                            <h2 class="text-2xl md:text-4xl font-black text-white">
-                                Nenhum produto encontrado
-                            </h2>
-
-                            <p class="text-zinc-500 mt-4 text-sm md:text-base max-w-xl mx-auto leading-relaxed">
-                                Não encontramos produtos nesta coleção no momento.
-                            </p>
-                        </div>
-                    </div>
-                `;
-
-                return;
-
-            }
-
-            produtos.forEach(prod => {
-
-                const preco =
-                    parseFloat(
-                        prod.precoFinal ||
-                        prod.price ||
-                        0
-                    );
-
-                const pix =
-                    preco * 0.95;
-
-                const parcelado =
-                    preco / 6;
-
-                const peso =
-                    parseFloat(
-                        prod.peso || 0
-                    );
-
-                let image =
+                const hero =
                     resolverImagemFirebase(
-                        prod.image ||
-                        prod.imagem ||
-                        ''
+                        produtos[0].image ||
+                        produtos[0].imagem
                     );
 
-                if(
-                    !image ||
-                    image.includes('undefined')
-                ){
+                if(hero){
 
-                    image =
-                        'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
+                    document.getElementById(
+                        'heroImagem'
+                    ).src =
+                        hero;
 
                 }
 
-                grid.innerHTML += `
-                    <div
-                        class="produto-card bg-card rounded-[2rem] overflow-hidden border border-zinc-900 hover:border-[#caa85c]/40 transition-all duration-300 hover:-translate-y-1"
-                        data-name="${(prod.nome || '').toLowerCase()}">
+            }
 
-                        <div class="aspect-square bg-black overflow-hidden relative">
+            renderizarProdutos();
 
-                            <img
-                                src="${image}"
-                                alt="${prod.nome || 'Produto'}"
-                                class="w-full h-full object-cover transition-all duration-500 hover:scale-105"
-                                loading="lazy"
-                                onerror="this.src='https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA'">
+        }catch(err){
 
-                            <div class="absolute top-4 left-4 flex flex-col gap-2">
+            console.error(
+                'Erro carregar produtos:',
+                err
+            );
 
-                                <div class="px-3 py-1 rounded-full bg-black/80 backdrop-blur border border-zinc-700 text-[10px] uppercase tracking-[0.2em] font-black">
-                                    ⚖ ${peso.toFixed(2)}g
-                                </div>
-
-                                <div class="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] uppercase tracking-[0.2em] font-black">
-                                    5% PIX
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div class="p-5 md:p-6 space-y-5">
-
-                            <div class="space-y-2">
-
-                                <h3 class="text-lg md:text-xl font-black leading-tight text-white line-clamp-2">
-                                    ${prod.nome || 'Produto'}
-                                </h3>
-
-                                <div class="flex items-center justify-between gap-3 text-xs">
-
-                                    <span class="text-zinc-500 font-mono">
-                                        SKU: ${prod.sku || '---'}
-                                    </span>
-
-                                    <span class="text-zinc-600">
-                                        Premium
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                            <div class="bg-black rounded-[1.5rem] border border-zinc-900 p-4 space-y-4">
-
-                                <div class="flex items-start justify-between gap-4">
-
-                                    <div>
-
-                                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                            Valor Unitário
-                                        </p>
-
-                                        <h4 class="text-2xl md:text-3xl font-black gold mt-2 leading-none">
-                                            ${money.formatar(preco)}
-                                        </h4>
-
-                                    </div>
-
-                                    <div class="text-right">
-
-                                        <p class="text-emerald-400 text-xs uppercase tracking-wider font-black">
-                                            PIX
-                                        </p>
-
-                                        <p class="text-lg font-black text-white mt-1">
-                                            ${money.formatar(pix)}
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-                                <div class="border-t border-zinc-900 pt-3 flex items-center justify-between text-xs">
-
-                                    <span class="text-zinc-500 uppercase tracking-wider">
-                                        Até 6x sem juros
-                                    </span>
-
-                                    <span class="text-white font-bold">
-                                        ${money.formatar(parcelado)}/mês
-                                    </span>
-
-                                </div>
-
-                            </div>
-
-                            <div class="min-h-[48px]">
-
-                                <p class="text-sm text-zinc-400 leading-relaxed line-clamp-2">
-                                    ${prod.descricao || prod.description || 'Joia premium Abella com acabamento refinado e qualidade profissional.'}
-                                </p>
-
-                            </div>
-
-                            <button
-                                onclick="abrirModalProduto('${String(prod.id || prod.sku)}')"
-                                class="w-full h-14 rounded-2xl bg-[#caa85c] hover:bg-[#d8b56b] text-black font-black uppercase tracking-[0.2em] transition-all duration-300 shadow-xl shadow-[#caa85c]/10">
-
-                                Comprar Agora
-
-                            </button>
-
-                        </div>
-
-                    </div>
-                `;
-
-            });
+            document.getElementById(
+                'loading'
+            ).innerHTML =
+                'Erro ao carregar produtos.';
 
         }
 
-        function abrirModalProduto(id){
+    }
 
-            produtoAtual =
-                produtos.find(
-                    p =>
-                        String(
-                            p.id || p.sku
-                        ) === String(id)
-                );
+    // =========================================================
+    // RENDER GRID
+    // =========================================================
 
-            if(!produtoAtual){
+    function renderizarProdutos(){
 
-                console.error(
-                    'Produto não encontrado:',
-                    id
-                );
+        const grid =
+            document.getElementById(
+                'grid-produtos'
+            );
 
-                return;
-            }
+        const loading =
+            document.getElementById(
+                'loading'
+            );
+
+        loading.classList.add(
+            'hidden'
+        );
+
+        grid.innerHTML = '';
+
+        if(!produtos.length){
+
+            grid.innerHTML = `
+                <div class="col-span-full">
+                    <div class="bg-card rounded-[2rem] p-10 text-center">
+                        <h2 class="text-3xl font-black">
+                            Nenhum produto encontrado
+                        </h2>
+                    </div>
+                </div>
+            `;
+
+            return;
+
+        }
+
+        produtos.forEach(prod => {
 
             const preco =
-                parseFloat(
-                    produtoAtual.precoFinal ||
-                    produtoAtual.price ||
+                Number(
+                    prod.precoFinal ||
+                    prod.price ||
+                    prod.preco ||
+                    0
+                );
+
+            const peso =
+                Number(
+                    prod.peso ||
+                    prod.weight ||
                     0
                 );
 
             const pix =
                 preco * 0.95;
 
+            const parcelado =
+                preco / 6;
+
             let imagem =
                 resolverImagemFirebase(
-                    produtoAtual.image ||
-                    produtoAtual.imagem ||
-                    ''
+                    prod.image ||
+                    prod.imagem
                 );
 
-            if(
-                !imagem ||
-                imagem.includes('undefined')
-            ){
+            if(!imagem){
 
                 imagem =
                     'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
 
             }
 
-            document.getElementById(
-                'modalNome'
-            ).innerText =
-                produtoAtual.nome || '';
+            grid.innerHTML += `
 
-            const modalImagem =
-                document.getElementById(
-                    'modalImagem'
-                );
+                <div
+                    class="produto-card bg-card rounded-[2rem] overflow-hidden border border-zinc-900"
+                    data-name="${normalizarTexto(prod.nome)}">
 
-            modalImagem.onerror = () => {
+                    <div class="aspect-square bg-black overflow-hidden">
 
-                modalImagem.src =
-                    'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
-            };
+                        <img
+                            src="${imagem}"
+                            class="w-full h-full object-cover"
+                            loading="lazy"
+                            onerror="this.src='https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA'">
 
-            modalImagem.src = imagem;
+                    </div>
 
-            document.getElementById(
-                'modalPreco'
-            ).innerText =
-                money.formatar(preco);
+                    <div class="p-5 space-y-5">
 
-            document.getElementById(
-                'modalPix'
-            ).innerText =
-                money.formatar(pix);
-
-            document.getElementById(
-                'modalSku'
-            ).innerText =
-                produtoAtual.sku || '---';
-
-            document.getElementById(
-                'modalPeso'
-            ).innerText =
-                `${parseFloat(produtoAtual.peso || 0).toFixed(2)}g`;
-
-            document.getElementById(
-                'modalDescricao'
-            ).innerText =
-                produtoAtual.descricao ||
-                produtoAtual.description ||
-                'Produto premium Abella Joias.';
-
-            document.getElementById(
-                'variacoesContainer'
-            ).innerHTML = '';
-
-            renderizarCamposVariacao();
-
-            const modal =
-                document.getElementById(
-                    'modalProduto'
-                );
-
-            modal.classList.remove(
-                'hidden'
-            );
-
-            document.body.style.overflow =
-                'hidden';
-
-        }
-
-        function renderizarCamposVariacao(){
-
-            const container =
-                document.getElementById(
-                    'variacoesContainer'
-                );
-
-            container.innerHTML = '';
-
-            container.innerHTML = `
-                <div class="bg-black rounded-3xl border border-zinc-900 p-5">
-                    <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                Quantidade
+
+                            <h3 class="text-xl font-black">
+
+                                ${prod.nome || 'Produto'}
+
+                            </h3>
+
+                            <p class="text-xs text-zinc-500 mt-2">
+
+                                SKU: ${prod.sku || '---'}
+
                             </p>
 
-                            <h3 class="text-xl font-black mt-2">
-                                Produto Padrão
-                            </h3>
                         </div>
 
-                        <input
-                            type="number"
-                            min="1"
-                            value="1"
-                            id="qtdPadrao"
-                            class="w-28 h-14 rounded-2xl bg-zinc-950 border border-zinc-800 text-center text-xl font-black outline-none focus:border-[#caa85c]">
+                        <div class="bg-black rounded-3xl border border-zinc-900 p-4">
+
+                            <div class="flex items-center justify-between">
+
+                                <div>
+
+                                    <p class="text-zinc-500 text-xs uppercase">
+
+                                        Valor
+
+                                    </p>
+
+                                    <h4 class="text-3xl font-black gold mt-2">
+
+                                        ${money.formatar(preco)}
+
+                                    </h4>
+
+                                </div>
+
+                                <div class="text-right">
+
+                                    <p class="text-emerald-400 text-xs">
+
+                                        PIX
+
+                                    </p>
+
+                                    <p class="font-black">
+
+                                        ${money.formatar(pix)}
+
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                            <div class="mt-4 pt-4 border-t border-zinc-900 text-sm flex justify-between">
+
+                                <span class="text-zinc-500">
+
+                                    6x sem juros
+
+                                </span>
+
+                                <span>
+
+                                    ${money.formatar(parcelado)}
+
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                        <button
+                            onclick="abrirModalProduto('${String(prod.id || prod.sku)}')"
+                            class="w-full h-14 rounded-2xl bg-[#caa85c] text-black font-black uppercase">
+
+                            Comprar Agora
+
+                        </button>
+
                     </div>
+
                 </div>
+
             `;
+
+        });
+
+    }
+
+    // =========================================================
+    // MODAL
+    // =========================================================
+
+    function abrirModalProduto(id){
+
+        produtoAtual =
+            produtos.find(
+                p =>
+                    String(
+                        p.id || p.sku
+                    ) === String(id)
+            );
+
+        if(!produtoAtual){
+
+            console.error(
+                'Produto não encontrado:',
+                id
+            );
+
+            return;
 
         }
 
-        function adicionarAoCarrinho(){
+        const preco =
+            Number(
+                produtoAtual.precoFinal ||
+                produtoAtual.price ||
+                0
+            );
 
-            if(!produtoAtual) return;
+        const pix =
+            preco * 0.95;
 
-            const qtd =
-                parseInt(
-                    document.getElementById(
-                        'qtdPadrao'
-                    ).value || 1
-                );
+        let imagem =
+            resolverImagemFirebase(
+                produtoAtual.image ||
+                produtoAtual.imagem
+            );
 
+        if(!imagem){
+
+            imagem =
+                'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
+
+        }
+
+        document.getElementById(
+            'modalNome'
+        ).innerText =
+            produtoAtual.nome || '';
+
+        document.getElementById(
+            'modalImagem'
+        ).src =
+            imagem;
+
+        document.getElementById(
+            'modalPreco'
+        ).innerText =
+            money.formatar(preco);
+
+        document.getElementById(
+            'modalPix'
+        ).innerText =
+            money.formatar(pix);
+
+        document.getElementById(
+            'modalSku'
+        ).innerText =
+            produtoAtual.sku || '---';
+
+        document.getElementById(
+            'modalPeso'
+        ).innerText =
+            `${Number(produtoAtual.peso || 0).toFixed(2)}g`;
+
+        document.getElementById(
+            'modalDescricao'
+        ).innerText =
+            produtoAtual.descricao ||
+            produtoAtual.description ||
+            'Produto premium Abella.';
+
+        renderizarCamposVariacao();
+
+        document.getElementById(
+            'modalProduto'
+        ).classList.remove(
+            'hidden'
+        );
+
+        document.body.style.overflow =
+            'hidden';
+
+    }
+
+    // =========================================================
+    // VARIAÇÃO
+    // =========================================================
+
+    function renderizarCamposVariacao(){
+
+        document.getElementById(
+            'variacoesContainer'
+        ).innerHTML = `
+
+            <div class="bg-black rounded-3xl border border-zinc-900 p-5">
+
+                <div class="flex items-center justify-between gap-4">
+
+                    <div>
+
+                        <p class="text-xs text-zinc-500 uppercase">
+
+                            Quantidade
+
+                        </p>
+
+                        <h3 class="text-xl font-black mt-2">
+
+                            Produto Padrão
+
+                        </h3>
+
+                    </div>
+
+                    <input
+                        type="number"
+                        min="1"
+                        value="1"
+                        id="qtdPadrao"
+                        class="w-28 h-14 rounded-2xl bg-zinc-950 border border-zinc-800 text-center text-xl font-black">
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+    // =========================================================
+    // ADD CARRINHO
+    // =========================================================
+
+    function adicionarAoCarrinho(){
+
+        if(!produtoAtual){
+            return;
+        }
+
+        const qtd =
+            parseInt(
+                document.getElementById(
+                    'qtdPadrao'
+                ).value || 1
+            );
+
+        const sucesso =
             carrinhoService.adicionarItem({
 
                 ...produtoAtual,
@@ -1111,90 +1203,108 @@
 
             });
 
-            atualizarMiniCarrinho();
-
-            fecharModalProduto();
+        if(!sucesso){
 
             alert(
-                'Produto adicionado ao carrinho.'
+                'Erro ao adicionar produto.'
             );
+
+            return;
 
         }
 
-        function fecharModalProduto(){
+        atualizarMiniCarrinho();
 
+        fecharModalProduto();
+
+        alert(
+            'Produto adicionado ao carrinho.'
+        );
+
+    }
+
+    // =========================================================
+    // CLOSE MODAL
+    // =========================================================
+
+    function fecharModalProduto(){
+
+        document.getElementById(
+            'modalProduto'
+        ).classList.add(
+            'hidden'
+        );
+
+        document.body.style.overflow =
+            '';
+
+    }
+
+    // =========================================================
+    // VOLTAR
+    // =========================================================
+
+    function voltarPagina(){
+
+        window.history.back();
+
+    }
+
+    // =========================================================
+    // BUSCA
+    // =========================================================
+
+    function iniciarBusca(){
+
+        const input =
             document.getElementById(
-                'modalProduto'
-            ).classList.add('hidden');
-
-            document.body.style.overflow =
-                '';
-
-        }
-
-        function voltarPagina(){
-
-            window.history.back();
-
-        }
-
-        function iniciarBusca(){
-
-            const input =
-                document.getElementById(
-                    'busca'
-                );
-
-            input.addEventListener(
-                'input',
-                e => {
-
-                    const termo =
-                        e.target.value
-                        .toLowerCase()
-                        .trim();
-
-                    document
-                    .querySelectorAll(
-                        '.produto-card'
-                    )
-                    .forEach(card => {
-
-                        const nome =
-                            card.dataset.name || '';
-
-                        if(
-                            nome.includes(termo)
-                        ){
-
-                            card.style.display =
-                                'block';
-
-                        }else{
-
-                            card.style.display =
-                                'none';
-
-                        }
-
-                    });
-
-                }
+                'busca'
             );
 
-        }
+        input.addEventListener(
+            'input',
+            e => {
 
-        window.abrirModalProduto =
-            abrirModalProduto;
+                const termo =
+                    normalizarTexto(
+                        e.target.value
+                    );
 
-        window.fecharModalProduto =
-            fecharModalProduto;
+                document
+                .querySelectorAll(
+                    '.produto-card'
+                )
+                .forEach(card => {
 
-        window.adicionarAoCarrinho =
-            adicionarAoCarrinho;
+                    const nome =
+                        card.dataset.name || '';
 
-    </script>
+                    card.style.display =
+                        nome.includes(termo)
+                        ? 'block'
+                        : 'none';
 
+                });
+
+            }
+        );
+
+    }
+
+    // =========================================================
+    // GLOBAL
+    // =========================================================
+
+    window.abrirModalProduto =
+        abrirModalProduto;
+
+    window.fecharModalProduto =
+        fecharModalProduto;
+
+    window.adicionarAoCarrinho =
+        adicionarAoCarrinho;
+
+</script>
 </body>
 
 </html>

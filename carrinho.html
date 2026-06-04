@@ -481,9 +481,15 @@ img{
                     </div>
 
                     <!-- BOTÃO CONTINUAR PARA O CHECKOUT -->
-                    <button onclick="prosseguirParaCheckout()" id="btn-finalizar" class="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[0.12em] text-[11px] md:text-sm flex items-center justify-center transition-all hover:bg-[#b5944a] active:scale-[0.98]"
-                        Prosseguir para o Checkout
-                    </button>
+                    <button
+    onclick="prosseguirParaCheckout()"
+    id="btn-finalizar"
+    type="button"
+    class="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[0.12em] text-[11px] md:text-sm flex items-center justify-center transition-all hover:bg-[#b5944a] active:scale-[0.98]">
+
+    Prosseguir para o Checkout
+
+</button>
                 </div>
             </div>
 
@@ -675,14 +681,41 @@ img{
             document.getElementById('info-condicoes').innerText = `Ou em até ${parcelas}x no cartão de crédito`;
         }
 
-        function prosseguirParaCheckout() {
-            // Garante que o usuário não avance se houver inconsistência crítica
-            if (typeof carrinhoService === 'undefined' || carrinhoService.obterItens().length === 0) {
-                alert("Seu carrinho está vazio.");
+        function prosseguirParaCheckout(){
+
+        try{
+
+            if(
+                typeof carrinhoService === 'undefined' ||
+                !carrinhoService.obterItens ||
+                carrinhoService.obterItens().length === 0
+            ){
+
+                alert('Seu carrinho está vazio.');
+
                 return;
+
             }
-            window.location.href = 'checkout.html';
+
+            // REDIRECT FORÇADO
+
+            window.location.assign('checkout.html');
+
+        }catch(error){
+
+            console.error(
+                'Erro ao abrir checkout:',
+                error
+            );
+
+            alert(
+                'Erro ao abrir checkout.'
+            );
+
         }
-    </script>
+
+    }
+
+</script>
 </body>
 </html>

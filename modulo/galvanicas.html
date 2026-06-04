@@ -1,114 +1,715 @@
+```html id="4r8rl8"
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Galvânicas | Abella Admin</title>
+
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <style>
+
+        ::-webkit-scrollbar{
+            width:8px;
+        }
+
+        ::-webkit-scrollbar-track{
+            background:#09090b;
+        }
+
+        ::-webkit-scrollbar-thumb{
+            background:#3f3f46;
+            border-radius:999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover{
+            background:#52525b;
+        }
+
+        .animate-fade{
+            animation:fade .25s ease;
+        }
+
+        @keyframes fade{
+
+            from{
+                opacity:0;
+                transform:translateY(6px);
+            }
+
+            to{
+                opacity:1;
+                transform:translateY(0);
+            }
+        }
+
+    </style>
+
 </head>
-<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
+
+<body class="bg-zinc-900 text-zinc-100 p-4 md:p-6 font-sans min-h-screen overflow-x-hidden">
 
     <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        <div class="md:col-span-1 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl h-fit space-y-4 text-left">
-            <h3 id="formTitulo" class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2">Cadastrar Parceiro Galvânica</h3>
-            <form id="formGalv" onsubmit="salvarGalvanicaUI(event)" class="space-y-4">
-                <input type="hidden" id="galvId">
-                <div class="space-y-1">
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Razão Social / Nome Fantasia *</label>
-                    <input type="text" id="galvNome" required placeholder="Ex: Galvânica Limeira Gold" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+
+        <!-- FORM -->
+        <div class="md:col-span-1">
+
+            <div class="bg-zinc-950 border border-zinc-800 p-5 rounded-2xl h-fit space-y-5 sticky top-4 animate-fade">
+
+                <!-- HEADER -->
+                <div class="flex items-center justify-between gap-3 border-b border-zinc-900 pb-3">
+
+                    <h3
+                        id="formTitulo"
+                        class="text-sm font-black text-white uppercase tracking-wider"
+                    >
+                        Cadastrar Parceiro Galvânica
+                    </h3>
+
+                    <div
+                        id="statusFirebase"
+                        class="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-wider"
+                    >
+                        ONLINE
+                    </div>
+
                 </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">WhatsApp / Telefone Comercial *</label>
-                    <input type="tel" id="galvWhats" required placeholder="19988207658" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Endereço de Entrega (Limeira) *</label>
-                    <input type="text" id="galvEnd" required placeholder="Av. Industrial, 450 - Distrito" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
-                </div>
-                <button type="submit" class="w-full bg-[#caa85c] text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all">
-                    Salvar Parceiro Logístico
-                </button>
-            </form>
+
+                <!-- FORM -->
+                <form
+                    id="formGalv"
+                    class="space-y-4"
+                >
+
+                    <input type="hidden" id="galvId">
+
+                    <!-- NOME -->
+                    <div class="space-y-1">
+
+                        <label class="text-[10px] uppercase text-zinc-400 font-black">
+                            Razão Social / Nome Fantasia *
+                        </label>
+
+                        <input
+                            type="text"
+                            id="galvNome"
+                            required
+                            placeholder="Ex: Galvânica Limeira Gold"
+                            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs outline-none focus:border-[#caa85c] transition-all"
+                        >
+
+                    </div>
+
+                    <!-- WHATS -->
+                    <div class="space-y-1">
+
+                        <label class="text-[10px] uppercase text-zinc-400 font-black">
+                            WhatsApp / Telefone Comercial *
+                        </label>
+
+                        <input
+                            type="tel"
+                            id="galvWhats"
+                            required
+                            maxlength="20"
+                            inputmode="numeric"
+                            placeholder="5519988207658"
+                            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs outline-none focus:border-[#caa85c] transition-all"
+                        >
+
+                        <p class="text-[10px] text-zinc-600 font-mono">
+                            Utilize somente números com DDI + DDD.
+                        </p>
+
+                    </div>
+
+                    <!-- END -->
+                    <div class="space-y-1">
+
+                        <label class="text-[10px] uppercase text-zinc-400 font-black">
+                            Endereço de Entrega (Limeira) *
+                        </label>
+
+                        <textarea
+                            id="galvEnd"
+                            required
+                            rows="4"
+                            placeholder="Av. Industrial, 450 - Distrito"
+                            class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs outline-none focus:border-[#caa85c] transition-all resize-none"
+                        ></textarea>
+
+                    </div>
+
+                    <!-- STATUS -->
+                    <div class="flex items-center justify-between gap-4 p-3 rounded-xl border border-zinc-800 bg-zinc-900">
+
+                        <div>
+                            <p class="text-[11px] font-black text-white uppercase">
+                                Parceiro Ativo
+                            </p>
+
+                            <p class="text-[10px] text-zinc-500">
+                                Disponível para roteamento logístico.
+                            </p>
+                        </div>
+
+                        <label class="relative inline-flex items-center cursor-pointer">
+
+                            <input
+                                type="checkbox"
+                                id="galvActive"
+                                class="sr-only peer"
+                                checked
+                            >
+
+                            <div class="w-11 h-6 bg-zinc-700 rounded-full peer peer-checked:bg-[#caa85c] transition-all"></div>
+
+                            <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-all peer-checked:translate-x-5"></div>
+
+                        </label>
+
+                    </div>
+
+                    <!-- PREVIEW -->
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3">
+
+                        <div class="flex items-center justify-between">
+
+                            <h4 class="text-[11px] uppercase tracking-wider text-zinc-400 font-black">
+                                Estrutura Firebase
+                            </h4>
+
+                            <span class="text-[9px] text-zinc-600 uppercase tracking-widest">
+                                abella/galvanicas
+                            </span>
+
+                        </div>
+
+                        <div class="space-y-2 text-[10px] font-mono text-zinc-500">
+
+                            <p>
+                                📦 Nó:
+                                <span class="text-zinc-300">
+                                    abella/galvanicas/{id}
+                                </span>
+                            </p>
+
+                            <p>
+                                🔗 Integração:
+                                <span class="text-zinc-300">
+                                    pedidos + logística + produção
+                                </span>
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <!-- ACTIONS -->
+                    <div class="pt-4 border-t border-zinc-900 flex items-center justify-between gap-4 flex-wrap">
+
+                        <div
+                            id="statusSave"
+                            class="text-[11px] text-zinc-600"
+                        >
+                            Aguardando operação...
+                        </div>
+
+                        <button
+                            type="submit"
+                            id="btnSalvar"
+                            class="bg-[#caa85c] hover:brightness-110 text-black font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Salvar Parceiro
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
         </div>
 
-        <div class="md:col-span-2 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl flex flex-col">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2 mb-4 text-left">Galvânicas Credenciadas</h3>
-            <div id="loading" class="text-center py-6 text-zinc-500 text-xs uppercase tracking-widest">⏳ Carregando dados...</div>
-            <div id="lista-galvanicas" class="space-y-2 text-left"></div>
+        <!-- LIST -->
+        <div class="md:col-span-2">
+
+            <div class="bg-zinc-950 border border-zinc-800 p-5 rounded-2xl flex flex-col min-h-[600px] animate-fade">
+
+                <!-- HEADER -->
+                <div class="flex items-center justify-between gap-4 border-b border-zinc-900 pb-3 mb-4">
+
+                    <div>
+
+                        <h3 class="text-sm font-black text-white uppercase tracking-wider">
+                            Galvânicas Credenciadas
+                        </h3>
+
+                        <p class="text-[10px] text-zinc-500 mt-1">
+                            Parceiros integrados ao fluxo operacional da Abella.
+                        </p>
+
+                    </div>
+
+                    <div
+                        id="contadorGalvanicas"
+                        class="text-[10px] uppercase tracking-widest text-zinc-500 font-black"
+                    >
+                        0 itens
+                    </div>
+
+                </div>
+
+                <!-- LOADING -->
+                <div
+                    id="loading"
+                    class="text-center py-10 text-zinc-500 text-xs uppercase tracking-widest"
+                >
+                    ⏳ Carregando dados...
+                </div>
+
+                <!-- LIST -->
+                <div
+                    id="lista-galvanicas"
+                    class="space-y-3 hidden"
+                ></div>
+
+            </div>
+
         </div>
+
     </div>
 
+    <!-- FIREBASE -->
     <script src="../js/firebase/firebase-config.js"></script>
-    <script src="../js/services/galvanicaService.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => { carregarGalvanicasUI(); });
 
-        async function carregarGalvanicasUI() {
-            const container = document.getElementById('lista-galvanicas');
-            const loading = document.getElementById('loading');
+    <!-- SERVICE -->
+    <script src="../js/services/galvanicaService.js"></script>
+
+    <script>
+
+        // =========================================================
+        // FIREBASE STATUS
+        // =========================================================
+
+        firebase
+            .database()
+            .ref('.info/connected')
+            .on('value', snap => {
+
+                const online = snap.val();
+
+                const el =
+                    document.getElementById('statusFirebase');
+
+                if(online){
+
+                    el.innerHTML = 'ONLINE';
+
+                    el.className =
+                        'text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-wider';
+
+                }else{
+
+                    el.innerHTML = 'OFFLINE';
+
+                    el.className =
+                        'text-[10px] px-2 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-black uppercase tracking-wider';
+                }
+            });
+
+        // =========================================================
+        // INIT
+        // =========================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            configurarEventos();
+
+            carregarGalvanicasUI();
+
+            document
+                .getElementById('formGalv')
+                .addEventListener(
+                    'submit',
+                    salvarGalvanicaUI
+                );
+        });
+
+        // =========================================================
+        // HELPERS
+        // =========================================================
+
+        function limparFormulario(){
+
+            document
+                .getElementById('formGalv')
+                .reset();
+
+            document
+                .getElementById('galvId')
+                .value = '';
+
+            document
+                .getElementById('galvActive')
+                .checked = true;
+
+            document
+                .getElementById('formTitulo')
+                .innerHTML =
+                'Cadastrar Parceiro Galvânica';
+
+            document
+                .getElementById('btnSalvar')
+                .innerHTML =
+                'Salvar Parceiro';
+        }
+
+        function configurarEventos(){
+
+            document
+                .getElementById('galvWhats')
+                .addEventListener(
+                    'input',
+                    e => {
+
+                        e.target.value =
+                            e.target.value.replace(/\D/g, '');
+                    }
+                );
+        }
+
+        // =========================================================
+        // LOAD
+        // =========================================================
+
+        async function carregarGalvanicasUI(){
+
+            const container =
+                document.getElementById('lista-galvanicas');
+
+            const loading =
+                document.getElementById('loading');
+
+            const contador =
+                document.getElementById('contadorGalvanicas');
+
             container.innerHTML = '';
+
             loading.classList.remove('hidden');
 
-            try {
-                const list = await galvanicaService.listarTodas();
+            container.classList.add('hidden');
+
+            try{
+
+                // =====================================================
+                // PADRÃO OFICIAL:
+                // abella/galvanicas
+                // =====================================================
+
+                const list =
+                    await galvanicaService.listarTodas();
+
                 loading.classList.add('hidden');
 
-                const keys = Object.keys(list);
-                if(keys.length === 0) {
-                    container.innerHTML = '<p class="text-zinc-600 text-xs italic py-4">Nenhuma galvânica credenciada no sistema.</p>';
+                container.classList.remove('hidden');
+
+                if(!list || Object.keys(list).length === 0){
+
+                    contador.innerHTML = '0 itens';
+
+                    container.innerHTML = `
+                        <div class="text-zinc-600 text-xs italic py-10 text-center border border-dashed border-zinc-800 rounded-2xl">
+                            Nenhuma galvânica credenciada no sistema.
+                        </div>
+                    `;
+
                     return;
                 }
 
+                const keys =
+                    Object.keys(list);
+
+                contador.innerHTML =
+                    `${keys.length} itens`;
+
                 keys.forEach(id => {
-                    const g = list[id];
-                    const div = document.createElement('div');
-                    div.className = "p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex justify-between items-center";
+
+                    const g =
+                        list[id] || {};
+
+                    const div =
+                        document.createElement('div');
+
+                    div.className =
+                        'animate-fade p-4 bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4';
+
                     div.innerHTML = `
-                        <div>
-                            <span class="text-xs text-white font-bold uppercase">${g.nome}</span>
-                            <p class="text-[9px] text-zinc-500 font-mono">📍 Endereço: ${g.endereco} | Tel: ${g.whatsapp}</p>
+
+                        <div class="flex-1 min-w-0">
+
+                            <div class="flex items-center gap-2 flex-wrap">
+
+                                <h4 class="text-xs text-white font-black uppercase">
+                                    ${g.nome || 'Sem Nome'}
+                                </h4>
+
+                                ${
+                                    g.active
+                                        ? `
+                                            <span class="text-[9px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase">
+                                                Ativo
+                                            </span>
+                                        `
+                                        : `
+                                            <span class="text-[9px] px-2 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-black uppercase">
+                                                Inativo
+                                            </span>
+                                        `
+                                }
+
+                            </div>
+
+                            <div class="space-y-1 mt-2">
+
+                                <p class="text-[10px] text-zinc-500 font-mono break-all">
+                                    📞 ${g.whatsapp || 'Não informado'}
+                                </p>
+
+                                <p class="text-[10px] text-zinc-500 font-mono">
+                                    📍 ${g.endereco || 'Endereço não informado'}
+                                </p>
+
+                                <p class="text-[9px] text-zinc-700 font-mono break-all">
+                                    abella/galvanicas/${id}
+                                </p>
+
+                            </div>
+
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="editarGalvUI('${id}','${g.nome}','${g.whatsapp}','${g.endereco}')" class="bg-zinc-800 hover:bg-zinc-700 px-3 py-1 text-[10px] font-bold rounded-lg transition-all">Editar</button>
-                            <button onclick="deletarGalvUI('${id}')" class="bg-red-950/20 border border-red-900/40 text-red-400 px-3 py-1 text-[10px] font-bold rounded-lg transition-all">Excluir</button>
+
+                        <div class="flex items-center gap-2 shrink-0">
+
+                            <button
+                                onclick="editarGalvUI(
+                                    '${id}',
+                                    ${JSON.stringify(g.nome || '')},
+                                    ${JSON.stringify(g.whatsapp || '')},
+                                    ${JSON.stringify(g.endereco || '')},
+                                    ${g.active !== false}
+                                )"
+                                class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 text-[10px] font-black rounded-xl transition-all"
+                            >
+                                Editar
+                            </button>
+
+                            <button
+                                onclick="deletarGalvUI('${id}')"
+                                class="bg-red-950/20 hover:bg-red-950/40 border border-red-900/40 text-red-400 px-4 py-2 text-[10px] font-black rounded-xl transition-all"
+                            >
+                                Excluir
+                            </button>
+
                         </div>
+
                     `;
+
                     container.appendChild(div);
                 });
-            } catch(e) { loading.innerText = "❌ Falha ao processar tabela de parceiros."; }
-        }
 
-        function editarGalvUI(id, nome, whats, endereco) {
-            document.getElementById('galvId').value = id;
-            document.getElementById('galvNome').value = nome;
-            document.getElementById('galvWhats').value = whats;
-            document.getElementById('galvEnd').value = endereco;
-            document.getElementById('formTitulo').innerText = "Modificar Parceiro Galvânica";
-        }
+            }catch(error){
 
-        async function salvarGalvanicaUI(e) {
-            e.preventDefault();
-            const payload = {
-                nome: document.getElementById('galvNome').value.trim(),
-                whatsapp: document.getElementById('galvWhats').value.trim().replace(/\D/g, ''),
-                endereco: document.getElementById('galvEnd').value.trim(),
-                active: true
-            };
+                console.error(
+                    'Erro ao carregar galvânicas:',
+                    error
+                );
 
-            await galvanicaService.salvar(document.getElementById('galvId').value, payload);
-            document.getElementById('formGalv').reset();
-            document.getElementById('galvId').value = '';
-            document.getElementById('formTitulo').innerText = "Cadastrar Parceiro Galvânica";
-            await carregarGalvanicasUI();
-        }
-
-        async function deletarGalvUI(id) {
-            if(confirm("Deseja expurgar esta galvânica do mapa de frete integrado?")) {
-                await galvanicaService.deletar(id);
-                await carregarGalvanicasUI();
+                loading.innerHTML =
+                    '❌ Falha ao processar tabela de parceiros.';
             }
         }
+
+        // =========================================================
+        // EDIT
+        // =========================================================
+
+        function editarGalvUI(
+            id,
+            nome,
+            whats,
+            endereco,
+            active = true
+        ){
+
+            document.getElementById('galvId')
+                .value = id;
+
+            document.getElementById('galvNome')
+                .value = nome || '';
+
+            document.getElementById('galvWhats')
+                .value = whats || '';
+
+            document.getElementById('galvEnd')
+                .value = endereco || '';
+
+            document.getElementById('galvActive')
+                .checked = active;
+
+            document.getElementById('formTitulo')
+                .innerHTML =
+                'Modificar Parceiro Galvânica';
+
+            document.getElementById('btnSalvar')
+                .innerHTML =
+                'Atualizar Parceiro';
+
+            window.scrollTo({
+                top:0,
+                behavior:'smooth'
+            });
+        }
+
+        // =========================================================
+        // SAVE
+        // =========================================================
+
+        async function salvarGalvanicaUI(e){
+
+            e.preventDefault();
+
+            const btn =
+                document.getElementById('btnSalvar');
+
+            const status =
+                document.getElementById('statusSave');
+
+            try{
+
+                btn.disabled = true;
+
+                btn.innerHTML =
+                    'Salvando...';
+
+                status.innerHTML =
+                    'Persistindo parceiro logístico...';
+
+                const id =
+                    document.getElementById('galvId')
+                        .value;
+
+                const payload = {
+
+                    // =================================================
+                    // NÓ:
+                    // abella/galvanicas/{id}
+                    // =================================================
+
+                    nome:
+                        document
+                            .getElementById('galvNome')
+                            .value
+                            .trim(),
+
+                    whatsapp:
+                        document
+                            .getElementById('galvWhats')
+                            .value
+                            .trim()
+                            .replace(/\D/g, ''),
+
+                    endereco:
+                        document
+                            .getElementById('galvEnd')
+                            .value
+                            .trim(),
+
+                    active:
+                        document
+                            .getElementById('galvActive')
+                            .checked,
+
+                    updatedAt:
+                        Date.now()
+                };
+
+                await galvanicaService
+                    .salvar(id, payload);
+
+                limparFormulario();
+
+                status.innerHTML =
+                    '✨ Parceiro atualizado com sucesso!';
+
+                await carregarGalvanicasUI();
+
+            }catch(error){
+
+                console.error(
+                    'Erro ao salvar galvânica:',
+                    error
+                );
+
+                status.innerHTML =
+                    '❌ Falha ao salvar parceiro.';
+
+                alert(
+                    'Falha ao persistir parceiro logístico.'
+                );
+
+            }finally{
+
+                btn.disabled = false;
+
+                btn.innerHTML =
+                    'Salvar Parceiro';
+            }
+        }
+
+        // =========================================================
+        // DELETE
+        // =========================================================
+
+        async function deletarGalvUI(id){
+
+            const confirmar =
+                confirm(
+                    'Deseja expurgar esta galvânica do mapa logístico integrado?'
+                );
+
+            if(!confirmar)
+                return;
+
+            try{
+
+                await galvanicaService
+                    .deletar(id);
+
+                await carregarGalvanicasUI();
+
+            }catch(error){
+
+                console.error(
+                    'Erro ao deletar:',
+                    error
+                );
+
+                alert(
+                    'Falha ao remover galvânica.'
+                );
+            }
+        }
+
     </script>
+
 </body>
 </html>
+```

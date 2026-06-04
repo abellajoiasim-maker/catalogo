@@ -1,11 +1,12 @@
+```js
 // ======================================================================
 // js/services/carrinhoService.js
-// Abella Joias • CarrinhoService Premium v3.0 FINAL
+// Abella Joias • CarrinhoService Premium v4.0 IQ200
 // ======================================================================
 
 const CarrinhoService = {
 
-    STORAGE_KEY:'abella_carrinho',
+    STORAGE_KEY: 'abella_carrinho',
 
     // ==========================================================
     // HELPERS
@@ -19,13 +20,18 @@ const CarrinhoService = {
 
         }catch(e){
 
+            console.error(
+                '[Carrinho] Erro parse JSON:',
+                e
+            );
+
             return [];
 
         }
 
     },
 
-    _safeNumber(valor,fallback = 0){
+    _safeNumber(valor, fallback = 0){
 
         const n =
             Number(valor);
@@ -88,176 +94,246 @@ const CarrinhoService = {
 
     ){
 
-      if(
-    !produto ||
-    typeof produto !== 'object'
-){
-    console.error(
-        'Produto inválido:',
-        produto
-    );
+        try{
 
-    return false;
-}
-        let itens =
-            this.getItens();
+            // ======================================================
+            // VALIDAÇÃO
+            // ======================================================
 
-        quantidade =
-            Math.min(
+            if(
+                !produto ||
+                typeof produto !== 'object'
+            ){
 
-                999,
+                console.error(
+                    'Produto inválido:',
+                    produto
+                );
 
-                Math.max(
-                    1,
-                    parseInt(quantidade) || 1
+                return false;
+            }
+
+            let itens =
+                this.getItens();
+
+            quantidade =
+                Math.min(
+
+                    999,
+
+                    Math.max(
+                        1,
+                        parseInt(quantidade) || 1
+                    )
+
+                );
+
+            // ======================================================
+            // SKU
+            // ======================================================
+
+            const sku =
+                (
+                    produto.sku ||
+                    produto.id ||
+                    ''
                 )
+                .toString()
+                .trim()
+                .toUpperCase();
 
+            if(!sku){
+
+                console.error(
+                    'Produto sem SKU:',
+                    produto
+                );
+
+                return false;
+            }
+
+            // ======================================================
+            // PREÇO
+            // ======================================================
+
+            const preco =
+                Math.max(
+
+                    0,
+
+                    this._safeNumber(
+
+                        produto.precoFinal ??
+                        produto.price ??
+                        produto.preco ??
+                        0
+
+                    )
+
+                );
+
+            // ======================================================
+            // PESO
+            // ======================================================
+
+            const peso =
+                Math.min(
+
+                    10000,
+
+                    Math.max(
+
+                        0,
+
+                        this._safeNumber(
+
+                            produto.peso ??
+                            produto.weight ??
+                            0
+
+                        )
+
+                    )
+
+                );
+
+            // ======================================================
+            // LOCALIZAR ITEM
+            // ======================================================
+
+            const index =
+                itens.findIndex(item =>
+
+                    item.sku === sku &&
+                    (
+                        item.variacao || null
+                    ) === (
+                        variacao || null
+                    )
+
+                );
+
+            // ======================================================
+            // ITEM EXISTE
+            // ======================================================
+
+            if(index >= 0){
+
+                itens[index].quantidade += quantidade;
+
+                itens[index].precoFinal = preco;
+                itens[index].price = preco;
+
+                itens[index].peso = peso;
+                itens[index].weight = peso;
+
+                itens[index].image =
+                    produto.image ||
+                    produto.imagem ||
+                    '';
+
+                itens[index].imagem =
+                    produto.image ||
+                    produto.imagem ||
+                    '';
+
+                itens[index].updatedAt =
+                    Date.now();
+            }
+
+            // ======================================================
+            // NOVO ITEM
+            // ======================================================
+
+            else{
+
+                itens.push({
+
+                    id:
+                        produto.id ||
+                        sku,
+
+                    sku,
+
+                    nome:
+                        produto.nome ||
+                        produto.name ||
+                        'Produto',
+
+                    name:
+                        produto.nome ||
+                        produto.name ||
+                        'Produto',
+
+                    image:
+                        produto.image ||
+                        produto.imagem ||
+                        '',
+
+                    imagem:
+                        produto.image ||
+                        produto.imagem ||
+                        '',
+
+                    categoria:
+                        produto.category ||
+                        produto.categoria ||
+                        '',
+
+                    subcategoria:
+                        produto.subcategory ||
+                        produto.subcategoria ||
+                        '',
+
+                    precoFinal:
+                        preco,
+
+                    price:
+                        preco,
+
+                    peso:
+                        peso,
+
+                    weight:
+                        peso,
+
+                    quantidade,
+
+                    variacao:
+                        variacao || null,
+
+                    createdAt:
+                        Date.now(),
+
+                    updatedAt:
+                        Date.now()
+
+                });
+
+            }
+
+            // ======================================================
+            // SAVE
+            // ======================================================
+
+            this.salvarTodos(itens);
+
+            console.log(
+                '🛒 Produto adicionado:',
+                sku
             );
 
-    const sku =
-(
-    produto.sku ||
-    produto.id ||
-    ''
-)
-.toString()
-.trim()
-.toUpperCase();
-        
-        if(!sku){
+            return true;
+
+        }catch(error){
 
             console.error(
-                'Produto sem SKU',
-                produto
+                '[Carrinho] Erro adicionar:',
+                error
             );
 
             return false;
-
         }
-
-    const preco =
-    Math.max(
-        0,
-        this._safeNumber(
-
-                produto.precoFinal ??
-                produto.price ??
-                produto.preco ??
-                0
-
-            );
-
-        const peso =
-            this._safeNumber(
-
-                produto.peso ??
-                produto.weight ??
-                0
-
-            );
-
-        const index =
-            itens.findIndex(item =>
-
-                item.sku === sku &&
-                (
-                    item.variacao || null
-                ) === (
-                    variacao || null
-                )
-
-            );
-
-        // ITEM EXISTE
-
-  if(index >= 0){
-
-    itens[index].quantidade += quantidade;
-
-    itens[index].precoFinal = preco;
-    itens[index].price = preco;
-
-    itens[index].peso = peso;
-    itens[index].weight = peso;
-
-    itens[index].image =
-        produto.image ||
-        produto.imagem ||
-        '';
-
-    itens[index].imagem =
-        produto.image ||
-        produto.imagem ||
-        '';
-
-}
-
-        // NOVO ITEM
-
-        else{
-
-            itens.push({
-
-                id:
-                    produto.id ||
-                    sku,
-
-                sku,
-
-                nome:
-                    produto.nome ||
-                    produto.name ||
-                    'Produto',
-
-                name:
-                    produto.nome ||
-                    produto.name ||
-                    'Produto',
-
-                image:
-                    produto.image ||
-                    produto.imagem ||
-                    '',
-
-                imagem:
-                    produto.image ||
-                    produto.imagem ||
-                    '',
-
-                categoria:
-                    produto.category ||
-                    produto.categoria ||
-                    '',
-
-                subcategoria:
-                    produto.subcategory ||
-                    produto.subcategoria ||
-                    '',
-
-                precoFinal:
-                    preco,
-
-                price:
-                    preco,
-
-                peso:
-                    peso,
-
-                weight:
-                    peso,
-
-                quantidade,
-
-                variacao:
-                    variacao || null
-
-            });
-
-        }
-
-        this.salvarTodos(itens);
-
-        return true;
 
     },
 
@@ -343,6 +419,9 @@ const CarrinhoService = {
 
             );
 
+        itens[index].updatedAt =
+            Date.now();
+
         this.salvarTodos(itens);
 
     },
@@ -394,26 +473,35 @@ const CarrinhoService = {
                 );
 
             const peso =
-    Math.min(
+                Math.min(
 
-        10000,
+                    10000,
 
-        Math.max(
-            0,
-            this._safeNumber(
+                    Math.max(
 
-                    item.peso ??
-                    item.weight ??
-                    0
+                        0,
+
+                        this._safeNumber(
+
+                            item.peso ??
+                            item.weight ??
+                            0
+
+                        )
+
+                    )
 
                 );
 
             const qtd =
                 Math.max(
+
                     1,
+
                     parseInt(
                         item.quantidade
                     ) || 1
+
                 );
 
             subtotal +=
@@ -497,6 +585,16 @@ const CarrinhoService = {
     },
 
     // ==========================================================
+    // EXISTS
+    // ==========================================================
+
+    possuiItens(){
+
+        return this.getItens().length > 0;
+
+    },
+
+    // ==========================================================
     // EVENTS
     // ==========================================================
 
@@ -515,7 +613,7 @@ const CarrinhoService = {
 };
 
 // ==========================================================
-// EXPORT
+// EXPORT GLOBAL
 // ==========================================================
 
 window.CarrinhoService =
@@ -529,20 +627,35 @@ window.carrinhoService =
 // ==========================================================
 
 CarrinhoService.obterItens =
-    CarrinhoService.getItens.bind(CarrinhoService);
+    CarrinhoService.getItens.bind(
+        CarrinhoService
+    );
 
 CarrinhoService.obterResumo =
-    CarrinhoService.getResumo.bind(CarrinhoService);
+    CarrinhoService.getResumo.bind(
+        CarrinhoService
+    );
 
 CarrinhoService.adicionarItem =
-    CarrinhoService.adicionarItem.bind(CarrinhoService);
+    CarrinhoService.adicionarItem.bind(
+        CarrinhoService
+    );
 
 CarrinhoService.removerItem =
-    CarrinhoService.removerItem.bind(CarrinhoService);
+    CarrinhoService.removerItem.bind(
+        CarrinhoService
+    );
 
 CarrinhoService.limparCarrinho =
-    CarrinhoService.limparCarrinho.bind(CarrinhoService);
+    CarrinhoService.limparCarrinho.bind(
+        CarrinhoService
+    );
+
+// ==========================================================
+// INIT
+// ==========================================================
 
 console.log(
-    '🛒 CarrinhoService Premium carregado.'
+    '🛒 CarrinhoService Premium v4.0 carregado.'
 );
+```

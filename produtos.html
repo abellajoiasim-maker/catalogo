@@ -544,53 +544,88 @@
     // IMG FIREBASE
     // =========================================================
 
-    function resolverImagemFirebase(path){
+   function resolverImagemFirebase(path){
 
-        if(!path){
-            return '';
-        }
+    if(!path){
+        return '';
+    }
 
-        if(path.startsWith('http')){
-            return path;
-        }
+    // Remove espaços
+    path = String(path).trim();
 
-        if(path.startsWith('gs://')){
+    // URL já pronta
+    if(
+        path.startsWith('http://') ||
+        path.startsWith('https://')
+    ){
+        return path;
+    }
 
-            try{
+    // Firebase GS
+    if(path.startsWith('gs://')){
 
-                const semGs =
-                    path.replace(
-                        'gs://',
-                        ''
-                    );
+        try{
 
-                const partes =
-                    semGs.split('/');
-
-                const bucket =
-                    partes.shift();
-
-                const arquivo =
-                    partes.join('/');
-
-                return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
-
-            }catch(e){
-
-                console.error(
-                    'Erro imagem Firebase:',
-                    e
+            const semGs =
+                path.replace(
+                    'gs://',
+                    ''
                 );
 
-                return '';
+            const partes =
+                semGs.split('/');
 
-            }
+            const bucket =
+                partes.shift();
+
+            const arquivo =
+                partes.join('/');
+
+            return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
+
+        }catch(e){
+
+            console.error(
+                'Erro imagem Firebase:',
+                e
+            );
+
+            return '';
 
         }
 
-        return path;
-
     }
+
+    // Caminho relativo images/
+    if(
+        path.startsWith('images/') ||
+        path.startsWith('/images/')
+    ){
+
+        return path.replace(/^\/+/,'');
+    }
+
+    // Caminho relativo Abella/
+    if(
+        path.startsWith('Abella/') ||
+        path.startsWith('/Abella/')
+    ){
+
+        return path.replace(/^\/+/,'');
+    }
+
+    // Nome simples de arquivo
+    if(
+        !path.includes('://') &&
+        !path.startsWith('data:')
+    ){
+
+        return `images/${path}`;
+    }
+
+    return path;
+
+}
 
     // =========================================================
     // INIT

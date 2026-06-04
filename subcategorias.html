@@ -667,131 +667,151 @@
         // RENDER
         // ==========================================================
 
-        function renderizarSubcategorias(lista){
+function renderizarSubcategorias(lista){
 
-            const grid =
-                document.getElementById(
-                    'gridSubcategorias'
-                );
+    const grid =
+        document.getElementById(
+            'gridSubcategorias'
+        );
 
-            const loading =
-                document.getElementById(
-                    'loading'
-                );
+    const loading =
+        document.getElementById(
+            'loading'
+        );
 
-            loading.classList.add(
-                'hidden'
-            );
+    loading.classList.add(
+        'hidden'
+    );
 
-            grid.classList.remove(
-                'hidden'
-            );
+    grid.classList.remove(
+        'hidden'
+    );
 
-            if(!lista.length){
+    if(!lista.length){
 
-                grid.innerHTML = `
+        grid.innerHTML = `
 
-                    <div class="glass rounded-[2rem] p-12 text-center">
+            <div class="glass rounded-[2rem] p-12 text-center">
 
-                        <div class="text-6xl mb-6">
-                            💎
-                        </div>
+                <div class="text-6xl mb-6">
+                    💎
+                </div>
 
-                        <h2 class="text-3xl font-black">
-                            Nenhuma subcategoria encontrada
-                        </h2>
+                <h2 class="text-3xl font-black">
+                    Nenhuma subcategoria encontrada
+                </h2>
 
-                    </div>
+            </div>
 
-                `;
+        `;
 
-                return;
+        return;
 
-            }
+    }
 
-            grid.innerHTML = `
+    grid.innerHTML = `
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full fade-in">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full fade-in">
 
-                    ${lista.map(([slug,sub]) => {
+            ${lista.map(([slug,sub]) => {
 
-                       const image =
-    ImageHelper.obterImagem(sub);
+                // ======================================================
+                // RESOLVE IMAGEM
+                // ======================================================
 
-                        return `
+                let image =
+                    resolverImagemFirebase(
 
-                            <div
-                                onclick="abrirProdutos('${slug}')"
-                                class="glass rounded-[2rem] overflow-hidden cursor-pointer hover-lift group border border-white/5">
+                        sub.image ||
+                        sub.imagem ||
+                        sub.cover ||
+                        sub.banner ||
+                        categoriaAtual.image ||
+                        categoriaAtual.imagem
 
-                                <!-- IMAGE -->
+                    );
 
-                                <div class="aspect-square overflow-hidden relative bg-black">
+                if(!image){
 
-                                    <img
-                                        src="${image}"
-                                        alt="${sub.name || slug}"
-                                        class="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
-                                        loading="lazy"
-                                        onerror="this.src='https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA'">
+                    image =
+                        'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
 
-                                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent"></div>
+                }
 
-                                    <div class="absolute top-5 left-5">
+                return `
 
-                                        <div class="bg-black/70 border border-white/10 backdrop-blur-xl rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.25em] font-black">
+                    <div
+                        onclick="abrirProdutos('${slug}')"
+                        class="glass rounded-[2rem] overflow-hidden cursor-pointer hover-lift group border border-white/5">
 
-                                            Subcategoria
+                        <!-- IMAGE -->
 
-                                        </div>
+                        <div class="aspect-square overflow-hidden relative bg-black">
 
-                                    </div>
+                            <img
+                                src="${image}"
+                                alt="${sub.name || slug}"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
+                                loading="lazy"
+                                onerror="this.src='https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA'">
 
-                                </div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent"></div>
 
-                                <!-- CONTENT -->
+                            <div class="absolute top-5 left-5">
 
-                                <div class="p-6">
+                                <div class="bg-black/70 border border-white/10 backdrop-blur-xl rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.25em] font-black">
 
-                                    <div class="flex items-center justify-between gap-4">
-
-                                        <div>
-
-                                            <h3 class="text-2xl font-black leading-tight">
-
-                                                ${sub.name || sub.nome || slug}
-
-                                            </h3>
-
-                                            <p class="text-zinc-500 text-sm mt-3 leading-relaxed">
-
-                                                Clique para explorar os produtos premium desta coleção.
-
-                                            </p>
-
-                                        </div>
-
-                                        <div class="w-14 h-14 rounded-2xl bg-[#caa85c] text-black flex items-center justify-center font-black text-xl shrink-0">
-
-                                            →
-
-                                        </div>
-
-                                    </div>
+                                    Subcategoria
 
                                 </div>
 
                             </div>
 
-                        `;
+                        </div>
 
-                    }).join('')}
+                        <!-- CONTENT -->
 
-                </div>
+                        <div class="p-6">
 
-            `;
+                            <div class="flex items-center justify-between gap-4">
 
-        }
+                                <div>
+
+                                    <h3 class="text-2xl font-black leading-tight">
+
+                                        ${sub.name || sub.nome || slug}
+
+                                    </h3>
+
+                                    <p class="text-zinc-500 text-sm mt-3 leading-relaxed">
+
+                                        Clique para explorar os produtos premium desta coleção.
+
+                                    </p>
+
+                                </div>
+
+                                <div class="w-14 h-14 rounded-2xl bg-[#caa85c] text-black flex items-center justify-center font-black text-xl shrink-0">
+
+                                    →
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            }).join('')}
+
+        </div>
+
+    `;
+
+}
 
         // ==========================================================
         // ERRO

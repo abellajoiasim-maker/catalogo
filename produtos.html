@@ -490,23 +490,95 @@ img{
 
 </button>
 
-                    <div>
+                   <div class="flex items-center gap-3">
 
-                        <p class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-bold">
+    <!-- LOGO -->
 
-                            Catálogo Premium
+    <img
+        id="headerLogo"
+        src=""
+        alt="Abella Joias"
+        class="hidden w-11 h-11 object-contain rounded-2xl bg-black/40 border border-[#caa85c]/20 p-1">
 
-                        </p>
+    <!-- FALLBACK -->
 
-                        <h1
-                            id="tituloPagina"
-                            class="serif gold text-lg md:text-3xl uppercase tracking-[0.15em] mt-1">
+    <div
+        id="headerLogoFallback"
+        class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center text-black font-black text-lg shrink-0">
 
-                            Produtos
+        A
 
-                        </h1>
+    </div>
 
-                    </div>
+    <!-- TEXTOS -->
+
+    <div>
+
+        <p class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-bold">
+
+            Catálogo Premium
+
+        </p>
+
+        <h1
+            id="tituloPagina"
+            class="serif gold text-lg md:text-3xl uppercase tracking-[0.15em] mt-1">
+
+            Produtos
+
+        </h1>
+
+    </div>
+
+</div>
+                    <script>
+
+async function carregarLogoHeader(){
+
+    try{
+
+        const snap =
+            await firebase
+                .database()
+                .ref('abella/config')
+                .once('value');
+
+        const config =
+            snap.val() || {};
+
+        const logo =
+            config.logo ||
+            config.logoUrl ||
+            '';
+
+        if(!logo){
+            return;
+        }
+
+        const logoImg =
+            document.getElementById('headerLogo');
+
+        const fallback =
+            document.getElementById('headerLogoFallback');
+
+        logoImg.src = logo;
+
+        logoImg.classList.remove('hidden');
+
+        fallback.classList.add('hidden');
+
+    }catch(e){
+
+        console.error(
+            'Erro logo header:',
+            e
+        );
+
+    }
+
+}
+
+</script>
 
                 </div>
 
@@ -1014,33 +1086,30 @@ class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6"
     // =========================================================
 
     document.addEventListener(
-        'DOMContentLoaded',
-        async () => {
+    'DOMContentLoaded',
+    async () => {
 
-            try{
+        try{
 
-                atualizarMiniCarrinho();
+            await carregarLogoHeader();
 
-                await carregarProdutos();
+            atualizarMiniCarrinho();
 
-                iniciarBusca();
+            await carregarProdutos();
 
-                console.log(
-                    '✅ Página carregada'
-                );
+            iniciarBusca();
 
-            }catch(e){
+        }catch(e){
 
-                console.error(
-                    'Erro init:',
-                    e
-                );
-
-            }
+            console.error(
+                'Erro init:',
+                e
+            );
 
         }
-    );
 
+    }
+);
     // =========================================================
     // MINI CART
     // =========================================================

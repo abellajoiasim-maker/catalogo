@@ -1,77 +1,489 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Configurações Gerais | Abella Admin</title>
+
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-</head>
-<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
 
-    <div class="max-w-2xl mx-auto space-y-6 text-left">
-        <div class="bg-zinc-950 p-6 rounded-2xl border border-zinc-800">
-            <h2 class="text-xl font-bold text-white">⚙️ Configurações Gerais do Sistema</h2>
-            <p class="text-xs text-zinc-500 mt-1">Controle taxas de liquidação, parcelamento máximo e WhatsApp corporativo.</p>
-        </div>
+    <style>
 
-        <form id="formConfig" onsubmit="salvarConfiguracoesGerais(event)" class="bg-zinc-950 border border-zinc-800 p-6 rounded-2xl space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-                <div class="space-y-1">
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Desconto à Vista no PIX (%) *</label>
-                    <input type="number" id="cfgPix" required min="0" max="50" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Parcelamento Máximo Cartão *</label>
-                    <input type="number" id="cfgParcelas" required min="1" max="12" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
-                </div>
-            </div>
-
-            <div class="space-y-1">
-                <label class="text-[10px] uppercase text-zinc-400 font-bold">WhatsApp Corporativo de Recebimento de Pedidos *</label>
-                <input type="text" id="cfgWhatsapp" required placeholder="Ex: 5519988207658" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
-                <p class="text-[9px] text-zinc-600 font-mono">Insira o número completo contendo DDI (55), DDD e número, sem espaços ou parênteses.</p>
-            </div>
-
-            <div class="pt-4 border-t border-zinc-900 flex justify-end">
-                <button type="submit" class="bg-[#caa85c] text-black font-black px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all">
-                    💾 Gravar Parâmetros
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <script src="../js/firebase/firebase-config.js"></script>
-    <script src="../js/services/configService.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => { await carregarCamposConfig(); });
-
-        async function carregarCamposConfig() {
-            try {
-                const s = await configService.obterConfiguracoes();
-                if(s) {
-                    document.getElementById('cfgPix').value = s.pixDesc || 5;
-                    document.getElementById('cfgParcelas').value = s.parcelasMax || 6;
-                    document.getElementById('cfgWhatsapp').value = s.whatsEmpresa || "5519988207658";
-                }
-            } catch(e) { console.error("Erro ao ler parametrização inicial", e); }
+        ::-webkit-scrollbar{
+            width:8px;
         }
 
-        async function salvarConfiguracoesGerais(e) {
-            e.preventDefault();
-            const payload = {
-                pixDesc: parseFloat(document.getElementById('cfgPix').value),
-                parcelasMax: parseInt(document.getElementById('cfgParcelas').value),
-                whatsEmpresa: document.getElementById('cfgWhatsapp').value.replace(/\D/g, '')
-            };
+        ::-webkit-scrollbar-track{
+            background:#09090b;
+        }
 
-            try {
-                await configService.salvarConfiguracoes(payload);
-                alert("✨ Parâmetros operacionais atualizados com sucesso!");
-                await carregarCamposConfig();
-            } catch(e) {
-                alert("Falha ao persistir novos dados de configuração corporativa.");
+        ::-webkit-scrollbar-thumb{
+            background:#3f3f46;
+            border-radius:999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover{
+            background:#52525b;
+        }
+
+        .animate-fade{
+            animation:fade .25s ease;
+        }
+
+        @keyframes fade{
+
+            from{
+                opacity:0;
+                transform:translateY(6px);
+            }
+
+            to{
+                opacity:1;
+                transform:translateY(0);
             }
         }
+
+    </style>
+
+</head>
+
+<body class="bg-zinc-900 text-zinc-100 p-4 md:p-6 font-sans min-h-screen overflow-x-hidden">
+
+    <div class="max-w-2xl mx-auto space-y-6 text-left">
+
+        <!-- HEADER -->
+        <div class="bg-zinc-950 p-6 rounded-2xl border border-zinc-800 animate-fade">
+
+            <div class="flex items-center justify-between gap-4">
+
+                <div>
+
+                    <h2 class="text-xl font-black text-white">
+                        ⚙️ Configurações Gerais do Sistema
+                    </h2>
+
+                    <p class="text-xs text-zinc-500 mt-1 leading-relaxed">
+                        Controle parâmetros financeiros, parcelamento, descontos PIX
+                        e recebimento operacional do catálogo.
+                    </p>
+
+                </div>
+
+                <div
+                    id="statusFirebase"
+                    class="text-[10px] px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-wider shrink-0"
+                >
+                    ONLINE
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- FORM -->
+        <form
+            id="formConfig"
+            class="bg-zinc-950 border border-zinc-800 p-6 rounded-2xl space-y-6 animate-fade"
+        >
+
+            <!-- GRID -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <!-- PIX -->
+                <div class="space-y-1">
+
+                    <label class="text-[10px] uppercase text-zinc-400 font-black">
+                        Desconto à Vista no PIX (%) *
+                    </label>
+
+                    <input
+                        type="number"
+                        id="cfgPix"
+                        required
+                        min="0"
+                        max="50"
+                        step="0.1"
+                        placeholder="5"
+                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
+                    >
+
+                    <p class="text-[10px] text-zinc-600">
+                        Percentual aplicado automaticamente em pagamentos via PIX.
+                    </p>
+
+                </div>
+
+                <!-- PARCELAS -->
+                <div class="space-y-1">
+
+                    <label class="text-[10px] uppercase text-zinc-400 font-black">
+                        Parcelamento Máximo Cartão *
+                    </label>
+
+                    <input
+                        type="number"
+                        id="cfgParcelas"
+                        required
+                        min="1"
+                        max="12"
+                        step="1"
+                        placeholder="6"
+                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
+                    >
+
+                    <p class="text-[10px] text-zinc-600">
+                        Quantidade máxima de parcelas exibidas no checkout.
+                    </p>
+
+                </div>
+
+            </div>
+
+            <!-- WHATS -->
+            <div class="space-y-1">
+
+                <label class="text-[10px] uppercase text-zinc-400 font-black">
+                    WhatsApp Corporativo *
+                </label>
+
+                <input
+                    type="text"
+                    id="cfgWhatsapp"
+                    required
+                    maxlength="20"
+                    inputmode="numeric"
+                    placeholder="5519988207658"
+                    class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
+                >
+
+                <p class="text-[10px] text-zinc-600 font-mono leading-relaxed">
+                    Insira o número completo contendo DDI + DDD + número,
+                    sem espaços, hífens ou parênteses.
+                </p>
+
+            </div>
+
+            <!-- PREVIEW -->
+            <div
+                class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3"
+            >
+
+                <div class="flex items-center justify-between">
+
+                    <h3 class="text-[11px] uppercase tracking-wider text-zinc-400 font-black">
+                        Pré-visualização operacional
+                    </h3>
+
+                    <div
+                        class="text-[9px] text-zinc-600 uppercase tracking-widest"
+                    >
+                        abella/settings/general
+                    </div>
+
+                </div>
+
+                <div class="space-y-2 text-xs">
+
+                    <div class="flex items-center justify-between gap-4">
+                        <span class="text-zinc-500">
+                            Desconto PIX:
+                        </span>
+
+                        <span
+                            id="previewPix"
+                            class="text-white font-black"
+                        >
+                            0%
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <span class="text-zinc-500">
+                            Parcelamento:
+                        </span>
+
+                        <span
+                            id="previewParcelas"
+                            class="text-white font-black"
+                        >
+                            0x
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <span class="text-zinc-500">
+                            WhatsApp:
+                        </span>
+
+                        <span
+                            id="previewWhatsapp"
+                            class="text-white font-black break-all text-right"
+                        >
+                            —
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ACTIONS -->
+            <div class="pt-4 border-t border-zinc-900 flex items-center justify-between gap-4 flex-wrap">
+
+                <div
+                    id="statusSave"
+                    class="text-[11px] text-zinc-600"
+                >
+                    Aguardando alterações...
+                </div>
+
+                <button
+                    type="submit"
+                    id="btnSalvar"
+                    class="bg-[#caa85c] hover:brightness-110 text-black font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    💾 Gravar Parâmetros
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+    <!-- FIREBASE -->
+    <script src="../js/firebase/firebase-config.js"></script>
+
+    <!-- SERVICES -->
+    <script src="../js/services/configService.js"></script>
+
+    <script>
+
+        // =========================================================
+        // FIREBASE STATUS
+        // =========================================================
+
+        firebase
+            .database()
+            .ref('.info/connected')
+            .on('value', snap => {
+
+                const online = snap.val();
+
+                const el =
+                    document.getElementById('statusFirebase');
+
+                if(online){
+
+                    el.innerHTML = 'ONLINE';
+
+                    el.className =
+                        'text-[10px] px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-wider shrink-0';
+
+                }else{
+
+                    el.innerHTML = 'OFFLINE';
+
+                    el.className =
+                        'text-[10px] px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-black uppercase tracking-wider shrink-0';
+                }
+            });
+
+        // =========================================================
+        // INIT
+        // =========================================================
+
+        document.addEventListener('DOMContentLoaded', async () => {
+
+            configurarEventosPreview();
+
+            await carregarCamposConfig();
+
+            document
+                .getElementById('formConfig')
+                .addEventListener(
+                    'submit',
+                    salvarConfiguracoesGerais
+                );
+        });
+
+        // =========================================================
+        // PREVIEW
+        // =========================================================
+
+        function configurarEventosPreview(){
+
+            [
+                'cfgPix',
+                'cfgParcelas',
+                'cfgWhatsapp'
+            ].forEach(id => {
+
+                document
+                    .getElementById(id)
+                    .addEventListener(
+                        'input',
+                        atualizarPreview
+                    );
+            });
+        }
+
+        function atualizarPreview(){
+
+            const pix =
+                document.getElementById('cfgPix').value || 0;
+
+            const parcelas =
+                document.getElementById('cfgParcelas').value || 0;
+
+            const whatsapp =
+                document.getElementById('cfgWhatsapp').value || '—';
+
+            document.getElementById('previewPix')
+                .innerHTML = `${pix}%`;
+
+            document.getElementById('previewParcelas')
+                .innerHTML = `${parcelas}x`;
+
+            document.getElementById('previewWhatsapp')
+                .innerHTML = whatsapp;
+        }
+
+        // =========================================================
+        // LOAD CONFIG
+        // =========================================================
+
+        async function carregarCamposConfig(){
+
+            try{
+
+                // =====================================================
+                // PADRÃO OFICIAL:
+                // abella/settings/general
+                // =====================================================
+
+                const s =
+                    await configService.obterConfiguracoes();
+
+                document.getElementById('cfgPix').value =
+                    s?.pixDesc ?? 5;
+
+                document.getElementById('cfgParcelas').value =
+                    s?.parcelasMax ?? 6;
+
+                document.getElementById('cfgWhatsapp').value =
+                    s?.whatsEmpresa ?? '5519988207658';
+
+                atualizarPreview();
+
+                document.getElementById('statusSave')
+                    .innerHTML =
+                    'Configurações carregadas com sucesso.';
+
+            }catch(error){
+
+                console.error(
+                    'Erro ao carregar configurações:',
+                    error
+                );
+
+                document.getElementById('statusSave')
+                    .innerHTML =
+                    'Falha ao carregar configurações.';
+            }
+        }
+
+        // =========================================================
+        // SAVE CONFIG
+        // =========================================================
+
+        async function salvarConfiguracoesGerais(e){
+
+            e.preventDefault();
+
+            const btn =
+                document.getElementById('btnSalvar');
+
+            const status =
+                document.getElementById('statusSave');
+
+            try{
+
+                btn.disabled = true;
+
+                btn.innerHTML =
+                    'Salvando...';
+
+                status.innerHTML =
+                    'Persistindo dados operacionais...';
+
+                const payload = {
+
+                    // =================================================
+                    // NÓ:
+                    // abella/settings/general
+                    // =================================================
+
+                    pixDesc: parseFloat(
+                        document.getElementById('cfgPix')
+                            .value || 0
+                    ),
+
+                    parcelasMax: parseInt(
+                        document.getElementById('cfgParcelas')
+                            .value || 1
+                    ),
+
+                    whatsEmpresa:
+                        document
+                            .getElementById('cfgWhatsapp')
+                            .value
+                            .replace(/\D/g, ''),
+
+                    updatedAt: Date.now()
+                };
+
+                await configService
+                    .salvarConfiguracoes(payload);
+
+                status.innerHTML =
+                    '✨ Configurações atualizadas com sucesso!';
+
+                await carregarCamposConfig();
+
+            }catch(error){
+
+                console.error(
+                    'Erro ao salvar configurações:',
+                    error
+                );
+
+                status.innerHTML =
+                    '❌ Falha ao persistir configurações.';
+
+                alert(
+                    'Falha ao persistir novos dados de configuração corporativa.'
+                );
+
+            }finally{
+
+                btn.disabled = false;
+
+                btn.innerHTML =
+                    '💾 Gravar Parâmetros';
+            }
+        }
+
     </script>
+
 </body>
 </html>
+```

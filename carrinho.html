@@ -1,667 +1,322 @@
-```html
-<!-- ===================================================================== -->
-<!-- carrinho.html -->
-<!-- Abella Joias • Carrinho Premium v3.0 -->
-<!-- ===================================================================== -->
-
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <title>
-        Carrinho • Abella Joias
-    </title>
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0">
-
-    <meta
-        http-equiv="Cache-Control"
-        content="no-cache, no-store, must-revalidate">
-
+    <title>Abella Joias • Seu Carrinho</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
-
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <style>
-
-        *{
-            box-sizing:border-box;
+        body {
+            background: #070707;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
         }
-
-        html{
-            scroll-behavior:smooth;
-        }
-
-        body{
-            background:#070707;
-            color:#fff;
-            font-family:'Inter',sans-serif;
-            overflow-x:hidden;
-        }
-
-        .serif{
-            font-family:'Cinzel',serif;
-        }
-
-        .gold{
-            color:#caa85c;
-        }
-
-        .bg-card{
-            background:#111;
-            border:1px solid #222;
-        }
-
-        .glass{
-            background:rgba(15,15,15,.85);
-            backdrop-filter:blur(16px);
-        }
-
-        ::-webkit-scrollbar{
-            width:8px;
-        }
-
-        ::-webkit-scrollbar-thumb{
-            background:#2b2b2b;
-            border-radius:999px;
-        }
-
+        .serif { font-family: 'Cinzel', serif; }
+        .gold { color: #caa85c; }
+        .bg-card { background: #111; border: 1px solid #222; }
+        .glass { background: rgba(10, 10, 10, .82); backdrop-filter: blur(18px); }
     </style>
-
 </head>
-
-<body class="min-h-screen pb-32">
+<body class="min-h-screen pb-24 lg:pb-12">
 
     <!-- HEADER -->
-
-    <header class="sticky top-0 z-50 glass border-b border-zinc-900">
-
-        <div class="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between">
-
-            <div>
-
-                <p class="text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-bold">
-                    Abella Premium
-                </p>
-
-                <h1 class="serif gold text-2xl tracking-[0.2em] uppercase mt-1">
-                    Carrinho
-                </h1>
-
+    <header class="sticky top-0 z-50 border-b border-zinc-900 glass">
+        <div class="max-w-7xl mx-auto px-4 md:px-6">
+            <div class="h-20 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="index.html" class="text-zinc-400 hover:text-[#caa85c] transition-colors">← Voltar</a>
+                    <h1 class="serif gold text-xl uppercase tracking-[0.2em]">Seu Carrinho</h1>
+                </div>
+                <div class="hidden lg:flex items-center gap-3">
+                    <span class="text-zinc-500 text-sm">Ambiente Seguro</span>
+                    <span class="text-emerald-400">🔒</span>
+                </div>
             </div>
-
-            <button
-                onclick="window.history.back()"
-                class="h-12 px-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] transition-all text-xs uppercase tracking-[0.2em] font-black">
-
-                ← Voltar
-
-            </button>
-
         </div>
-
     </header>
 
-    <!-- HERO -->
-
-    <section class="border-b border-zinc-900">
-
-        <div class="max-w-7xl mx-auto px-4 md:px-6 py-10">
-
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-                <div class="bg-card rounded-3xl p-5">
-
-                    <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                        Produtos
-                    </p>
-
-                    <p
-                        id="totalItens"
-                        class="text-3xl font-black text-white mt-3">
-
-                        0
-
-                    </p>
-
-                </div>
-
-                <div class="bg-card rounded-3xl p-5">
-
-                    <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                        Peso
-                    </p>
-
-                    <p
-                        id="pesoTotal"
-                        class="text-3xl font-black gold mt-3">
-
-                        0g
-
-                    </p>
-
-                </div>
-
-                <div class="bg-card rounded-3xl p-5">
-
-                    <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                        Economia PIX
-                    </p>
-
-                    <p
-                        id="descontoPix"
-                        class="text-3xl font-black text-emerald-400 mt-3">
-
-                        R$ 0
-
-                    </p>
-
-                </div>
-
-                <div class="bg-card rounded-3xl p-5">
-
-                    <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                        Total
-                    </p>
-
-                    <p
-                        id="subtotal"
-                        class="text-3xl font-black text-white mt-3">
-
-                        R$ 0
-
-                    </p>
-
-                </div>
-
-            </div>
-
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-7xl mx-auto px-4 md:px-6 py-10">
+        
+        <!-- ESTADO: CARRINHO VAZIO -->
+        <div id="carrinho-vazio" class="hidden text-center py-20 bg-card rounded-[2rem] p-8">
+            <span class="text-5xl block mb-6">🛒</span>
+            <h2 class="serif text-2xl font-bold text-zinc-400">Seu carrinho está vazio</h2>
+            <p class="text-zinc-500 mt-2 max-w-md mx-auto">Nenhum produto foi adicionado ainda. Explore nossas categorias premium e monte seu pedido corporativo.</p>
+            <a href="index.html" class="inline-flex h-12 px-6 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[0.15em] items-center justify-center mt-8 transition-transform hover:scale-105">
+                Ver Categorias
+            </a>
         </div>
 
-    </section>
-
-    <!-- GRID -->
-
-    <main class="max-w-7xl mx-auto px-4 md:px-6 py-10">
-
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
-            <!-- PRODUTOS -->
-
-            <div class="xl:col-span-2">
-
-                <div
-                    id="listaCarrinho"
-                    class="space-y-5">
+        <!-- ESTADO: CARRINHO COM ITENS -->
+        <div id="carrinho-conteudo" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- LISTA DE PRODUTOS -->
+            <div class="lg:col-span-2 space-y-4">
+                <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
+                    <h2 class="text-lg font-black uppercase tracking-wider">Itens Selecionados</h2>
+                    <button onclick="limparCarrinhoCompleto()" class="text-xs text-rose-400 hover:underline">Limpar tudo</button>
                 </div>
-
+                
+                <!-- Lista injetada via JS -->
+                <div id="lista-produtos-carrinho" class="space-y-4"></div>
             </div>
 
-            <!-- RESUMO -->
-
-            <div>
-
-                <div class="bg-card rounded-[2rem] p-6 sticky top-28">
-
-                    <h2 class="text-xl font-black uppercase tracking-[0.2em]">
-                        Resumo
-                    </h2>
-
-                    <div class="space-y-5 mt-8">
-
-                        <div class="flex justify-between text-sm">
-
-                            <span class="text-zinc-500">
-                                Subtotal
-                            </span>
-
-                            <span
-                                id="resumoSubtotal"
-                                class="font-bold">
-                                R$ 0
-                            </span>
-
+            <!-- RESUMO DO PEDIDO / REQUISITOS COMERCIAIS -->
+            <div class="space-y-6">
+                <div class="bg-card rounded-[2rem] p-6 sticky top-28 space-y-6">
+                    <h2 class="serif text-xl gold uppercase tracking-wider">Resumo do Pedido</h2>
+                    
+                    <div class="space-y-3 text-sm border-b border-zinc-900 pb-6">
+                        <div class="flex justify-between text-zinc-400">
+                            <span>Total de Peças:</span>
+                            <span id="resumo-itens" class="font-bold text-white">0</span>
                         </div>
-
-                        <div class="flex justify-between text-sm">
-
-                            <span class="text-zinc-500">
-                                Desconto PIX
-                            </span>
-
-                            <span
-                                id="resumoPix"
-                                class="font-bold text-emerald-400">
-                                R$ 0
-                            </span>
-
+                        <div class="flex justify-between text-zinc-400">
+                            <span>Peso Total Estimado:</span>
+                            <span id="resumo-peso" class="font-bold text-white">0.00g</span>
                         </div>
-
-                        <div class="flex justify-between text-sm">
-
-                            <span class="text-zinc-500">
-                                Total no PIX
-                            </span>
-
-                            <span
-                                id="resumoTotalPix"
-                                class="font-bold gold">
-                                R$ 0
-                            </span>
-
+                        <div class="flex justify-between text-zinc-400">
+                            <span>Subtotal Bruto:</span>
+                            <span id="resumo-subtotal" class="font-bold text-white">R$ 0,00</span>
                         </div>
-
-                        <div class="border-t border-zinc-800 pt-5">
-
-                            <div class="flex justify-between items-end">
-
-                                <div>
-
-                                    <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                        Total Final
-                                    </p>
-
-                                    <h3
-                                        id="resumoFinal"
-                                        class="text-4xl font-black mt-2">
-
-                                        R$ 0
-
-                                    </h3>
-
-                                </div>
-
-                            </div>
-
+                        
+                        <!-- Bloco Dinâmico de Desconto por Categoria -->
+                        <div id="bloco-desconto" class="hidden flex justify-between text-emerald-400 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
+                            <span id="desconto-label" class="font-medium">Desconto Aplicado:</span>
+                            <span id="desconto-valor" class="font-black">- R$ 0,00</span>
                         </div>
-
-                        <button
-                            onclick="finalizarPedido()"
-                            class="w-full h-14 rounded-2xl bg-[#caa85c] hover:bg-[#d4b165] transition-all text-black font-black uppercase tracking-[0.2em]">
-
-                            Finalizar Pedido
-
-                        </button>
-
-                        <button
-                            onclick="limparCarrinho()"
-                            class="w-full h-14 rounded-2xl border border-zinc-700 hover:border-red-500 transition-all text-white font-black uppercase tracking-[0.2em]">
-
-                            Limpar Carrinho
-
-                        </button>
-
                     </div>
 
-                </div>
+                    <!-- REGRAS DE FRETE / GALVÂNICA -->
+                    <div class="bg-zinc-950 rounded-2xl p-4 border border-zinc-900 text-xs space-y-2">
+                        <p class="font-bold text-zinc-400 uppercase tracking-wider">🚚 Regra de Entrega Limeira</p>
+                        <p class="text-zinc-500">Frete grátis para galvânicas de Limeira nas compras acima de R$100,00!</p>
+                        <div id="barra-frete-container" class="w-full bg-zinc-900 h-2 rounded-full mt-2 overflow-hidden">
+                            <div id="barra-frete" class="bg-emerald-500 h-full w-0 transition-all duration-500"></div>
+                        </div>
+                        <p id="frete-aviso" class="text-[11px] font-medium mt-1"></p>
+                    </div>
 
+                    <!-- TOTAL FINAL -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-end">
+                            <span class="text-zinc-400 text-sm">Total Geral:</span>
+                            <span id="resumo-total" class="text-3xl font-black gold">R$ 0,00</span>
+                        </div>
+                        <p id="info-condicoes" class="text-[10px] text-zinc-500 text-right uppercase tracking-wider"></p>
+                    </div>
+
+                    <!-- BOTÃO CONTINUAR PARA O CHECKOUT -->
+                    <button onclick="prosseguirParaCheckout()" id="btn-finalizar" class="w-full h-14 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[0.2em] flex items-center justify-center transition-all hover:bg-[#b5944a] active:scale-[0.98]">
+                        Prosseguir para o Checkout
+                    </button>
+                </div>
             </div>
 
         </div>
-
     </main>
 
-    <!-- SCRIPTS -->
-
+    <!-- SCRIPTS DE CONFIGURAÇÃO E INFRA -->
     <script src="js/firebase/firebase-config.js"></script>
-
     <script src="js/utils/money.js"></script>
-
+    <script src="js/utils/storage.js"></script>
     <script src="js/services/carrinhoService.js"></script>
 
+    <!-- LÓGICA DO CARRINHO -->
     <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await inicializarConfiguracoesBase();
+            renderizarCarrinho();
+        });
 
-        function formatar(valor){
+        let configGlobal = {};
 
-            if(
-                window.money &&
-                money.formatar
-            ){
-
-                return money.formatar(valor);
-
-            }
-
-            return valor.toLocaleString(
-
-                'pt-BR',
-
-                {
-                    style:'currency',
-                    currency:'BRL'
+        async function inicializarConfiguracoesBase() {
+            try {
+                // Sincroniza dinamicamente as regras vigentes no nó do Firebase
+                const snap = await firebase.database().ref('abella/settings').once('value');
+                if (snap.exists()) {
+                    configGlobal = snap.val() || {};
                 }
-
-            );
-
+            } catch (err) {
+                console.error("Erro ao carregar regras comerciais:", err);
+            }
         }
 
-        document.addEventListener(
+        function renderizarCarrinho() {
+            const containerVazio = document.getElementById('carrinho-vazio');
+            const containerConteudo = document.getElementById('carrinho-conteudo');
+            const listaProdutos = document.getElementById('lista-produtos-carrinho');
 
-            'DOMContentLoaded',
-
-            () => {
-
-                carregarCarrinho();
-
-            }
-
-        );
-
-        window.addEventListener(
-
-            'carrinhoAtualizado',
-
-            () => {
-
-                carregarCarrinho();
-
-            }
-
-        );
-
-        function carregarCarrinho(){
-
-            const lista =
-                document.getElementById(
-                    'listaCarrinho'
-                );
-
-            const itens =
-                carrinhoService.getItens();
-
-            lista.innerHTML = '';
-
-            if(!itens.length){
-
-                lista.innerHTML = `
-
-                    <div class="bg-card rounded-[2rem] p-14 text-center">
-
-                        <div class="text-6xl mb-6">
-                            🛒
-                        </div>
-
-                        <h2 class="text-3xl font-black">
-
-                            Seu carrinho está vazio
-
-                        </h2>
-
-                        <p class="text-zinc-500 mt-4">
-
-                            Adicione produtos para continuar.
-
-                        </p>
-
-                    </div>
-
-                `;
-
-                atualizarResumo();
-
+            if (typeof carrinhoService === 'undefined' || !carrinhoService.obterItens) {
+                console.error("carrinhoService não carregado corretamente.");
                 return;
-
             }
 
-            let html = '';
+            const itens = carrinhoService.obterItens() || [];
 
-            itens.forEach((item,index) => {
+            if (itens.length === 0) {
+                containerConteudo.classList.add('hidden');
+                containerVazio.classList.remove('hidden');
+                return;
+            }
 
-                const preco =
-                    parseFloat(
-                        item.precoFinal ||
-                        item.price ||
-                        0
-                    );
+            containerVazio.classList.add('hidden');
+            containerConteudo.classList.remove('hidden');
+            listaProdutos.innerHTML = '';
 
-                const subtotal =
-                    preco *
-                    item.quantidade;
+            itens.forEach((item, index) => {
+                const img = item.image || item.imagem || 'https://via.placeholder.com/150/111111/caa85c?text=Joia';
+                const pesoTotalItem = ((item.peso || item.pesoUnitario || 0) * item.quantidade).toFixed(2);
+                
+                // Conversões para garantir integridade matemática no padrão BR
+                const precoUnitario = parseFloat(item.preco || item.precoUnitario || 0);
+                const subtotalItem = precoUnitario * item.quantidade;
 
-                html += `
+                const txtUnitario = typeof money !== 'undefined' ? money.formatar(precoUnitario) : `R$ ${precoUnitario.toFixed(2)}`;
+                const txtSubtotal = typeof money !== 'undefined' ? money.formatar(subtotalItem) : `R$ ${subtotalItem.toFixed(2)}`;
 
-                    <div class="bg-card rounded-[2rem] overflow-hidden">
-
-                        <div class="grid grid-cols-1 md:grid-cols-[180px_1fr]">
-
-                            <div class="aspect-square bg-black">
-
-                                <img
-                                    src="${item.image || item.imagem || 'https://via.placeholder.com/600x600/111111/caa85c?text=ABELLA'}"
-                                    class="w-full h-full object-cover"
-                                    loading="lazy"
-                                    decoding="async">
-
-                            </div>
-
-                            <div class="p-6 space-y-5">
-
-                                <div class="flex items-start justify-between gap-4">
-
-                                    <div>
-
-                                        <h2 class="text-2xl font-black leading-tight">
-
-                                            ${item.nome || item.name || 'Produto'}
-
-                                        </h2>
-
-                                        <p class="text-zinc-500 text-sm mt-2">
-
-                                            SKU:
-                                            ${item.sku || '---'}
-
-                                        </p>
-
-                                        ${
-                                            item.variacao
-                                            ?
-                                            `
-                                            <p class="text-[#caa85c] text-sm mt-2 font-bold">
-                                                Variação:
-                                                ${item.variacao}
-                                            </p>
-                                            `
-                                            :
-                                            ''
-                                        }
-
-                                    </div>
-
-                                    <button
-                                        onclick="removerItem(${index})"
-                                        class="w-11 h-11 rounded-xl bg-zinc-900 hover:bg-red-500 transition-all">
-
-                                        ✕
-
-                                    </button>
-
-                                </div>
-
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-                                    <div>
-
-                                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-
-                                            Valor
-
-                                        </p>
-
-                                        <p class="text-xl font-black mt-2">
-
-                                            ${formatar(preco)}
-
-                                        </p>
-
-                                    </div>
-
-                                    <div>
-
-                                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-
-                                            Peso
-
-                                        </p>
-
-                                        <p class="text-xl font-black gold mt-2">
-
-                                            ${(parseFloat(item.peso || 0)).toFixed(2)}g
-
-                                        </p>
-
-                                    </div>
-
-                                    <div>
-
-                                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-
-                                            Quantidade
-
-                                        </p>
-
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="999"
-                                            value="${item.quantidade}"
-                                            onchange="alterarQtd(${index}, this.value)"
-                                            class="w-24 h-12 rounded-xl bg-black border border-zinc-800 text-center font-black mt-2">
-
-                                    </div>
-
-                                    <div>
-
-                                        <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-
-                                            Subtotal
-
-                                        </p>
-
-                                        <p class="text-2xl font-black gold mt-2">
-
-                                            ${formatar(subtotal)}
-
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
+                listaProdutos.innerHTML += `
+                    <div class="bg-card rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 border border-zinc-900 hover:border-zinc-800 transition-colors">
+                        <div class="w-20 h-20 rounded-xl overflow-hidden bg-black border border-zinc-800 flex-shrink-0">
+                            <img src="${img}" class="w-full h-full object-cover">
+                        </div>
+                        
+                        <div class="flex-1 text-center sm:text-left">
+                            <h3 class="font-bold text-base uppercase tracking-wide text-white">${item.name || item.titulo}</h3>
+                            <p class="text-zinc-500 text-xs mt-1">Ref: ${item.id} | Unitário: ${txtUnitario}</p>
+                            <p class="text-zinc-400 text-xs mt-1">🔋 Peso total: <span class="text-zinc-300 font-medium">${pesoTotalItem}g</span></p>
                         </div>
 
+                        <!-- CONTROLES DE QUANTIDADE -->
+                        <div class="flex items-center bg-black rounded-xl border border-zinc-800 p-1">
+                            <button onclick="alterarQtd('${item.id}', -1)" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors">-</button>
+                            <span class="w-10 text-center font-bold text-sm">${item.quantidade}</span>
+                            <button onclick="alterarQtd('${item.id}', 1)" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors">+</button>
+                        </div>
+
+                        <div class="text-center sm:text-right flex-shrink-0 min-w-[100px]">
+                            <p class="text-xs text-zinc-500 uppercase">Subtotal</p>
+                            <p class="font-black text-[#caa85c] mt-1">${txtSubtotal}</p>
+                        </div>
                     </div>
-
                 `;
-
             });
 
-            lista.innerHTML = html;
-
-            atualizarResumo();
-
+            atualizarTotaisResumo(itens);
         }
 
-        function atualizarResumo(){
-
-            const resumo =
-                carrinhoService.calcularTotais();
-
-            document.getElementById(
-                'totalItens'
-            ).innerText =
-                resumo.totalPecas;
-
-            document.getElementById(
-                'pesoTotal'
-            ).innerText =
-                `${resumo.pesoTotal.toFixed(2)}g`;
-
-            document.getElementById(
-                'descontoPix'
-            ).innerText =
-                formatar(resumo.descontoPix);
-
-            document.getElementById(
-                'subtotal'
-            ).innerText =
-                formatar(resumo.subtotal);
-
-            document.getElementById(
-                'resumoSubtotal'
-            ).innerText =
-                formatar(resumo.subtotal);
-
-            document.getElementById(
-                'resumoPix'
-            ).innerText =
-                formatar(resumo.descontoPix);
-
-            document.getElementById(
-                'resumoTotalPix'
-            ).innerText =
-                formatar(resumo.totalPix);
-
-            document.getElementById(
-                'resumoFinal'
-            ).innerText =
-                formatar(resumo.subtotal);
-
+        function alterarQtd(id, delta) {
+            const itens = carrinhoService.obterItens();
+            const item = itens.find(i => i.id === id);
+            
+            if (item) {
+                const novaQtd = item.quantidade + delta;
+                if (novaQtd <= 0) {
+                    carrinhoService.removerItem(id);
+                } else {
+                    carrinhoService.atualizarQuantidade(id, novaQtd);
+                }
+                renderizarCarrinho();
+                
+                // Dispara atualização para escutas globais se houver (ex: mini cart do header)
+                if (typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
+            }
         }
 
-        function alterarQtd(index,qtd){
-
-            carrinhoService.atualizarQuantidade(
-                index,
-                qtd
-            );
-
+        function limparCarrinhoCompleto() {
+            if (confirm("Deseja realmente esvaziar seu carrinho?")) {
+                carrinhoService.limpar();
+                renderizarCarrinho();
+                if (typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
+            }
         }
 
-        function removerItem(index){
+        function atualizarTotaisResumo(itens) {
+            let totalItens = 0;
+            let totalPeso = 0;
+            let subtotalBruto = 0;
+            let descontoTotal = 0;
 
-            carrinhoService.remover(index);
+            itens.forEach(item => {
+                totalItens += item.quantidade;
+                totalPeso += (parseFloat(item.peso || item.pesoUnitario || 0) * item.quantidade);
+                
+                const preco = parseFloat(item.preco || item.precoUnitario || 0);
+                const brutoItem = preco * item.quantidade;
+                subtotalBruto += brutoItem;
 
-        }
+                // Restaura fielmente os descontos por categoria vinculados dinamicamente
+                if (item.descontoPorcentagem && item.descontoPorcentagem > 0) {
+                    descontoTotal += (brutoItem * (parseFloat(item.descontoPorcentagem) / 100));
+                }
+            });
 
-        function limparCarrinho(){
+            const totalFinal = subtotalBruto - descontoTotal;
 
-            if(
-                !confirm(
-                    'Deseja limpar o carrinho?'
-                )
-            ){
-
-                return;
-
+            // Injeções estruturadas no HTML com formatação de casas decimais
+            document.getElementById('resumo-itens').innerText = totalItens;
+            document.getElementById('resumo-peso').innerText = `${totalPeso.toFixed(2)}g`;
+            
+            if (typeof money !== 'undefined') {
+                document.getElementById('resumo-subtotal').innerText = money.formatar(subtotalBruto);
+                document.getElementById('resumo-total').innerText = money.formatar(totalFinal);
+            } else {
+                document.getElementById('resumo-subtotal').innerText = `R$ ${subtotalBruto.toFixed(2)}`;
+                document.getElementById('resumo-total').innerText = `R$ ${totalFinal.toFixed(2)}`;
             }
 
-            carrinhoService.limpar();
+            // Exibição condicional do bloco de descontos por categoria restaurado
+            const blocoDesc = document.getElementById('bloco-desconto');
+            if (descontoTotal > 0) {
+                document.getElementById('desconto-valor').innerText = typeof money !== 'undefined' ? `- ${money.formatar(descontoTotal)}` : `- R$ ${descontoTotal.toFixed(2)}`;
+                blocoDesc.classList.remove('hidden');
+            } else {
+                blocoDesc.classList.add('hidden');
+            }
 
+            // Gestão dinâmica da regra de frete para galvânicas de Limeira
+            const limiteFrete = 100.00;
+            const barraFrete = document.getElementById('barra-frete');
+            const freteAviso = document.getElementById('frete-aviso');
+
+            if (subtotalBruto >= limiteFrete) {
+                barraFrete.style.width = '100%';
+                barraFrete.className = "bg-emerald-500 h-full transition-all duration-500";
+                freteAviso.innerText = "🎉 Parabéns! Sua entrega na galvânica parceira é grátis!";
+                freteAviso.className = "text-[11px] font-bold text-emerald-400 mt-1";
+            } else {
+                const faltam = limiteFrete - subtotalBruto;
+                const pct = (subtotalBruto / limiteFrete) * 100;
+                barraFrete.style.width = `${pct}%`;
+                barraFrete.className = "bg-[#caa85c] h-full transition-all duration-500";
+                
+                const txtFaltam = typeof money !== 'undefined' ? money.formatar(faltam) : `R$ ${faltam.toFixed(2)}`;
+                freteAviso.innerText = `Faltam apenas ${txtFaltam} para garantir o frete grátis em Limeira.`;
+                freteAviso.className = "text-[11px] text-zinc-400 mt-1";
+            }
+
+            // Textos auxiliares com as condições salvas no Firebase
+            const parcelas = configGlobal.parcelas || configGlobal.parcelasMax || 6;
+            document.getElementById('info-condicoes').innerText = `Ou em até ${parcelas}x no cartão de crédito`;
         }
 
-        function finalizarPedido(){
-
-            window.location.href =
-                'checkout.html';
-
+        function prosseguirParaCheckout() {
+            // Garante que o usuário não avance se houver inconsistência crítica
+            if (typeof carrinhoService === 'undefined' || carrinhoService.obterItens().length === 0) {
+                alert("Seu carrinho está vazio.");
+                return;
+            }
+            window.location.href = 'checkout.html';
         }
-
     </script>
-
 </body>
 </html>
-```

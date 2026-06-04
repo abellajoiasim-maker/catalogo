@@ -1,127 +1,671 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subcategorias | Abella Admin</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <style>
+        ::-webkit-scrollbar{
+            width:8px;
+        }
+
+        ::-webkit-scrollbar-track{
+            background:#09090b;
+        }
+
+        ::-webkit-scrollbar-thumb{
+            background:#3f3f46;
+            border-radius:999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover{
+            background:#52525b;
+        }
+
+        .animate-fade{
+            animation:fade .25s ease;
+        }
+
+        @keyframes fade{
+            from{
+                opacity:0;
+                transform:translateY(6px);
+            }
+
+            to{
+                opacity:1;
+                transform:translateY(0);
+            }
+        }
+    </style>
 </head>
-<body class="bg-zinc-900 text-zinc-100 p-6 font-sans min-h-screen">
+
+<body class="bg-zinc-900 text-zinc-100 p-4 md:p-6 font-sans min-h-screen overflow-x-hidden">
 
     <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        <div class="md:col-span-1 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl h-fit space-y-4 text-left">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2">Vincular Subcategoria</h3>
-            
-            <div class="space-y-1">
-                <label class="text-[10px] uppercase text-zinc-400 font-bold">Selecione a Categoria Mãe *</label>
-                <select id="selectCatMae" onchange="mudarCategoriaMaeFiltro()" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#caa85c]"></select>
+
+        <!-- FORM -->
+        <div class="md:col-span-1 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl h-fit space-y-4 sticky top-4">
+
+            <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
+                <h3 class="text-sm font-black uppercase tracking-wider text-white">
+                    Vincular Subcategoria
+                </h3>
+
+                <div id="statusFirebase"
+                    class="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold">
+                    ONLINE
+                </div>
             </div>
 
-            <form id="formSubcat" onsubmit="salvarSubcategoriaUI(event)" class="space-y-4 pt-2">
+            <!-- CATEGORIA -->
+            <div class="space-y-1">
+                <label class="text-[10px] uppercase text-zinc-400 font-bold">
+                    Selecione a Categoria Mãe *
+                </label>
+
+                <select
+                    id="selectCatMae"
+                    onchange="mudarCategoriaMaeFiltro()"
+                    class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
+                >
+                    <option value="">Carregando categorias...</option>
+                </select>
+            </div>
+
+            <!-- FORM -->
+            <form id="formSubcat" class="space-y-4 pt-2">
+
                 <input type="hidden" id="subOldSlug">
+
+                <!-- NOME -->
                 <div class="space-y-1">
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Nome da Subcategoria *</label>
-                    <input type="text" id="subName" required placeholder="Ex: Cravejados" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                    <label class="text-[10px] uppercase text-zinc-400 font-bold">
+                        Nome da Subcategoria *
+                    </label>
+
+                    <input
+                        type="text"
+                        id="subName"
+                        required
+                        placeholder="Ex: Cravejados"
+                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c] transition-all"
+                    >
                 </div>
+
+                <!-- IMAGEM -->
                 <div class="space-y-1">
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">Imagem Opcional (URL)</label>
-                    <input type="text" id="subImage" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c]">
+                    <label class="text-[10px] uppercase text-zinc-400 font-bold">
+                        Imagem Opcional (URL)
+                    </label>
+
+                    <input
+                        type="text"
+                        id="subImage"
+                        placeholder="https://..."
+                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c] transition-all"
+                    >
                 </div>
-                <button type="submit" class="w-full bg-[#caa85c] text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all">
+
+                <!-- PREVIEW -->
+                <div id="previewImageContainer" class="hidden">
+                    <p class="text-[10px] uppercase text-zinc-500 font-bold mb-2">
+                        Preview
+                    </p>
+
+                    <img
+                        id="previewImage"
+                        class="w-full h-40 object-cover rounded-xl border border-zinc-800 bg-zinc-900"
+                    >
+                </div>
+
+                <!-- BUTTON -->
+                <button
+                    type="submit"
+                    id="btnSalvar"
+                    class="w-full bg-[#caa85c] hover:brightness-110 text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all"
+                >
                     Gravar Subcategoria
                 </button>
+
             </form>
         </div>
 
-        <div class="md:col-span-2 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl flex flex-col">
-            <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-900 pb-2 mb-4 text-left">Subcategorias da Seção</h3>
-            <div id="lista-subcategorias" class="space-y-2 text-left text-xs text-zinc-500 italic py-4">Selecione uma categoria mãe para expandir a subárvore.</div>
+        <!-- LISTA -->
+        <div class="md:col-span-2 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl flex flex-col min-h-[500px]">
+
+            <div class="flex items-center justify-between border-b border-zinc-900 pb-3 mb-4">
+                <h3 class="text-sm font-black uppercase tracking-wider text-white">
+                    Subcategorias da Seção
+                </h3>
+
+                <div id="contadorSubcats"
+                    class="text-[10px] text-zinc-500 uppercase font-bold">
+                    0 itens
+                </div>
+            </div>
+
+            <!-- LIST -->
+            <div
+                id="lista-subcategorias"
+                class="space-y-3 text-left flex-1"
+            >
+                <div class="text-zinc-500 text-xs italic py-6 text-center">
+                    Selecione uma categoria mãe para expandir a subárvore.
+                </div>
+            </div>
+
         </div>
+
     </div>
 
+    <!-- SERVICES -->
     <script src="../js/firebase/firebase-config.js"></script>
     <script src="../js/services/categoriaService.js"></script>
     <script src="../js/services/subcategoriaService.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => { await popularCategoriasMae(); });
 
-        async function popularCategoriasMae() {
-            const select = document.getElementById('selectCatMae');
-            select.innerHTML = '<option value="" disabled selected>Escolha uma categoria...</option>';
-            try {
-                const list = await categoriaService.listarTodas();
-                Object.keys(list).forEach(key => {
-                    select.innerHTML += `<option value="${key}">${list[key].name || key}</option>`;
-                });
-            } catch(e) { console.error(e); }
+    <script>
+
+        // =========================================================
+        // FIREBASE STATUS
+        // =========================================================
+
+        firebase
+            .database()
+            .ref('.info/connected')
+            .on('value', snap => {
+
+                const online = snap.val();
+                const el = document.getElementById('statusFirebase');
+
+                if(online){
+
+                    el.innerHTML = 'ONLINE';
+                    el.className =
+                        'text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold';
+
+                }else{
+
+                    el.innerHTML = 'OFFLINE';
+                    el.className =
+                        'text-[10px] px-2 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold';
+                }
+            });
+
+        // =========================================================
+        // INIT
+        // =========================================================
+
+        document.addEventListener('DOMContentLoaded', async () => {
+
+            await popularCategoriasMae();
+            configurarPreviewImagem();
+
+            document
+                .getElementById('formSubcat')
+                .addEventListener('submit', salvarSubcategoriaUI);
+        });
+
+        // =========================================================
+        // HELPERS
+        // =========================================================
+
+        function gerarSlug(texto){
+
+            return texto
+                .toLowerCase()
+                .trim()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/(^-|-$)/g, "");
         }
 
-        async function mudarCategoriaMaeFiltro() {
-            const catSlug = document.getElementById('selectCatMae').value;
-            const container = document.getElementById('lista-subcategorias');
-            container.innerHTML = '<div class="text-zinc-500 text-xs">⏳ Mapeando subitens...</div>';
+        function limparFormulario(){
 
-            try {
-                const subs = await subcategoriaService.obterPorCategoria(catSlug);
-                container.innerHTML = '';
+            document.getElementById('formSubcat').reset();
+            document.getElementById('subOldSlug').value = '';
 
-                if(!subs || Object.keys(subs).length === 0) {
-                    container.innerHTML = '<p class="text-zinc-600 text-xs italic py-2">Nenhuma subcategoria vinculada a esta raiz.</p>';
+            document.getElementById('previewImageContainer')
+                .classList.add('hidden');
+
+            document.getElementById('btnSalvar').innerHTML =
+                'Gravar Subcategoria';
+        }
+
+        function configurarPreviewImagem(){
+
+            const input = document.getElementById('subImage');
+
+            input.addEventListener('input', () => {
+
+                const url = input.value.trim();
+
+                const container =
+                    document.getElementById('previewImageContainer');
+
+                const preview =
+                    document.getElementById('previewImage');
+
+                if(!url){
+
+                    container.classList.add('hidden');
                     return;
                 }
 
-                Object.keys(subs).forEach(subSlug => {
-                    const s = subs[subSlug];
-                    const div = document.createElement('div');
-                    div.className = "flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-xl";
-                    div.innerHTML = `
-                        <div>
-                            <span class="text-xs text-white font-bold uppercase">${s.name || subSlug}</span>
-                            <p class="text-[9px] text-zinc-500 font-mono">Caminho: /categories/${catSlug}/subcategories/${subSlug}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="editarSubcatUI('${subSlug}', '${s.name || ''}', '${s.image || ''}')" class="bg-zinc-800 hover:bg-zinc-700 px-3 py-1 text-[10px] font-bold rounded-lg transition-all">Editar</button>
-                            <button onclick="deletarSubcatUI('${subSlug}')" class="bg-red-950/20 border border-red-900/40 text-red-400 px-3 py-1 text-[10px] font-bold rounded-lg transition-all">Excluir</button>
+                preview.src = url;
+
+                preview.onload = () => {
+                    container.classList.remove('hidden');
+                };
+
+                preview.onerror = () => {
+                    container.classList.add('hidden');
+                };
+            });
+        }
+
+        // =========================================================
+        // LOAD CATEGORIES
+        // =========================================================
+
+        async function popularCategoriasMae(){
+
+            const select =
+                document.getElementById('selectCatMae');
+
+            try{
+
+                select.innerHTML =
+                    '<option value="">Carregando...</option>';
+
+                const categorias =
+                    await categoriaService.listarTodas();
+
+                select.innerHTML =
+                    '<option value="" disabled selected>Escolha uma categoria...</option>';
+
+                if(!categorias){
+
+                    select.innerHTML =
+                        '<option value="">Nenhuma categoria encontrada</option>';
+
+                    return;
+                }
+
+                Object.keys(categorias).forEach(slug => {
+
+                    const categoria = categorias[slug];
+
+                    const option =
+                        document.createElement('option');
+
+                    option.value = slug;
+                    option.textContent =
+                        categoria?.name || slug;
+
+                    select.appendChild(option);
+                });
+
+            }catch(error){
+
+                console.error(
+                    'Erro ao carregar categorias:',
+                    error
+                );
+
+                select.innerHTML =
+                    '<option value="">Falha ao carregar</option>';
+            }
+        }
+
+        // =========================================================
+        // LOAD SUBCATEGORIES
+        // =========================================================
+
+        async function mudarCategoriaMaeFiltro(){
+
+            const catSlug =
+                document.getElementById('selectCatMae').value;
+
+            const container =
+                document.getElementById('lista-subcategorias');
+
+            const contador =
+                document.getElementById('contadorSubcats');
+
+            if(!catSlug){
+
+                container.innerHTML = `
+                    <div class="text-zinc-500 text-xs italic py-6 text-center">
+                        Selecione uma categoria mãe.
+                    </div>
+                `;
+
+                contador.innerHTML = '0 itens';
+
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="text-zinc-500 text-xs py-6 text-center">
+                    ⏳ Mapeando subcategorias...
+                </div>
+            `;
+
+            try{
+
+                // =====================================================
+                // PADRÃO ALINHADO AO NÓ:
+                // abella/categories/{catSlug}/subcategories
+                // =====================================================
+
+                const subs =
+                    await subcategoriaService.obterPorCategoria(catSlug);
+
+                container.innerHTML = '';
+
+                if(!subs || Object.keys(subs).length === 0){
+
+                    contador.innerHTML = '0 itens';
+
+                    container.innerHTML = `
+                        <div class="text-zinc-600 text-xs italic py-6 text-center border border-dashed border-zinc-800 rounded-2xl">
+                            Nenhuma subcategoria vinculada a esta categoria.
                         </div>
                     `;
+
+                    return;
+                }
+
+                contador.innerHTML =
+                    `${Object.keys(subs).length} itens`;
+
+                Object.keys(subs).forEach(subSlug => {
+
+                    const s = subs[subSlug] || {};
+
+                    const div =
+                        document.createElement('div');
+
+                    div.className =
+                        'animate-fade flex items-center justify-between gap-4 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl';
+
+                    div.innerHTML = `
+
+                        <div class="flex items-center gap-4 flex-1 min-w-0">
+
+                            ${
+                                s.image
+                                    ? `
+                                        <img
+                                            src="${s.image}"
+                                            class="w-16 h-16 rounded-xl object-cover border border-zinc-800 bg-zinc-950 shrink-0"
+                                        >
+                                    `
+                                    : `
+                                        <div class="w-16 h-16 rounded-xl border border-dashed border-zinc-800 bg-zinc-950 flex items-center justify-center text-zinc-700 text-[10px] shrink-0">
+                                            SEM IMG
+                                        </div>
+                                    `
+                            }
+
+                            <div class="min-w-0">
+
+                                <h4 class="text-xs text-white font-black uppercase truncate">
+                                    ${s.name || subSlug}
+                                </h4>
+
+                                <p class="text-[10px] text-zinc-500 font-mono mt-1 break-all">
+                                    abella/categories/${catSlug}/subcategories/${subSlug}
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0">
+
+                            <button
+                                onclick="editarSubcatUI(
+                                    '${subSlug}',
+                                    ${JSON.stringify(s.name || '')},
+                                    ${JSON.stringify(s.image || '')}
+                                )"
+                                class="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 text-[10px] font-black rounded-xl transition-all"
+                            >
+                                Editar
+                            </button>
+
+                            <button
+                                onclick="deletarSubcatUI('${subSlug}')"
+                                class="bg-red-950/20 hover:bg-red-950/40 border border-red-900/40 text-red-400 px-3 py-2 text-[10px] font-black rounded-xl transition-all"
+                            >
+                                Excluir
+                            </button>
+
+                        </div>
+                    `;
+
                     container.appendChild(div);
                 });
-            } catch(e) { container.innerHTML = '❌ Falha ao processar nós internos.'; }
+
+            }catch(error){
+
+                console.error(
+                    'Erro ao carregar subcategorias:',
+                    error
+                );
+
+                contador.innerHTML = 'Erro';
+
+                container.innerHTML = `
+                    <div class="text-red-400 text-xs py-6 text-center border border-red-900/30 rounded-2xl bg-red-950/10">
+                        ❌ Falha ao processar os nós internos do Firebase.
+                    </div>
+                `;
+            }
         }
 
-        function editarSubcatUI(slug, name, img) {
-            document.getElementById('subOldSlug').value = slug;
-            document.getElementById('subName').value = name;
-            document.getElementById('subImage').value = img;
+        // =========================================================
+        // EDIT
+        // =========================================================
+
+        function editarSubcatUI(slug, name, img){
+
+            document.getElementById('subOldSlug').value =
+                slug;
+
+            document.getElementById('subName').value =
+                name || '';
+
+            document.getElementById('subImage').value =
+                img || '';
+
+            document.getElementById('btnSalvar').innerHTML =
+                'Atualizar Subcategoria';
+
+            if(img){
+
+                const preview =
+                    document.getElementById('previewImage');
+
+                preview.src = img;
+
+                document
+                    .getElementById('previewImageContainer')
+                    .classList.remove('hidden');
+            }
+
+            window.scrollTo({
+                top:0,
+                behavior:'smooth'
+            });
         }
 
-        async function salvarSubcategoriaUI(e) {
+        // =========================================================
+        // SAVE
+        // =========================================================
+
+        async function salvarSubcategoriaUI(e){
+
             e.preventDefault();
-            const catSlug = document.getElementById('selectCatMae').value;
-            if(!catSlug) { alert("Escolha a categoria antes de salvar."); return; }
 
-            const name = document.getElementById('subName').value.trim();
-            const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
-            const oldSlug = document.getElementById('subOldSlug').value;
+            const btn =
+                document.getElementById('btnSalvar');
 
-            if(oldSlug && oldSlug !== slug) {
-                await subcategoriaService.deletar(catSlug, oldSlug);
-            }
+            try{
 
-            await subcategoriaService.salvar(catSlug, slug, { name: name, image: document.getElementById('subImage').value.trim() });
-            document.getElementById('formSubcat').reset();
-            document.getElementById('subOldSlug').value = '';
-            await mudarCategoriaMaeFiltro();
-        }
+                const catSlug =
+                    document.getElementById('selectCatMae').value;
 
-        async function deletarSubcatUI(subSlug) {
-            const catSlug = document.getElementById('selectCatMae').value;
-            if(confirm("Deseja deletar permanentemente o vínculo desta subcategoria?")) {
-                await subcategoriaService.deletar(catSlug, subSlug);
+                if(!catSlug){
+
+                    alert(
+                        'Escolha uma categoria antes de salvar.'
+                    );
+
+                    return;
+                }
+
+                const name =
+                    document.getElementById('subName')
+                        .value
+                        .trim();
+
+                if(!name){
+
+                    alert(
+                        'Informe o nome da subcategoria.'
+                    );
+
+                    return;
+                }
+
+                const image =
+                    document.getElementById('subImage')
+                        .value
+                        .trim();
+
+                const slug =
+                    gerarSlug(name);
+
+                const oldSlug =
+                    document.getElementById('subOldSlug')
+                        .value;
+
+                btn.disabled = true;
+                btn.innerHTML = 'Salvando...';
+
+                // =====================================================
+                // REMOVE SLUG ANTIGO
+                // =====================================================
+
+                if(oldSlug && oldSlug !== slug){
+
+                    await subcategoriaService.deletar(
+                        catSlug,
+                        oldSlug
+                    );
+                }
+
+                // =====================================================
+                // SALVAR
+                // =====================================================
+
+                await subcategoriaService.salvar(
+                    catSlug,
+                    slug,
+                    {
+                        name,
+                        image,
+                        slug,
+                        updatedAt: Date.now()
+                    }
+                );
+
+                limparFormulario();
+
                 await mudarCategoriaMaeFiltro();
+
+            }catch(error){
+
+                console.error(
+                    'Erro ao salvar subcategoria:',
+                    error
+                );
+
+                alert(
+                    'Falha ao salvar subcategoria.'
+                );
+
+            }finally{
+
+                btn.disabled = false;
+
+                btn.innerHTML =
+                    'Gravar Subcategoria';
             }
         }
+
+        // =========================================================
+        // DELETE
+        // =========================================================
+
+        async function deletarSubcatUI(subSlug){
+
+            const catSlug =
+                document.getElementById('selectCatMae').value;
+
+            if(!catSlug){
+
+                alert(
+                    'Selecione uma categoria.'
+                );
+
+                return;
+            }
+
+            const confirmar =
+                confirm(
+                    'Deseja deletar permanentemente esta subcategoria?'
+                );
+
+            if(!confirmar)
+                return;
+
+            try{
+
+                await subcategoriaService.deletar(
+                    catSlug,
+                    subSlug
+                );
+
+                await mudarCategoriaMaeFiltro();
+
+            }catch(error){
+
+                console.error(
+                    'Erro ao deletar:',
+                    error
+                );
+
+                alert(
+                    'Falha ao deletar subcategoria.'
+                );
+            }
+        }
+
     </script>
+
 </body>
 </html>
+```

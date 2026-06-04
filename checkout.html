@@ -1,231 +1,612 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
     <meta charset="UTF-8">
+
     <title>Finalizar Pedido • Abella Joias</title>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    
-    <!-- Scripts de Dependências Identificados no Carrinho -->
+
+    <!-- DEPENDÊNCIAS -->
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Estilos Premium Idênticos ao Carrinho -->
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
     <style>
-        body { background:#0b0b0b; color:#eee; font-family:'Inter', sans-serif; min-height: 100vh; }
-        .serif { font-family:'Cinzel', serif; }
-        .gold { color:#caa85c; }
-        .bg-card { background:#141414; border:1px solid #222; }
-        .border-gold { border-color: #caa85c; }
-        .bg-gold { background-color: #caa85c; }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0b0b0b; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #caa85c; }
 
-        input, select, textarea {
-            background: #1a1a1a !important;
-            border: 1px solid #333 !important;
-            color: #fff !important;
-            transition: all 0.2s ease;
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
         }
-        input:focus, select:focus, textarea:focus {
-            border-color: #caa85c !important;
-            outline: none;
-            box-shadow: 0 0 0 2px rgba(202, 168, 92, 0.2);
+
+        :root{
+
+            --gold:#caa85c;
+            --bg:#050505;
+            --card:#111111;
+            --line:#222222;
+
         }
+
+        body{
+
+            background:
+                radial-gradient(circle at top,#171717 0%,#050505 45%);
+
+            color:#fff;
+
+            font-family:'Inter',sans-serif;
+
+            min-height:100vh;
+
+            overflow-x:hidden;
+
+        }
+
+        .serif{
+            font-family:'Cinzel',serif;
+        }
+
+        .gold{
+            color:var(--gold);
+        }
+
+        .glass{
+
+            background:rgba(18,18,18,.92);
+
+            backdrop-filter:blur(18px);
+
+            border:1px solid rgba(255,255,255,.06);
+
+        }
+
+        .hero-glow{
+
+            position:absolute;
+
+            width:600px;
+            height:600px;
+
+            background:
+                radial-gradient(
+                    circle,
+                    var(--gold) 0%,
+                    transparent 70%
+                );
+
+            opacity:.05;
+
+            filter:blur(80px);
+
+            pointer-events:none;
+
+        }
+
+        input,
+        textarea,
+        select{
+
+            background:#181818 !important;
+
+            border:1px solid #2b2b2b !important;
+
+            color:#fff !important;
+
+            transition:.25s ease;
+
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus{
+
+            border-color:var(--gold) !important;
+
+            box-shadow:
+                0 0 0 3px rgba(202,168,92,.15);
+
+            outline:none;
+
+        }
+
+        .scrollbar::-webkit-scrollbar{
+            width:6px;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb{
+
+            background:#333;
+
+            border-radius:20px;
+
+        }
+
+        .fade-in{
+            animation:fade .35s ease forwards;
+        }
+
+        @keyframes fade{
+
+            from{
+                opacity:0;
+                transform:translateY(10px);
+            }
+
+            to{
+                opacity:1;
+                transform:translateY(0);
+            }
+
+        }
+
     </style>
-</head>
-<body class="pb-12">
 
-    <!-- Cabeçalho Premium Abella -->
-    <header class="border-b border-zinc-900 bg-black/50 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex flex-col">
-                <span class="serif text-xl tracking-widest gold font-bold">ABELLA JOIAS</span>
-                <span class="text-[9px] uppercase tracking-wider text-zinc-500 font-medium">Atacado de Joias no Bruto</span>
-            </div>
-            <a href="carrinho.html" class="text-xs text-zinc-400 hover:text-[#caa85c] flex items-center gap-1 transition-colors">
-                ← Voltar ao Carrinho
+</head>
+
+<body class="pb-20">
+
+    <!-- GLOW -->
+
+    <div class="hero-glow top-[-200px] left-[-200px]"></div>
+
+    <div class="hero-glow bottom-[-200px] right-[-200px]"></div>
+
+    <!-- HEADER -->
+
+    <header class="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-2xl">
+
+        <div class="max-w-7xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between">
+
+            <a href="index.html" class="flex items-center gap-4">
+
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center text-black font-black text-xl">
+                    A
+                </div>
+
+                <div>
+
+                    <h1 class="serif gold text-lg md:text-2xl uppercase tracking-[0.2em]">
+                        Abella Joias
+                    </h1>
+
+                    <p class="text-[10px] uppercase tracking-[0.3em] text-zinc-500 mt-1">
+                        Finalização Premium
+                    </p>
+
+                </div>
+
             </a>
+
+            <a
+                href="carrinho.html"
+                class="h-12 px-6 rounded-2xl glass flex items-center justify-center text-xs font-black uppercase tracking-[0.2em] hover:border-[#caa85c] transition-all">
+
+                ← Carrinho
+
+            </a>
+
         </div>
+
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 mt-8">
+    <!-- CONTEÚDO -->
+
+    <main class="max-w-7xl mx-auto px-4 md:px-8 py-10 fade-in">
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            <!-- COLUNA DA ESQUERDA: FORMULÁRIOS (7 COLS) -->
+
+            <!-- FORMULÁRIOS -->
+
             <div class="lg:col-span-7 space-y-6">
-                
-                <!-- FORMULÁRIO CLIENTE -->
-                <div class="bg-card rounded-2xl p-6 shadow-2xl">
-                    <div class="flex items-center gap-3 border-b border-zinc-800 pb-4 mb-4">
-                        <span class="w-2 h-6 bg-gold rounded-full"></span>
-                        <h2 class="serif text-lg font-bold text-white tracking-wide">Dados do Cliente</h2>
+
+                <!-- CLIENTE -->
+
+                <section class="glass rounded-[2rem] p-6">
+
+                    <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+
+                        <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
+
+                        <h2 class="serif text-xl">
+                            Dados do Cliente
+                        </h2>
+
                     </div>
-                    
-                    <form id="form-cliente" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
                         <div class="md:col-span-2">
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">Nome Completo ou Razão Social *</label>
-                            <input type="text" id="cli-nome" required class="w-full px-4 py-3 rounded-xl text-sm" placeholder="Ex: João Silva Joias">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">WhatsApp / Celular *</label>
-                            <input type="text" id="cli-whats" required class="w-full px-4 py-3 rounded-xl text-sm" placeholder="Ex: (19) 99999-9999">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">CPF / CNPJ *</label>
-                            <input type="text" id="cli-documento" required class="w-full px-4 py-3 rounded-xl text-sm" placeholder="Ex: 000.000.000-00">
-                        </div>
-                    </form>
-                </div>
 
-                <!-- FORMULÁRIO ENTREGA -->
-                <div class="bg-card rounded-2xl p-6 shadow-2xl">
-                    <div class="flex items-center gap-3 border-b border-zinc-800 pb-4 mb-4">
-                        <span class="w-2 h-6 bg-gold rounded-full"></span>
-                        <h2 class="serif text-lg font-bold text-white tracking-wide">Destino & Entrega</h2>
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                Nome Completo *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="cli-nome"
+                                required
+                                class="w-full rounded-2xl px-5 py-4 text-sm"
+                                placeholder="Ex: João Silva">
+
+                        </div>
+
+                        <div>
+
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                WhatsApp *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="cli-whats"
+                                required
+                                class="w-full rounded-2xl px-5 py-4 text-sm"
+                                placeholder="(19) 99999-9999">
+
+                        </div>
+
+                        <div>
+
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                CPF / CNPJ *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="cli-documento"
+                                required
+                                class="w-full rounded-2xl px-5 py-4 text-sm"
+                                placeholder="000.000.000-00">
+
+                        </div>
+
                     </div>
-                    
-                    <form id="form-entrega" class="grid grid-cols-1 md:grid-cols-12 gap-4">
+
+                </section>
+
+                <!-- ENTREGA -->
+
+                <section class="glass rounded-[2rem] p-6">
+
+                    <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+
+                        <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
+
+                        <h2 class="serif text-xl">
+                            Entrega
+                        </h2>
+
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+
                         <div class="md:col-span-4">
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">CEP *</label>
-                            <input type="text" id="ent-cep" required class="w-full px-4 py-3 rounded-xl text-sm" placeholder="13480-000">
+
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                CEP *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="ent-cep"
+                                required
+                                class="w-full rounded-2xl px-5 py-4 text-sm"
+                                placeholder="13480-000">
+
                         </div>
+
                         <div class="md:col-span-8">
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">Logradouro / Endereço *</label>
-                            <input type="text" id="ent-rua" required class="w-full px-4 py-3 rounded-xl text-sm" placeholder="Ex: Rua das Galvânicas">
+
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                Endereço *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="ent-rua"
+                                required
+                                class="w-full rounded-2xl px-5 py-4 text-sm"
+                                placeholder="Rua Exemplo">
+
                         </div>
+
                         <div class="md:col-span-4">
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">Número *</label>
-                            <input type="text" id="ent-numero" required class="w-full px-4 py-3 rounded-xl text-sm" placeholder="123">
+
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                Número *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="ent-numero"
+                                required
+                                class="w-full rounded-2xl px-5 py-4 text-sm">
+
                         </div>
+
                         <div class="md:col-span-8">
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">Bairro *</label>
-                            <input type="text" id="ent-bairro" required class="w-full px-4 py-3 rounded-xl text-sm" placeholder="Centro">
+
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                Bairro *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="ent-bairro"
+                                required
+                                class="w-full rounded-2xl px-5 py-4 text-sm">
+
                         </div>
+
                         <div class="md:col-span-6">
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">Cidade *</label>
-                            <input type="text" id="ent-cidade" required class="w-full px-4 py-3 rounded-xl text-sm" placeholder="Limeira">
+
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                Cidade *
+                            </label>
+
+                            <input
+                                type="text"
+                                id="ent-cidade"
+                                required
+                                class="w-full rounded-2xl px-5 py-4 text-sm">
+
                         </div>
+
                         <div class="md:col-span-6">
-                            <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">Estado (UF) *</label>
-                            <select id="ent-uf" required class="w-full px-4 py-3 rounded-xl text-sm">
-                                <option value="SP">São Paulo (SP)</option>
-                                <option value="MG">Minas Gerais (MG)</option>
-                                <option value="RJ">Rio de Janeiro (RJ)</option>
-                                <option value="PR">Paraná (PR)</option>
-                                <option value="SC">Santa Catarina (SC)</option>
-                                <option value="RS">Rio Grande do Sul (RS)</option>
-                                <option value="GO">Goiás (GO)</option>
-                                <option value="DF">Distrito Federal (DF)</option>
+
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                                UF *
+                            </label>
+
+                            <select
+                                id="ent-uf"
+                                class="w-full rounded-2xl px-5 py-4 text-sm">
+
+                                <option value="SP">São Paulo</option>
+                                <option value="MG">Minas Gerais</option>
+                                <option value="RJ">Rio de Janeiro</option>
+                                <option value="PR">Paraná</option>
+                                <option value="SC">Santa Catarina</option>
+
                             </select>
+
                         </div>
-                    </form>
-                </div>
 
-                <!-- FORMA DE PAGAMENTO & OBSERVAÇÕES -->
-                <div class="bg-card rounded-2xl p-6 shadow-2xl">
-                    <div class="flex items-center gap-3 border-b border-zinc-800 pb-4 mb-4">
-                        <span class="w-2 h-6 bg-gold rounded-full"></span>
-                        <h2 class="serif text-lg font-bold text-white tracking-wide">Condições de Pagamento</h2>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <!-- Opção PIX -->
-                        <label class="relative flex flex-col p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-bold text-white flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> PIX À Vista
-                                </span>
-                                <input type="radio" name="formaPagamento" value="PIX" checked class="w-4 h-4 accent-[#caa85c]" onchange="atualizarResumoValores()">
-                            </div>
-                            <span class="text-xs text-zinc-400" id="txt-desc-pix">Desconto especial aplicado automaticamente sobre o lote bruto.</span>
-                        </label>
-                        
-                        <!-- Opção Cartão -->
-                        <label class="relative flex flex-col p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl cursor-pointer hover:border-zinc-700 transition-all">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-bold text-white flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Cartão de Crédito
-                                </span>
-                                <input type="radio" name="formaPagamento" value="Cartão" class="w-4 h-4 accent-[#caa85c]" onchange="atualizarResumoValores()">
-                            </div>
-                            <span class="text-xs text-zinc-400" id="txt-desc-cartao">Parcelamento sem juros direto com o seu consultor técnico.</span>
-                        </label>
                     </div>
 
-                    <div class="mt-4">
-                        <label class="block text-[11px] uppercase tracking-wider text-zinc-400 font-semibold mb-1">Instruções de Produção / Observações do Pedido</label>
-                        <textarea id="obs-pedido" rows="3" class="w-full px-4 py-3 rounded-xl text-sm" placeholder="Ex: Solicito embalagem reforçada para transporte galvânico ou pinos específicos..."></textarea>
+                </section>
+
+                <!-- PAGAMENTO -->
+
+                <section class="glass rounded-[2rem] p-6">
+
+                    <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+
+                        <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
+
+                        <h2 class="serif text-xl">
+                            Pagamento
+                        </h2>
+
                     </div>
-                </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        <label class="border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-[#caa85c] transition-all">
+
+                            <div class="flex items-center justify-between">
+
+                                <div>
+
+                                    <h3 class="font-black">
+                                        PIX
+                                    </h3>
+
+                                    <p class="text-zinc-500 text-xs mt-1">
+                                        Desconto automático
+                                    </p>
+
+                                </div>
+
+                                <input
+                                    type="radio"
+                                    name="formaPagamento"
+                                    value="PIX"
+                                    checked
+                                    onchange="atualizarResumo()">
+
+                            </div>
+
+                        </label>
+
+                        <label class="border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-[#caa85c] transition-all">
+
+                            <div class="flex items-center justify-between">
+
+                                <div>
+
+                                    <h3 class="font-black">
+                                        Cartão
+                                    </h3>
+
+                                    <p class="text-zinc-500 text-xs mt-1">
+                                        Parcelamento
+                                    </p>
+
+                                </div>
+
+                                <input
+                                    type="radio"
+                                    name="formaPagamento"
+                                    value="Cartão"
+                                    onchange="atualizarResumo()">
+
+                            </div>
+
+                        </label>
+
+                    </div>
+
+                    <div class="mt-5">
+
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                            Observações
+                        </label>
+
+                        <textarea
+                            id="obs-pedido"
+                            rows="4"
+                            class="w-full rounded-2xl px-5 py-4 text-sm"
+                            placeholder="Informações adicionais..."></textarea>
+
+                    </div>
+
+                </section>
 
             </div>
 
-            <!-- COLUNA DA DIREITA: RESUMO LATERAL E INTEGRAÇÕES (5 COLS) -->
-            <div class="lg:col-span-5 space-y-6">
-                
-                <div class="bg-card rounded-2xl p-6 shadow-2xl sticky top-24 border border-zinc-800">
-                    <div class="flex items-center gap-3 border-b border-zinc-800 pb-4 mb-4">
-                        <span class="w-2 h-6 bg-gold rounded-full"></span>
-                        <h2 class="serif text-lg font-bold text-white tracking-wide">Resumo Consolidado</h2>
+            <!-- RESUMO -->
+
+            <div class="lg:col-span-5">
+
+                <div class="glass rounded-[2rem] p-6 sticky top-24">
+
+                    <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+
+                        <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
+
+                        <h2 class="serif text-xl">
+                            Resumo
+                        </h2>
+
                     </div>
 
-                    <!-- Lista Compacta de Itens -->
-                    <div id="lista-itens-checkout" class="max-h-48 overflow-y-auto space-y-3 mb-6 pr-2">
-                        <!-- Preenchido via JS -->
+                    <div
+                        id="lista-itens-checkout"
+                        class="space-y-3 max-h-[320px] overflow-y-auto scrollbar pr-2">
+
                     </div>
 
-                    <!-- Métricas de Lote -->
-                    <div class="bg-zinc-900/40 rounded-xl p-4 space-y-3 border border-zinc-900">
-                        <div class="flex justify-between text-xs text-zinc-400">
-                            <span>Quantidade Total:</span>
-                            <span class="font-bold text-white font-mono" id="res-qtd">0 pçs</span>
+                    <div class="mt-6 border-t border-white/5 pt-5 space-y-3">
+
+                        <div class="flex items-center justify-between text-sm">
+
+                            <span class="text-zinc-500">
+                                Quantidade
+                            </span>
+
+                            <span id="res-qtd" class="font-bold">
+                                0
+                            </span>
+
                         </div>
-                        <div class="flex justify-between text-xs text-zinc-400">
-                            <span>Peso Bruto Total:</span>
-                            <span class="font-bold text-white font-mono" id="res-peso">0.00g</span>
+
+                        <div class="flex items-center justify-between text-sm">
+
+                            <span class="text-zinc-500">
+                                Peso Total
+                            </span>
+
+                            <span id="res-peso" class="font-bold">
+                                0g
+                            </span>
+
                         </div>
-                        <div class="flex justify-between text-xs text-zinc-400">
-                            <span>Subtotal Bruto:</span>
-                            <span class="font-bold text-white font-mono" id="res-subtotal">R$ 0,00</span>
+
+                        <div class="flex items-center justify-between text-sm">
+
+                            <span class="text-zinc-500">
+                                Subtotal
+                            </span>
+
+                            <span id="res-subtotal" class="font-bold">
+                                R$ 0,00
+                            </span>
+
                         </div>
-                        <div class="flex justify-between text-xs text-emerald-400/90 hidden" id="box-desconto-pix">
-                            <span id="label-desconto-pix">Desconto PIX:</span>
-                            <span class="font-bold font-mono" id="res-desconto">- R$ 0,00</span>
+
+                        <div
+                            id="box-desconto"
+                            class="hidden flex items-center justify-between text-sm text-emerald-400">
+
+                            <span>
+                                Desconto PIX
+                            </span>
+
+                            <span id="res-desconto">
+                                - R$ 0,00
+                            </span>
+
                         </div>
-                        
-                        <div class="border-t border-zinc-800 pt-3 flex justify-between items-center">
-                            <span class="text-sm font-bold text-white uppercase tracking-wider">Total Líquido:</span>
-                            <span class="text-xl font-black gold font-mono" id="res-total">R$ 0,00</span>
+
+                        <div class="border-t border-white/5 pt-4 flex items-center justify-between">
+
+                            <span class="uppercase tracking-[0.2em] text-sm font-black">
+                                Total
+                            </span>
+
+                            <span
+                                id="res-total"
+                                class="text-3xl gold font-black">
+                                R$ 0,00
+                            </span>
+
                         </div>
+
                     </div>
 
-                    <!-- Ações Integradas -->
-                    <div class="mt-6 space-y-3">
-                        <button onclick="visualizarRomaneioModal()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-bold py-3 px-4 rounded-xl transition-all uppercase tracking-wider flex items-center justify-center gap-2">
-                            👁️ Visualizar Romaneio Técnico
+                    <div class="mt-8 space-y-3">
+
+                        <button
+                            onclick="visualizarRomaneio()"
+                            class="w-full h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">
+
+                            👁 Visualizar Romaneio
+
                         </button>
-                        
+
                         <div class="grid grid-cols-2 gap-3">
-                            <button onclick="gerarRomaneioPDF(false)" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-bold py-3 px-2 rounded-xl transition-all uppercase tracking-wider flex items-center justify-center gap-1">
-                                📥 Baixar PDF
+
+                            <button
+                                onclick="gerarPDF(false)"
+                                class="h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">
+
+                                PDF
+
                             </button>
-                            <button onclick="gerarRomaneioPDF(true)" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 text-xs font-bold py-3 px-2 rounded-xl transition-all uppercase tracking-wider flex items-center justify-center gap-1">
-                                🖨️ Imprimir
+
+                            <button
+                                onclick="gerarPDF(true)"
+                                class="h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">
+
+                                Imprimir
+
                             </button>
+
                         </div>
 
-                        <button onclick="executarFinalizacaoPedidoCompleta()" class="w-full bg-[#caa85c] hover:bg-[#bda152] text-black font-black text-sm py-4 px-6 rounded-xl transition-all uppercase tracking-widest shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 mt-4">
-                            🚀 Finalizar Pedido & Enviar
+                        <button
+                            id="btnFinalizar"
+                            onclick="finalizarPedido()"
+                            class="w-full h-16 rounded-2xl bg-[#caa85c] hover:bg-[#b99a53] text-black font-black uppercase tracking-[0.2em] transition-all">
+
+                            Finalizar Pedido
+
                         </button>
+
                     </div>
 
                 </div>
@@ -233,391 +614,746 @@
             </div>
 
         </div>
+
     </main>
 
-    <!-- MODAL DE VISUALIZAÇÃO DO ROMANEIO -->
-    <div id="modal-romaneio" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-zinc-950 border border-zinc-800 w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="p-4 border-b border-zinc-900 flex justify-between items-center bg-black/40">
-                <h3 class="serif text-white font-bold text-sm tracking-wider gold">Preview do Romaneio de Atacado</h3>
-                <button onclick="fecharRomaneioModal()" class="text-zinc-500 hover:text-white font-mono text-lg">&times;</button>
-            </div>
-            
-            <!-- Conteúdo do Romaneio Estruturado -->
-            <div id="conteudo-romaneio-print" class="p-6 overflow-y-auto space-y-6 text-zinc-300 bg-zinc-950 font-mono text-xs">
-                <!-- Preenchido via Injeção Organizada -->
+    <!-- MODAL -->
+
+    <div
+        id="modal-romaneio"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 p-4 flex items-center justify-center">
+
+        <div class="w-full max-w-3xl glass rounded-[2rem] overflow-hidden">
+
+            <div class="h-16 px-6 border-b border-white/5 flex items-center justify-between">
+
+                <h3 class="serif gold">
+                    Romaneio
+                </h3>
+
+                <button
+                    onclick="fecharModal()"
+                    class="text-zinc-500 hover:text-white text-2xl">
+                    ×
+                </button>
+
             </div>
 
-            <div class="p-4 border-t border-zinc-900 bg-black/40 flex justify-end gap-3">
-                <button onclick="fecharRomaneioModal()" class="px-4 py-2 bg-zinc-900 text-zinc-400 rounded-lg text-xs font-bold hover:text-white transition-all">Fechar</button>
-                <button onclick="gerarRomaneioPDF(true)" class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold hover:bg-[#bda152] transition-all">Imprimir Cópia</button>
+            <div
+                id="conteudo-romaneio"
+                class="p-6 max-h-[70vh] overflow-y-auto scrollbar">
+
             </div>
+
         </div>
+
     </div>
 
-    <!-- ENGINE DE MAPEAMENTO E INTEGRAÇÃO DOS SERVIÇOS -->
+    <!-- FIREBASE -->
+
+    <script src="js/firebase/firebase-config.js"></script>
+
     <script>
-        // Inicialização Segura e Isolada das Estruturas e Fallbacks
-        const configGlobal = { pixDesc: 5, parcelasMax: 6, whatsEmpresa: '5519999999999' };
+
+        const db =
+            firebase.database();
+
+        const CONFIG = {
+
+            descontoPix:5,
+
+            parcelasMax:6,
+
+            whatsEmpresa:'5519999999999'
+
+        };
+
         let itensCarrinho = [];
 
-        // Conexão e Verificação de Fallbacks dos Módulos Core do Catálogo
-        window.carrinhoService = window.carrinhoService || {
-            obterItens() {
-                try { return JSON.parse(localStorage.getItem('abella_carrinho')) || []; } catch(e) { return []; }
+        const money = {
+
+            formatar(v){
+
+                return new Intl.NumberFormat(
+                    'pt-BR',
+                    {
+                        style:'currency',
+                        currency:'BRL'
+                    }
+                ).format(v || 0);
+
+            }
+
+        };
+
+        // CARRINHO
+
+        const carrinhoService = {
+
+            obterItens(){
+
+                try{
+
+                    return JSON.parse(
+                        localStorage.getItem(
+                            'abellaCart'
+                        ) || '[]'
+                    );
+
+                }catch(e){
+
+                    return [];
+
+                }
+
             },
-            limpar() { localStorage.removeItem('abella_carrinho'); }
-        };
 
-        window.ConfigService = window.ConfigService || {
-            async getSettings() {
-                if (window.firebase && firebase.apps.length && firebase.database) {
-                    try {
-                        const snap = await firebase.database().ref('abella/settings').once('value');
-                        if(snap.exists()) return snap.val();
-                    } catch(e) { console.error("Erro ConfigService", e); }
-                }
-                return configGlobal;
-            }
-        };
+            limpar(){
 
-        window.PedidoService = window.PedidoService || {
-            async create(pedidoPayload) {
-                if (window.firebase && firebase.apps.length && firebase.database) {
-                    return firebase.database().ref('abella/orders').push(pedidoPayload);
-                } else {
-                    // Fallback para ambiente local/desconexão
-                    console.warn("Firebase offline. Armazenando em lote local de contingência.");
-                    let locais = JSON.parse(localStorage.getItem('abella_pedidos_contingencia')) || [];
-                    locais.push(pedidoPayload);
-                    localStorage.setItem('abella_pedidos_contingencia', JSON.stringify(locais));
-                    return { key: 'LOCAL_' + Date.now() };
-                }
-            }
-        };
+                localStorage.removeItem(
+                    'abellaCart'
+                );
 
-        window.money = window.money || {
-            formatar(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0); }
-        };
-
-        // Carregamento de Estado Inicial
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Sincronizar configurações do banco remoto via ConfigService
-            try {
-                const s = await window.ConfigService.getSettings();
-                if(s) {
-                    if(s.pixDesc) configGlobal.pixDesc = parseFloat(s.pixDesc);
-                    if(s.parcelasMax) configGlobal.parcelasMax = parseInt(s.parcelasMax);
-                    if(s.whatsEmpresa) configGlobal.whatsEmpresa = s.whatsEmpresa.replace(/\D/g, '');
-                }
-            } catch(e) { console.warn("Usando parâmetros locais de contingência para cálculos."); }
-
-            // Atualizar textos informativos de regras comerciais
-            document.getElementById('txt-desc-pix').innerText = `Ganhe ${configGlobal.pixDesc}% de desconto real direto sobre o valor de atacado bruto das peças.`;
-            document.getElementById('txt-desc-cartao').innerText = `Parcele em até ${configGlobal.parcelasMax}x sem juros diretamente com a nossa mesa de atendimento comercial.`;
-
-            // Resgatar itens ativos do carrinhoService
-            itensCarrinho = window.carrinhoService.obterItens();
-            if(itensCarrinho.length === 0) {
-                alert("Seu carrinho está vazio. Redirecionando para a vitrine de produtos no bruto.");
-                window.location.href = "index.html";
-                return;
             }
 
-            renderizarListaItensCheckout();
-            atualizarResumoValores();
-        });
+        };
 
-        function renderizarListaItensCheckout() {
-            const container = document.getElementById('lista-itens-checkout');
+        document.addEventListener(
+            'DOMContentLoaded',
+            async ()=>{
+
+                await carregarConfiguracoes();
+
+                itensCarrinho =
+                    carrinhoService.obterItens();
+
+                if(!Array.isArray(itensCarrinho)){
+
+                    itensCarrinho = [];
+
+                }
+
+                if(itensCarrinho.length === 0){
+
+                    alert(
+                        'Seu carrinho está vazio.'
+                    );
+
+                    window.location.href =
+                        'index.html';
+
+                    return;
+
+                }
+
+                renderizarItens();
+
+                atualizarResumo();
+
+            }
+        );
+
+        async function carregarConfiguracoes(){
+
+            try{
+
+                const snap =
+                    await db
+                    .ref('abella/settings')
+                    .once('value');
+
+                if(snap.exists()){
+
+                    const s =
+                        snap.val();
+
+                    CONFIG.descontoPix =
+                        parseFloat(
+                            s.pixDesc || 5
+                        );
+
+                    CONFIG.parcelasMax =
+                        parseInt(
+                            s.parcelasMax || 6
+                        );
+
+                    CONFIG.whatsEmpresa =
+                        (s.whatsEmpresa || '')
+                        .replace(/\D/g,'');
+
+                }
+
+            }catch(e){
+
+                console.warn(
+                    'Erro ao carregar configurações.',
+                    e
+                );
+
+            }
+
+        }
+
+        function renderizarItens(){
+
+            const container =
+                document.getElementById(
+                    'lista-itens-checkout'
+                );
+
             container.innerHTML = '';
 
-            itensCarrinho.forEach(item => {
-                const preco = parseFloat(item.price || item.precoFinal || 0);
-                const qtd = parseInt(item.qtd || item.quantidade || 1);
-                const img = item.image || item.imagem || 'https://via.placeholder.com/150';
+            itensCarrinho.forEach(item=>{
 
-                const div = document.createElement('div');
-                div.className = "flex items-center gap-3 bg-zinc-900/60 p-2 rounded-xl border border-zinc-900";
-                div.innerHTML = `
-                    <img src="${img}" class="w-10 h-10 object-cover rounded-lg bg-zinc-800 flex-shrink-0" onerror="this.src='https://via.placeholder.com/150'">
-                    <div class="flex-1 min-w-0">
-                        <h4 class="text-xs font-bold text-white truncate">${item.name || item.nome || 'Produto Bruto'}</h4>
-                        <p class="text-[10px] text-zinc-500 font-mono">${qtd} pçs x ${window.money.formatar(preco)}</p>
+                const qtd =
+                    parseInt(
+                        item.quantidade || item.qtd || 1
+                    );
+
+                const preco =
+                    parseFloat(
+                        item.precoFinal || item.price || 0
+                    );
+
+                const total =
+                    preco * qtd;
+
+                const imagem =
+                    item.image ||
+                    item.imagem ||
+                    'https://via.placeholder.com/100';
+
+                const nome =
+                    item.nome ||
+                    item.name ||
+                    'Produto';
+
+                container.innerHTML += `
+
+                    <div class="flex items-center gap-4 border border-white/5 rounded-2xl p-3">
+
+                        <img
+                            src="${imagem}"
+                            class="w-16 h-16 rounded-xl object-cover bg-black"
+                            onerror="this.src='https://via.placeholder.com/100'">
+
+                        <div class="flex-1 min-w-0">
+
+                            <h3 class="font-bold text-sm truncate">
+                                ${nome}
+                            </h3>
+
+                            <p class="text-zinc-500 text-xs mt-1">
+                                ${qtd}x • ${money.formatar(preco)}
+                            </p>
+
+                        </div>
+
+                        <span class="font-black text-sm">
+                            ${money.formatar(total)}
+                        </span>
+
                     </div>
-                    <span class="text-xs font-bold text-zinc-300 font-mono">${window.money.formatar(preco * qtd)}</span>
+
                 `;
-                container.appendChild(div);
+
             });
+
         }
 
-        function calcularTotais() {
-            let qtdTotal = 0;
-            let pesoTotal = 0;
+        function calcularTotais(){
+
+            let qtd = 0;
+
+            let peso = 0;
+
             let subtotal = 0;
 
-            itensCarrinho.forEach(item => {
-                const qtd = parseInt(item.qtd || item.quantidade || 1);
-                const preco = parseFloat(item.price || item.precoFinal || 0);
-                const peso = parseFloat(item.peso || item.weight || 0);
+            itensCarrinho.forEach(item=>{
 
-                qtdTotal += qtd;
-                pesoTotal += (peso * qtd);
-                subtotal += (preco * qtd);
+                const quantidade =
+                    parseInt(
+                        item.quantidade || item.qtd || 1
+                    );
+
+                const preco =
+                    parseFloat(
+                        item.precoFinal || item.price || 0
+                    );
+
+                const pesoItem =
+                    parseFloat(
+                        item.peso || item.weight || 0
+                    );
+
+                qtd += quantidade;
+
+                peso += (pesoItem * quantidade);
+
+                subtotal += (preco * quantidade);
+
             });
 
-            const formaPagamento = document.querySelector('input[name="formaPagamento"]:checked').value;
+            const pagamento =
+                document.querySelector(
+                    'input[name="formaPagamento"]:checked'
+                )?.value || 'PIX';
+
             let desconto = 0;
-            if(formaPagamento === 'PIX') {
-                desconto = subtotal * (configGlobal.pixDesc / 100);
+
+            if(pagamento === 'PIX'){
+
+                desconto =
+                    subtotal *
+                    (CONFIG.descontoPix / 100);
+
             }
 
-            let totalLiquido = subtotal - desconto;
+            const total =
+                subtotal - desconto;
 
-            return { qtdTotal, pesoTotal, subtotal, desconto, totalLiquido, formaPagamento };
-        }
+            return {
 
-        function atualizarResumoValores() {
-            const t = calcularTotais();
+                qtd,
+                peso,
+                subtotal,
+                desconto,
+                total,
+                pagamento
 
-            document.getElementById('res-qtd').innerText = `${t.qtdTotal} pçs`;
-            document.getElementById('res-peso').innerText = `${t.pesoTotal.toFixed(2)}g`;
-            document.getElementById('res-subtotal').innerText = window.money.formatar(t.subtotal);
-            document.getElementById('res-total').innerText = window.money.formatar(t.totalLiquido);
-
-            const boxDesc = document.getElementById('box-desconto-pix');
-            if(t.desconto > 0) {
-                document.getElementById('label-desconto-pix').innerText = `Desconto PIX (-${configGlobal.pixDesc}%):`;
-                document.getElementById('res-desconto').innerText = `- ${window.money.formatar(t.desconto)}`;
-                boxDesc.classList.remove('hidden');
-            } else {
-                boxDesc.classList.add('hidden');
-            }
-        }
-
-        // MONTAGEM DO LAYOUT DO ROMANEIO TEXTUAL PARA PREVIEW E VALIDAÇÃO ELETRÔNICA
-        function construirTextoRomaneio() {
-            const t = calcularTotais();
-            const cliNome = document.getElementById('cli-nome').value || 'Não Informado';
-            const cliWhats = document.getElementById('cli-whats').value || 'Não Informado';
-            const cliDoc = document.getElementById('cli-documento').value || 'Não Informado';
-            const entRua = document.getElementById('ent-rua').value || '';
-            const entNum = document.getElementById('ent-numero').value || '';
-            const entBair = document.getElementById('ent-bairro').value || '';
-            const entCid = document.getElementById('ent-cidade').value || '';
-            const entUf = document.getElementById('ent-uf').value || '';
-            const entCep = document.getElementById('ent-cep').value || '';
-            const obs = document.getElementById('obs-pedido').value || 'Sem observações especiais.';
-
-            let r = `==================================================
-`;
-            r += `               ABELLA JOIAS ATACADO               
-`;
-            r += `               ROMANEIO DE PRODUÇÃO               
-`;
-            r += `==================================================
-
-`;
-            
-            r += `[DADOS DO CLIENTE]
-`;
-            r += `Nome/Razão: ${cliNome}
-`;
-            r += `WhatsApp:   ${cliWhats}
-`;
-            r += `CPF/CNPJ:   ${cliDoc}
-
-`;
-            
-            r += `[DADOS DE ENTREGA / LOGÍSTICA]
-`;
-            r += `Endereço:   ${entRua}, ${entNum}
-`;
-            r += `Bairro:     ${entBair} | CEP: ${entCep}
-`;
-            r += `Cidade:     ${entCid} - ${entUf}
-
-`;
-            
-            r += `[RELAÇÃO DE PRODUTOS NO BRUTO]
-`;
-            r += `--------------------------------------------------
-`;
-            r += `Qtd  | Item/SKU                       | V. Total  
-`;
-            r += `--------------------------------------------------
-`;
-            
-            itensCarrinho.forEach(item => {
-                const qtd = String(item.qtd || item.quantidade || 1).padEnd(4, ' ');
-                const nome = (item.name || item.nome || 'Produto').substring(0, 30).padEnd(30, ' ');
-                const preco = parseFloat(item.price || item.precoFinal || 0);
-                const totItem = window.money.formatar(preco * parseInt(qtd));
-                r += `${qtd} | ${nome} | ${totItem}
-`;
-            });
-            
-            r += `--------------------------------------------------
-
-`;
-            r += `[RESUMO CONSOLIDADO FINANCEIRO]
-`;
-            r += `Total de Peças:  ${t.qtdTotal} unidades
-`;
-            r += `Peso Total Lote: ${t.pesoTotal.toFixed(2)}g
-`;
-            r += `Subtotal Bruto:  ${window.money.formatar(t.subtotal)}
-`;
-            if(t.desconto > 0) {
-                r += `Desconto PIX:    - ${window.money.formatar(t.desconto)}
-`;
-            }
-            r += `Condição/Pgto:   ${t.formaPagamento}
-`;
-            r += `VALOR LÍQUIDO:   ${window.money.formatar(t.totalLiquido)}
-
-`;
-            
-            r += `[OBSERVAÇÕES TÉCNICAS]:
-${obs}
-`;
-            return r;
-        }
-
-        function visualizarRomaneioModal() {
-            const target = document.getElementById('conteudo-romaneio-print');
-            target.innerHTML = `<pre class="whitespace-pre-wrap font-mono text-zinc-300 text-xs">${construirTextoRomaneio()}</pre>`;
-            document.getElementById('modal-romaneio').classList.remove('hidden');
-        }
-
-        function fecharRomaneioModal() {
-            document.getElementById('modal-romaneio').classList.add('hidden');
-        }
-
-        // EXECUTOR PROFISSIONAL DE IMPRESSÃO E DOWNLOAD DE PDF UTILIZANDO O MOTOR DO JSPDF CONFORME DIRETRIZES DO CARRINHO
-        function gerarRomaneioPDF(deveImprimir = false) {
-            try {
-                const { jsPDF } = window.jspdf ? window.jspdf : { jsPDF: null };
-                if(!jsPDF) {
-                    alert("Biblioteca de geração de relatórios jsPDF não foi carregada corretamente.");
-                    return;
-                }
-
-                const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-                const texto = construirTextoRomaneio();
-                
-                doc.setFont("Courier", "normal");
-                doc.setFontSize(10);
-                
-                // Quebrar strings longas para encaixe perfeito nas margens da folha A4 técnica
-                const linhasSplit = doc.splitTextToSize(texto, 180);
-                doc.text(linhasSplit, 15, 20);
-
-                if(deveImprimir) {
-                    // Janela de Impressão Direta Profissional
-                    doc.autoPrint();
-                    window.open(doc.output('bloburl'), '_blank');
-                } else {
-                    // Download do Arquivo Consolidado
-                    doc.save(`romaneio_abella_${Date.now()}.pdf`);
-                }
-            } catch (error) {
-                console.error("Falha na renderização do documento PDF nativo", error);
-                alert("Erro ao processar arquivo PDF do romaneio. Verifique os dados inseridos.");
-            }
-        }
-
-        // INTERFACE FORENSE DE VALIDAÇÃO DE CAMPOS E COMPACTAÇÃO DE PEDIDO
-        async function executarFinalizacaoPedidoCompleta() {
-            // Validação das estruturas nativas de formulários HTML5
-            if(!document.getElementById('cli-nome').checkValidity() || 
-               !document.getElementById('cli-whats').checkValidity() ||
-               !document.getElementById('cli-documento').checkValidity() ||
-               !document.getElementById('ent-cep').checkValidity() ||
-               !document.getElementById('ent-rua').checkValidity() ||
-               !document.getElementById('ent-numero').checkValidity() ||
-               !document.getElementById('ent-bairro').checkValidity() ||
-               !document.getElementById('ent-cidade').checkValidity()) {
-                alert("Por favor, preencha todos os campos obrigatórios marcados com (*) antes de submeter ao banco.");
-                return;
-            }
-
-            const t = calcularTotais();
-            
-            // Construção do Payload Homologado para Gravação Rígida em abella/orders
-            const pedidoPayload = {
-                cliente: document.getElementById('cli-nome').value.trim(),
-                whatsapp: document.getElementById('cli-whats').value.trim(),
-                documento: document.getElementById('cli-documento').value.trim(),
-                entrega: {
-                    cep: document.getElementById('ent-cep').value.trim(),
-                    rua: document.getElementById('ent-rua').value.trim(),
-                    numero: document.getElementById('ent-numero').value.trim(),
-                    bairro: document.getElementById('ent-bairro').value.trim(),
-                    cidade: document.getElementById('ent-cidade').value.trim(),
-                    uf: document.getElementById('ent-uf').value
-                },
-                formaPagamento: t.formaPagamento,
-                observacoes: document.getElementById('obs-pedido').value.trim(),
-                itens: itensCarrinho.map(i => ({
-                    sku: i.sku || 'N/A',
-                    nome: i.name || i.nome || 'Produto Bruto',
-                    quantidade: parseInt(i.qtd || i.quantidade || 1),
-                    precoUnitario: parseFloat(i.price || i.precoFinal || 0),
-                    pesoUnitario: parseFloat(i.peso || i.weight || 0)
-                })),
-                totalPecas: t.qtdTotal,
-                pesoTotal: parseFloat(t.pesoTotal.toFixed(2)),
-                subtotal: t.subtotal,
-                desconto: t.desconto,
-                total: t.totalLiquido,
-                status: 'Novo',
-                data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR'),
-                timestamp: Date.now()
             };
 
-            try {
-                // Execução de gravação através da Camada Abstrata do PedidoService
-                const refGerada = await window.PedidoService.create(pedidoPayload);
-                const idPedidoFinal = refGerada.key || 'ERR_' + Date.now();
-
-                // Montagem da Mensagem de Integração Estruturada do WhatsApp Conforme Modelo Exigido
-                const textoWhats = `Olá!
-
-` +
-                                   `Novo pedido realizado.
-
-` +
-                                   `Cliente: ${pedidoPayload.cliente}
-` +
-                                   `Cidade: ${pedidoPayload.entrega.cidade}
-
-` +
-                                   `Valor: ${window.money.formatar(pedidoPayload.total)}
-` +
-                                   `Pagamento: ${pedidoPayload.formaPagamento}
-
-` +
-                                   `Estou aguardando o link para pagamento e o prazo de entrega.
-
-` +
-                                   `ID de Referência Banco: ${idPedidoFinal}`;
-
-                const urlDisparoWhats = `https://api.whatsapp.com/send?phone=${configGlobal.whatsEmpresa}&text=${encodeURIComponent(textoWhats)}`;
-                
-                alert("Pedido catalogado com sucesso no Firebase Realtime Database! Redirecionando para o canal comercial do WhatsApp.");
-                
-                // Expurgar itens processados do carrinho de compras ativo
-                window.carrinhoService.limpar();
-                
-                // Redirecionamento limpo para o WhatsApp comercial cadastrado
-                window.location.href = urlDisparoWhats;
-
-            } catch (error) {
-                console.error("Erro crítico na finalização eletrônica do lote", error);
-                alert("Erro ao persistir pedido no Firebase. Tente novamente.");
-            }
         }
+
+        function atualizarResumo(){
+
+            const t =
+                calcularTotais();
+
+            document.getElementById(
+                'res-qtd'
+            ).innerText =
+                `${t.qtd} pçs`;
+
+            document.getElementById(
+                'res-peso'
+            ).innerText =
+                `${t.peso.toFixed(2)}g`;
+
+            document.getElementById(
+                'res-subtotal'
+            ).innerText =
+                money.formatar(t.subtotal);
+
+            document.getElementById(
+                'res-total'
+            ).innerText =
+                money.formatar(t.total);
+
+            const box =
+                document.getElementById(
+                    'box-desconto'
+                );
+
+            if(t.desconto > 0){
+
+                box.classList.remove(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'res-desconto'
+                ).innerText =
+                    `- ${money.formatar(t.desconto)}`;
+
+            }else{
+
+                box.classList.add(
+                    'hidden'
+                );
+
+            }
+
+        }
+
+        function construirTextoRomaneio(){
+
+            const t =
+                calcularTotais();
+
+            const nome =
+                document.getElementById(
+                    'cli-nome'
+                ).value || 'Não informado';
+
+            const whats =
+                document.getElementById(
+                    'cli-whats'
+                ).value || 'Não informado';
+
+            const documento =
+                document.getElementById(
+                    'cli-documento'
+                ).value || 'Não informado';
+
+            const rua =
+                document.getElementById(
+                    'ent-rua'
+                ).value || '';
+
+            const numero =
+                document.getElementById(
+                    'ent-numero'
+                ).value || '';
+
+            const bairro =
+                document.getElementById(
+                    'ent-bairro'
+                ).value || '';
+
+            const cidade =
+                document.getElementById(
+                    'ent-cidade'
+                ).value || '';
+
+            const uf =
+                document.getElementById(
+                    'ent-uf'
+                ).value || '';
+
+            const cep =
+                document.getElementById(
+                    'ent-cep'
+                ).value || '';
+
+            const obs =
+                document.getElementById(
+                    'obs-pedido'
+                ).value || 'Sem observações';
+
+            let texto = '';
+
+            texto += 'ABELLA JOIAS\n';
+            texto += 'ROMANEIO DE PEDIDO\n';
+            texto += '====================================\n\n';
+
+            texto += `CLIENTE: ${nome}\n`;
+            texto += `WHATSAPP: ${whats}\n`;
+            texto += `CPF/CNPJ: ${documento}\n\n`;
+
+            texto += 'ENDEREÇO\n';
+            texto += `${rua}, ${numero}\n`;
+            texto += `${bairro}\n`;
+            texto += `${cidade} - ${uf}\n`;
+            texto += `CEP: ${cep}\n\n`;
+
+            texto += 'ITENS\n';
+            texto += '------------------------------------\n';
+
+            itensCarrinho.forEach(item=>{
+
+                const qtd =
+                    parseInt(
+                        item.quantidade || item.qtd || 1
+                    );
+
+                const preco =
+                    parseFloat(
+                        item.precoFinal || item.price || 0
+                    );
+
+                const nomeItem =
+                    item.nome ||
+                    item.name ||
+                    'Produto';
+
+                texto += `${qtd}x ${nomeItem}\n`;
+                texto += `${money.formatar(preco * qtd)}\n\n`;
+
+            });
+
+            texto += '------------------------------------\n';
+
+            texto += `TOTAL PEÇAS: ${t.qtd}\n`;
+            texto += `PESO TOTAL: ${t.peso.toFixed(2)}g\n`;
+            texto += `SUBTOTAL: ${money.formatar(t.subtotal)}\n`;
+
+            if(t.desconto > 0){
+
+                texto += `DESCONTO PIX: ${money.formatar(t.desconto)}\n`;
+
+            }
+
+            texto += `TOTAL: ${money.formatar(t.total)}\n`;
+            texto += `FORMA PGTO: ${t.pagamento}\n\n`;
+
+            texto += `OBS:\n${obs}\n`;
+
+            return texto;
+
+        }
+
+        function visualizarRomaneio(){
+
+            document.getElementById(
+                'conteudo-romaneio'
+            ).innerHTML = `
+
+                <pre class="whitespace-pre-wrap text-zinc-300 text-xs leading-6 font-mono">${construirTextoRomaneio()}</pre>
+
+            `;
+
+            document.getElementById(
+                'modal-romaneio'
+            ).classList.remove(
+                'hidden'
+            );
+
+        }
+
+        function fecharModal(){
+
+            document.getElementById(
+                'modal-romaneio'
+            ).classList.add(
+                'hidden'
+            );
+
+        }
+
+        function gerarPDF(imprimir = false){
+
+            try{
+
+                const { jsPDF } =
+                    window.jspdf;
+
+                const doc =
+                    new jsPDF();
+
+                const texto =
+                    construirTextoRomaneio();
+
+                doc.setFont(
+                    'Courier',
+                    'normal'
+                );
+
+                doc.setFontSize(10);
+
+                const linhas =
+                    doc.splitTextToSize(
+                        texto,
+                        180
+                    );
+
+                doc.text(
+                    linhas,
+                    15,
+                    20
+                );
+
+                if(imprimir){
+
+                    doc.autoPrint();
+
+                    window.open(
+                        doc.output('bloburl'),
+                        '_blank'
+                    );
+
+                }else{
+
+                    doc.save(
+                        `romaneio_abella_${Date.now()}.pdf`
+                    );
+
+                }
+
+            }catch(e){
+
+                console.error(e);
+
+                alert(
+                    'Erro ao gerar PDF.'
+                );
+
+            }
+
+        }
+
+        async function finalizarPedido(){
+
+            const btn =
+                document.getElementById(
+                    'btnFinalizar'
+                );
+
+            // VALIDAÇÃO
+
+            const campos = [
+
+                'cli-nome',
+                'cli-whats',
+                'cli-documento',
+                'ent-cep',
+                'ent-rua',
+                'ent-numero',
+                'ent-bairro',
+                'ent-cidade'
+
+            ];
+
+            for(const id of campos){
+
+                const el =
+                    document.getElementById(id);
+
+                if(!el.value.trim()){
+
+                    el.focus();
+
+                    alert(
+                        'Preencha todos os campos obrigatórios.'
+                    );
+
+                    return;
+
+                }
+
+            }
+
+            try{
+
+                btn.disabled = true;
+
+                btn.innerText =
+                    'FINALIZANDO...';
+
+                const t =
+                    calcularTotais();
+
+                const payload = {
+
+                    cliente:
+                        document.getElementById(
+                            'cli-nome'
+                        ).value.trim(),
+
+                    whatsapp:
+                        document.getElementById(
+                            'cli-whats'
+                        ).value.trim(),
+
+                    documento:
+                        document.getElementById(
+                            'cli-documento'
+                        ).value.trim(),
+
+                    entrega:{
+
+                        cep:
+                            document.getElementById(
+                                'ent-cep'
+                            ).value.trim(),
+
+                        rua:
+                            document.getElementById(
+                                'ent-rua'
+                            ).value.trim(),
+
+                        numero:
+                            document.getElementById(
+                                'ent-numero'
+                            ).value.trim(),
+
+                        bairro:
+                            document.getElementById(
+                                'ent-bairro'
+                            ).value.trim(),
+
+                        cidade:
+                            document.getElementById(
+                                'ent-cidade'
+                            ).value.trim(),
+
+                        uf:
+                            document.getElementById(
+                                'ent-uf'
+                            ).value
+
+                    },
+
+                    observacoes:
+                        document.getElementById(
+                            'obs-pedido'
+                        ).value.trim(),
+
+                    formaPagamento:
+                        t.pagamento,
+
+                    itens:
+                        itensCarrinho,
+
+                    subtotal:
+                        t.subtotal,
+
+                    desconto:
+                        t.desconto,
+
+                    total:
+                        t.total,
+
+                    totalPecas:
+                        t.qtd,
+
+                    pesoTotal:
+                        parseFloat(
+                            t.peso.toFixed(2)
+                        ),
+
+                    status:'Novo',
+
+                    data:
+                        new Date().toLocaleString(
+                            'pt-BR'
+                        ),
+
+                    timestamp:
+                        Date.now()
+
+                };
+
+                const ref =
+                    await db
+                    .ref('abella/orders')
+                    .push(payload);
+
+                carrinhoService.limpar();
+
+                const mensagem = `Olá! Meu pedido foi realizado.%0A%0ACliente: ${payload.cliente}%0ATotal: ${money.formatar(payload.total)}%0APagamento: ${payload.formaPagamento}%0A%0AID Pedido: ${ref.key}`;
+
+                window.location.href =
+                    `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${mensagem}`;
+
+            }catch(e){
+
+                console.error(e);
+
+                alert(
+                    'Erro ao finalizar pedido.'
+                );
+
+                btn.disabled = false;
+
+                btn.innerText =
+                    'FINALIZAR PEDIDO';
+
+            }
+
+        }
+
     </script>
+
 </body>
 </html>

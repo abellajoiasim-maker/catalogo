@@ -1,4 +1,3 @@
-```js
 // ======================================================================
 // js/services/carrinhoService.js
 // Abella Joias • CarrinhoService Premium v4.0 IQ200

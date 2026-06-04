@@ -1,18 +1,27 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subcategorias | Abella Admin</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Subcategorias | Abella Admin
+    </title>
 
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Firebase -->
+    <!-- FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
     <style>
+
         ::-webkit-scrollbar{
             width:8px;
         }
@@ -35,6 +44,7 @@
         }
 
         @keyframes fade{
+
             from{
                 opacity:0;
                 transform:translateY(6px);
@@ -44,8 +54,11 @@
                 opacity:1;
                 transform:translateY(0);
             }
+
         }
+
     </style>
+
 </head>
 
 <body class="bg-zinc-900 text-zinc-100 p-4 md:p-6 font-sans min-h-screen overflow-x-hidden">
@@ -56,20 +69,31 @@
         <div class="md:col-span-1 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl h-fit space-y-4 sticky top-4">
 
             <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
+
                 <h3 class="text-sm font-black uppercase tracking-wider text-white">
+
                     Vincular Subcategoria
+
                 </h3>
 
-                <div id="statusFirebase"
-                    class="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold">
+                <div
+                    id="statusFirebase"
+                    class="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold"
+                >
+
                     ONLINE
+
                 </div>
+
             </div>
 
-            <!-- CATEGORIA -->
+            <!-- SELECT CATEGORY -->
             <div class="space-y-1">
+
                 <label class="text-[10px] uppercase text-zinc-400 font-bold">
-                    Selecione a Categoria Mãe *
+
+                    Categoria Mãe *
+
                 </label>
 
                 <select
@@ -77,19 +101,32 @@
                     onchange="mudarCategoriaMaeFiltro()"
                     class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
                 >
-                    <option value="">Carregando categorias...</option>
+
+                    <option value="">
+
+                        Carregando categorias...
+
+                    </option>
+
                 </select>
+
             </div>
 
             <!-- FORM -->
             <form id="formSubcat" class="space-y-4 pt-2">
 
-                <input type="hidden" id="subOldSlug">
+                <input
+                    type="hidden"
+                    id="subOldSlug"
+                >
 
-                <!-- NOME -->
+                <!-- NAME -->
                 <div class="space-y-1">
+
                     <label class="text-[10px] uppercase text-zinc-400 font-bold">
+
                         Nome da Subcategoria *
+
                     </label>
 
                     <input
@@ -99,12 +136,16 @@
                         placeholder="Ex: Cravejados"
                         class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c] transition-all"
                     >
+
                 </div>
 
-                <!-- IMAGEM -->
+                <!-- IMAGE -->
                 <div class="space-y-1">
+
                     <label class="text-[10px] uppercase text-zinc-400 font-bold">
-                        Imagem Opcional (URL)
+
+                        Imagem (URL)
+
                     </label>
 
                     <input
@@ -113,18 +154,26 @@
                         placeholder="https://..."
                         class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c] transition-all"
                     >
+
                 </div>
 
                 <!-- PREVIEW -->
-                <div id="previewImageContainer" class="hidden">
+                <div
+                    id="previewImageContainer"
+                    class="hidden"
+                >
+
                     <p class="text-[10px] uppercase text-zinc-500 font-bold mb-2">
+
                         Preview
+
                     </p>
 
                     <img
                         id="previewImage"
                         class="w-full h-40 object-cover rounded-xl border border-zinc-800 bg-zinc-900"
                     >
+
                 </div>
 
                 <!-- BUTTON -->
@@ -133,24 +182,35 @@
                     id="btnSalvar"
                     class="w-full bg-[#caa85c] hover:brightness-110 text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all"
                 >
+
                     Gravar Subcategoria
+
                 </button>
 
             </form>
+
         </div>
 
-        <!-- LISTA -->
+        <!-- LIST -->
         <div class="md:col-span-2 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl flex flex-col min-h-[500px]">
 
             <div class="flex items-center justify-between border-b border-zinc-900 pb-3 mb-4">
+
                 <h3 class="text-sm font-black uppercase tracking-wider text-white">
+
                     Subcategorias da Seção
+
                 </h3>
 
-                <div id="contadorSubcats"
-                    class="text-[10px] text-zinc-500 uppercase font-bold">
+                <div
+                    id="contadorSubcats"
+                    class="text-[10px] text-zinc-500 uppercase font-bold"
+                >
+
                     0 itens
+
                 </div>
+
             </div>
 
             <!-- LIST -->
@@ -158,9 +218,13 @@
                 id="lista-subcategorias"
                 class="space-y-3 text-left flex-1"
             >
+
                 <div class="text-zinc-500 text-xs italic py-6 text-center">
-                    Selecione uma categoria mãe para expandir a subárvore.
+
+                    Selecione uma categoria mãe.
+
                 </div>
+
             </div>
 
         </div>
@@ -169,7 +233,9 @@
 
     <!-- SERVICES -->
     <script src="../js/firebase/firebase-config.js"></script>
+
     <script src="../js/services/categoriaService.js"></script>
+
     <script src="../js/services/subcategoriaService.js"></script>
 
     <script>
@@ -184,35 +250,51 @@
             .on('value', snap => {
 
                 const online = snap.val();
-                const el = document.getElementById('statusFirebase');
+
+                const el =
+                    document.getElementById(
+                        'statusFirebase'
+                    );
 
                 if(online){
 
                     el.innerHTML = 'ONLINE';
+
                     el.className =
                         'text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold';
 
                 }else{
 
                     el.innerHTML = 'OFFLINE';
+
                     el.className =
                         'text-[10px] px-2 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold';
+
                 }
+
             });
 
         // =========================================================
         // INIT
         // =========================================================
 
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener(
+            'DOMContentLoaded',
+            async () => {
 
-            await popularCategoriasMae();
-            configurarPreviewImagem();
+                await popularCategoriasMae();
 
-            document
-                .getElementById('formSubcat')
-                .addEventListener('submit', salvarSubcategoriaUI);
-        });
+                configurarPreviewImagem();
+
+                document
+                    .getElementById('formSubcat')
+                    .addEventListener(
+                        'submit',
+                        salvarSubcategoriaUI
+                    );
+
+            }
+        );
 
         // =========================================================
         // HELPERS
@@ -227,60 +309,97 @@
                 .replace(/[\u0300-\u036f]/g, "")
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/(^-|-$)/g, "");
+
         }
 
         function limparFormulario(){
 
-            document.getElementById('formSubcat').reset();
-            document.getElementById('subOldSlug').value = '';
+            document
+                .getElementById('formSubcat')
+                .reset();
 
-            document.getElementById('previewImageContainer')
+            document
+                .getElementById('subOldSlug')
+                .value = '';
+
+            document
+                .getElementById('previewImageContainer')
                 .classList.add('hidden');
 
-            document.getElementById('btnSalvar').innerHTML =
-                'Gravar Subcategoria';
+            document
+                .getElementById('btnSalvar')
+                .innerHTML =
+                    'Gravar Subcategoria';
+
         }
 
         function configurarPreviewImagem(){
 
-            const input = document.getElementById('subImage');
+            const input =
+                document.getElementById(
+                    'subImage'
+                );
 
-            input.addEventListener('input', () => {
+            input.addEventListener(
+                'input',
+                () => {
 
-                const url = input.value.trim();
+                    const url =
+                        input.value.trim();
 
-                const container =
-                    document.getElementById('previewImageContainer');
+                    const container =
+                        document.getElementById(
+                            'previewImageContainer'
+                        );
 
-                const preview =
-                    document.getElementById('previewImage');
+                    const preview =
+                        document.getElementById(
+                            'previewImage'
+                        );
 
-                if(!url){
+                    if(!url){
 
-                    container.classList.add('hidden');
-                    return;
+                        container.classList.add(
+                            'hidden'
+                        );
+
+                        return;
+
+                    }
+
+                    preview.src = url;
+
+                    preview.onload = () => {
+
+                        container.classList.remove(
+                            'hidden'
+                        );
+
+                    };
+
+                    preview.onerror = () => {
+
+                        container.classList.add(
+                            'hidden'
+                        );
+
+                    };
+
                 }
+            );
 
-                preview.src = url;
-
-                preview.onload = () => {
-                    container.classList.remove('hidden');
-                };
-
-                preview.onerror = () => {
-                    container.classList.add('hidden');
-                };
-            });
         }
 
         // =========================================================
-        // LOAD CATEGORIES
+        // LOAD CATEGORY
         // =========================================================
 
         async function popularCategoriasMae(){
 
             const select =
-                document.getElementById('selectCatMae');
+                document.getElementById(
+                    'selectCatMae'
+                );
 
             try{
 
@@ -299,32 +418,40 @@
                         '<option value="">Nenhuma categoria encontrada</option>';
 
                     return;
+
                 }
 
                 Object.keys(categorias).forEach(slug => {
 
-                    const categoria = categorias[slug];
+                    const categoria =
+                        categorias[slug];
 
                     const option =
-                        document.createElement('option');
+                        document.createElement(
+                            'option'
+                        );
 
                     option.value = slug;
+
                     option.textContent =
                         categoria?.name || slug;
 
                     select.appendChild(option);
+
                 });
 
             }catch(error){
 
                 console.error(
-                    'Erro ao carregar categorias:',
+                    'Erro categorias:',
                     error
                 );
 
                 select.innerHTML =
                     '<option value="">Falha ao carregar</option>';
+
             }
+
         }
 
         // =========================================================
@@ -334,13 +461,19 @@
         async function mudarCategoriaMaeFiltro(){
 
             const catSlug =
-                document.getElementById('selectCatMae').value;
+                document.getElementById(
+                    'selectCatMae'
+                ).value;
 
             const container =
-                document.getElementById('lista-subcategorias');
+                document.getElementById(
+                    'lista-subcategorias'
+                );
 
             const contador =
-                document.getElementById('contadorSubcats');
+                document.getElementById(
+                    'contadorSubcats'
+                );
 
             if(!catSlug){
 
@@ -350,40 +483,45 @@
                     </div>
                 `;
 
-                contador.innerHTML = '0 itens';
+                contador.innerHTML =
+                    '0 itens';
 
                 return;
+
             }
 
             container.innerHTML = `
                 <div class="text-zinc-500 text-xs py-6 text-center">
-                    ⏳ Mapeando subcategorias...
+                    ⏳ Carregando...
                 </div>
             `;
 
             try{
 
-                // =====================================================
-                // PADRÃO ALINHADO AO NÓ:
-                // abella/categories/{catSlug}/subcategories
-                // =====================================================
-
                 const subs =
-                    await subcategoriaService.obterPorCategoria(catSlug);
+                    await subcategoriaService
+                        .obterPorCategoria(
+                            catSlug
+                        );
 
                 container.innerHTML = '';
 
-                if(!subs || Object.keys(subs).length === 0){
+                if(
+                    !subs ||
+                    Object.keys(subs).length === 0
+                ){
 
-                    contador.innerHTML = '0 itens';
+                    contador.innerHTML =
+                        '0 itens';
 
                     container.innerHTML = `
                         <div class="text-zinc-600 text-xs italic py-6 text-center border border-dashed border-zinc-800 rounded-2xl">
-                            Nenhuma subcategoria vinculada a esta categoria.
+                            Nenhuma subcategoria vinculada.
                         </div>
                     `;
 
                     return;
+
                 }
 
                 contador.innerHTML =
@@ -391,10 +529,16 @@
 
                 Object.keys(subs).forEach(subSlug => {
 
-                    const s = subs[subSlug] || {};
+                    const s =
+                        subs[subSlug] || {};
+
+                    const ativo =
+                        s.active !== false;
 
                     const div =
-                        document.createElement('div');
+                        document.createElement(
+                            'div'
+                        );
 
                     div.className =
                         'animate-fade flex items-center justify-between gap-4 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl';
@@ -405,27 +549,59 @@
 
                             ${
                                 s.image
-                                    ? `
-                                        <img
-                                            src="${s.image}"
-                                            class="w-16 h-16 rounded-xl object-cover border border-zinc-800 bg-zinc-950 shrink-0"
-                                        >
-                                    `
-                                    : `
-                                        <div class="w-16 h-16 rounded-xl border border-dashed border-zinc-800 bg-zinc-950 flex items-center justify-center text-zinc-700 text-[10px] shrink-0">
-                                            SEM IMG
-                                        </div>
-                                    `
+                                ? `
+                                    <img
+                                        src="${s.image}"
+                                        class="w-16 h-16 rounded-xl object-cover border border-zinc-800 bg-zinc-950 shrink-0"
+                                    >
+                                `
+                                : `
+                                    <div class="w-16 h-16 rounded-xl border border-dashed border-zinc-800 bg-zinc-950 flex items-center justify-center text-zinc-700 text-[10px] shrink-0">
+                                        SEM IMG
+                                    </div>
+                                `
                             }
 
-                            <div class="min-w-0">
+                            <div class="min-w-0 flex-1">
 
                                 <h4 class="text-xs text-white font-black uppercase truncate">
+
                                     ${s.name || subSlug}
+
                                 </h4>
 
-                                <p class="text-[10px] text-zinc-500 font-mono mt-1 break-all">
+                                <div class="flex items-center gap-2 mt-2">
+
+                                    <span class="
+                                        text-[9px]
+                                        px-2
+                                        py-1
+                                        rounded-full
+                                        font-black
+                                        uppercase
+                                        tracking-wider
+
+                                        ${
+                                            ativo
+                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                        }
+                                    ">
+
+                                        ${
+                                            ativo
+                                            ? 'Ativa'
+                                            : 'Pausada'
+                                        }
+
+                                    </span>
+
+                                </div>
+
+                                <p class="text-[10px] text-zinc-500 font-mono mt-2 break-all">
+
                                     abella/categories/${catSlug}/subcategories/${subSlug}
+
                                 </p>
 
                             </div>
@@ -434,81 +610,140 @@
 
                         <div class="flex items-center gap-2 shrink-0">
 
+                            <!-- EDIT -->
                             <button
-                                onclick="editarSubcatUI(
-                                    '${subSlug}',
-                                    ${JSON.stringify(s.name || '')},
-                                    ${JSON.stringify(s.image || '')}
-                                )"
+                                onclick='editarSubcatUI(
+                                    ${JSON.stringify(subSlug)},
+                                    ${JSON.stringify(s.name || "")},
+                                    ${JSON.stringify(s.image || "")}
+                                )'
                                 class="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 text-[10px] font-black rounded-xl transition-all"
                             >
+
                                 Editar
+
                             </button>
 
+                            <!-- PAUSE -->
+                            <button
+                                onclick="toggleStatusSubcat(
+                                    '${subSlug}',
+                                    ${ativo}
+                                )"
+                                class="
+                                    ${
+                                        ativo
+                                        ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
+                                        : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                                    }
+                                    px-3 py-2 text-[10px] font-black rounded-xl transition-all
+                                "
+                            >
+
+                                ${
+                                    ativo
+                                    ? 'Pausar'
+                                    : 'Ativar'
+                                }
+
+                            </button>
+
+                            <!-- DELETE -->
                             <button
                                 onclick="deletarSubcatUI('${subSlug}')"
                                 class="bg-red-950/20 hover:bg-red-950/40 border border-red-900/40 text-red-400 px-3 py-2 text-[10px] font-black rounded-xl transition-all"
                             >
+
                                 Excluir
+
                             </button>
 
                         </div>
                     `;
 
                     container.appendChild(div);
+
                 });
 
             }catch(error){
 
                 console.error(
-                    'Erro ao carregar subcategorias:',
+                    'Erro subcategorias:',
                     error
                 );
 
-                contador.innerHTML = 'Erro';
+                contador.innerHTML =
+                    'Erro';
 
                 container.innerHTML = `
                     <div class="text-red-400 text-xs py-6 text-center border border-red-900/30 rounded-2xl bg-red-950/10">
-                        ❌ Falha ao processar os nós internos do Firebase.
+                        ❌ Falha ao carregar subcategorias.
                     </div>
                 `;
+
             }
+
         }
 
         // =========================================================
         // EDIT
         // =========================================================
 
-        function editarSubcatUI(slug, name, img){
+        function editarSubcatUI(
+            slug,
+            name,
+            img
+        ){
 
-            document.getElementById('subOldSlug').value =
-                slug;
+            document
+                .getElementById(
+                    'subOldSlug'
+                )
+                .value = slug;
 
-            document.getElementById('subName').value =
-                name || '';
+            document
+                .getElementById(
+                    'subName'
+                )
+                .value = name || '';
 
-            document.getElementById('subImage').value =
-                img || '';
+            document
+                .getElementById(
+                    'subImage'
+                )
+                .value = img || '';
 
-            document.getElementById('btnSalvar').innerHTML =
-                'Atualizar Subcategoria';
+            document
+                .getElementById(
+                    'btnSalvar'
+                )
+                .innerHTML =
+                    'Atualizar Subcategoria';
 
             if(img){
 
                 const preview =
-                    document.getElementById('previewImage');
+                    document.getElementById(
+                        'previewImage'
+                    );
 
                 preview.src = img;
 
                 document
-                    .getElementById('previewImageContainer')
-                    .classList.remove('hidden');
+                    .getElementById(
+                        'previewImageContainer'
+                    )
+                    .classList.remove(
+                        'hidden'
+                    );
+
             }
 
             window.scrollTo({
                 top:0,
                 behavior:'smooth'
             });
+
         }
 
         // =========================================================
@@ -520,38 +755,50 @@
             e.preventDefault();
 
             const btn =
-                document.getElementById('btnSalvar');
+                document.getElementById(
+                    'btnSalvar'
+                );
 
             try{
 
                 const catSlug =
-                    document.getElementById('selectCatMae').value;
+                    document.getElementById(
+                        'selectCatMae'
+                    ).value;
 
                 if(!catSlug){
 
                     alert(
-                        'Escolha uma categoria antes de salvar.'
+                        'Escolha uma categoria.'
                     );
 
                     return;
+
                 }
 
                 const name =
-                    document.getElementById('subName')
+                    document
+                        .getElementById(
+                            'subName'
+                        )
                         .value
                         .trim();
 
                 if(!name){
 
                     alert(
-                        'Informe o nome da subcategoria.'
+                        'Informe o nome.'
                     );
 
                     return;
+
                 }
 
                 const image =
-                    document.getElementById('subImage')
+                    document
+                        .getElementById(
+                            'subImage'
+                        )
                         .value
                         .trim();
 
@@ -559,38 +806,77 @@
                     gerarSlug(name);
 
                 const oldSlug =
-                    document.getElementById('subOldSlug')
+                    document
+                        .getElementById(
+                            'subOldSlug'
+                        )
                         .value;
 
                 btn.disabled = true;
-                btn.innerHTML = 'Salvando...';
 
-                // =====================================================
-                // REMOVE SLUG ANTIGO
-                // =====================================================
+                btn.innerHTML =
+                    'Salvando...';
 
-                if(oldSlug && oldSlug !== slug){
+                let dadosAntigos = {};
 
-                    await subcategoriaService.deletar(
-                        catSlug,
-                        oldSlug
-                    );
+                if(oldSlug){
+
+                    try{
+
+                        dadosAntigos =
+                            await subcategoriaService
+                                .obter(
+                                    catSlug,
+                                    oldSlug
+                                ) || {};
+
+                    }catch(e){
+
+                        console.error(e);
+
+                    }
+
                 }
 
-                // =====================================================
-                // SALVAR
-                // =====================================================
+                // REMOVE SLUG ANTIGO
+                if(
+                    oldSlug &&
+                    oldSlug !== slug
+                ){
 
-                await subcategoriaService.salvar(
-                    catSlug,
-                    slug,
-                    {
-                        name,
-                        image,
+                    await subcategoriaService
+                        .deletar(
+                            catSlug,
+                            oldSlug
+                        );
+
+                }
+
+                // SAVE
+                await subcategoriaService
+                    .salvar(
+                        catSlug,
                         slug,
-                        updatedAt: Date.now()
-                    }
-                );
+                        {
+
+                            ...dadosAntigos,
+
+                            name,
+                            image,
+                            slug,
+
+                            active:
+                                dadosAntigos.active !== false,
+
+                            createdAt:
+                                dadosAntigos.createdAt ||
+                                Date.now(),
+
+                            updatedAt:
+                                Date.now()
+
+                        }
+                    );
 
                 limparFormulario();
 
@@ -599,12 +885,12 @@
             }catch(error){
 
                 console.error(
-                    'Erro ao salvar subcategoria:',
+                    'Erro salvar:',
                     error
                 );
 
                 alert(
-                    'Falha ao salvar subcategoria.'
+                    'Falha ao salvar.'
                 );
 
             }finally{
@@ -613,7 +899,9 @@
 
                 btn.innerHTML =
                     'Gravar Subcategoria';
+
             }
+
         }
 
         // =========================================================
@@ -623,7 +911,11 @@
         async function deletarSubcatUI(subSlug){
 
             const catSlug =
-                document.getElementById('selectCatMae').value;
+                document
+                    .getElementById(
+                        'selectCatMae'
+                    )
+                    .value;
 
             if(!catSlug){
 
@@ -632,6 +924,7 @@
                 );
 
                 return;
+
             }
 
             const confirmar =
@@ -639,33 +932,103 @@
                     'Deseja deletar permanentemente esta subcategoria?'
                 );
 
-            if(!confirmar)
+            if(!confirmar){
                 return;
+            }
 
             try{
 
-                await subcategoriaService.deletar(
-                    catSlug,
-                    subSlug
-                );
+                await subcategoriaService
+                    .deletar(
+                        catSlug,
+                        subSlug
+                    );
 
                 await mudarCategoriaMaeFiltro();
 
             }catch(error){
 
                 console.error(
-                    'Erro ao deletar:',
+                    'Erro deletar:',
                     error
                 );
 
                 alert(
-                    'Falha ao deletar subcategoria.'
+                    'Falha ao deletar.'
                 );
+
             }
+
+        }
+
+        // =========================================================
+        // TOGGLE STATUS
+        // =========================================================
+
+        async function toggleStatusSubcat(
+            subSlug,
+            statusAtual
+        ){
+
+            try{
+
+                const catSlug =
+                    document
+                        .getElementById(
+                            'selectCatMae'
+                        )
+                        .value;
+
+                if(!catSlug){
+                    return;
+                }
+
+                const dados =
+                    await subcategoriaService
+                        .obter(
+                            catSlug,
+                            subSlug
+                        );
+
+                if(!dados){
+                    return;
+                }
+
+                await subcategoriaService
+                    .salvar(
+                        catSlug,
+                        subSlug,
+                        {
+
+                            ...dados,
+
+                            active:
+                                !statusAtual,
+
+                            updatedAt:
+                                Date.now()
+
+                        }
+                    );
+
+                await mudarCategoriaMaeFiltro();
+
+            }catch(error){
+
+                console.error(
+                    'Erro status:',
+                    error
+                );
+
+                alert(
+                    'Falha ao alterar status.'
+                );
+
+            }
+
         }
 
     </script>
 
 </body>
 </html>
-```

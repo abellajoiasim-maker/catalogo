@@ -1123,14 +1123,24 @@ async function carregarProdutos(){
 
 }
 
+```js
 function abrirModalProduto(id){
 
     produtoAtual =
         produtos.find(
-            p => p.id == id
+            p =>
+                String(p.id) === String(id)
         );
 
-    if(!produtoAtual) return;
+    if(!produtoAtual){
+
+        console.error(
+            'Produto não encontrado:',
+            id
+        );
+
+        return;
+    }
 
     const preco =
         parseFloat(
@@ -1164,10 +1174,18 @@ function abrirModalProduto(id){
     ).innerText =
         produtoAtual.nome || '';
 
-    document.getElementById(
-        'modalImagem'
-    ).src =
-        imagem;
+    const modalImagem =
+        document.getElementById(
+            'modalImagem'
+        );
+
+    modalImagem.onerror = () => {
+
+        modalImagem.src =
+            'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
+    };
+
+    modalImagem.src = imagem;
 
     document.getElementById(
         'modalPreco'
@@ -1196,18 +1214,26 @@ function abrirModalProduto(id){
         produtoAtual.description ||
         'Produto premium Abella Joias.';
 
+    document.getElementById(
+        'variacoesContainer'
+    ).innerHTML = '';
+
     renderizarCamposVariacao();
 
-    document.getElementById(
-        'modalProduto'
-    ).classList.remove(
+    const modal =
+        document.getElementById(
+            'modalProduto'
+        );
+
+    modal.classList.remove(
         'hidden'
     );
 
     document.body.style.overflow =
         'hidden';
-
 }
+```
+
 
         function renderizarCamposVariacao(){
 

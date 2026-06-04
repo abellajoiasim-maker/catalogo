@@ -48,7 +48,7 @@
 
 <div
     id="abellaLogoContainer"
-    class="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center border border-[#caa85c]/20 shadow-lg shadow-[#caa85c]/10">
+    class="w-11 h-11 md:w-12 md:h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center border border-[#caa85c]/20 shadow-lg shadow-[#caa85c]/10">
 
     <!-- FALLBACK -->
 
@@ -380,6 +380,113 @@
                 });
             });
         }
-    </script>
+    <script>
+
+    // ==========================================================
+    // LOGO DINÂMICA ABELLA
+    // ==========================================================
+
+    async function carregarLogoAbella(){
+
+        try{
+
+            const snap =
+                await firebase
+                    .database()
+                    .ref('abella/settings/logo')
+                    .once('value');
+
+            if(!snap.exists()){
+
+                console.log(
+                    'Logo não configurada.'
+                );
+
+                return;
+
+            }
+
+            let logo =
+                snap.val();
+
+            if(!logo){
+
+                return;
+
+            }
+
+            logo =
+                resolverImagemFirebase
+                ? resolverImagemFirebase(logo)
+                : logo;
+
+            const img =
+                document.getElementById(
+                    'abellaLogoImg'
+                );
+
+            const fallback =
+                document.getElementById(
+                    'abellaLogoFallback'
+                );
+
+            if(!img){
+
+                return;
+
+            }
+
+            img.src =
+                logo;
+
+            img.onload = () => {
+
+                img.classList.remove(
+                    'hidden'
+                );
+
+                fallback?.classList.add(
+                    'hidden'
+                );
+
+            };
+
+            img.onerror = () => {
+
+                img.classList.add(
+                    'hidden'
+                );
+
+                fallback?.classList.remove(
+                    'hidden'
+                );
+
+            };
+
+        }catch(error){
+
+            console.error(
+                'Erro carregar logo:',
+                error
+            );
+
+        }
+
+    }
+
+    // ==========================================================
+    // INIT
+    // ==========================================================
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        () => {
+
+            carregarLogoAbella();
+
+        }
+    );
+
+</script>
 </body>
 </html>

@@ -453,28 +453,211 @@
     <script>
         const db = firebase.database();
 
-        // Mapeamento dinâmico da logo e dados globais da marca salvos do settings
+        /* ─── Logo da marca ─────────────────────────────────────────── */
         async function carregarLogoAbella() {
             try {
                 const snap = await db.ref('abella/settings/logoUrl').once('value');
-                const img = document.getElementById('abellaLogoImg');
+                const img      = document.getElementById('abellaLogoImg');
                 const fallback = document.getElementById('abellaLogoFallback');
-                
                 if (snap.exists() && snap.val()) {
                     let logo = snap.val();
-                    img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logo) : logo;
+                    img.src = typeof resolverImagemFirebase !== 'undefined'
+                        ? resolverImagemFirebase(logo) : logo;
                     img.onload = () => {
                         img.classList.remove('hidden');
                         fallback?.classList.add('hidden');
                     };
                 }
-            } catch (error) {
-                console.error('Erro ao processar identidade visual:', error);
+            } catch (e) {
+                console.error('Erro ao carregar logo:', e);
             }
         }
 
+        /* ─── Settings globais (banner, parcelamento, PIX, WhatsApp) ── */
+        async function carregarSettings() {
+            try {
+                const snap = await db.ref('abella/settings').once('value');
+                if (!snap.exists()) return;
+                const s = snap.val();
+
+                // Banner
+                if (s.bannerAtivo && s.bannerTexto) {
+                    const bannerEl = document.getElementById('banner');
+                    const bannerTxt = document.getElementById('bannerTexto');
+                    if (bannerEl && bannerTxt) {
+                        bannerTxt.textContent = s.bannerTexto;
+                        bannerEl.classList.remove('hidden');
+                    }
+                }
+
+                // Parcelamento
+                if (s.parcelamento) {
+                    const el = document.getElementById('parcelamento');
+                    if (el) el.textContent = s.parcelamento;
+                    const fp = document.getElementById('float-parcelas');
+                    if (fp) fp.textContent = `Até ${s.parcelamento}`;
+                }
+
+                // PIX
+                if (s.descontoPix) {
+                    const el = document.getElementById('pix');
+                    if (el) el.textContent = `${s.descontoPix}% OFF`;
+                    const fp = document.getElementById('float-pix');
+                    if (fp) fp.textContent = `PIX ${s.descontoPix}% OFF`;
+                }
+
+                // WhatsApp
+                if (s.whatsapp) {
+                    const numero = s.whatsapp.replace(/\D/g, '');
+                    const link   = `https://wa.me/55${numero}`;
+                    const wa     = document.getElementById('whats');
+                    const fwa    = document.getElementById('footerWhats');
+                    if (wa)  wa.href  = link;
+                    if (fwa) fwa.href = link;
+                }
+            } catch (e) {
+                console.error('Erro ao carregar settings:', e);
+            }
+        }
+
+        /* ─── Renderização de um card de categoria ───────────────────── */
+        function criarCardCategoria(id, cat) {
+            const href  = `categoria.html?id=${encodeURIComponent(id)}`;
+            const nome  = cat.nome  || 'Categoria';
+            const desc  = cat.descricao || '';
+            const total = cat.totalProdutos != null ? cat.totalProdutos : (cat.produtos ? Object.keys(cat.produtos).length : 0);
+
+            // Imagem: usa resolverImagemFirebase se disponível
+            let imgSrc = cat.imagemUrl || cat.imagem || '';
+            if (imgSrc && typeof resolverImagemFirebase !== 'undefined') {
+                imgSrc = resolverImagemFirebase(imgSrc);
+            }
+
+            const imgHtml = imgSrc
+                ? `<img src="${imgSrc}" alt="${nome}" class="w-full h-full object-cover" loading="lazy">`
+                : `<div class="w-full h-full flex items-center justify-center text-5xl">💍</div>`;
+
+            const card = document.createElement('a');
+            card.href      = href;
+            card.className = 'cat-card';
+            card.setAttribute('role', 'listitem');
+            card.setAttribute('aria-label', `Categoria ${nome}`);
+
+            card.innerHTML = `
+                <div class="aspect-[3/4] relative overflow-hidden bg-black">
+                    ${imgHtml}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 right-0 p-4">
+                        <h3 class="serif text-base font-bold leading-snug">${nome}</h3>
+                        ${desc ? `<p class="text-zinc-400 text-xs mt-1 line-clamp-2">${desc}</p>` : ''}
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-[11px] uppercase tracking-[.2em] gold font-black">${total} ${total === 1 ? 'produto' : 'produtos'}</span>
+                            <div class="arrow-btn">→</div>
+                        </div>
+                    </div>
+                </div>`;
+
+            return card;
+        }
+
+        /* ─── Carregar e renderizar categorias ───────────────────────── */
+        let todasCategorias = []; // cache para filtro de busca
+
+        async function carregarCategorias() {
+            const loading = document.getElementById('loading');
+            const grid    = document.getElementById('grid-categorias');
+            const noResult = document.getElementById('no-result');
+
+            try {
+                const snap = await db.ref('abella/categorias').once('value');
+
+                // Oculta skeletons
+                if (loading) {
+                    loading.classList.add('hidden');
+                    loading.setAttribute('aria-busy', 'false');
+                }
+
+                if (!snap.exists()) {
+                    noResult.classList.remove('hidden');
+                    return;
+                }
+
+                const data = snap.val();
+                todasCategorias = Object.entries(data)
+                    .filter(([, cat]) => cat && cat.ativo !== false)
+                    .sort(([, a], [, b]) => (a.ordem ?? 999) - (b.ordem ?? 999));
+
+                renderizarCategorias(todasCategorias);
+
+            } catch (e) {
+                console.error('Erro ao carregar categorias:', e);
+                if (loading) loading.classList.add('hidden');
+                if (grid) grid.innerHTML = `
+                    <div class="empty-state">
+                        <p class="text-3xl mb-4">⚠️</p>
+                        <h3 class="text-xl font-black text-zinc-400">Erro ao carregar categorias.</h3>
+                        <p class="text-zinc-600 mt-2 text-sm">Verifique sua conexão e recarregue a página.</p>
+                    </div>`;
+            }
+        }
+
+        function renderizarCategorias(lista) {
+            const grid     = document.getElementById('grid-categorias');
+            const noResult = document.getElementById('no-result');
+            if (!grid) return;
+
+            grid.innerHTML = '';
+
+            if (!lista.length) {
+                noResult.classList.remove('hidden');
+                return;
+            }
+
+            noResult.classList.add('hidden');
+            lista.forEach(([id, cat]) => {
+                grid.appendChild(criarCardCategoria(id, cat));
+            });
+        }
+
+        /* ─── Filtro de busca ────────────────────────────────────────── */
+        function iniciarBusca() {
+            const input = document.getElementById('busca');
+            if (!input) return;
+            input.addEventListener('input', () => {
+                const termo = input.value.trim().toLowerCase();
+                if (!termo) {
+                    renderizarCategorias(todasCategorias);
+                    return;
+                }
+                const filtrado = todasCategorias.filter(([, cat]) =>
+                    (cat.nome        || '').toLowerCase().includes(termo) ||
+                    (cat.descricao   || '').toLowerCase().includes(termo)
+                );
+                renderizarCategorias(filtrado);
+            });
+        }
+
+        /* ─── Carrinho (contador no header) ─────────────────────────── */
+        function atualizarContadorCarrinho() {
+            try {
+                const carrinho = typeof getCarrinho === 'function' ? getCarrinho() : [];
+                const count = carrinho.reduce((acc, i) => acc + (i.quantidade || 1), 0);
+                const total = carrinho.reduce((acc, i) => acc + ((i.preco || 0) * (i.quantidade || 1)), 0);
+                const el  = document.getElementById('cart-count');
+                const tel = document.getElementById('cart-total');
+                if (el)  el.textContent  = count;
+                if (tel) tel.textContent = typeof formatarMoeda === 'function'
+                    ? formatarMoeda(total) : `R$ ${total.toFixed(2).replace('.', ',')}`;
+            } catch (e) { /* silencioso */ }
+        }
+
+        /* ─── Init ───────────────────────────────────────────────────── */
         document.addEventListener('DOMContentLoaded', () => {
             carregarLogoAbella();
+            carregarSettings();
+            carregarCategorias();
+            iniciarBusca();
+            atualizarContadorCarrinho();
         });
     </script>
 </body>

@@ -1,515 +1,837 @@
 // ======================================================================
 // js/firebase/services/categoriaService.js
-// Abella Joias - CategoriaService v3.0
+// Abella Joias - CategoriaService Premium v4.0
 // ======================================================================
 
-const CategoriaService = {
+(function () {
 
-    _cache: {},
-    _cacheTimestamp: 0,
-    _cacheTTL: 60000,
+    'use strict';
 
-    // ==========================================================
-    // Firebase
-    // ==========================================================
+    const CATEGORIES_PATH =
+        getAbellaPath('categories');
 
-    _db() {
+    const CategoriaService = {
 
-        if (!window.db) {
-            throw new Error(
-                "Firebase Database não inicializado."
-            );
-        }
+        // ==========================================================
+        // CACHE
+        // ==========================================================
 
-        return window.db;
-    },
+        _cache: {},
 
-    // ==========================================================
-    // Cache
-    // ==========================================================
+        _cacheTimestamp: 0,
 
-    _isCacheValid() {
+        _cacheTTL: 60000,
 
-        return (
-            Object.keys(this._cache).length > 0 &&
-            (Date.now() - this._cacheTimestamp) <
-            this._cacheTTL
-        );
-    },
+        // ==========================================================
+        // DATABASE
+        // ==========================================================
 
-    invalidateCache() {
+        _db() {
 
-        this._cache = {};
-        this._cacheTimestamp = 0;
-    },
+            if (!window.db) {
 
-    // ==========================================================
-    // Utilidades
-    // ==========================================================
-
-    gerarSlug(texto = '') {
-
-        return texto
-            .toString()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '');
-    },
-
-    // ==========================================================
-    // Normalização
-    // ==========================================================
-
- normalizarCategoria(slug, raw = {}) {
-
-    return {
-
-        // Compatibilidade nova + legado
-        id: slug,
-        slug: slug,
-
-        name:
-            raw.name ||
-            raw.nome ||
-            '',
-
-        image:
-            raw.image ||
-            raw.imagem ||
-            '',
-
-        order: Number(
-            raw.order ?? 0
-        ),
-
-        active:
-            raw.active !== false,
-
-        createdAt:
-            raw.createdAt ||
-            null,
-
-        updatedAt:
-            raw.updatedAt ||
-            null,
-
-        subcategories:
-            raw.subcategories ||
-            {}
-    };
-},
-    // ==========================================================
-    // Buscar Todas
-    // ==========================================================
-
-    async getAll(forceRefresh = false) {
-
-        try {
-
-            if (
-                !forceRefresh &&
-                this._isCacheValid()
-            ) {
-                return this._cache;
+                throw new Error(
+                    'Firebase Database não inicializado.'
+                );
             }
 
-            const snapshot =
-                await this
-                    ._db()
-                    .ref('abella/categories')
-                    .once('value');
+            return window.db;
+        },
 
-            const data =
-                snapshot.val() || {};
+        // ==========================================================
+        // REF
+        // ==========================================================
+
+        _ref() {
+
+            return this
+                ._db()
+                .ref(CATEGORIES_PATH);
+        },
+
+        // ==========================================================
+        // CACHE
+        // ==========================================================
+
+        _isCacheValid() {
+
+            return (
+
+                Object.keys(
+                    this._cache
+                ).length > 0
+
+                &&
+
+                (
+                    Date.now() -
+                    this._cacheTimestamp
+                ) < this._cacheTTL
+
+            );
+        },
+
+        invalidateCache() {
 
             this._cache = {};
 
-            Object.entries(data)
-                .forEach(([slug, raw]) => {
+            this._cacheTimestamp = 0;
+        },
 
-                    this._cache[slug] =
-                        this.normalizarCategoria(
-                            slug,
-                            raw
-                        );
-                });
+        // ==========================================================
+        // HELPERS
+        // ==========================================================
 
-            this._cacheTimestamp =
-                Date.now();
+        _safeString(valor = '') {
 
-            return this._cache;
+            return String(valor || '')
+                .trim();
+        },
 
-        } catch (error) {
+        _safeNumber(valor = 0) {
 
-            console.error(
-                '[CategoriaService:getAll]',
-                error
-            );
+            const numero =
+                Number(valor);
 
-            return {};
-        }
-    },
+            return Number.isFinite(numero)
+                ? numero
+                : 0;
+        },
 
-    // ==========================================================
-    // Lista Ordenada
-    // ==========================================================
+        _safeObject(valor) {
 
-    async getList(forceRefresh = false) {
+            return (
+                valor &&
+                typeof valor === 'object' &&
+                !Array.isArray(valor)
+            )
+                ? valor
+                : {};
+        },
 
-        const categorias =
-            await this.getAll(forceRefresh);
+        // ==========================================================
+        // SLUG
+        // ==========================================================
 
-        return Object.values(categorias)
-            .sort(
-                (a, b) =>
-                    (a.order || 0) -
-                    (b.order || 0)
-            );
-    },
+        gerarSlug(texto = '') {
 
-    // ==========================================================
-    // Buscar Categoria
-    // ==========================================================
+            return this
+                ._safeString(texto)
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        },
 
-    async getBySlug(slug) {
+        validarSlug(slug = '') {
 
-        if (!slug) return null;
+            return /^[a-z0-9-]+$/.test(slug);
+        },
 
-        try {
+        // ==========================================================
+        // IMAGEM
+        // ==========================================================
+
+        resolverImagem(url = '') {
+
+            const imagem =
+                this._safeString(url);
+
+            if (!imagem) {
+
+                return '';
+            }
 
             if (
-                this._cache[slug]
+                imagem.startsWith('http://') ||
+                imagem.startsWith('https://')
             ) {
-                return this._cache[slug];
+
+                return imagem;
             }
 
-            const snapshot =
-                await this
-                    ._db()
-                    .ref(
-                        `abella/categories/${slug}`
-                    )
-                    .once('value');
+            if (imagem.startsWith('gs://')) {
 
-            const data =
-                snapshot.val();
+                try {
 
-            if (!data) {
-                return null;
+                    const semGs =
+                        imagem.replace(
+                            'gs://',
+                            ''
+                        );
+
+                    const partes =
+                        semGs.split('/');
+
+                    const bucket =
+                        partes.shift();
+
+                    const arquivo =
+                        partes.join('/');
+
+                    if (
+                        !bucket ||
+                        !arquivo
+                    ) {
+
+                        return '';
+                    }
+
+                    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
+
+                } catch (error) {
+
+                    console.error(
+                        '[CategoriaService:resolverImagem]',
+                        error
+                    );
+
+                    return '';
+                }
             }
 
-            const categoria =
-                this.normalizarCategoria(
-                    slug,
-                    data
+            return imagem;
+        },
+
+        // ==========================================================
+        // NORMALIZAÇÃO
+        // ==========================================================
+
+        normalizarCategoria(
+            slug,
+            raw = {}
+        ) {
+
+            const categoriaSlug =
+                this.gerarSlug(slug);
+
+            const nome =
+                this._safeString(
+
+                    raw.name ||
+
+                    raw.nome
+
                 );
 
-            this._cache[slug] =
-                categoria;
+            const imageOriginal =
+                this._safeString(
 
-            return categoria;
+                    raw.image ||
 
-        } catch (error) {
+                    raw.imagem
 
-            console.error(
-                '[CategoriaService:getBySlug]',
-                error
-            );
-
-            return null;
-        }
-    },
-
-    // ==========================================================
-    // Verificar Existência
-    // ==========================================================
-
-    async exists(slug) {
-
-        const categoria =
-            await this.getBySlug(slug);
-
-        return categoria !== null;
-    },
-
-    // ==========================================================
-    // Salvar
-    // ==========================================================
-
-    async save(
-        slug,
-        categoryData = {}
-    ) {
-
-        try {
-
-            if (!slug) {
-
-                throw new Error(
-                    'Slug da categoria é obrigatório.'
                 );
-            }
 
-            const name =
-                (
-                    categoryData.name ||
-                    categoryData.nome ||
-                    ''
-                ).trim();
+            const categoria = {
 
-            if (!name) {
+                // ==================================================
+                // IDENTIFICAÇÃO
+                // ==================================================
 
-                throw new Error(
-                    'Nome da categoria é obrigatório.'
-                );
-            }
+                id:
+                    categoriaSlug,
 
-            const existente =
-                await this.getBySlug(slug);
+                slug:
+                    categoriaSlug,
 
-            const node = {
+                // ==================================================
+                // DADOS
+                // ==================================================
 
-                name,
+                name:
+                    nome,
+
+                nome:
+                    nome,
 
                 image:
-                    categoryData.image ||
-                    categoryData.imagem ||
-                    '',
+                    this.resolverImagem(
+                        imageOriginal
+                    ),
 
-                order: Number(
-                    categoryData.order ?? 0
-                ),
+                imagem:
+                    this.resolverImagem(
+                        imageOriginal
+                    ),
+
+                imageOriginal:
+                    imageOriginal,
+
+                // ==================================================
+                // CONFIGURAÇÃO
+                // ==================================================
+
+                order:
+                    this._safeNumber(
+                        raw.order
+                    ),
 
                 active:
-                    categoryData.active !== false,
+                    raw.active !== false,
+
+                // ==================================================
+                // SUBCATEGORIAS
+                // ==================================================
 
                 subcategories:
-                    categoryData.subcategories ||
-                    existente?.subcategories ||
-                    {},
+                    this._safeObject(
+                        raw.subcategories
+                    ),
+
+                // ==================================================
+                // DATAS
+                // ==================================================
 
                 createdAt:
-                    existente?.createdAt ||
+
+                    raw.createdAt ||
+
                     Date.now(),
 
                 updatedAt:
+
+                    raw.updatedAt ||
+
+                    raw.createdAt ||
+
                     Date.now()
+
             };
 
-            await this
-                ._db()
-                .ref(
-                    `abella/categories/${slug}`
-                )
-                .update(node);
-
-            this._cache[slug] = {
-
-                slug,
-                ...node
-            };
-
-            return true;
-
-        } catch (error) {
-
-            console.error(
-                '[CategoriaService:save]',
-                error
+            return Object.freeze(
+                categoria
             );
+        },
 
-            throw error;
-        }
-    },
+        // ==========================================================
+        // GET ALL
+        // ==========================================================
 
-    // ==========================================================
-    // Ativar / Desativar
-    // ==========================================================
+        async getAll(
+            forceRefresh = false
+        ) {
 
-    async toggleStatus(slug) {
+            try {
 
-        try {
+                if (
+                    !forceRefresh &&
+                    this._isCacheValid()
+                ) {
 
-            const categoria =
-                await this.getBySlug(slug);
+                    return structuredClone(
+                        this._cache
+                    );
+                }
 
-            if (!categoria) {
+                const snapshot =
+                    await this
+                        ._ref()
+                        .once('value');
 
-                throw new Error(
-                    'Categoria não encontrada.'
-                );
-            }
+                const data =
+                    snapshot.val() || {};
 
-            const novoStatus =
-                !categoria.active;
+                const novoCache = {};
 
-            await this
-                ._db()
-                .ref(
-                    `abella/categories/${slug}`
-                )
-                .update({
-                    active: novoStatus,
-                    updatedAt: Date.now()
-                });
+                Object.entries(data)
+                    .forEach(
+                        ([slug, raw]) => {
 
-            if (
-                this._cache[slug]
-            ) {
-
-                this._cache[slug].active =
-                    novoStatus;
-
-                this._cache[slug].updatedAt =
-                    Date.now();
-            }
-
-            return true;
-
-        } catch (error) {
-
-            console.error(
-                '[CategoriaService:toggleStatus]',
-                error
-            );
-
-            return false;
-        }
-    },
-
-    // ==========================================================
-    // Excluir
-    // ==========================================================
-
-    async delete(slug) {
-
-        try {
-
-            if (!slug) return false;
-
-            await this
-                ._db()
-                .ref(
-                    `abella/categories/${slug}`
-                )
-                .remove();
-
-            delete this._cache[slug];
-
-            return true;
-
-        } catch (error) {
-
-            console.error(
-                '[CategoriaService:delete]',
-                error
-            );
-
-            return false;
-        }
-    },
-
-    // ==========================================================
-    // Listener Realtime
-    // ==========================================================
-
-    subscribe(callback) {
-
-        try {
-
-            const ref =
-                this
-                    ._db()
-                    .ref(
-                        'abella/categories'
+                            novoCache[slug] =
+                                this.normalizarCategoria(
+                                    slug,
+                                    raw
+                                );
+                        }
                     );
 
-            ref.on(
-                'value',
-                snapshot => {
+                this._cache =
+                    novoCache;
 
-                    const data =
-                        snapshot.val() || {};
+                this._cacheTimestamp =
+                    Date.now();
 
-                    this._cache = {};
+                return structuredClone(
+                    novoCache
+                );
 
-                    Object.entries(data)
-                        .forEach(
-                            ([slug, raw]) => {
+            } catch (error) {
 
-                                this._cache[slug] =
-                                    this.normalizarCategoria(
-                                        slug,
-                                        raw
-                                    );
-                            }
-                        );
+                console.error(
+                    '[CategoriaService:getAll]',
+                    error
+                );
 
-                    this._cacheTimestamp =
-                        Date.now();
-
-                    if (
-                        typeof callback ===
-                        'function'
-                    ) {
-
-                        callback(
-                            this._cache
-                        );
-                    }
-                }
-            );
-
-            return ref;
-
-        } catch (error) {
-
-            console.error(
-                '[CategoriaService:subscribe]',
-                error
-            );
-        }
-    },
-
-    // ==========================================================
-    // Remover Listener
-    // ==========================================================
-
-    unsubscribe(ref) {
-
-        try {
-
-            if (ref) {
-                ref.off();
+                return {};
             }
+        },
 
-        } catch (error) {
+        // ==========================================================
+        // LISTA ORDENADA
+        // ==========================================================
 
-            console.error(
-                '[CategoriaService:unsubscribe]',
-                error
+        async getList(
+            forceRefresh = false
+        ) {
+
+            const categorias =
+                await this.getAll(
+                    forceRefresh
+                );
+
+            return Object.values(
+                categorias
+            ).sort(
+                (a, b) =>
+
+                    (a.order || 0)
+
+                    -
+
+                    (b.order || 0)
             );
+        },
+
+        // ==========================================================
+        // GET BY SLUG
+        // ==========================================================
+
+        async getBySlug(slug) {
+
+            try {
+
+                const categoriaSlug =
+                    this.gerarSlug(slug);
+
+                if (
+                    !categoriaSlug
+                ) {
+
+                    return null;
+                }
+
+                if (
+                    this._cache[categoriaSlug]
+                ) {
+
+                    return structuredClone(
+                        this._cache[
+                            categoriaSlug
+                        ]
+                    );
+                }
+
+                const snapshot =
+                    await this
+                        ._ref()
+                        .child(categoriaSlug)
+                        .once('value');
+
+                const data =
+                    snapshot.val();
+
+                if (!data) {
+
+                    return null;
+                }
+
+                const categoria =
+                    this.normalizarCategoria(
+                        categoriaSlug,
+                        data
+                    );
+
+                this._cache[
+                    categoriaSlug
+                ] = categoria;
+
+                return structuredClone(
+                    categoria
+                );
+
+            } catch (error) {
+
+                console.error(
+                    '[CategoriaService:getBySlug]',
+                    error
+                );
+
+                return null;
+            }
+        },
+
+        // ==========================================================
+        // EXISTS
+        // ==========================================================
+
+        async exists(slug) {
+
+            const categoria =
+                await this.getBySlug(
+                    slug
+                );
+
+            return categoria !== null;
+        },
+
+        // ==========================================================
+        // SAVE
+        // ==========================================================
+
+        async save(
+            slug,
+            categoryData = {}
+        ) {
+
+            try {
+
+                const categoriaSlug =
+                    this.gerarSlug(slug);
+
+                if (
+                    !categoriaSlug
+                ) {
+
+                    throw new Error(
+                        'Slug inválido.'
+                    );
+                }
+
+                if (
+                    !this.validarSlug(
+                        categoriaSlug
+                    )
+                ) {
+
+                    throw new Error(
+                        'Slug fora do padrão permitido.'
+                    );
+                }
+
+                const nome =
+                    this._safeString(
+
+                        categoryData.name ||
+
+                        categoryData.nome
+
+                    );
+
+                if (!nome) {
+
+                    throw new Error(
+                        'Nome da categoria é obrigatório.'
+                    );
+                }
+
+                const existente =
+                    await this.getBySlug(
+                        categoriaSlug
+                    );
+
+                const payload = {
+
+                    name:
+                        nome,
+
+                    image:
+                        this._safeString(
+
+                            categoryData.image ||
+
+                            categoryData.imagem
+
+                        ),
+
+                    order:
+                        this._safeNumber(
+                            categoryData.order
+                        ),
+
+                    active:
+                        categoryData.active !== false,
+
+                    subcategories:
+                        this._safeObject(
+
+                            categoryData.subcategories ||
+
+                            existente?.subcategories
+
+                        ),
+
+                    createdAt:
+
+                        existente?.createdAt ||
+
+                        Date.now(),
+
+                    updatedAt:
+                        Date.now()
+
+                };
+
+                await this
+                    ._ref()
+                    .child(categoriaSlug)
+                    .set(payload);
+
+                this._cache[
+                    categoriaSlug
+                ] = this.normalizarCategoria(
+                    categoriaSlug,
+                    payload
+                );
+
+                return true;
+
+            } catch (error) {
+
+                console.error(
+                    '[CategoriaService:save]',
+                    error
+                );
+
+                throw error;
+            }
+        },
+
+        // ==========================================================
+        // TOGGLE STATUS
+        // ==========================================================
+
+        async toggleStatus(slug) {
+
+            try {
+
+                const categoria =
+                    await this.getBySlug(
+                        slug
+                    );
+
+                if (!categoria) {
+
+                    throw new Error(
+                        'Categoria não encontrada.'
+                    );
+                }
+
+                const novoStatus =
+                    !categoria.active;
+
+                await this
+                    ._ref()
+                    .child(categoria.slug)
+                    .update({
+
+                        active:
+                            novoStatus,
+
+                        updatedAt:
+                            Date.now()
+
+                    });
+
+                if (
+                    this._cache[
+                        categoria.slug
+                    ]
+                ) {
+
+                    this._cache[
+                        categoria.slug
+                    ] = Object.freeze({
+
+                        ...this._cache[
+                            categoria.slug
+                        ],
+
+                        active:
+                            novoStatus,
+
+                        updatedAt:
+                            Date.now()
+
+                    });
+                }
+
+                return true;
+
+            } catch (error) {
+
+                console.error(
+                    '[CategoriaService:toggleStatus]',
+                    error
+                );
+
+                return false;
+            }
+        },
+
+        // ==========================================================
+        // DELETE
+        // ==========================================================
+
+        async delete(slug) {
+
+            try {
+
+                const categoriaSlug =
+                    this.gerarSlug(slug);
+
+                if (
+                    !categoriaSlug
+                ) {
+
+                    return false;
+                }
+
+                await this
+                    ._ref()
+                    .child(categoriaSlug)
+                    .remove();
+
+                delete this._cache[
+                    categoriaSlug
+                ];
+
+                return true;
+
+            } catch (error) {
+
+                console.error(
+                    '[CategoriaService:delete]',
+                    error
+                );
+
+                return false;
+            }
+        },
+
+        // ==========================================================
+        // SUBSCRIBE
+        // ==========================================================
+
+        subscribe(callback) {
+
+            try {
+
+                const ref =
+                    this._ref();
+
+                ref.on(
+                    'value',
+                    snapshot => {
+
+                        const data =
+                            snapshot.val() || {};
+
+                        const novoCache = {};
+
+                        Object.entries(data)
+                            .forEach(
+                                ([slug, raw]) => {
+
+                                    novoCache[slug] =
+                                        this.normalizarCategoria(
+                                            slug,
+                                            raw
+                                        );
+                                }
+                            );
+
+                        this._cache =
+                            novoCache;
+
+                        this._cacheTimestamp =
+                            Date.now();
+
+                        if (
+                            typeof callback ===
+                            'function'
+                        ) {
+
+                            callback(
+                                structuredClone(
+                                    novoCache
+                                )
+                            );
+                        }
+                    }
+                );
+
+                return ref;
+
+            } catch (error) {
+
+                console.error(
+                    '[CategoriaService:subscribe]',
+                    error
+                );
+            }
+        },
+
+        // ==========================================================
+        // UNSUBSCRIBE
+        // ==========================================================
+
+        unsubscribe(ref) {
+
+            try {
+
+                if (
+                    ref &&
+                    typeof ref.off ===
+                    'function'
+                ) {
+
+                    ref.off();
+                }
+
+            } catch (error) {
+
+                console.error(
+                    '[CategoriaService:unsubscribe]',
+                    error
+                );
+            }
         }
-    }
-};
 
-window.categoriaService =
-    CategoriaService;
+    };
 
-CategoriaService.listarTodas =
-    CategoriaService.getList;
+    // ==============================================================
+    // EXPORT GLOBAL
+    // ==============================================================
 
-CategoriaService.buscarPorSlug =
-    CategoriaService.getBySlug;
+    window.categoriaService =
+        Object.freeze(
+            CategoriaService
+        );
 
-// Compatibilidade legado
-CategoriaService.obterPorId =
-    CategoriaService.getBySlug;
+    // ==============================================================
+    // COMPATIBILIDADE LEGADO
+    // ==============================================================
 
-CategoriaService.salvarCategoria =
-    CategoriaService.save;
+    window.categoriaService
+        .listarTodas =
+            CategoriaService.getList;
 
-CategoriaService.excluirCategoria =
-    CategoriaService.delete;
+    window.categoriaService
+        .buscarPorSlug =
+            CategoriaService.getBySlug;
+
+    window.categoriaService
+        .obterPorId =
+            CategoriaService.getBySlug;
+
+    window.categoriaService
+        .salvarCategoria =
+            CategoriaService.save;
+
+    window.categoriaService
+        .excluirCategoria =
+            CategoriaService.delete;
+
+})();

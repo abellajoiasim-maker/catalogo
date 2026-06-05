@@ -1,100 +1,227 @@
 // ======================================================================
 // js/firebase/firebase-config.js
-// Catálogo Multi-Lojas - Firebase Config v3.0 (Dinâmico)
+// Firebase Config Global • Abella Joias
+// Compatível com GitHub Pages + Firebase Compat SDK
+// Estrutura Oficial: abella/*
 // ======================================================================
 
 (function () {
 
+    'use strict';
+
     // ==========================================================
-    // Verificação Firebase SDK
+    // VERIFICAÇÃO FIREBASE SDK
     // ==========================================================
-    if (typeof firebase === 'undefined') {
-        console.error('[Firebase] SDK não carregado nas dependências HTML.');
+    if (typeof window.firebase === 'undefined') {
+
+        console.error(
+            '[Firebase] SDK principal não carregado.'
+        );
+
         return;
     }
 
     // ==========================================================
-    // Configuração Firebase (Projeto Unificado)
+    // EVITA REINICIALIZAÇÃO DUPLICADA
     // ==========================================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-        authDomain: "catalogo-abella-joias.firebaseapp.com",
-        databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com",
-        projectId: "catalogo-abella-joias",
-        storageBucket: "catalogo-abella-joias.firebasestorage.app",
-        messagingSenderId: "727568435294",
-        appId: "1:727568435294:web:442c0179ecf0686dff4ccf"
-    };
+    if (window.__ABELLA_FIREBASE_INITIALIZED__) {
+
+        console.warn(
+            '[Firebase] Instância global já inicializada.'
+        );
+
+        return;
+    }
 
     // ==========================================================
-    // Inicialização do Aplicativo
+    // CONFIGURAÇÃO OFICIAL FIREBASE
     // ==========================================================
+    const firebaseConfig = Object.freeze({
+
+        apiKey:
+            'AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY',
+
+        authDomain:
+            'catalogo-abella-joias.firebaseapp.com',
+
+        databaseURL:
+            'https://catalogo-abella-joias-default-rtdb.firebaseio.com',
+
+        projectId:
+            'catalogo-abella-joias',
+
+        storageBucket:
+            'catalogo-abella-joias.firebasestorage.app',
+
+        messagingSenderId:
+            '727568435294',
+
+        appId:
+            '1:727568435294:web:442c0179ecf0686dff4ccf'
+
+    });
+
+    // ==========================================================
+    // INICIALIZAÇÃO SEGURA
+    // ==========================================================
+    let app = null;
+
     try {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-            console.log('[Firebase] Aplicação inicializada com sucesso.');
-        }
+
+        app = firebase.apps.length
+            ? firebase.app()
+            : firebase.initializeApp(firebaseConfig);
+
     } catch (error) {
-        console.error('[Firebase] Erro crítico ao inicializar aplicativo:', error);
+
+        console.error(
+            '[Firebase] Falha crítica ao inicializar aplicação:',
+            error
+        );
+
         return;
     }
 
     // ==========================================================
-    // Instanciação dos Serviços
+    // INSTÂNCIAS GLOBAIS
     // ==========================================================
     let db = null;
     let storage = null;
     let auth = null;
 
-    try { db = firebase.database(); } catch (e) { console.error('[Firebase DB] Erro:', e); }
-    try { if (typeof firebase.storage === 'function') storage = firebase.storage(); } catch (e) { console.error('[Firebase Storage] Erro:', e); }
-    try { if (typeof firebase.auth === 'function') auth = firebase.auth(); } catch (e) { console.error('[Firebase Auth] Erro:', e); }
+    // ==========================================================
+    // DATABASE
+    // ==========================================================
+    try {
+
+        if (typeof firebase.database === 'function') {
+
+            db = firebase.database();
+
+        } else {
+
+            console.error(
+                '[Firebase Database] SDK não carregado.'
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            '[Firebase Database] Erro ao instanciar:',
+            error
+        );
+
+    }
 
     // ==========================================================
-    // 🧠 LÓGICA MULTI-TENANT (Mapeamento Dinâmico de Marcas)
+    // STORAGE
     // ==========================================================
-    // Detecta qual loja está acessando através do domínio/URL atual
-    const hostname = window.location.hostname.toLowerCase();
-    let currentTenant = 'abella_joias'; // Valor padrão de fallback
+    try {
 
-    if (hostname.includes('luary') || hostname.includes('luaryshop')) {
-        currentTenant = 'luary_shop';
-    } else if (hostname.includes('marcinha') || hostname.includes('marcinhasemijoias')) {
-        currentTenant = 'marcinha_semijoias';
-    } else if (hostname.includes('abella') || hostname.includes('abellajoias')) {
-        currentTenant = 'abella_joias';
-    } else {
-        // Fallback alternativo para testes em localhost ou IP (ex: localhost:5500?loja=luary)
-        const urlParams = new URLSearchParams(window.location.search);
-        const lojaParam = urlParams.get('loja');
-        if (lojaParam) {
-            if (lojaParam === 'luary') currentTenant = 'luary_shop';
-            if (lojaParam === 'marcinha') currentTenant = 'marcinha_semijoias';
+        if (typeof firebase.storage === 'function') {
+
+            storage = firebase.storage();
+
+        } else {
+
+            console.warn(
+                '[Firebase Storage] SDK não carregado.'
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            '[Firebase Storage] Erro ao instanciar:',
+            error
+        );
+
+    }
+
+    // ==========================================================
+    // AUTH
+    // ==========================================================
+    try {
+
+        if (typeof firebase.auth === 'function') {
+
+            auth = firebase.auth();
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            '[Firebase Auth] Erro ao instanciar:',
+            error
+        );
+
+    }
+
+    // ==========================================================
+    // EXPORTAÇÃO GLOBAL SEGURA
+    // ==========================================================
+    window.firebaseApp = app;
+
+    window.db = db;
+
+    window.storage = storage;
+
+    window.auth = auth;
+
+    // ==========================================================
+    // ESTRUTURA OFICIAL DO PROJETO
+    // ==========================================================
+    window.ABELLA_DB_ROOT = 'abella';
+
+    // ==========================================================
+    // HELPERS GLOBAIS
+    // ==========================================================
+    window.getAbellaPath = function (path = '') {
+
+        const cleanPath =
+            String(path || '')
+                .replace(/^\/+/, '');
+
+        return cleanPath
+            ? `${window.ABELLA_DB_ROOT}/${cleanPath}`
+            : window.ABELLA_DB_ROOT;
+    };
+
+    // ==========================================================
+    // MONITOR DE CONEXÃO
+    // ==========================================================
+    if (db) {
+
+        try {
+
+            db.ref('.info/connected')
+                .on('value', snapshot => {
+
+                    const connected =
+                        snapshot.val() === true;
+
+                    window.__ABELLA_FIREBASE_CONNECTED__ =
+                        connected;
+
+                });
+
+        } catch (error) {
+
+            console.error(
+                '[Firebase] Falha monitor conexão:',
+                error
+            );
+
         }
     }
 
-    console.log(`[Multi-Tenant] Ambiente detectado para a marca: ${currentTenant.toUpperCase()}`);
-
     // ==========================================================
-    // Exportação Global Segura
+    // FLAG GLOBAL DE SEGURANÇA
     // ==========================================================
-    window.firebaseApp = firebase.app();
-    window.db = db;
-    window.storage = storage;
-    window.auth = auth;
-    
-    // Caminho base que TODAS as chamadas do Realtime Database deverão usar
-    // Ex: db.ref(window.dbTenantPath + '/produtos')
-    window.dbTenantPath = `lojas/${currentTenant}`; 
-    window.currentTenantName = currentTenant;
-
-    // ==========================================================
-    // Teste de Conectividade do Banco
-    // ==========================================================
-    if (db) {
-        db.ref('.info/connected').on('value', snapshot => {
-            console.log(snapshot.val() ? '[Firebase] Conectado à nuvem.' : '[Firebase] Sem conexão.');
-        });
-    }
+    window.__ABELLA_FIREBASE_INITIALIZED__ = true;
 
 })();

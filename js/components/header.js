@@ -1,225 +1,346 @@
 // ======================================================================
 // js/components/header.js
-// Abella Joias - HeaderComponent v2.0
+// Abella Joias - HeaderComponent v3.0
+// Refatorado conforme Auditoria Forense Firebase
 // ======================================================================
 
 const HeaderComponent = {
 
-    initialized: false,
+```
+initialized: false,
 
-    // ==========================================================
-    // Formatar moeda
-    // ==========================================================
+_listener: null,
 
-    formatMoney(valor) {
+_elements: {},
 
-        try {
+_renderTimeout: null,
 
-            if (
-                window.MoneyUtils &&
-                typeof window.MoneyUtils.format === 'function'
-            ) {
+// ==========================================================
+// HELPERS
+// ==========================================================
 
-                return window.MoneyUtils.format(
-                    valor
-                );
-            }
+_safeNumber(value = 0) {
 
-            return new Intl.NumberFormat(
-                'pt-BR',
-                {
-                    style: 'currency',
-                    currency: 'BRL'
-                }
-            ).format(valor);
+    const number =
+        Number(value);
 
-        } catch {
+    return Number.isFinite(number)
+        ? number
+        : 0;
+},
 
-            return `R$ ${Number(valor || 0).toFixed(2)}`;
-        }
-    },
+formatMoney(valor) {
 
-    // ==========================================================
-    // Atualizar indicadores
-    // ==========================================================
-
-    renderCounters() {
-
-        try {
-
-            if (
-                !window.CarrinhoService
-            ) {
-                return;
-            }
-
-            const totais =
-                window.CarrinhoService
-                    .calcularTotais();
-
-            const countEl =
-                document.getElementById(
-                    'cart-count'
-                );
-
-            const weightEl =
-                document.getElementById(
-                    'cart-weight'
-                );
-
-            const totalEl =
-                document.getElementById(
-                    'cart-total'
-                );
-
-            if (countEl) {
-
-                countEl.textContent =
-                    `${totais.totalPecas} pçs`;
-            }
-
-            if (weightEl) {
-
-                weightEl.textContent =
-                    `${totais.pesoTotal.toFixed(2)}g`;
-            }
-
-            if (totalEl) {
-
-                totalEl.textContent =
-                    this.formatMoney(
-                        totais.subtotal
-                    );
-            }
-
-        } catch (error) {
-
-            console.error(
-                '[HeaderComponent:renderCounters]',
-                error
-            );
-        }
-    },
-
-    // ==========================================================
-    // Atualizar contador visual
-    // ==========================================================
-
-    atualizarBadge() {
-
-        try {
-
-            const badge =
-                document.getElementById(
-                    'cart-badge'
-                );
-
-            if (!badge) {
-                return;
-            }
-
-            const quantidade =
-                window.CarrinhoService
-                    ?.getQuantidadeItens?.() || 0;
-
-            badge.textContent =
-                quantidade;
-
-            badge.style.display =
-                quantidade > 0
-                    ? 'flex'
-                    : 'none';
-
-        } catch (error) {
-
-            console.error(
-                '[HeaderComponent:atualizarBadge]',
-                error
-            );
-        }
-    },
-
-    // ==========================================================
-    // Atualização completa
-    // ==========================================================
-
-    atualizarTudo() {
-
-        this.renderCounters();
-
-        this.atualizarBadge();
-    },
-
-    // ==========================================================
-    // Inicialização
-    // ==========================================================
-
-    init() {
+    try {
 
         if (
-            this.initialized
+            window.MoneyUtils &&
+            typeof window.MoneyUtils.format ===
+            'function'
+        ) {
+
+            return window.MoneyUtils.format(
+                valor
+            );
+        }
+
+        return new Intl.NumberFormat(
+            'pt-BR',
+            {
+                style: 'currency',
+                currency: 'BRL'
+            }
+        ).format(
+            this._safeNumber(
+                valor
+            )
+        );
+
+    } catch {
+
+        return `R$ ${this._safeNumber(valor).toFixed(2)}`;
+    }
+},
+
+// ==========================================================
+// CACHE DOM
+// ==========================================================
+
+cacheElements() {
+
+    this._elements = {
+
+        count:
+            document.getElementById(
+                'cart-count'
+            ),
+
+        weight:
+            document.getElementById(
+                'cart-weight'
+            ),
+
+        total:
+            document.getElementById(
+                'cart-total'
+            ),
+
+        badge:
+            document.getElementById(
+                'cart-badge'
+            )
+    };
+},
+
+// ==========================================================
+// QUANTIDADE ITENS
+// ==========================================================
+
+getQuantidadeItens() {
+
+    try {
+
+        const itens =
+            window.CarrinhoService
+                ?.getItens?.() || [];
+
+        return itens.reduce(
+            (acc, item) => {
+
+                return (
+
+                    acc +
+
+                    this._safeNumber(
+                        item.quantidade
+                    )
+
+                );
+
+            },
+            0
+        );
+
+    } catch {
+
+        return 0;
+    }
+},
+
+// ==========================================================
+// RENDER
+// ==========================================================
+
+renderCounters() {
+
+    try {
+
+        if (
+            !window.CarrinhoService
         ) {
             return;
         }
 
-        this.initialized = true;
+        const totais =
 
-        this._listener =
-            this.atualizarTudo.bind(this);
+            window.CarrinhoService
+                .calcularTotais();
 
-        this.atualizarTudo();
+        if (
+            this._elements.count
+        ) {
 
-        window.addEventListener(
+            this._elements.count
+                .textContent =
+
+                `${totais.totalPecas} pçs`;
+        }
+
+        if (
+            this._elements.weight
+        ) {
+
+            this._elements.weight
+                .textContent =
+
+                `${this._safeNumber(totais.pesoTotal).toFixed(2)}g`;
+        }
+
+        if (
+            this._elements.total
+        ) {
+
+            this._elements.total
+                .textContent =
+
+                this.formatMoney(
+                    totais.subtotal
+                );
+        }
+
+    } catch (error) {
+
+        console.error(
+            '[HeaderComponent:renderCounters]',
+            error
+        );
+    }
+},
+
+// ==========================================================
+// BADGE
+// ==========================================================
+
+atualizarBadge() {
+
+    try {
+
+        const badge =
+            this._elements.badge;
+
+        if (!badge) {
+            return;
+        }
+
+        const quantidade =
+            this.getQuantidadeItens();
+
+        badge.textContent =
+            quantidade;
+
+        badge.style.display =
+
+            quantidade > 0
+                ? 'flex'
+                : 'none';
+
+    } catch (error) {
+
+        console.error(
+            '[HeaderComponent:atualizarBadge]',
+            error
+        );
+    }
+},
+
+// ==========================================================
+// RENDER COMPLETO
+// ==========================================================
+
+atualizarTudo() {
+
+    clearTimeout(
+        this._renderTimeout
+    );
+
+    this._renderTimeout =
+        setTimeout(() => {
+
+            this.renderCounters();
+
+            this.atualizarBadge();
+
+        }, 10);
+},
+
+// ==========================================================
+// INIT
+// ==========================================================
+
+init() {
+
+    if (
+        this.initialized
+    ) {
+        return;
+    }
+
+    this.initialized =
+        true;
+
+    this.cacheElements();
+
+    this._listener =
+        this.atualizarTudo
+            .bind(this);
+
+    window.addEventListener(
+        'carrinhoAtualizado',
+        this._listener
+    );
+
+    this.atualizarTudo();
+
+    console.log(
+        '[HeaderComponent] Inicializado.'
+    );
+},
+
+// ==========================================================
+// DESTROY
+// ==========================================================
+
+destroy() {
+
+    if (
+        this._listener
+    ) {
+
+        window.removeEventListener(
             'carrinhoAtualizado',
             this._listener
         );
-
-        console.log(
-            '[HeaderComponent] Inicializado.'
-        );
-    },
-
-    // ==========================================================
-    // Destruir Listener
-    // ==========================================================
-
-    destroy() {
-
-        if (
-            this._listener
-        ) {
-
-            window.removeEventListener(
-                'carrinhoAtualizado',
-                this._listener
-            );
-        }
-
-        this.initialized = false;
     }
+
+    clearTimeout(
+        this._renderTimeout
+    );
+
+    this._listener = null;
+
+    this._elements = {};
+
+    this.initialized =
+        false;
+}
+```
+
 };
 
 // ==========================================================
-// Exportação Global
+// EXPORT
 // ==========================================================
 
 window.HeaderComponent =
-    HeaderComponent;
+HeaderComponent;
 
 // ==========================================================
-// Auto Start
+// AUTO INIT
 // ==========================================================
 
+if (
+document.readyState ===
+'loading'
+) {
+
+```
 document.addEventListener(
     'DOMContentLoaded',
     () => {
 
-        if (
-            typeof window.CarrinhoService !==
-            'undefined'
-        ) {
-
-            HeaderComponent.init();
-        }
+        HeaderComponent.init();
     }
+);
+```
+
+} else {
+
+```
+HeaderComponent.init();
+```
+
+}
+
+console.log(
+'🧩 HeaderComponent v3.0 carregado.'
 );

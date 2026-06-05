@@ -51,7 +51,7 @@
             'catalogo-abella-joias',
 
         storageBucket:
-            'catalogo-abella-joias.firebasestorage.app',
+            "catalogo-abella-joias.firebasestorage.app"
 
         messagingSenderId:
             '727568435294',

@@ -318,7 +318,14 @@
             itens.forEach((item) => {
                 const imgUrl = resolverImagemFirebase(item.image || item.imagem);
                 const pesoTotalItem = ((parseFloat(item.peso || item.pesoUnitario || 0)) * item.quantidade).toFixed(2);
-                const precoUnitario = parseFloat(item.preco || item.precoUnitario || 0);
+               const precoUnitario =
+parseFloat(
+    item.precoFinal ??
+    item.price ??
+    item.preco ??
+    item.precoUnitario ??
+    0
+);
                 const subtotalItem = precoUnitario * item.quantidade;
 
                 const txtUnitario = typeof money !== 'undefined' ? money.formatar(precoUnitario) : `R$ ${precoUnitario.toFixed(2)}`;
@@ -358,20 +365,28 @@
         }
 
         function alterarQtd(id, delta) {
-            const itens = carrinhoService.obterItens();
-            const item = itens.find(i => i.id === id);
-            
-            if (item) {
-                const novaQtd = item.quantidade + delta;
-                if (novaQtd <= 0) {
-                    carrinhoService.removerItem(id);
-                } else {
-                    carrinhoService.atualizarQuantidade(id, novaQtd);
-                }
-                renderizarCarrinho();
-                if (typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
-            }
-        }
+    const itens = carrinhoService.obterItens();
+
+    const index = itens.findIndex(i => String(i.id) === String(id));
+
+    if (index === -1) return;
+
+    const item = itens[index];
+
+    const novaQtd = (parseInt(item.quantidade) || 0) + delta;
+
+    if (novaQtd <= 0) {
+        carrinhoService.removerItem(index);
+    } else {
+        carrinhoService.atualizarQuantidade(index, novaQtd);
+    }
+
+    renderizarCarrinho();
+
+    if (typeof atualizarMiniCarrinho === 'function') {
+        atualizarMiniCarrinho();
+    }
+}
 
         function limparCarrinhoCompleto() {
             if (confirm("Deseja realmente esvaziar seu carrinho?")) {
@@ -391,7 +406,14 @@
                 totalItens += item.quantidade;
                 totalPeso += (parseFloat(item.peso || item.pesoUnitario || 0) * item.quantidade);
                 
-                const preco = parseFloat(item.preco || item.precoUnitario || 0);
+                const preco =
+parseFloat(
+    item.precoFinal ??
+    item.price ??
+    item.preco ??
+    item.precoUnitario ??
+    0
+);
                 const brutoItem = preco * item.quantidade;
                 subtotalBruto += brutoItem;
 

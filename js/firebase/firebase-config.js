@@ -198,16 +198,27 @@
 
         try {
 
-            db.ref('.info/connected')
-                .on('value', snapshot => {
+           db.ref('.info/connected')
+    .on('value', snapshot => {
 
-                    const connected =
-                        snapshot.val() === true;
+        const connected =
+            snapshot.val() === true;
 
-                    window.__ABELLA_FIREBASE_CONNECTED__ =
-                        connected;
+        window.__ABELLA_FIREBASE_CONNECTED__ =
+            connected;
 
-                });
+        window.dispatchEvent(
+            new CustomEvent(
+                'abella-connection',
+                {
+                    detail: {
+                        connected
+                    }
+                }
+            )
+        );
+
+    });
 
         } catch (error) {
 

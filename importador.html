@@ -287,123 +287,122 @@
     }
 
     async function executarImportacaoCSV() {
-        const file = document.getElementById('csvFile').files[0];
-        if (!file) {
-            alert('Por favor, selecione um arquivo CSV primeiro.');
-            return;
-        }
-
-        const incremental = document.getElementById('incrementalMode').checked;
-        const resetCategorias = document.getElementById('resetCategorias').checked;
-        const btn = document.getElementById('btnImportar');
-        btn.disabled = true;
-
-        try {
-            log('🚀 Iniciando processamento do arquivo...', 'info');
-
-            if (!incremental) {
-                log('🗑️ Removendo catálogo antigo (Modo limpo)...', 'warning');
-                await db.ref('abella/products').remove();
-            }
-            if (resetCategorias) {
-                log('🗑️ Resetando árvore de categorias antigas...', 'warning');
-                await db.ref('abella/categories').remove();
-            }
-
-            const texto = await file.text();
-            // Divide por quebra de linha independente do sistema operacional (\r\n ou \n)
-            const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
-            
-            log(`📦 ${linhas.length - 1} registros detectados. Processando...`, 'info');
-
-            let processados = 0;
-
-            for (let i = 1; i < linhas.length; i++) {
-                const colunas = parseCSVLine(linhas[i]);
-
-                // Pula a linha se estiver totalmente vazia ou corrompida
-                if (colunas.length === 0 || (colunas.length === 1 && colunas[0] === '')) {
-                    continue; 
-                }
-
-                // Captura mapeada baseada estritamente nos índices reais do array
-                const nome = colunas[0] ? colunas[0].replace(/^"|"$/g, '').trim() : '';
-                const sku = colunas[1] ? colunas[1].replace(/^"|"$/g, '').trim() : '';
-                const categoriaNome = colunas[2] ? colunas[2].replace(/^"|"$/g, '').trim() : '';
-                const subcategoriaNome = colunas[3] ? colunas[3].replace(/^"|"$/g, '').trim() : '';
-                
-                // Sanitização e tratamento do preço e peso com fallback resiliente para vírgulas
-                const precoCru = colunas[4] ? colunas[4].replace(/[^0-9.,]/g, '').replace(',', '.') : '0';
-                const preco = parseFloat(precoCru) || 0;
-
-                const pesoCru = colunas[5] ? colunas[5].replace(/[^0-9.,]/g, '').replace(',', '.') : '0';
-                const peso = parseFloat(pesoCru) || 0;
-
-                const imagem = colunas[6] ? colunas[6].replace(/^"|"$/g, '').trim() : '';
-                const variacao = colunas[7] ? colunas[7].replace(/^"|"$/g, '').trim() : 'Padrão';
-                const opcoes = colunas[8] ? colunas[8].replace(/^"|"$/g, '').trim() : '';
-                const pausado = colunas[9] ? colunas[9].toLowerCase().includes('true') : false;
-
-                // Validação obrigatória dos 3 pilares vitais do produto
-                if (!nome || !sku || !categoriaNome) {
-                    log(`⚠️ Linha ${i + 1} ignorada: Falta dados obrigatórios (Nome, SKU ou Categoria).`, 'warning');
-                    continue;
-                }
-
-                const categoriaSlug = slugify(categoriaNome);
-                const subcategoriaSlug = subcategoriaNome ? slugify(subcategoriaNome) : '';
-                const skuLimpo = sku.replace(/[\.\$#\[\]\/]/g, '-');
-
-                // Garante a inserção da categoria sem apagar nós internos de outras execuções
-                await db.ref(`abella/categories/${categoriaSlug}`).update({
-                    name: categoriaNome,
-                    slug: categoriaSlug,
-                    paused: false
-                });
-
-                if (subcategoriaNome) {
-                    await db.ref(`abella/categories/${categoriaSlug}/subcategories/${subcategoriaSlug}`).update({
-                        name: subcategoriaNome,
-                        slug: subcategoriaSlug,
-                        paused: false
-                    });
-                }
-
-                // Estrutura limpa de dados sem duplicidade legada no banco de dados
-                const produto = {
-                    id: skuLimpo,
-                    sku: sku,
-                    name: nome,
-                    category: categoriaSlug,
-                    price: preco,
-                    weight: peso,
-                    variacaoTipo: variacao || 'Padrão',
-                    opcoesPersonalizadas: opcoes || '',
-                    paused: pausado,
-                    promo: 0,
-                    updatedAt: Date.now()
-                };
-
-                // Inclui subcategoria e imagem dinamicamente caso existam nas células
-                if (subcategoriaSlug) produto.subcategory = subcategoriaSlug;
-                if (imagem) produto.image = imagem;
-
-                // Salva ou mescla incrementalmente as propriedades enviadas
-                await db.ref(`abella/products/${skuLimpo}`).update(produto);
-                processados++;
-            }
-
-            log(`🎉 Sucesso! ${processados} produtos foram injetados e normalizados.`, 'success');
-            atualizarEstatisticas();
-
-        } catch(e) {
-            console.error(e);
-            log(`❌ Falha crítica: ${e.message}`, 'error');
-        } finally {
-            btn.disabled = false;
-        }
+    const file = document.getElementById('csvFile').files[0];
+    if (!file) {
+        alert('Por favor, selecione um arquivo CSV primeiro.');
+        return;
     }
 
+    const incremental = document.getElementById('incrementalMode').checked;
+    const resetCategorias = document.getElementById('resetCategorias').checked;
+    const btn = document.getElementById('btnImportar');
+    btn.disabled = true;
+
+    try {
+        log('🚀 Iniciando processamento do arquivo...', 'info');
+
+        if (!incremental) {
+            log('🗑️ Removendo catálogo antigo (Modo limpo)...', 'warning');
+            await db.ref('abella/products').remove();
+        }
+        if (resetCategorias) {
+            log('🗑️ Resetando árvore de categorias antigas...', 'warning');
+            await db.ref('abella/categories').remove();
+        }
+
+        const texto = await file.text();
+        const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
+        
+        log(`📦 ${linhas.length - 1} registros detectados. Processando...`, 'info');
+
+        let processados = 0;
+
+        for (let i = 1; i < linhas.length; i++) {
+            const colunas = parseCSVLine(linhas[i]);
+
+            if (colunas.length === 0 || (colunas.length === 1 && colunas[0] === '')) {
+                continue; 
+            }
+
+            // Captura os dados limpando as aspas
+            const nome = colunas[0] ? colunas[0].replace(/^"|"$/g, '').trim() : '';
+            const sku = colunas[1] ? colunas[1].replace(/^"|"$/g, '').trim() : '';
+            const categoriaNome = colunas[2] ? colunas[2].replace(/^"|"$/g, '').trim() : '';
+            const subcategoriaNome = colunas[3] ? colunas[3].replace(/^"|"$/g, '').trim() : '';
+            
+            const precoCru = colunas[4] ? colunas[4].replace(/[^0-9.,]/g, '').replace(',', '.') : '';
+            const pesoCru = colunas[5] ? colunas[5].replace(/[^0-9.,]/g, '').replace(',', '.') : '';
+
+            const imagem = colunas[6] ? colunas[6].replace(/^"|"$/g, '').trim() : '';
+            const variacao = colunas[7] ? colunas[7].replace(/^"|"$/g, '').trim() : '';
+            const opcoes = colunas[8] ? colunas[8].replace(/^"|"$/g, '').trim() : '';
+            const pausadoStr = colunas[9] ? colunas[9].toLowerCase().trim() : '';
+
+            // Validação obrigatória dos pilares vitais do produto
+            if (!nome || !sku || !categoriaNome) {
+                log(`⚠️ Linha ${i + 1} ignorada: Falta dados obrigatórios (Nome, SKU ou Categoria).`, 'warning');
+                continue;
+            }
+
+            const categoriaSlug = slugify(categoriaNome);
+            const skuLimpo = sku.replace(/[\.\$#\[\]\/]/g, '-');
+
+            // Atualiza a categoria base
+            await db.ref(`abella/categories/${categoriaSlug}`).update({
+                name: categoriaNome,
+                slug: categoriaSlug,
+                paused: false
+            });
+
+            // Cria a subcategoria APENAS se houver conteúdo nela
+            if (subcategoriaNome) {
+                const subcategoriaSlug = slugify(subcategoriaNome);
+                await db.ref(`abella/categories/${categoriaSlug}/subcategories/${subcategoriaSlug}`).update({
+                    name: subcategoriaNome,
+                    slug: subcategoriaSlug,
+                    paused: false
+                });
+            }
+
+            // Monte o objeto base apenas com o estritamente obrigatório
+            const produto = {
+                id: skuLimpo,
+                sku: sku,
+                name: nome,
+                category: categoriaSlug,
+                updatedAt: Date.now()
+            };
+
+            // IGNORAR CÉLULAS VAZIAS: Insere as propriedades de forma dinâmica se existirem dados
+            if (subcategoriaNome) produto.subcategory = slugify(subcategoriaNome);
+            if (precoCru !== '')  produto.price = parseFloat(precoCru) || 0;
+            if (pesoCru !== '')   produto.weight = parseFloat(pesoCru) || 0;
+            if (imagem)           produto.image = imagem;
+            if (variacao)         produto.variacaoTipo = variacao;
+            if (opcoes)           produto.opcoesPersonalizadas = opcoes;
+            
+            // Trata o status pausado somente se a célula foi preenchida
+            if (pausadoStr !== '') {
+                produto.paused = pausadoStr.includes('true');
+            } else {
+                produto.paused = false; // Fallback padrão seguro
+            }
+
+            // Injeta ou atualiza mantendo campos vazios intocados se for o caso
+            await db.ref(`abella/products/${skuLimpo}`).update(produto);
+            processados++;
+        }
+
+        log(`🎉 Sucesso! ${processados} produtos foram injetados e normalizados.`, 'success');
+        atualizarEstatisticas();
+
+    } catch(e) {
+        console.error(e);
+        log(`❌ Falha crítica: ${e.message}`, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
     async function exportarCSV() {
         try {
             const snap = await db.ref('abella/products').once('value');

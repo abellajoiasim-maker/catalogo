@@ -6,7 +6,799 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     
+    <script src="https://cdn.tailwindcss.com"></sc<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="description" content="Abella Joias — Plataforma corporativa premium de pedidos. Compre joias com clareza, segurança e total transparência.">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Abella Joias • Catálogo Premium">
+    <meta property="og:description" content="Plataforma inteligente de pedidos. Veja pesos, descontos, parcelamentos e economia em tempo real.">
+    <meta property="og:type" content="website">
+    <title>Abella Joias • Catálogo Premium</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        :root {
+            --gold: #caa85c;
+            --gold-dark: #a8863a;
+            --gold-light: #e2c07a;
+            --bg: #070707;
+            --bg-card: #111111;
+            --bg-card2: #0d0d0d;
+            --border: #1e1e1e;
+            --border-gold: rgba(202,168,92,.25);
+            --text-muted: #666;
+            --text-dim: #444;
+            --emerald: #34d399;
+        }
+
+        body {
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .serif { font-family: 'Cinzel', serif; }
+        .gold  { color: var(--gold); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-dark); }
+
+        /* Glass */
+        .glass {
+            background: rgba(7,7,7,.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        /* Hover lift */
+        .hover-lift {
+            transition: transform .35s cubic-bezier(.22,1,.36,1), border-color .25s;
+        }
+        .hover-lift:hover {
+            transform: translateY(-6px);
+            border-color: var(--gold) !important;
+        }
+
+        /* Hero gradient */
+        .hero-gradient {
+            background:
+                radial-gradient(ellipse at top left, rgba(61,47,21,.55) 0%, transparent 45%),
+                radial-gradient(ellipse at bottom right, rgba(26,26,26,.4) 0%, transparent 45%);
+        }
+
+        /* Grain overlay */
+        .grain::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            border-radius: inherit;
+        }
+
+        /* Pulse dot */
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .6; transform: scale(1.4); }
+        }
+        .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+        /* Fade-in */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeUp .55s ease forwards; }
+        .fade-up-delay-1 { animation-delay: .1s; opacity: 0; animation-fill-mode: forwards; }
+        .fade-up-delay-2 { animation-delay: .22s; opacity: 0; animation-fill-mode: forwards; }
+        .fade-up-delay-3 { animation-delay: .34s; opacity: 0; animation-fill-mode: forwards; }
+
+        /* Skeleton */
+        @keyframes shimmer {
+            0%   { background-position: -700px 0; }
+            100% { background-position: 700px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%);
+            background-size: 700px 100%;
+            animation: shimmer 1.5s infinite linear;
+            border-radius: 1.5rem;
+        }
+
+        /* Card categoria */
+        .cat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform .35s cubic-bezier(.22,1,.36,1), border-color .25s, box-shadow .35s;
+        }
+        .cat-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--gold);
+            box-shadow: 0 20px 60px rgba(202,168,92,.1);
+        }
+        .cat-card img {
+            transition: transform .55s cubic-bezier(.22,1,.36,1);
+        }
+        .cat-card:hover img {
+            transform: scale(1.07);
+        }
+
+        /* Arrow btn */
+        .arrow-btn {
+            width: 44px; height: 44px;
+            border-radius: 14px;
+            background: var(--gold);
+            color: #000;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 900;
+            flex-shrink: 0;
+            transition: background .2s;
+        }
+        .cat-card:hover .arrow-btn { background: var(--gold-light); }
+
+        /* Stat card */
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            transition: border-color .25s;
+        }
+        .stat-card:hover { border-color: var(--border-gold); }
+
+        /* Mobile bar */
+        .mobile-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 50;
+            padding: .75rem;
+            background: linear-gradient(to top, #000 60%, transparent);
+        }
+
+        /* Empty state */
+        .empty-state {
+            grid-column: 1 / -1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 2rem;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        /* Search */
+        #busca:focus { outline: none; border-color: var(--gold); }
+
+        /* Tags badge */
+        .badge {
+            display: inline-flex; align-items: center; gap: .5rem;
+            background: rgba(202,168,92,.08);
+            border: 1px solid rgba(202,168,92,.18);
+            border-radius: 999px;
+            padding: .35rem 1rem;
+        }
+
+        /* Logo container */
+        #abellaLogoContainer {
+            width: 44px; height: 44px;
+            border-radius: 14px;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--gold), #8b6a2b);
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(202,168,92,.2);
+            box-shadow: 0 4px 20px rgba(202,168,92,.12);
+            flex-shrink: 0;
+        }
+
+        /* Responsive hero image */
+        .hero-img-wrap {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 3rem;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #000;
+        }
+        .hero-float {
+            position: absolute;
+            bottom: -1.5rem; left: 1.5rem; right: 1.5rem;
+            background: rgba(0,0,0,.96);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.25rem 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .hero-float { bottom: -1rem; left: 1rem; right: 1rem; padding: 1rem; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- ============================================================
+         HEADER
+    ============================================================ -->
+    <header class="sticky top-0 z-50 border-b border-zinc-900 glass">
+        <div class="max-w-7xl mx-auto px-4 md:px-6">
+            <div class="h-20 flex items-center justify-between gap-4">
+
+                <!-- Logo + Nome -->
+                <div class="flex items-center gap-4">
+                    <div id="abellaLogoContainer">
+                        <span id="abellaLogoFallback" class="text-black font-black text-xl serif">A</span>
+                        <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
+                    </div>
+                    <div>
+                        <h1 id="nome" class="serif gold text-lg md:text-2xl uppercase tracking-[.25em]">Abella Joias</h1>
+                        <p id="slogan" class="text-[10px] text-zinc-500 uppercase tracking-[.25em] mt-1">Catálogo Premium</p>
+                    </div>
+                </div>
+
+                <!-- Nav Desktop -->
+                <nav class="hidden lg:flex items-center gap-3" aria-label="Navegação principal">
+                    <a href="galvanicas.html"
+                       class="h-12 px-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] transition-all flex items-center gap-3 text-sm font-bold">
+                        ✨ Galvânicas Parceiras
+                        <span class="gold text-xs">Limeira →</span>
+                    </a>
+                    <a href="carrinho.html"
+                       class="h-12 px-5 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.15em] flex items-center gap-3"
+                       aria-label="Carrinho de compras">
+                        <span aria-hidden="true">🛒</span>
+                        <span id="cart-count" aria-live="polite">0</span>
+                        <span class="opacity-60" aria-hidden="true">|</span>
+                        <span id="cart-total">R$ 0,00</span>
+                    </a>
+                </nav>
+
+                <!-- Nav Mobile -->
+                <a href="carrinho.html"
+                   class="lg:hidden w-12 h-12 rounded-2xl bg-[#caa85c] text-black flex items-center justify-center font-black"
+                   aria-label="Carrinho">
+                    🛒
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============================================================
+         BANNER DE AVISO (oculto por padrão)
+    ============================================================ -->
+    <div id="banner" class="hidden border-b border-[#caa85c]/20 bg-gradient-to-r from-[#1a1407] via-black to-[#1a1407]" role="banner">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center">
+            <p id="bannerTexto" class="gold font-black uppercase tracking-[.25em] text-xs md:text-sm"></p>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         HERO
+    ============================================================ -->
+    <section class="hero-gradient border-b border-zinc-900" aria-label="Apresentação">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-14 md:py-20">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+                <!-- Copy -->
+                <div class="fade-up">
+                    <div class="badge">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot" aria-hidden="true"></span>
+                        <span class="text-[11px] uppercase tracking-[.25em] gold font-black">Catálogo Corporativo Online</span>
+                    </div>
+
+                    <h2 class="serif text-4xl md:text-6xl leading-tight mt-6">
+                        Sua próxima coleção<br>começa aqui.
+                    </h2>
+                    <p class="text-zinc-400 text-lg leading-relaxed mt-6 max-w-2xl">
+                        Plataforma inteligente de pedidos. Compre com clareza, segurança e total transparência.
+                        Veja pesos, descontos, parcelamentos e economia em tempo real.
+                    </p>
+
+                    <!-- Stats -->
+                    <div class="grid grid-cols-3 gap-4 mt-10">
+                        <div class="stat-card">
+                            <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Parcelamento</p>
+                            <p id="parcelamento" class="text-base font-black gold mt-2">6x sem juros</p>
+                        </div>
+                        <div class="stat-card">
+                            <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">PIX</p>
+                            <p id="pix" class="text-base font-black text-emerald-400 mt-2">5% OFF</p>
+                        </div>
+                        <div class="stat-card">
+                            <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Atendimento</p>
+                            <a id="whats" href="#" target="_blank" rel="noopener noreferrer"
+                               class="text-base font-black gold mt-2 block hover:text-[#e2c07a] transition-colors">
+                                WhatsApp
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- CTAs -->
+                    <div class="flex flex-wrap gap-4 mt-10">
+                        <a href="#categorias"
+                           class="h-14 px-8 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] flex items-center justify-center hover:bg-[#b5944a] transition-colors">
+                            Explorar Categorias
+                        </a>
+                        <a href="galvanicas.html"
+                           class="h-14 px-8 rounded-2xl border border-zinc-700 hover:border-[#caa85c] font-black uppercase tracking-[.2em] flex items-center justify-center transition-all">
+                            Galvânicas Parceiras
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Image -->
+                <div class="relative fade-up fade-up-delay-2">
+                    <div class="hero-img-wrap">
+                        <img src="https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1400&auto=format&fit=crop"
+                             class="w-full h-full object-cover"
+                             alt="Joias Abella — Coleção Premium"
+                             loading="lazy"
+                             width="700" height="700">
+                    </div>
+                    <div class="hero-float">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Experiência Premium</p>
+                                <h3 class="text-xl font-black mt-1">Compra Inteligente</h3>
+                            </div>
+                            <div class="text-right">
+                                <p id="float-pix" class="text-emerald-400 font-black text-base">PIX 5% OFF</p>
+                                <p id="float-parcelas" class="text-zinc-500 text-sm">Até 6x sem juros</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         BARRA DE BUSCA
+    ============================================================ -->
+    <section class="border-b border-zinc-900" aria-label="Busca de categorias">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-8">
+            <div class="bg-[#111] border border-[#1e1e1e] rounded-[2rem] p-4 md:p-6">
+                <div class="flex flex-col lg:flex-row gap-4">
+                    <div class="flex-1 relative">
+                        <label for="busca" class="sr-only">Buscar categorias</label>
+                        <input type="search"
+                               id="busca"
+                               placeholder="Buscar categorias..."
+                               autocomplete="off"
+                               class="w-full h-14 rounded-2xl bg-black border border-zinc-800 px-5 pl-14 text-white text-sm transition-colors"
+                               aria-label="Buscar categorias">
+                        <span class="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" aria-hidden="true">🔎</span>
+                    </div>
+                    <a href="carrinho.html"
+                       class="h-14 px-8 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] flex items-center justify-center hover:bg-[#b5944a] transition-colors whitespace-nowrap">
+                        Finalizar Pedido
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================================
+         CATEGORIAS
+    ============================================================ -->
+    <main id="categorias" class="py-12 md:py-16">
+        <div class="max-w-7xl mx-auto px-4 md:px-6">
+
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+                <div>
+                    <p class="gold uppercase tracking-[.25em] text-xs font-black">Catálogo Premium</p>
+                    <h2 class="serif text-4xl md:text-5xl mt-3">Categorias Oficiais</h2>
+                </div>
+                <p class="text-zinc-500 leading-relaxed max-w-xl md:text-right">
+                    Explore categorias organizadas para facilitar seu pedido. Valores transparentes e experiência intuitiva.
+                </p>
+            </div>
+
+            <!-- Loading skeletons -->
+            <div id="loading" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5" aria-live="polite" aria-busy="true" aria-label="Carregando categorias">
+                <div class="skeleton aspect-[3/4]"></div>
+                <div class="skeleton aspect-[3/4]"></div>
+                <div class="skeleton aspect-[3/4]"></div>
+                <div class="skeleton aspect-[3/4] hidden md:block"></div>
+            </div>
+
+            <!-- Grid categorias -->
+            <div id="grid-categorias"
+                 class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5"
+                 aria-label="Categorias disponíveis"
+                 role="list">
+            </div>
+
+            <!-- Sem resultado de busca -->
+            <div id="no-result" class="hidden empty-state">
+                <p class="text-3xl mb-4">🔎</p>
+                <h3 class="text-xl font-black text-zinc-400">Nenhuma categoria encontrada.</h3>
+                <p class="text-zinc-600 mt-2 text-sm">Tente outro termo de busca.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ============================================================
+         FOOTER
+    ============================================================ -->
+    <footer class="border-t border-zinc-900 mt-16">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+
+                <div>
+                    <h3 class="serif gold text-2xl uppercase tracking-[.25em]">Abella Joias</h3>
+                    <p class="text-zinc-500 leading-relaxed mt-4 text-sm">
+                        Plataforma corporativa premium desenvolvida para proporcionar uma experiência de compra clara, elegante e profissional.
+                    </p>
+                </div>
+
+                <nav aria-label="Links do rodapé">
+                    <p class="text-sm font-black uppercase tracking-[.2em] mb-4">Navegação</p>
+                    <ul class="space-y-3">
+                        <li><a href="#categorias" class="text-zinc-500 hover:text-white transition-colors text-sm">Categorias</a></li>
+                        <li><a href="galvanicas.html" class="text-zinc-500 hover:text-white transition-colors text-sm">Galvânicas</a></li>
+                        <li><a href="carrinho.html" class="text-zinc-500 hover:text-white transition-colors text-sm">Carrinho</a></li>
+                    </ul>
+                </nav>
+
+                <div>
+                    <p class="text-sm font-black uppercase tracking-[.2em] mb-4">Atendimento</p>
+                    <ul class="space-y-3">
+                        <li>
+                            <a id="footerWhats" href="#" target="_blank" rel="noopener noreferrer"
+                               class="text-zinc-500 hover:text-white transition-colors text-sm">
+                                WhatsApp Comercial
+                            </a>
+                        </li>
+                        <li><p class="text-zinc-500 text-sm">Limeira • São Paulo</p></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="border-t border-zinc-900 mt-12 pt-8 text-center">
+                <p class="text-zinc-600 text-sm">© Abella Joias • Plataforma Premium</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ============================================================
+         MOBILE BAR FIXA
+    ============================================================ -->
+    <div class="mobile-bar lg:hidden">
+        <a href="carrinho.html"
+           class="w-full h-14 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] flex items-center justify-center gap-3 hover:bg-[#b5944a] transition-colors">
+            🛒 <span>Finalizar Pedido</span>
+        </a>
+    </div>
+
+    <!-- ============================================================
+         SCRIPTS EXTERNOS
+    ============================================================ -->
+    <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/utils/money.js"></script>
+    <script src="js/utils/storage.js"></script>
+    <script src="js/services/carrinhoService.js"></script>
+    <script src="js/services/categoriaService.js"></script>
+    <script src="js/services/produtoService.js"></script>
+
+    <!-- ============================================================
+         APP PRINCIPAL
+    ============================================================ -->
+    <script>
+    (function () {
+        'use strict';
+
+        // ----------------------------------------------------------
+        // UTILITÁRIOS
+        // ----------------------------------------------------------
+
+        /** Formata moeda BRL de forma segura */
+        function formatarMoeda(valor) {
+            const v = parseFloat(valor) || 0;
+            if (typeof money !== 'undefined' && typeof money.formatar === 'function') {
+                return money.formatar(v);
+            }
+            return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        /** Sanitiza string para evitar XSS ao usar innerHTML */
+        function sanitize(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;');
+        }
+
+        /** Resolve gs:// → URL pública */
+        function resolverImagem(url) {
+            if (!url) return '';
+            if (typeof resolverImagemFirebase === 'function') {
+                return resolverImagemFirebase(url);
+            }
+            if (typeof url === 'string' && url.startsWith('gs://')) {
+                const bucket = url.replace('gs://', '').split('/')[0];
+                const path   = url.replace(`gs://${bucket}/`, '');
+                return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
+            }
+            return url;
+        }
+
+        // ----------------------------------------------------------
+        // MINI-CARRINHO (HEADER)
+        // ----------------------------------------------------------
+
+        function atualizarMiniCarrinho() {
+            try {
+                if (typeof carrinhoService === 'undefined' || typeof carrinhoService.obterResumo !== 'function') return;
+                const resumo = carrinhoService.obterResumo();
+                document.getElementById('cart-count').textContent = resumo.totalItens || 0;
+                document.getElementById('cart-total').textContent  = formatarMoeda(resumo.subtotal || 0);
+            } catch (e) {
+                console.warn('[MiniCarrinho] Erro ao atualizar:', e);
+            }
+        }
+
+        // ----------------------------------------------------------
+        // CONFIGURAÇÕES (settings)
+        // ----------------------------------------------------------
+
+        async function carregarConfiguracoes() {
+            try {
+                // CORRETO: usa getAbellaPath para acessar abella/settings
+                const snap = await window.db.ref(getAbellaPath('settings')).once('value');
+                if (!snap.exists()) return;
+
+                const cfg = snap.val() || {};
+
+                // Nome e slogan — estrutura plana (sem subnó 'empresa')
+                if (cfg.name)   document.getElementById('nome').textContent   = cfg.name;
+                if (cfg.slogan) document.getElementById('slogan').textContent = cfg.slogan;
+
+                // Parcelas
+                const parcelas = cfg.parcelas || 6;
+                const parcelasTexto = `Até ${parcelas}x sem juros`;
+                document.getElementById('parcelamento').textContent   = parcelasTexto;
+                document.getElementById('float-parcelas').textContent = parcelasTexto;
+
+                // PIX
+                const pix     = cfg.pix || 5;
+                const pixTexto = `${pix}% OFF`;
+                document.getElementById('pix').textContent      = pixTexto;
+                document.getElementById('float-pix').textContent = `PIX ${pixTexto}`;
+
+                // WhatsApp
+                const rawWhats = String(cfg.whatsapp || '').replace(/\D/g, '');
+                if (rawWhats) {
+                    const urlWhats = `https://wa.me/${rawWhats}`;
+                    document.getElementById('whats').href      = urlWhats;
+                    document.getElementById('footerWhats').href = urlWhats;
+                }
+
+                // Banner
+                if (cfg.bannerAtivo === true || cfg.bannerAtivo === 'true') {
+                    const texto = cfg.bannerTexto || '';
+                    if (texto.trim()) {
+                        // Usa textContent — jamais innerHTML com dado do banco
+                        document.getElementById('bannerTexto').textContent = texto;
+                        document.getElementById('banner').classList.remove('hidden');
+                    }
+                }
+
+                // Logo
+                if (cfg.logo) {
+                    carregarLogo(resolverImagem(cfg.logo));
+                }
+
+            } catch (err) {
+                console.error('[Configurações] Erro ao carregar:', err);
+            }
+        }
+
+        // ----------------------------------------------------------
+        // LOGO DINÂMICA
+        // ----------------------------------------------------------
+
+        function carregarLogo(src) {
+            if (!src) return;
+            const img      = document.getElementById('abellaLogoImg');
+            const fallback = document.getElementById('abellaLogoFallback');
+            if (!img) return;
+
+            img.src     = src;
+            img.onload  = () => { img.classList.remove('hidden'); fallback?.classList.add('hidden'); };
+            img.onerror = () => { img.classList.add('hidden');    fallback?.classList.remove('hidden'); };
+        }
+
+        // ----------------------------------------------------------
+        // CATEGORIAS
+        // ----------------------------------------------------------
+
+        function renderSkeleton(visivel) {
+            const el = document.getElementById('loading');
+            if (el) el.classList.toggle('hidden', !visivel);
+        }
+
+        async function carregarCategorias() {
+            const grid = document.getElementById('grid-categorias');
+
+            renderSkeleton(true);
+            grid.innerHTML = '';
+
+            try {
+                if (typeof categoriaService === 'undefined' || typeof categoriaService.listarTodas !== 'function') {
+                    throw new Error('categoriaService.listarTodas não disponível.');
+                }
+
+                const categorias = await categoriaService.listarTodas();
+                renderSkeleton(false);
+
+                // Filtra pausadas
+                const ativas = (categorias || []).filter(cat => !cat.paused && cat.ativo !== false);
+
+                if (!ativas.length) {
+                    grid.innerHTML = `
+                        <div class="empty-state">
+                            <p class="text-3xl mb-4">📦</p>
+                            <h2 class="text-xl font-bold text-zinc-400">Nenhuma categoria disponível no momento.</h2>
+                            <p class="text-zinc-600 mt-2 text-sm">Em breve novas coleções serão adicionadas.</p>
+                        </div>`;
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+
+                ativas.forEach(cat => {
+                    const imgSrc  = resolverImagem(cat.image || cat.imagem) ||
+                                    'https://via.placeholder.com/800x800/111111/caa85c?text=ABELLA';
+                    const nome    = sanitize(cat.name || '');
+                    const slug    = sanitize(cat.slug || '');
+
+                    // Cria card via DOM (sem innerHTML com dados do banco = XSS safe)
+                    const article = document.createElement('article');
+                    article.className   = 'cat-card';
+                    article.dataset.name = (cat.name || '').toLowerCase();
+                    article.setAttribute('role', 'listitem');
+                    article.setAttribute('tabindex', '0');
+                    article.setAttribute('aria-label', `Categoria ${nome}`);
+                    article.addEventListener('click',   () => abrirCategoria(cat.slug));
+                    article.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') abrirCategoria(cat.slug); });
+
+                    const imgWrap = document.createElement('div');
+                    imgWrap.className = 'aspect-square overflow-hidden bg-black';
+
+                    const imgEl = document.createElement('img');
+                    imgEl.src     = imgSrc;
+                    imgEl.alt     = cat.name || 'Categoria';
+                    imgEl.className = 'w-full h-full object-cover';
+                    imgEl.loading   = 'lazy';
+                    imgEl.width     = 400;
+                    imgEl.height    = 400;
+                    imgEl.onerror   = () => { imgEl.src = 'https://via.placeholder.com/400x400/111/caa85c?text=A'; };
+                    imgWrap.appendChild(imgEl);
+
+                    const body = document.createElement('div');
+                    body.className = 'p-5';
+
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center justify-between gap-4';
+
+                    const textWrap = document.createElement('div');
+                    const h3 = document.createElement('h3');
+                    h3.className   = 'text-base font-black uppercase leading-tight';
+                    h3.textContent = cat.name || '';
+                    const sub = document.createElement('p');
+                    sub.className   = 'text-zinc-500 text-xs mt-1';
+                    sub.textContent = 'Explorar coleção';
+                    textWrap.appendChild(h3);
+                    textWrap.appendChild(sub);
+
+                    const arrow = document.createElement('div');
+                    arrow.className         = 'arrow-btn';
+                    arrow.textContent       = '→';
+                    arrow.setAttribute('aria-hidden', 'true');
+
+                    row.appendChild(textWrap);
+                    row.appendChild(arrow);
+                    body.appendChild(row);
+
+                    article.appendChild(imgWrap);
+                    article.appendChild(body);
+                    fragment.appendChild(article);
+                });
+
+                grid.appendChild(fragment);
+
+            } catch (err) {
+                console.error('[Categorias] Erro ao carregar:', err);
+                renderSkeleton(false);
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <p class="text-3xl mb-4">⚠️</p>
+                        <h2 class="text-xl font-bold text-zinc-400">Erro ao carregar categorias.</h2>
+                        <p class="text-zinc-600 mt-2 text-sm">Verifique sua conexão e recarregue a página.</p>
+                    </div>`;
+            }
+        }
+
+        function abrirCategoria(slug) {
+            if (!slug) return;
+            window.location.href = `subcategorias.html?id=${encodeURIComponent(slug)}`;
+        }
+
+        // ----------------------------------------------------------
+        // BUSCA DE CATEGORIAS
+        // ----------------------------------------------------------
+
+        function iniciarBusca() {
+            const input   = document.getElementById('busca');
+            const noResult = document.getElementById('no-result');
+            if (!input) return;
+
+            input.addEventListener('input', () => {
+                const termo  = input.value.toLowerCase().trim();
+                const cards  = document.querySelectorAll('#grid-categorias .cat-card');
+                let visiveis = 0;
+
+                cards.forEach(card => {
+                    const nome = (card.dataset.name || '').toLowerCase();
+                    const exibe = !termo || nome.includes(termo);
+                    card.style.display = exibe ? '' : 'none';
+                    if (exibe) visiveis++;
+                });
+
+                if (noResult) {
+                    noResult.classList.toggle('hidden', visiveis > 0 || !cards.length);
+                }
+            });
+        }
+
+        // ----------------------------------------------------------
+        // INIT
+        // ----------------------------------------------------------
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Garante que firebase-config já foi carregado
+            if (typeof window.db === 'undefined') {
+                console.error('[Init] window.db não disponível. Verifique firebase-config.js.');
+                return;
+            }
+
+            atualizarMiniCarrinho();
+
+            await Promise.allSettled([
+                carregarConfiguracoes(),
+                carregarCategorias()
+            ]);
+
+            iniciarBusca();
+        });
+
+    })();
+    </script>
+
+</body>
+</html>ript>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     

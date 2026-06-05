@@ -3,334 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Módulo de Subcategorias • Abella Joias</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Módulo Administrativo • Gestão de Categorias Mãe</title>
     
-    <!-- Mesma infraestrutura de Scripts e fontes do Editor Master v4.0 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght=600;700&family=Inter:wght=300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
-        body { background: #0b0b0b; color: #eee; font-family: 'Poppins', sans-serif; }
-        .gold { color: #caa85c; }
-        
-        .input-dark {
-            background: #1a1a1a; border: 1px solid #333; color: white;
-            padding: 8px 10px; border-radius: 8px; width: 100%;
-            font-size: 11px; transition: 0.2s;
+        :root {
+            --gold: #caa85c;
+            --bg-dark: #070707;
+            --border-dark: #222222;
         }
-        .input-dark:focus { border-color: #caa85c; outline: none; background: #222; }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: #0b0b0b; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #caa85c; }
+        body { background: var(--bg-dark); color: #eee; font-family: 'Inter', sans-serif; }
+        .serif { font-family: 'Cinzel', serif; }
+        .gold-text { color: var(--gold); }
+        .glass-panel {
+            background: rgba(18, 18, 18, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-dark);
+        }
+        .input-dark {
+            background: #181818 !important; 
+            border: 1px solid #282828 !important; 
+            color: white !important;
+            padding: 12px 14px; 
+            border-radius: 12px; 
+            width: 100%;
+            font-size: 12px; 
+            transition: all 0.25s ease;
+        }
+        .input-dark:focus { 
+            border-color: var(--gold) !important; 
+            outline: none; 
+            box-shadow: 0 0 0 3px rgba(202, 168, 92, 0.15);
+        }
     </style>
 </head>
-<body class="p-2 md:p-6">
+<body class="p-4 md:p-8 antialiased">
 
-    <div class="max-w-[100%] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 pointer-events-none space-y-3"></div>
+
+    <div class="max-w-7xl mx-auto space-y-6">
         
-        <!-- FORMULÁRIO DE CADASTRO / EDIÇÃO -->
-        <div class="lg:col-span-4 bg-[#141414] border border-[#2a2a2a] p-6 rounded-xl h-fit space-y-4 shadow-2xl">
-            <div class="flex items-center gap-2 border-b border-[#2a2a2a] pb-3">
-                <span class="w-1.5 h-4 bg-[#caa85c] rounded-full"></span>
-                <h3 id="formTitulo" class="text-xs font-bold text-white uppercase tracking-wider">Nova Subcategoria</h3>
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-950/60 p-6 rounded-2xl border border-zinc-900 gap-4">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors">
+                    ← Menu
+                </a>
+                <div>
+                    <h1 class="serif gold-text text-xl uppercase tracking-[0.15em]">Categorias Principais (Mãe)</h1>
+                    <p class="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Gerenciamento do Primeiro Nível do Catálogo</p>
+                </div>
             </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <form id="formSubcat" class="space-y-4 text-left" onsubmit="executingSalvamentoSubUI(event)">
-                <input type="hidden" id="subOldSlug">
-                
-                <div class="space-y-1">
-                    <label class="text-[9px] uppercase text-gray-400 font-bold tracking-wider">Selecione a Categoria Mãe *</label>
-                    <select id="selectCatMae" required class="input-dark">
-                        <option value="">Sincronizando categorias...</option>
-                    </select>
-                </div>
-
-                <div class="space-y-1">
-                    <label class="text-[9px] uppercase text-gray-400 font-bold tracking-wider">Título da Subcategoria *</label>
-                    <input type="text" id="subName" required placeholder="Ex: Chokers ou Argolas" class="input-dark">
-                </div>
-                
-                <div class="space-y-1">
-                    <label class="text-[9px] uppercase text-gray-400 font-bold tracking-wider">Caminho da Imagem (Opcional)</label>
-                    <input type="text" id="subImage" placeholder="Ex: images/sub/chokers.jpg ou gs://" class="input-dark">
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1">
-                        <label class="text-[9px] uppercase text-gray-400 font-bold tracking-wider">Ordem (Index)</label>
-                        <input type="number" id="subOrder" value="0" class="input-dark text-center">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[9px] uppercase text-gray-400 font-bold tracking-wider">Estado Visual</label>
-                        <select id="subStatus" class="input-dark">
-                            <option value="ativo">Ativo (Visível)</option>
-                            <option value="pausado">Pausado (Oculto)</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="flex gap-2 pt-2">
-                    <button type="button" id="btnCancelarEdicao" onclick="resetarFormularioEstado()" class="hidden w-1/3 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition-all border border-zinc-800">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="flex-1 bg-[#caa85c] hover:brightness-110 text-black font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition-all shadow-lg">
-                        Gravar Subnó
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- PAINEL DE VISUALIZAÇÃO E GESTÃO -->
-        <div class="lg:col-span-8 bg-[#141414] border border-[#2a2a2a] p-6 rounded-xl flex flex-col shadow-2xl">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-[#2a2a2a] pb-3 mb-4 gap-2">
-                <div class="flex items-center gap-2">
+            <div class="lg:col-span-4 glass-panel p-6 rounded-3xl h-fit space-y-5 shadow-2xl">
+                <div class="flex items-center gap-2 border-b border-zinc-900 pb-3">
                     <span class="w-1.5 h-4 bg-[#caa85c] rounded-full"></span>
-                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Estruturas Vinculadas</h3>
+                    <h3 id="formTitulo" class="serif text-xs font-bold text-white uppercase tracking-wider">Nova Categoria Mãe</h3>
                 </div>
-                <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <span class="text-[9px] uppercase font-mono text-gray-400 whitespace-nowrap">Filtrar Categoria:</span>
-                    <select id="filtroCatMae" onchange="sincronizarSubcategoriasModulo()" class="bg-[#0b0b0b] border border-[#333] px-2 py-1.5 rounded-lg text-[10px] text-white outline-none focus:border-[#caa85c] min-w-[140px]">
-                        <option value="">Todas</option>
-                    </select>
-                </div>
+                
+                <form id="formCat" class="space-y-4 text-left" onsubmit="executingSalvamentoCatUI(event)">
+                    <input type="hidden" id="catOldSlug">
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Título da Categoria *</label>
+                        <input type="text" id="catName" required placeholder="Ex: Anéis, Brincos, Colares" class="input-dark">
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Caminho da Imagem / Ícone</label>
+                        <input type="text" id="catImage" placeholder="Ex: images/categorias/brincos.jpg" class="input-dark">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Ordem (Index)</label>
+                            <input type="number" id="catOrder" value="0" min="0" class="input-dark text-center font-mono">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Estado Visual</label>
+                            <select id="catStatus" class="input-dark">
+                                <option value="ativo">Ativo (Visível)</option>
+                                <option value="pausado">Pausado (Oculto)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" id="btnCancelarEdicao" onclick="resetarFormularioEstado()" class="hidden w-1/3 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold py-3 rounded-xl text-[10px] uppercase tracking-wider transition-all border border-zinc-800">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="flex-1 bg-[#caa85c] hover:bg-[#b5944a] text-black font-black py-3 rounded-xl text-[10px] uppercase tracking-wider transition-all shadow-lg">
+                            Gravar Categoria Principal
+                        </button>
+                    </div>
+                </form>
             </div>
-            
-            <div id="loading" class="text-center py-12 text-[#caa85c] text-[10px] font-mono uppercase tracking-widest animate-pulse">⏳ Conectando à base de dados /abella...</div>
-            <div id="lista-subcategorias" class="space-y-2 overflow-y-auto max-h-[72vh] pr-1"></div>
+
+            <div class="lg:col-span-8 glass-panel p-6 rounded-3xl flex flex-col shadow-2xl">
+                <div class="flex items-center gap-2 border-b border-zinc-900 pb-4 mb-4">
+                    <span class="w-1.5 h-4 bg-[#caa85c] rounded-full"></span>
+                    <h3 class="serif text-xs font-bold text-white uppercase tracking-wider">Categorias Cadastradas</h3>
+                </div>
+                
+                <div id="loading" class="text-center py-16 text-[#caa85c] text-xs font-mono uppercase tracking-widest animate-pulse">
+                    ⏳ Conectando ao banco de dados...
+                </div>
+                
+                <div id="lista-categorias" class="space-y-3 overflow-y-auto max-h-[65vh] pr-1"></div>
+            </div>
         </div>
     </div>
 
-    <!-- CONTROLADOR DO MÓDULO INTEGRADO -->
     <script>
-        // Mesmo padrão de inicialização e credenciais do Editor Master v4.0
-        const firebaseConfig = {
-            apiKey: "AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY",
-            databaseURL: "https://catalogo-abella-joias-default-rtdb.firebaseio.com"
-        };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const db = window.db || firebase.database();
 
-        // Elementos do DOM
+        if (typeof window.getAbellaPath !== 'function') {
+            window.getAbellaPath = function(node) {
+                const root = window.ABELLA_DB_ROOT || 'abella';
+                return node ? `${root}/${node}` : root;
+            };
+        }
+
         const DOM = {
-            form: document.getElementById('formSubcat'),
+            form: document.getElementById('formCat'),
             titulo: document.getElementById('formTitulo'),
-            oldSlug: document.getElementById('subOldSlug'),
-            selectCatMae: document.getElementById('selectCatMae'),
-            filtroCatMae: document.getElementById('filtroCatMae'),
-            name: document.getElementById('subName'),
-            image: document.getElementById('subImage'),
-            order: document.getElementById('subOrder'),
-            status: document.getElementById('subStatus'),
+            oldSlug: document.getElementById('catOldSlug'),
+            name: document.getElementById('catName'),
+            image: document.getElementById('catImage'),
+            order: document.getElementById('catOrder'),
+            status: document.getElementById('catStatus'),
             btnCancelar: document.getElementById('btnCancelarEdicao'),
             loading: document.getElementById('loading'),
-            lista: document.getElementById('lista-subcategorias')
+            lista: document.getElementById('lista-categorias')
         };
 
         let categoriasCache = {};
 
-        // Inicialização automática ao carregar a página
-        document.addEventListener('DOMContentLoaded', () => {
-            carregarCategoriasEAtivar();
-        });
+        document.addEventListener('DOMContentLoaded', carregarCategoriasMestres);
 
-        // Carrega todas as categorias diretamente do nó correto utilizado no seu Editor
-        async function carregarCategoriasEAtivar() {
+        function spawnAdminToast(msg, isError = false) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `px-5 py-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 bg-zinc-900/95 border shadow-xl flex items-center gap-3 ${isError ? 'text-rose-300 border-rose-800' : 'text-emerald-400 border-zinc-800'}`;
+            toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span> <span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        async function carregarCategoriasMestres() {
             try {
-                const snap = await db.ref('abella/categories').once('value');
+                const path = window.getAbellaPath('categories');
+                const snap = await db.ref(path).once('value');
                 categoriasCache = snap.val() || {};
-                
-                DOM.selectCatMae.innerHTML = '<option value="">— Selecione a Mãe —</option>';
-                DOM.filtroCatMae.innerHTML = '<option value="">Mostrar Todas</option>';
-
-                Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
-                    const nomeStr = cat.name || catSlug;
-
-                    // Popula o select do formulário de criação
-                    const optForm = document.createElement('option');
-                    optForm.value = catSlug;
-                    optForm.innerText = nomeStr.toUpperCase();
-                    DOM.selectCatMae.appendChild(optForm);
-
-                    // Popula o filtro de busca da listagem
-                    const optFiltro = document.createElement('option');
-                    optFiltro.value = catSlug;
-                    optFiltro.innerText = nomeStr.toUpperCase();
-                    DOM.filtroCatMae.appendChild(optFiltro);
-                });
-
-                // Com as categorias carregadas, renderiza as subcategorias vinculadas
-                await sincronizarSubcategoriasModulo();
-
+                renderizarCategorias();
             } catch (err) {
-                console.error("Falha ao mapear nós de categorias mães:", err);
-                DOM.loading.innerText = "❌ Erro ao buscar categorias do banco.";
+                DOM.loading.innerText = "❌ Erro ao ler categorias.";
+                spawnAdminToast("Erro ao carregar dados.", true);
             }
         }
 
-        // Renderiza as subcategorias baseadas na árvore do banco de dados
-        async function sincronizarSubcategoriasModulo() {
+        function renderizarCategorias() {
             DOM.lista.innerHTML = '';
-            DOM.loading.classList.remove('hidden');
+            DOM.loading.classList.add('hidden');
 
-            const filtroAtivo = DOM.filtroCatMae.value;
-            let listaAgrupada = [];
+            let listaOrdenada = Object.entries(categoriasCache).map(([slug, data]) => ({
+                slug,
+                name: data.name || slug,
+                image: data.image || '',
+                order: parseInt(data.order) || 0,
+                paused: data.paused !== undefined ? !!data.paused : data.status === 'pausado',
+                subcategories: data.subcategories || {}
+            }));
 
-            try {
-                // Se houver um filtro ativo de categoria mãe selecionada
-                if (filtroAtivo) {
-                    const snap = await db.ref(`abella/categories/${filtroAtivo}/subcategories`).once('value');
-                    const subs = snap.val() || {};
-                    Object.keys(subs).forEach(subSlug => {
-                        listaAgrupada.push({ catSlug: filtroAtivo, subSlug, ...subs[subSlug] });
-                    });
-                } else {
-                    // Percorre toda a árvore de categorias mapeando as subcategorias internas
-                    Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
-                        const subs = cat.subcategories || {};
-                        Object.keys(subs).forEach(subSlug => {
-                            listaAgrupada.push({ catSlug, subSlug, ...subs[subSlug] });
-                        });
-                    });
-                }
+            listaOrdenada.sort((a, b) => a.order - b.order);
 
-                DOM.loading.classList.add('hidden');
-
-                if (listaAgrupada.length === 0) {
-                    DOM.lista.innerHTML = `<p class="text-zinc-500 text-[11px] italic py-8 text-center font-mono">[Nenhuma subcategoria vinculada encontrada]</p>`;
-                    return;
-                }
-
-                // Ordenação por Index (Ordem)
-                listaAgrupada.sort((a, b) => (parseInt(a.order) || 0) - (parseInt(b.order) || 0));
-
-                // Constroi o layout dos cards das subcategorias
-                listaAgrupada.forEach(item => {
-                    const nomeMae = categoriasCache[item.catSlug]?.name || item.catSlug;
-                    const isPausado = item.status === 'pausado';
-
-                    const card = document.createElement('div');
-                    card.className = `flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-[#191919]/60 border rounded-xl gap-3 transition-all hover:bg-[#191919] ${isPausado ? 'border-red-900/30 opacity-40 bg-red-950/10' : 'border-[#2a2a2a]'}`;
-
-                    card.innerHTML = `
-                        <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center gap-2 mb-1">
-                                <span class="text-xs font-bold ${isPausado ? 'text-red-400 line-through' : 'text-white'} uppercase tracking-wide">${item.name || item.subSlug}</span>
-                                <span class="text-[9px] px-2 py-0.5 bg-[#0b0b0b] text-[#caa85c] rounded border border-[#333] uppercase font-mono tracking-wider">↳ ${nomeMae}</span>
-                                ${isPausado ? '<span class="text-[8px] px-1.5 py-0.2 bg-red-900/50 text-white rounded uppercase font-bold tracking-wider">Pausado</span>' : ''}
-                            </div>
-                            <p class="text-[9px] text-gray-500 font-mono truncate">Caminho RTDB: abella/categories/${item.catSlug}/subcategories/${item.subSlug} | Ordem: ${item.order || 0}</p>
-                        </div>
-                        <div class="flex items-center gap-1.5 justify-end">
-                            <button type="button" onclick="ativarModoEdicao('${item.catSlug}', '${item.subSlug}', '${item.name || ''}', '${item.image || ''}', ${item.order || 0}, '${item.status || 'ativo'}')" 
-                                    class="bg-[#0b0b0b] hover:bg-zinc-800 text-zinc-300 border border-[#333] px-2.5 py-1.5 text-[9px] font-bold rounded-md transition-all uppercase tracking-wider">
-                                Editar
-                            </button>
-                            <button type="button" onclick="alternarEstadoPausa('${item.catSlug}', '${item.subSlug}', '${item.status || 'ativo'}')" 
-                                    class="bg-[#0b0b0b] border border-[#333] px-2 py-1.5 text-[9px] font-bold rounded-md transition-all uppercase ${isPausado ? 'text-green-500 hover:bg-green-950/20' : 'text-amber-500 hover:bg-amber-950/20'}">
-                                ${isPausado ? 'Reativar' : 'Pausar'}
-                            </button>
-                            <button type="button" onclick="executarRemocaoSub('${item.catSlug}', '${item.subSlug}')" 
-                                    class="bg-red-950/20 hover:bg-red-900 text-red-400 hover:text-white border border-red-900/30 px-2.5 py-1.5 text-[9px] font-bold rounded-md transition-all uppercase tracking-wider">
-                                🗑️
-                            </button>
-                        </div>
-                    `;
-
-                    DOM.lista.appendChild(card);
-                });
-
-            } catch (err) {
-                console.error("Erro ao sincronizar subcategorias:", err);
-                DOM.loading.innerText = "❌ Falha na comunicação direta com Firebase RTDB.";
+            if (listaOrdenada.length === 0) {
+                DOM.lista.innerHTML = `<p class="text-zinc-600 text-xs italic py-12 text-center font-mono">[Nenhuma categoria principal cadastrada]</p>`;
+                return;
             }
+
+            listaOrdenada.forEach(item => {
+                const qtdSubs = Object.keys(item.subcategories).length;
+                const card = document.createElement('div');
+                card.className = `flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-zinc-900/40 border rounded-2xl gap-4 ${item.paused ? 'border-rose-950/40 bg-rose-950/5 opacity-60' : 'border-zinc-800/80'}`;
+                
+                card.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <span class="text-sm font-bold ${item.paused ? 'text-rose-400/80 line-through' : 'text-white'} uppercase tracking-wide">${item.name}</span>
+                            <span class="text-[9px] px-2 py-0.5 bg-zinc-950 text-zinc-400 rounded-md border border-zinc-800 font-mono">${qtdSubs} Subcategorias vinculadas</span>
+                        </div>
+                        <p class="text-[10px] text-zinc-500 font-mono truncate">PATH: categories/${item.slug} | Ordem: ${item.order}</p>
+                    </div>
+                    <div class="flex items-center gap-2 justify-end">
+                        <button type="button" onclick="ativarModoEdicao('${item.slug}', \`${item.name}\`, '${item.image}', ${item.order}, ${item.paused})" class="bg-zinc-950 text-zinc-300 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase">Editar</button>
+                        <button type="button" onclick="alternarEstadoPausa('${item.slug}', ${item.paused})" class="bg-zinc-950 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase ${item.paused ? 'text-emerald-400' : 'text-amber-500'}">${item.paused ? 'Reativar' : 'Pausar'}</button>
+                        <button type="button" onclick="executarRemocao('${item.slug}')" class="bg-rose-950/20 text-rose-400 border border-rose-900/30 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase">🗑️</button>
+                    </div>
+                `;
+                DOM.lista.appendChild(card);
+            });
         }
 
-        // Entra em modo de edição de subcategoria trazendo os dados para o formulário
-        function activarModoEdicao(catSlug, subSlug, name, img, order, status) {
-            DOM.oldSlug.value = subSlug;
-            DOM.selectCatMae.value = catSlug;
+        function activarModoEdicao(slug, name, img, order, isPaused) {
+            DOM.oldSlug.value = slug;
             DOM.name.value = name;
             DOM.image.value = img;
             DOM.order.value = order;
-            DOM.status.value = status;
-            DOM.titulo.innerText = "Modificar Subcategoria";
+            DOM.status.value = isPaused ? 'pausado' : 'ativo';
+            DOM.titulo.innerText = "Modificar Categoria Mãe";
             DOM.btnCancelar.classList.remove('hidden');
             DOM.name.focus();
         }
 
-        // Limpa e reseta o formulário
         function resetarFormularioEstado() {
             DOM.form.reset();
             DOM.oldSlug.value = '';
-            DOM.titulo.innerText = "Nova Subcategoria";
+            DOM.titulo.innerText = "Nova Categoria Mãe";
             DOM.btnCancelar.classList.add('hidden');
         }
 
-        // Ação de Gravação/Atualização de Subnó
-        async function executingSalvamentoSubUI(e) {
+        async function executingSalvamentoCatUI(e) {
             e.preventDefault();
-            
-            const catSlug = DOM.selectCatMae.value;
-            if(!catSlug) { alert("Por favor, selecione uma categoria mãe válida."); return; }
-
             const name = DOM.name.value.trim();
-            const slug = name.toLowerCase()
-                             .normalize("NFD")
-                             .replace(/[\u0300-\u036f]/g, "")
-                             .replace(/[^a-z0-9]+/g, "-")
-                             .replace(/(^-|-$)/g, "");
-            
+            const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
             const oldSlug = DOM.oldSlug.value;
 
+            // Mantém subcategorias intactas caso seja uma edição de nome
+            const subcategoriesSalvas = oldSlug && categoriasCache[oldSlug] ? categoriasCache[oldSlug].subcategories || {} : {};
+
             const payload = {
-                name: name,
+                name: name.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
                 image: DOM.image.value.trim(),
-                order: parseInt(DOM.order.value) || 0,
-                status: DOM.status.value,
+                order: Math.abs(parseInt(DOM.order.value, 10) || 0),
+                paused: DOM.status.value === 'pausado',
+                subcategories: subcategoriesSalvas,
                 timestamp: Date.now()
             };
 
             try {
-                // Se o nome mudou durante a edição, deleta o registro com o slug antigo para não duplicar
                 if (oldSlug && oldSlug !== slug) {
-                    await db.ref(`abella/categories/${catSlug}/subcategories/${oldSlug}`).remove();
+                    await db.ref(window.getAbellaPath(`categories/${oldSlug}`)).remove();
                 }
-
-                // Injeta diretamente o novo payload ou alteração no nó estrutural exato
-                await db.ref(`abella/categories/${catSlug}/subcategories/${slug}`).set(payload);
-                
+                await db.ref(window.getAbellaPath(`categories/${slug}`)).set(payload);
+                spawnAdminToast("Categoria salva com sucesso.");
                 resetarFormularioEstado();
-                await carregarCategoriasEAtivar(); 
+                await carregarCategoriasMestres();
             } catch(err) {
-                alert("Erro ao gravar subcategoria no Firebase Realtime Database: " + err.message);
+                spawnAdminToast("Erro ao salvar categoria.", true);
             }
         }
 
-        // Alterna rapidamente o estado de ativo para pausado diretamente na árvore de nós
-        async function alternarEstadoPausa(catSlug, subSlug, statusAtual) {
+        async function alternarEstadoPausa(slug, estadoPausaAtual) {
             try {
-                const novoEstado = (statusAtual === 'ativo') ? 'pausado' : 'ativo';
-                await db.ref(`abella/categories/${catSlug}/subcategories/${subSlug}`).update({ status: novoEstado });
-                await carregarCategoriasEAtivar();
+                await db.ref(window.getAbellaPath(`categories/${slug}`)).update({ paused: !estadoPausaAtual });
+                categoriasCache[slug].paused = !estadoPausaAtual;
+                renderizarCategorias();
+                spawnAdminToast("Visibilidade alterada com sucesso.");
             } catch (err) {
-                console.error("Erro ao alterar estado de pausa no Firebase:", err);
+                spawnAdminToast("Erro ao alterar visibilidade.", true);
             }
         }
 
-        // Remove em definitivo o subnó selecionado do banco de dados
-        async function ejecutarRemocaoSub(catSlug, subSlug) {
-            if(confirm("Confirmar a remoção definitiva do nó desta subcategoria no Firebase?")) {
-                try {
-                    await db.ref(`abella/categories/${catSlug}/subcategories/${subSlug}`).remove();
-                    await carregarCategoriasEAtivar();
-                } catch(err) {
-                    alert("Erro ao excluir subcategoria: " + err.message);
-                }
+        async function ejecutarRemocao(slug) {
+            if(!confirm("⚠️ ATENÇÃO: Deletar esta categoria mãe irá remover as subcategorias vinculadas! Confirmar?")) return;
+            try {
+                await db.ref(window.getAbellaPath(`categories/${slug}`)).remove();
+                spawnAdminToast("Categoria removida.");
+                await carregarCategoriasMestres();
+            } catch(err) {
+                spawnAdminToast("Erro ao remover categoria.", true);
             }
         }
     </script>

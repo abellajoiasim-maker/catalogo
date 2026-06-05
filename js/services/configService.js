@@ -1,365 +1,380 @@
 // ======================================================================
-// js/firebase/services/configService.js
-// Abella Joias - ConfigService v3.0
+// js/services/configService.js
+// Abella Joias - ConfigService v4.0
 // ======================================================================
 
-const ConfigService = {
+(function () {
 
-    _cache: null,
-    _cacheTimestamp: 0,
-    _cacheTTL: 60000,
+    'use strict';
 
-    _defaultSettings: {
+    const SETTINGS_PATH =
+        getAbellaPath('settings');
 
-        pixDesc: 5,
+    const DEFAULT_SETTINGS =
+        Object.freeze({
 
-        parcelasMax: 6,
+            pixDesc: 5,
 
-        whatsEmpresa:
-            "5519988207658",
+            parcelasMax: 6,
 
-        nomeEmpresa:
-            "Abella Joias",
-
-        instagram:
-            "",
-
-        endereco:
-            "",
-
-        email:
-            ""
-    },
-
-    // ==========================================================
-    // Firebase
-    // ==========================================================
-
-    _db() {
-
-        if (!window.db) {
-
-            throw new Error(
-                "Firebase Database não inicializado."
-            );
-        }
-
-        return window.db;
-    },
-
-    // ==========================================================
-    // Cache
-    // ==========================================================
-
-    _isCacheValid() {
-
-        return (
-            this._cache &&
-            (Date.now() - this._cacheTimestamp) <
-            this._cacheTTL
-        );
-    },
-
-    invalidateCache() {
-
-        this._cache = null;
-        this._cacheTimestamp = 0;
-    },
-
-    // ==========================================================
-    // Normalização
-    // ==========================================================
-
-    normalizarConfiguracoes(
-        raw = {}
-    ) {
-
-        const empresa =
-            raw.empresa || {};
-
-        return {
-
-            pixDesc: Number(
-                raw.pix ??
-                empresa.pix ??
-                this._defaultSettings.pixDesc
-            ),
-
-            parcelasMax: Number(
-                raw.parcelas ??
-                empresa.parcelas ??
-                this._defaultSettings.parcelasMax
-            ),
-
-            whatsEmpresa: String(
-                raw.whatsapp ??
-                empresa.whatsapp ??
-                this._defaultSettings.whatsEmpresa
-            ).replace(/\D/g, ""),
+            whatsEmpresa:
+                '5519988207658',
 
             nomeEmpresa:
-                raw.nomeEmpresa ??
-                empresa.nomeEmpresa ??
-                this._defaultSettings.nomeEmpresa,
+                'Abella Joias',
 
-            instagram:
-                raw.instagram ??
-                empresa.instagram ??
-                this._defaultSettings.instagram,
+            instagram: '',
 
-            endereco:
-                raw.endereco ??
-                empresa.endereco ??
-                this._defaultSettings.endereco,
+            endereco: '',
 
-            email:
-                raw.email ??
-                empresa.email ??
-                this._defaultSettings.email
-        };
-    },
+            email: ''
 
-    // ==========================================================
-    // Buscar Configurações
-    // ==========================================================
+        });
 
-    async getSettings(
-        forceRefresh = false
-    ) {
+    const ConfigService = {
 
-        try {
+        _cache: null,
 
-            if (
-                !forceRefresh &&
-                this._isCacheValid()
-            ) {
+        _cacheTimestamp: 0,
 
-                return this._cache;
+        _cacheTTL: 60000,
+
+        // ======================================================
+        // DATABASE
+        // ======================================================
+
+        _db() {
+
+            if (!window.db) {
+
+                throw new Error(
+                    'Firebase Database não inicializado.'
+                );
             }
 
-            const snapshot =
+            return window.db;
+        },
+
+        // ======================================================
+        // REF
+        // ======================================================
+
+        _ref() {
+
+            return this
+                ._db()
+                .ref(SETTINGS_PATH);
+        },
+
+        // ======================================================
+        // CACHE
+        // ======================================================
+
+        _isCacheValid() {
+
+            return Boolean(
+                this._cache &&
+                (Date.now() - this._cacheTimestamp)
+                < this._cacheTTL
+            );
+        },
+
+        invalidateCache() {
+
+            this._cache = null;
+
+            this._cacheTimestamp = 0;
+        },
+
+        // ======================================================
+        // NORMALIZAÇÃO
+        // ======================================================
+
+        normalizarConfiguracoes(
+            raw = {}
+        ) {
+
+            const empresa =
+                raw.empresa || {};
+
+            return Object.freeze({
+
+                pixDesc: Number(
+                    raw.pix ??
+                    empresa.pix ??
+                    DEFAULT_SETTINGS.pixDesc
+                ),
+
+                parcelasMax: Number(
+                    raw.parcelas ??
+                    empresa.parcelas ??
+                    DEFAULT_SETTINGS.parcelasMax
+                ),
+
+                whatsEmpresa: String(
+                    raw.whatsapp ??
+                    empresa.whatsapp ??
+                    DEFAULT_SETTINGS.whatsEmpresa
+                ).replace(/\D/g, ''),
+
+                nomeEmpresa: String(
+                    raw.nomeEmpresa ??
+                    empresa.nomeEmpresa ??
+                    DEFAULT_SETTINGS.nomeEmpresa
+                ),
+
+                instagram: String(
+                    raw.instagram ??
+                    empresa.instagram ??
+                    DEFAULT_SETTINGS.instagram
+                ),
+
+                endereco: String(
+                    raw.endereco ??
+                    empresa.endereco ??
+                    DEFAULT_SETTINGS.endereco
+                ),
+
+                email: String(
+                    raw.email ??
+                    empresa.email ??
+                    DEFAULT_SETTINGS.email
+                )
+            });
+        },
+
+        // ======================================================
+        // GET SETTINGS
+        // ======================================================
+
+        async getSettings(
+            forceRefresh = false
+        ) {
+
+            try {
+
+                if (
+                    !forceRefresh &&
+                    this._isCacheValid()
+                ) {
+
+                    return structuredClone(
+                        this._cache
+                    );
+                }
+
+                const snapshot =
+                    await this
+                        ._ref()
+                        .once('value');
+
+                const data =
+                    snapshot.val() || {};
+
+                this._cache =
+                    this.normalizarConfiguracoes(
+                        data
+                    );
+
+                this._cacheTimestamp =
+                    Date.now();
+
+                return structuredClone(
+                    this._cache
+                );
+
+            } catch (error) {
+
+                console.error(
+                    '[ConfigService:getSettings]',
+                    error
+                );
+
+                return structuredClone(
+                    DEFAULT_SETTINGS
+                );
+            }
+        },
+
+        // ======================================================
+        // SAVE SETTINGS
+        // ======================================================
+
+        async saveSettings(
+            settingsData = {}
+        ) {
+
+            try {
+
+                const normalized =
+                    this.normalizarConfiguracoes(
+                        settingsData
+                    );
+
+                const payload = {
+
+                    pix:
+                        normalized.pixDesc,
+
+                    parcelas:
+                        normalized.parcelasMax,
+
+                    whatsapp:
+                        normalized.whatsEmpresa,
+
+                    nomeEmpresa:
+                        normalized.nomeEmpresa,
+
+                    instagram:
+                        normalized.instagram,
+
+                    endereco:
+                        normalized.endereco,
+
+                    email:
+                        normalized.email
+                };
+
                 await this
-                    ._db()
-                    .ref(
-                        "abella/settings"
-                    )
-                    .once("value");
+                    ._ref()
+                    .update(payload);
 
-            const data =
-                snapshot.val() || {};
+                this._cache =
+                    this.normalizarConfiguracoes(
+                        payload
+                    );
 
-            this._cache =
-                this.normalizarConfiguracoes(
-                    data
+                this._cacheTimestamp =
+                    Date.now();
+
+                return true;
+
+            } catch (error) {
+
+                console.error(
+                    '[ConfigService:saveSettings]',
+                    error
                 );
 
-            this._cacheTimestamp =
-                Date.now();
+                return false;
+            }
+        },
 
-            return this._cache;
+        // ======================================================
+        // UPDATE PARCIAL
+        // ======================================================
 
-        } catch (error) {
+        async update(
+            partialData = {}
+        ) {
 
-            console.error(
-                "[ConfigService:getSettings]",
-                error
-            );
+            try {
 
-            return {
-                ...this._defaultSettings
-            };
-        }
-    },
+                const current =
+                    await this.getSettings();
 
-    // ==========================================================
-    // Salvar Configurações
-    // ==========================================================
+                const merged = {
 
-    async saveSettings(
-        settingsData = {}
-    ) {
-
-        try {
-
-            const payload = {
-
-                pix: Number(
-                    settingsData.pixDesc ??
-                    this._defaultSettings.pixDesc
-                ),
-
-                parcelas: Number(
-                    settingsData.parcelasMax ??
-                    this._defaultSettings.parcelasMax
-                ),
-
-                whatsapp: String(
-                    settingsData.whatsEmpresa ??
-                    this._defaultSettings.whatsEmpresa
-                ).replace(/\D/g, ""),
-
-                nomeEmpresa:
-                    settingsData.nomeEmpresa || "",
-
-                instagram:
-                    settingsData.instagram || "",
-
-                endereco:
-                    settingsData.endereco || "",
-
-                email:
-                    settingsData.email || ""
-            };
-
-            await this
-                ._db()
-                .ref(
-                    "abella/settings"
-                )
-                .update(
-                    payload
-                );
-
-            this._cache =
-                this.normalizarConfiguracoes(
-                    payload
-                );
-
-            this._cacheTimestamp =
-                Date.now();
-
-            return true;
-
-        } catch (error) {
-
-            console.error(
-                "[ConfigService:saveSettings]",
-                error
-            );
-
-            return false;
-        }
-    },
-
-    // ==========================================================
-    // Atualização Parcial
-    // ==========================================================
-
-    async update(
-        partialData = {}
-    ) {
-
-        try {
-
-            await this
-                ._db()
-                .ref(
-                    "abella/settings"
-                )
-                .update(
-                    partialData
-                );
-
-            if (
-                this._cache
-            ) {
-
-                this._cache = {
-
-                    ...this._cache,
+                    ...current,
 
                     ...partialData
                 };
+
+                return await this
+                    .saveSettings(merged);
+
+            } catch (error) {
+
+                console.error(
+                    '[ConfigService:update]',
+                    error
+                );
+
+                return false;
             }
+        },
 
-            return true;
+        // ======================================================
+        // SUBSCRIBE
+        // ======================================================
 
-        } catch (error) {
+        subscribe(callback) {
 
-            console.error(
-                "[ConfigService:update]",
-                error
-            );
+            try {
 
-            return false;
-        }
-    },
+                const ref =
+                    this._ref();
 
-    // ==========================================================
-    // Listener Realtime
-    // ==========================================================
+                ref.on(
+                    'value',
+                    snapshot => {
 
-    subscribe(callback) {
+                        const data =
+                            snapshot.val() || {};
 
-        try {
+                        this._cache =
+                            this.normalizarConfiguracoes(
+                                data
+                            );
 
-            const ref =
-                this
-                    ._db()
-                    .ref(
-                        "abella/settings"
-                    );
+                        this._cacheTimestamp =
+                            Date.now();
 
-            ref.on(
-                "value",
-                snapshot => {
+                        if (
+                            typeof callback ===
+                            'function'
+                        ) {
 
-                    const data =
-                        snapshot.val() || {};
-
-                    this._cache =
-                        this.normalizarConfiguracoes(
-                            data
-                        );
-
-                    this._cacheTimestamp =
-                        Date.now();
-
-                    if (
-                        typeof callback ===
-                        "function"
-                    ) {
-
-                        callback(
-                            this._cache
-                        );
+                            callback(
+                                structuredClone(
+                                    this._cache
+                                )
+                            );
+                        }
                     }
-                }
-            );
+                );
 
-            return ref;
+                return ref;
 
-        } catch (error) {
+            } catch (error) {
 
-            console.error(
-                "[ConfigService:subscribe]",
-                error
-            );
-        }
-    },
-
-    // ==========================================================
-    // Remover Listener
-    // ==========================================================
-
-    unsubscribe(ref) {
-
-        try {
-
-            if (ref) {
-
-                ref.off();
+                console.error(
+                    '[ConfigService:subscribe]',
+                    error
+                );
             }
+        },
 
-        } catch (error) {
+        // ======================================================
+        // UNSUBSCRIBE
+        // ======================================================
 
-            console.error(
-                "[ConfigService:unsubscribe]",
-                error
-            );
+        unsubscribe(ref) {
+
+            try {
+
+                if (
+                    ref &&
+                    typeof ref.off ===
+                    'function'
+                ) {
+
+                    ref.off();
+                }
+
+            } catch (error) {
+
+                console.error(
+                    '[ConfigService:unsubscribe]',
+                    error
+                );
+            }
         }
-    }
-};
+    };
 
-window.ConfigService =
-    ConfigService;
+    window.ConfigService =
+        Object.freeze(
+            ConfigService
+        );
+
+})();

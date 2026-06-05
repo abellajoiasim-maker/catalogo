@@ -1,19 +1,26 @@
 // ======================================================================
 // js/firebase/services/subcategoriaService.js
-// Abella Joias - SubcategoriaService v3.0
+// Abella Joias - SubcategoriaService v4.0
 // ======================================================================
 
 const SubcategoriaService = {
 
     // ==========================================================
-    // Firebase
+    // CACHE
+    // ==========================================================
+
+    _cache: {},
+
+    // ==========================================================
+    // FIREBASE
     // ==========================================================
 
     _db() {
 
         if (!window.db) {
+
             throw new Error(
-                "Firebase Database não inicializado."
+                'Firebase Database não inicializado.'
             );
         }
 
@@ -21,13 +28,62 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Utilidades
+    // PATH HELPER
     // ==========================================================
+
+    _path(path = '') {
+
+        if (
+            typeof window.getAbellaPath !== 'function'
+        ) {
+
+            console.error(
+                '[SubcategoriaService] getAbellaPath() não encontrado.'
+            );
+
+            return `abella/${path}`;
+        }
+
+        return window.getAbellaPath(path);
+    },
+
+    // ==========================================================
+    // CATEGORIA SERVICE
+    // ==========================================================
+
+    _categoriaService() {
+
+        return (
+            window.CategoriaService ||
+            window.categoriaService ||
+            null
+        );
+    },
+
+    // ==========================================================
+    // UTILIDADES
+    // ==========================================================
+
+    _safeString(valor = '') {
+
+        return String(valor || '')
+            .trim();
+    },
+
+    _safeNumber(valor = 0) {
+
+        const numero =
+            Number(valor);
+
+        return Number.isFinite(numero)
+            ? numero
+            : 0;
+    },
 
     gerarSlug(texto = '') {
 
-        return texto
-            .toString()
+        return this
+            ._safeString(texto)
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .toLowerCase()
@@ -36,7 +92,7 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Normalização
+    // NORMALIZAÇÃO
     // ==========================================================
 
     normalizarSubcategoria(
@@ -46,17 +102,23 @@ const SubcategoriaService = {
 
         return {
 
-            slug,
+            id:
+                this._safeString(slug),
+
+            slug:
+                this._safeString(slug),
 
             name:
-                raw.name ||
-                raw.nome ||
-                '',
+                this._safeString(
+                    raw.name ||
+                    raw.nome
+                ),
 
             image:
-                raw.image ||
-                raw.imagem ||
-                '',
+                this._safeString(
+                    raw.image ||
+                    raw.imagem
+                ),
 
             paused:
                 raw.paused === true,
@@ -64,9 +126,10 @@ const SubcategoriaService = {
             active:
                 raw.paused !== true,
 
-            order: Number(
-                raw.order ?? 0
-            ),
+            order:
+                this._safeNumber(
+                    raw.order
+                ),
 
             createdAt:
                 raw.createdAt ||
@@ -79,7 +142,7 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Buscar todas de uma categoria
+    // BUSCAR TODAS
     // ==========================================================
 
     async getByCategory(catSlug) {
@@ -87,18 +150,29 @@ const SubcategoriaService = {
         try {
 
             if (!catSlug) {
+
                 return {};
             }
 
+            const categoriaService =
+                this._categoriaService();
+
+            if (!categoriaService) {
+
+                throw new Error(
+                    'CategoriaService não encontrado.'
+                );
+            }
+
             const categoria =
-                await window
-                    .CategoriaService
+                await categoriaService
                     .getBySlug(catSlug);
 
             if (
                 !categoria ||
                 !categoria.subcategories
             ) {
+
                 return {};
             }
 
@@ -117,6 +191,9 @@ const SubcategoriaService = {
                 }
             );
 
+            this._cache[catSlug] =
+                resultado;
+
             return resultado;
 
         } catch (error) {
@@ -131,27 +208,39 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Lista ordenada
+    // LISTA ORDENADA
     // ==========================================================
 
     async getList(catSlug) {
 
-        const subcategorias =
-            await this.getByCategory(
-                catSlug
+        try {
+
+            const subcategorias =
+                await this.getByCategory(
+                    catSlug
+                );
+
+            return Object
+                .values(subcategorias)
+                .sort(
+                    (a, b) =>
+                        (a.order || 0) -
+                        (b.order || 0)
+                );
+
+        } catch (error) {
+
+            console.error(
+                '[SubcategoriaService:getList]',
+                error
             );
 
-        return Object.values(
-            subcategorias
-        ).sort(
-            (a, b) =>
-                (a.order || 0) -
-                (b.order || 0)
-        );
+            return [];
+        }
     },
 
     // ==========================================================
-    // Buscar por slug
+    // BUSCAR POR SLUG
     // ==========================================================
 
     async getBySlug(
@@ -160,6 +249,14 @@ const SubcategoriaService = {
     ) {
 
         try {
+
+            if (
+                !catSlug ||
+                !subSlug
+            ) {
+
+                return null;
+            }
 
             const subcategorias =
                 await this.getByCategory(
@@ -183,7 +280,7 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Verificar existência
+    // EXISTE
     // ==========================================================
 
     async exists(
@@ -201,7 +298,7 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Salvar
+    // SALVAR
     // ==========================================================
 
     async save(
@@ -222,21 +319,28 @@ const SubcategoriaService = {
             if (!subSlug) {
 
                 throw new Error(
-                    'Slug da subcategoria obrigatório.'
+                    'Slug obrigatório.'
                 );
             }
 
-            const name =
-                (
-                    subcatData.name ||
-                    subcatData.nome ||
-                    ''
-                ).trim();
+            const categoriaService =
+                this._categoriaService();
 
-            if (!name) {
+            if (!categoriaService) {
 
                 throw new Error(
-                    'Nome da subcategoria obrigatório.'
+                    'CategoriaService não encontrado.'
+                );
+            }
+
+            const categoriaExiste =
+                await categoriaService
+                    .exists(catSlug);
+
+            if (!categoriaExiste) {
+
+                throw new Error(
+                    `Categoria "${catSlug}" inexistente.`
                 );
             }
 
@@ -246,21 +350,36 @@ const SubcategoriaService = {
                     subSlug
                 );
 
+            const nome =
+                this._safeString(
+                    subcatData.name ||
+                    subcatData.nome
+                );
+
+            if (!nome) {
+
+                throw new Error(
+                    'Nome obrigatório.'
+                );
+            }
+
             const node = {
 
-                name,
+                name: nome,
 
                 image:
-                    subcatData.image ||
-                    subcatData.imagem ||
-                    '',
+                    this._safeString(
+                        subcatData.image ||
+                        subcatData.imagem
+                    ),
 
                 paused:
                     subcatData.paused === true,
 
-                order: Number(
-                    subcatData.order ?? 0
-                ),
+                order:
+                    this._safeNumber(
+                        subcatData.order
+                    ),
 
                 createdAt:
                     existente?.createdAt ||
@@ -273,13 +392,16 @@ const SubcategoriaService = {
             await this
                 ._db()
                 .ref(
-                    `abella/categories/${catSlug}/subcategories/${subSlug}`
+                    this._path(
+                        `categories/${catSlug}/subcategories/${subSlug}`
+                    )
                 )
                 .update(node);
 
-            window
-                .CategoriaService
+            categoriaService
                 .invalidateCache();
+
+            delete this._cache[catSlug];
 
             return true;
 
@@ -295,7 +417,7 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Ativar / Pausar
+    // TOGGLE STATUS
     // ==========================================================
 
     async toggleStatus(
@@ -318,26 +440,32 @@ const SubcategoriaService = {
                 );
             }
 
-            const novoStatus =
-                !subcategoria.active;
-
             await this
                 ._db()
                 .ref(
-                    `abella/categories/${catSlug}/subcategories/${subSlug}`
+                    this._path(
+                        `categories/${catSlug}/subcategories/${subSlug}`
+                    )
                 )
                 .update({
 
                     paused:
-                        !novoStatus,
+                        subcategoria.active,
 
                     updatedAt:
                         Date.now()
                 });
 
-            window
-                .CategoriaService
-                .invalidateCache();
+            const categoriaService =
+                this._categoriaService();
+
+            if (categoriaService) {
+
+                categoriaService
+                    .invalidateCache();
+            }
+
+            delete this._cache[catSlug];
 
             return true;
 
@@ -353,7 +481,7 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Excluir
+    // DELETE
     // ==========================================================
 
     async delete(
@@ -367,19 +495,29 @@ const SubcategoriaService = {
                 !catSlug ||
                 !subSlug
             ) {
+
                 return false;
             }
 
             await this
                 ._db()
                 .ref(
-                    `abella/categories/${catSlug}/subcategories/${subSlug}`
+                    this._path(
+                        `categories/${catSlug}/subcategories/${subSlug}`
+                    )
                 )
                 .remove();
 
-            window
-                .CategoriaService
-                .invalidateCache();
+            const categoriaService =
+                this._categoriaService();
+
+            if (categoriaService) {
+
+                categoriaService
+                    .invalidateCache();
+            }
+
+            delete this._cache[catSlug];
 
             return true;
 
@@ -395,7 +533,7 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Listener realtime
+    // SUBSCRIBE
     // ==========================================================
 
     subscribe(
@@ -405,15 +543,26 @@ const SubcategoriaService = {
 
         try {
 
+            if (!catSlug) {
+
+                throw new Error(
+                    'Categoria obrigatória.'
+                );
+            }
+
             const ref =
                 this
                     ._db()
                     .ref(
-                        `abella/categories/${catSlug}/subcategories`
+                        this._path(
+                            `categories/${catSlug}/subcategories`
+                        )
                     );
 
             ref.on(
+
                 'value',
+
                 snapshot => {
 
                     const data =
@@ -434,15 +583,24 @@ const SubcategoriaService = {
                             }
                         );
 
+                    this._cache[catSlug] =
+                        resultado;
+
                     if (
                         typeof callback ===
                         'function'
                     ) {
 
-                        callback(
-                            resultado
-                        );
+                        callback(resultado);
                     }
+                },
+
+                error => {
+
+                    console.error(
+                        '[SubcategoriaService:subscribe]',
+                        error
+                    );
                 }
             );
 
@@ -458,14 +616,18 @@ const SubcategoriaService = {
     },
 
     // ==========================================================
-    // Remover listener
+    // UNSUBSCRIBE
     // ==========================================================
 
     unsubscribe(ref) {
 
         try {
 
-            if (ref) {
+            if (
+                ref &&
+                typeof ref.off === 'function'
+            ) {
+
                 ref.off();
             }
 
@@ -479,15 +641,19 @@ const SubcategoriaService = {
     }
 };
 
+// ==========================================================
+// EXPORTS
+// ==========================================================
+
 window.SubcategoriaService =
     SubcategoriaService;
 
-// ==========================================================
-// Compatibilidade Legado
-// ==========================================================
-
 window.subcategoriaService =
     SubcategoriaService;
+
+// ==========================================================
+// LEGADO
+// ==========================================================
 
 SubcategoriaService.listarTodas =
     SubcategoriaService.getList;
@@ -509,3 +675,7 @@ SubcategoriaService.inscrever =
 
 SubcategoriaService.removerInscricao =
     SubcategoriaService.unsubscribe;
+
+console.log(
+    '🧩 SubcategoriaService v4.0 carregado.'
+);

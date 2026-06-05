@@ -1,6 +1,6 @@
 // ======================================================================
 // js/firebase/services/pedidoService.js
-// Abella Joias - PedidoService Premium v6.0
+// Abella Joias - PedidoService Premium v7.0 FORENSE
 // ======================================================================
 
 const PedidoService = {
@@ -18,7 +18,7 @@ const PedidoService = {
         if (!window.db) {
 
             throw new Error(
-                "Firebase Database não inicializado."
+                'Firebase Database não inicializado.'
             );
 
         }
@@ -28,14 +28,22 @@ const PedidoService = {
     },
 
     // ==========================================================
-    // PATH CENTRALIZADO
+    // PATH
     // ==========================================================
 
-    _getPath() {
+    _path(path = '') {
 
-        return getAbellaPath(
-            'orders'
-        );
+        return getAbellaPath(path);
+
+    },
+
+    _ref(path = '') {
+
+        return this
+            ._db()
+            .ref(
+                this._path(path)
+            );
 
     },
 
@@ -97,8 +105,101 @@ const PedidoService = {
 
     },
 
+    _safeObject(valor) {
+
+        return (
+            valor &&
+            typeof valor === 'object' &&
+            !Array.isArray(valor)
+        )
+            ? valor
+            : {};
+
+    },
+
+    _normalizeStatus(status = '') {
+
+        const valor =
+            this
+                ._safeString(status);
+
+        return valor || 'Recebido';
+
+    },
+
     // ==========================================================
-    // NORMALIZADOR
+    // NORMALIZADOR ITEM
+    // ==========================================================
+
+    normalizarItem(item = {}) {
+
+        return {
+
+            id:
+                this._safeString(
+                    item.id
+                ),
+
+            sku:
+                this._safeString(
+                    item.sku
+                ),
+
+            nome:
+                this._safeString(
+                    item.nome ||
+                    item.name
+                ),
+
+            image:
+                this._safeString(
+                    item.image ||
+                    item.imagem
+                ),
+
+            categoria:
+                this._safeString(
+                    item.categoria ||
+                    item.category
+                ),
+
+            subcategoria:
+                this._safeString(
+                    item.subcategoria ||
+                    item.subcategory
+                ),
+
+            precoFinal:
+                this._safeNumber(
+                    item.precoFinal ??
+                    item.price
+                ),
+
+            peso:
+                this._safeNumber(
+                    item.peso ??
+                    item.weight
+                ),
+
+            quantidade:
+                Math.max(
+                    1,
+                    parseInt(
+                        item.quantidade
+                    ) || 1
+                ),
+
+            variacao:
+                this._safeString(
+                    item.variacao
+                )
+
+        };
+
+    },
+
+    // ==========================================================
+    // NORMALIZADOR PEDIDO
     // ==========================================================
 
     normalizarPedido(
@@ -106,31 +207,31 @@ const PedidoService = {
         raw = {}
     ) {
 
+        raw =
+            this._safeObject(raw);
+
+        const entrega =
+            this._safeObject(
+                raw.entrega
+            );
+
+        const romaneio =
+            this._safeObject(
+                raw.romaneio
+            );
+
         return {
 
             // ==================================================
             // IDENTIFICAÇÃO
             // ==================================================
 
-            id,
+            id:
+                this._safeString(id),
 
             numeroPedido:
                 this._safeString(
                     raw.numeroPedido
-                ),
-
-            // ==================================================
-            // DATAS
-            // ==================================================
-
-            createdAt:
-                this._safeNumber(
-                    raw.createdAt
-                ),
-
-            updatedAt:
-                this._safeNumber(
-                    raw.updatedAt
                 ),
 
             // ==================================================
@@ -159,7 +260,7 @@ const PedidoService = {
             formaPagamento:
                 this._safeString(
                     raw.formaPagamento
-                ) || "PIX",
+                ) || 'PIX',
 
             observacoes:
                 this._safeString(
@@ -210,9 +311,9 @@ const PedidoService = {
             // ==================================================
 
             status:
-                this._safeString(
+                this._normalizeStatus(
                     raw.status
-                ) || "Recebido",
+                ),
 
             // ==================================================
             // ENTREGA
@@ -222,27 +323,27 @@ const PedidoService = {
 
                 nome:
                     this._safeString(
-                        raw.entrega?.nome
+                        entrega.nome
                     ),
 
                 endereco:
                     this._safeString(
-                        raw.entrega?.endereco
+                        entrega.endereco
                     ),
 
                 numero:
                     this._safeString(
-                        raw.entrega?.numero
+                        entrega.numero
                     ),
 
                 bairro:
                     this._safeString(
-                        raw.entrega?.bairro
+                        entrega.bairro
                     ),
 
                 cidade:
                     this._safeString(
-                        raw.entrega?.cidade
+                        entrega.cidade
                     )
 
             },
@@ -255,27 +356,27 @@ const PedidoService = {
 
                 subtotal:
                     this._safeNumber(
-                        raw.romaneio?.subtotal
+                        romaneio.subtotal
                     ),
 
                 desconto:
                     this._safeNumber(
-                        raw.romaneio?.desconto
+                        romaneio.desconto
                     ),
 
                 totalPix:
                     this._safeNumber(
-                        raw.romaneio?.totalPix
+                        romaneio.totalPix
                     ),
 
                 pesoTotal:
                     this._safeNumber(
-                        raw.romaneio?.pesoTotal
+                        romaneio.pesoTotal
                     ),
 
                 totalPecas:
                     this._safeNumber(
-                        raw.romaneio?.totalPecas
+                        romaneio.totalPecas
                     )
 
             },
@@ -285,16 +386,39 @@ const PedidoService = {
             // ==================================================
 
             itens:
-                this._safeArray(
-                    raw.itens
-                )
+
+                this
+                    ._safeArray(
+                        raw.itens
+                    )
+                    .map(item =>
+
+                        this.normalizarItem(
+                            item
+                        )
+
+                    ),
+
+            // ==================================================
+            // DATAS
+            // ==================================================
+
+            createdAt:
+                this._safeNumber(
+                    raw.createdAt
+                ) || Date.now(),
+
+            updatedAt:
+                this._safeNumber(
+                    raw.updatedAt
+                ) || Date.now()
 
         };
 
     },
 
     // ==========================================================
-    // CRIAR PEDIDO
+    // CREATE
     // ==========================================================
 
     async create(
@@ -305,15 +429,12 @@ const PedidoService = {
 
             const ref =
                 this
-                    ._db()
-                    .ref(
-                        this._getPath()
-                    )
+                    ._ref('orders')
                     .push();
 
             const numeroPedido =
 
-                "AB" +
+                'AB' +
 
                 Date.now()
                     .toString()
@@ -321,83 +442,27 @@ const PedidoService = {
 
             const payload =
                 this.normalizarPedido(
+
                     ref.key,
+
                     {
 
+                        ...pedidoData,
+
                         numeroPedido,
+
+                        status:
+                            pedidoData.status ||
+                            'Recebido',
 
                         createdAt:
                             Date.now(),
 
                         updatedAt:
-                            Date.now(),
-
-                        cliente:
-                            pedidoData.cliente,
-
-                        whats:
-                            pedidoData.whats,
-
-                        cidade:
-                            pedidoData.cidade,
-
-                        formaPagamento:
-                            pedidoData.formaPagamento,
-
-                        observacoes:
-                            pedidoData.observacoes,
-
-                        subtotal:
-                            pedidoData.subtotal,
-
-                        desconto:
-                            pedidoData.desconto,
-
-                        frete:
-                            pedidoData.frete,
-
-                        total:
-                            pedidoData.total,
-
-                        totalPix:
-                            pedidoData.totalPix,
-
-                        pesoTotal:
-                            pedidoData.pesoTotal,
-
-                        totalPecas:
-                            pedidoData.totalPecas,
-
-                        status:
-                            pedidoData.status ||
-                            "Recebido",
-
-                        entrega:
-                            pedidoData.entrega || {},
-
-                        romaneio: {
-
-                            subtotal:
-                                pedidoData.subtotal,
-
-                            desconto:
-                                pedidoData.desconto,
-
-                            totalPix:
-                                pedidoData.totalPix,
-
-                            pesoTotal:
-                                pedidoData.pesoTotal,
-
-                            totalPecas:
-                                pedidoData.totalPecas
-
-                        },
-
-                        itens:
-                            pedidoData.itens || []
+                            Date.now()
 
                     }
+
                 );
 
             await ref.set(
@@ -422,7 +487,7 @@ const PedidoService = {
         } catch (error) {
 
             console.error(
-                "[PedidoService:create]",
+                '[PedidoService:create]',
                 error
             );
 
@@ -440,7 +505,7 @@ const PedidoService = {
     },
 
     // ==========================================================
-    // LISTAR TODOS
+    // GET ALL
     // ==========================================================
 
     async getAll(
@@ -452,7 +517,6 @@ const PedidoService = {
             if (
 
                 !forceRefresh &&
-
                 this._isCacheValid()
 
             ) {
@@ -464,35 +528,27 @@ const PedidoService = {
             const snapshot =
 
                 await this
-                    ._db()
-                    .ref(
-                        this._getPath()
-                    )
-                    .once(
-                        "value"
-                    );
+                    ._ref('orders')
+                    .once('value');
 
             const data =
                 snapshot.val() || {};
 
             this._cache = {};
 
-            Object.entries(
-                data
-            ).forEach(
+            Object.entries(data)
+                .forEach(
+                    ([id, raw]) => {
 
-                ([id, raw]) => {
+                        this._cache[id] =
 
-                    this._cache[id] =
+                            this.normalizarPedido(
+                                id,
+                                raw
+                            );
 
-                        this.normalizarPedido(
-                            id,
-                            raw
-                        );
-
-                }
-
-            );
+                    }
+                );
 
             this._cacheTimestamp =
                 Date.now();
@@ -502,7 +558,7 @@ const PedidoService = {
         } catch (error) {
 
             console.error(
-                "[PedidoService:getAll]",
+                '[PedidoService:getAll]',
                 error
             );
 
@@ -513,12 +569,15 @@ const PedidoService = {
     },
 
     // ==========================================================
-    // BUSCAR POR ID
+    // GET BY ID
     // ==========================================================
 
     async getById(id) {
 
         try {
+
+            id =
+                this._safeString(id);
 
             if (!id) {
 
@@ -537,13 +596,10 @@ const PedidoService = {
             const snapshot =
 
                 await this
-                    ._db()
-                    .ref(
-                        `${this._getPath()}/${id}`
+                    ._ref(
+                        `orders/${id}`
                     )
-                    .once(
-                        "value"
-                    );
+                    .once('value');
 
             const data =
                 snapshot.val();
@@ -569,7 +625,7 @@ const PedidoService = {
         } catch (error) {
 
             console.error(
-                "[PedidoService:getById]",
+                '[PedidoService:getById]',
                 error
             );
 
@@ -580,7 +636,7 @@ const PedidoService = {
     },
 
     // ==========================================================
-    // ATUALIZAR STATUS
+    // UPDATE STATUS
     // ==========================================================
 
     async updateStatus(
@@ -590,80 +646,23 @@ const PedidoService = {
 
         try {
 
-            if (!id) {
-
-                throw new Error(
-                    "ID do pedido obrigatório."
-                );
-
-            }
-
-            await this
-                ._db()
-                .ref(
-                    `${this._getPath()}/${id}`
-                )
-                .update({
-
-                    status:
-                        this._safeString(
-                            status
-                        ),
-
-                    updatedAt:
-                        Date.now()
-
-                });
-
-            if (
-                this._cache[id]
-            ) {
-
-                this._cache[id].status =
-                    status;
-
-                this._cache[id].updatedAt =
-                    Date.now();
-
-            }
-
-            return true;
-
-        } catch (error) {
-
-            console.error(
-                "[PedidoService:updateStatus]",
-                error
-            );
-
-            return false;
-
-        }
-
-    },
-
-    // ==========================================================
-    // ATUALIZAR PEDIDO
-    // ==========================================================
-
-    async update(
-        id,
-        partialData = {}
-    ) {
-
-        try {
+            id =
+                this._safeString(id);
 
             if (!id) {
 
                 throw new Error(
-                    "ID obrigatório."
+                    'ID obrigatório.'
                 );
 
             }
 
             const payload = {
 
-                ...partialData,
+                status:
+                    this._normalizeStatus(
+                        status
+                    ),
 
                 updatedAt:
                     Date.now()
@@ -671,9 +670,8 @@ const PedidoService = {
             };
 
             await this
-                ._db()
-                .ref(
-                    `${this._getPath()}/${id}`
+                ._ref(
+                    `orders/${id}`
                 )
                 .update(
                     payload
@@ -698,7 +696,7 @@ const PedidoService = {
         } catch (error) {
 
             console.error(
-                "[PedidoService:update]",
+                '[PedidoService:updateStatus]',
                 error
             );
 
@@ -709,12 +707,92 @@ const PedidoService = {
     },
 
     // ==========================================================
-    // EXCLUIR
+    // UPDATE
+    // ==========================================================
+
+    async update(
+        id,
+        partialData = {}
+    ) {
+
+        try {
+
+            id =
+                this._safeString(id);
+
+            if (!id) {
+
+                throw new Error(
+                    'ID obrigatório.'
+                );
+
+            }
+
+            const atual =
+                await this.getById(id);
+
+            if (!atual) {
+
+                throw new Error(
+                    'Pedido não encontrado.'
+                );
+
+            }
+
+            const payload =
+                this.normalizarPedido(
+
+                    id,
+
+                    {
+
+                        ...atual,
+
+                        ...partialData,
+
+                        updatedAt:
+                            Date.now()
+
+                    }
+
+                );
+
+            await this
+                ._ref(
+                    `orders/${id}`
+                )
+                .update(
+                    payload
+                );
+
+            this._cache[id] =
+                payload;
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                '[PedidoService:update]',
+                error
+            );
+
+            return false;
+
+        }
+
+    },
+
+    // ==========================================================
+    // DELETE
     // ==========================================================
 
     async delete(id) {
 
         try {
+
+            id =
+                this._safeString(id);
 
             if (!id) {
 
@@ -723,9 +801,8 @@ const PedidoService = {
             }
 
             await this
-                ._db()
-                .ref(
-                    `${this._getPath()}/${id}`
+                ._ref(
+                    `orders/${id}`
                 )
                 .remove();
 
@@ -736,7 +813,7 @@ const PedidoService = {
         } catch (error) {
 
             console.error(
-                "[PedidoService:delete]",
+                '[PedidoService:delete]',
                 error
             );
 
@@ -755,16 +832,11 @@ const PedidoService = {
         try {
 
             const ref =
-
-                this
-                    ._db()
-                    .ref(
-                        this._getPath()
-                    );
+                this._ref('orders');
 
             ref.on(
 
-                "value",
+                'value',
 
                 snapshot => {
 
@@ -773,29 +845,26 @@ const PedidoService = {
 
                     this._cache = {};
 
-                    Object.entries(
-                        data
-                    ).forEach(
+                    Object.entries(data)
+                        .forEach(
+                            ([id, raw]) => {
 
-                        ([id, raw]) => {
+                                this._cache[id] =
 
-                            this._cache[id] =
+                                    this.normalizarPedido(
+                                        id,
+                                        raw
+                                    );
 
-                                this.normalizarPedido(
-                                    id,
-                                    raw
-                                );
-
-                        }
-
-                    );
+                            }
+                        );
 
                     this._cacheTimestamp =
                         Date.now();
 
                     if (
                         typeof callback ===
-                        "function"
+                        'function'
                     ) {
 
                         callback(
@@ -813,7 +882,7 @@ const PedidoService = {
         } catch (error) {
 
             console.error(
-                "[PedidoService:subscribe]",
+                '[PedidoService:subscribe]',
                 error
             );
 
@@ -822,7 +891,7 @@ const PedidoService = {
     },
 
     // ==========================================================
-    // REMOVER LISTENER
+    // UNSUBSCRIBE
     // ==========================================================
 
     unsubscribe(ref) {
@@ -838,7 +907,7 @@ const PedidoService = {
         } catch (error) {
 
             console.error(
-                "[PedidoService:unsubscribe]",
+                '[PedidoService:unsubscribe]',
                 error
             );
 
@@ -858,6 +927,29 @@ window.PedidoService =
 window.pedidoService =
     PedidoService;
 
+// ==========================================================
+// LEGACY
+// ==========================================================
+
+PedidoService.criarPedido =
+    PedidoService.create.bind(
+        PedidoService
+    );
+
+PedidoService.buscarPorId =
+    PedidoService.getById.bind(
+        PedidoService
+    );
+
+PedidoService.listarTodos =
+    PedidoService.getAll.bind(
+        PedidoService
+    );
+
+// ==========================================================
+// INIT
+// ==========================================================
+
 console.log(
-    "📦 PedidoService Premium v6.0 carregado."
+    '📦 PedidoService Premium v7.0 FORENSE carregado.'
 );

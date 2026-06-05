@@ -1,6 +1,6 @@
 // ======================================================================
 // js/firebase/services/pedidoService.js
-// Abella Joias - PedidoService Premium v5.0
+// Abella Joias - PedidoService Premium v6.0
 // ======================================================================
 
 const PedidoService = {
@@ -28,12 +28,14 @@ const PedidoService = {
     },
 
     // ==========================================================
-    // CAMINHO FIREBASE
+    // PATH CENTRALIZADO
     // ==========================================================
 
     _getPath() {
 
-        return "abella/orders";
+        return getAbellaPath(
+            'orders'
+        );
 
     },
 
@@ -66,6 +68,36 @@ const PedidoService = {
     },
 
     // ==========================================================
+    // HELPERS
+    // ==========================================================
+
+    _safeString(valor = '') {
+
+        return String(valor || '')
+            .trim();
+
+    },
+
+    _safeNumber(valor = 0) {
+
+        const numero =
+            Number(valor);
+
+        return Number.isFinite(numero)
+            ? numero
+            : 0;
+
+    },
+
+    _safeArray(valor) {
+
+        return Array.isArray(valor)
+            ? valor
+            : [];
+
+    },
+
+    // ==========================================================
     // NORMALIZADOR
     // ==========================================================
 
@@ -76,124 +108,186 @@ const PedidoService = {
 
         return {
 
+            // ==================================================
+            // IDENTIFICAÇÃO
+            // ==================================================
+
             id,
 
             numeroPedido:
-                raw.numeroPedido || "",
+                this._safeString(
+                    raw.numeroPedido
+                ),
+
+            // ==================================================
+            // DATAS
+            // ==================================================
 
             createdAt:
-                raw.createdAt || 0,
+                this._safeNumber(
+                    raw.createdAt
+                ),
 
             updatedAt:
-                raw.updatedAt || 0,
+                this._safeNumber(
+                    raw.updatedAt
+                ),
+
+            // ==================================================
+            // CLIENTE
+            // ==================================================
 
             cliente:
-                raw.cliente || "",
+                this._safeString(
+                    raw.cliente
+                ),
 
             whats:
-                raw.whats || "",
+                this._safeString(
+                    raw.whats
+                ),
 
             cidade:
-                raw.cidade || "",
+                this._safeString(
+                    raw.cidade
+                ),
+
+            // ==================================================
+            // PAGAMENTO
+            // ==================================================
 
             formaPagamento:
-                raw.formaPagamento || "PIX",
+                this._safeString(
+                    raw.formaPagamento
+                ) || "PIX",
 
             observacoes:
-                raw.observacoes || "",
+                this._safeString(
+                    raw.observacoes
+                ),
+
+            // ==================================================
+            // VALORES
+            // ==================================================
 
             subtotal:
-                Number(
-                    raw.subtotal ?? 0
+                this._safeNumber(
+                    raw.subtotal
                 ),
 
             desconto:
-                Number(
-                    raw.desconto ?? 0
+                this._safeNumber(
+                    raw.desconto
                 ),
 
             frete:
-                Number(
-                    raw.frete ?? 0
+                this._safeNumber(
+                    raw.frete
                 ),
 
             total:
-                Number(
-                    raw.total ?? 0
+                this._safeNumber(
+                    raw.total
                 ),
 
             totalPix:
-                Number(
-                    raw.totalPix ?? 0
+                this._safeNumber(
+                    raw.totalPix
                 ),
 
             pesoTotal:
-                Number(
-                    raw.pesoTotal ?? 0
+                this._safeNumber(
+                    raw.pesoTotal
                 ),
 
             totalPecas:
-                Number(
-                    raw.totalPecas ?? 0
+                this._safeNumber(
+                    raw.totalPecas
                 ),
 
+            // ==================================================
+            // STATUS
+            // ==================================================
+
             status:
-                raw.status || "Recebido",
+                this._safeString(
+                    raw.status
+                ) || "Recebido",
+
+            // ==================================================
+            // ENTREGA
+            // ==================================================
 
             entrega: {
 
                 nome:
-                    raw.entrega?.nome || "",
+                    this._safeString(
+                        raw.entrega?.nome
+                    ),
 
                 endereco:
-                    raw.entrega?.endereco || "",
+                    this._safeString(
+                        raw.entrega?.endereco
+                    ),
 
                 numero:
-                    raw.entrega?.numero || "",
+                    this._safeString(
+                        raw.entrega?.numero
+                    ),
 
                 bairro:
-                    raw.entrega?.bairro || "",
+                    this._safeString(
+                        raw.entrega?.bairro
+                    ),
 
                 cidade:
-                    raw.entrega?.cidade || ""
-
-            },
-
-            romaneio: {
-
-                subtotal:
-                    Number(
-                        raw.romaneio?.subtotal ?? 0
-                    ),
-
-                desconto:
-                    Number(
-                        raw.romaneio?.desconto ?? 0
-                    ),
-
-                totalPix:
-                    Number(
-                        raw.romaneio?.totalPix ?? 0
-                    ),
-
-                pesoTotal:
-                    Number(
-                        raw.romaneio?.pesoTotal ?? 0
-                    ),
-
-                totalPecas:
-                    Number(
-                        raw.romaneio?.totalPecas ?? 0
+                    this._safeString(
+                        raw.entrega?.cidade
                     )
 
             },
 
+            // ==================================================
+            // ROMANEIO
+            // ==================================================
+
+            romaneio: {
+
+                subtotal:
+                    this._safeNumber(
+                        raw.romaneio?.subtotal
+                    ),
+
+                desconto:
+                    this._safeNumber(
+                        raw.romaneio?.desconto
+                    ),
+
+                totalPix:
+                    this._safeNumber(
+                        raw.romaneio?.totalPix
+                    ),
+
+                pesoTotal:
+                    this._safeNumber(
+                        raw.romaneio?.pesoTotal
+                    ),
+
+                totalPecas:
+                    this._safeNumber(
+                        raw.romaneio?.totalPecas
+                    )
+
+            },
+
+            // ==================================================
+            // ITENS
+            // ==================================================
+
             itens:
-                Array.isArray(
+                this._safeArray(
                     raw.itens
                 )
-                ? raw.itens
-                : []
 
         };
 
@@ -225,127 +319,86 @@ const PedidoService = {
                     .toString()
                     .slice(-8);
 
-            const payload = {
+            const payload =
+                this.normalizarPedido(
+                    ref.key,
+                    {
 
-                numeroPedido,
+                        numeroPedido,
 
-                createdAt:
-                    Date.now(),
+                        createdAt:
+                            Date.now(),
 
-                updatedAt:
-                    Date.now(),
+                        updatedAt:
+                            Date.now(),
 
-                cliente:
-                    pedidoData.cliente || "",
+                        cliente:
+                            pedidoData.cliente,
 
-                whats:
-                    pedidoData.whats || "",
+                        whats:
+                            pedidoData.whats,
 
-                cidade:
-                    pedidoData.cidade || "",
+                        cidade:
+                            pedidoData.cidade,
 
-                formaPagamento:
-                    pedidoData.formaPagamento || "PIX",
+                        formaPagamento:
+                            pedidoData.formaPagamento,
 
-                observacoes:
-                    pedidoData.observacoes || "",
+                        observacoes:
+                            pedidoData.observacoes,
 
-                subtotal:
-                    Number(
-                        pedidoData.subtotal ?? 0
-                    ),
+                        subtotal:
+                            pedidoData.subtotal,
 
-                desconto:
-                    Number(
-                        pedidoData.desconto ?? 0
-                    ),
+                        desconto:
+                            pedidoData.desconto,
 
-                frete:
-                    Number(
-                        pedidoData.frete ?? 0
-                    ),
+                        frete:
+                            pedidoData.frete,
 
-                total:
-                    Number(
-                        pedidoData.total ?? 0
-                    ),
+                        total:
+                            pedidoData.total,
 
-                totalPix:
-                    Number(
-                        pedidoData.totalPix ?? 0
-                    ),
+                        totalPix:
+                            pedidoData.totalPix,
 
-                pesoTotal:
-                    Number(
-                        pedidoData.pesoTotal ?? 0
-                    ),
+                        pesoTotal:
+                            pedidoData.pesoTotal,
 
-                totalPecas:
-                    Number(
-                        pedidoData.totalPecas ?? 0
-                    ),
+                        totalPecas:
+                            pedidoData.totalPecas,
 
-                status:
-                    pedidoData.status ||
-                    "Recebido",
+                        status:
+                            pedidoData.status ||
+                            "Recebido",
 
-                entrega: {
+                        entrega:
+                            pedidoData.entrega || {},
 
-                    nome:
-                        pedidoData.entrega?.nome || "",
+                        romaneio: {
 
-                    endereco:
-                        pedidoData.entrega?.endereco || "",
+                            subtotal:
+                                pedidoData.subtotal,
 
-                    numero:
-                        pedidoData.entrega?.numero || "",
+                            desconto:
+                                pedidoData.desconto,
 
-                    bairro:
-                        pedidoData.entrega?.bairro || "",
+                            totalPix:
+                                pedidoData.totalPix,
 
-                    cidade:
-                        pedidoData.entrega?.cidade || ""
+                            pesoTotal:
+                                pedidoData.pesoTotal,
 
-                },
+                            totalPecas:
+                                pedidoData.totalPecas
 
-                romaneio: {
+                        },
 
-                    subtotal:
-                        Number(
-                            pedidoData.subtotal ?? 0
-                        ),
+                        itens:
+                            pedidoData.itens || []
 
-                    desconto:
-                        Number(
-                            pedidoData.desconto ?? 0
-                        ),
-
-                    totalPix:
-                        Number(
-                            pedidoData.totalPix ?? 0
-                        ),
-
-                    pesoTotal:
-                        Number(
-                            pedidoData.pesoTotal ?? 0
-                        ),
-
-                    totalPecas:
-                        Number(
-                            pedidoData.totalPecas ?? 0
-                        )
-
-                },
-
-                itens:
-
-                    Array.isArray(
-                        pedidoData.itens
-                    )
-                    ? pedidoData.itens
-                    : []
-
-            };
+                    }
+                );
 
             await ref.set(
                 payload
@@ -353,18 +406,11 @@ const PedidoService = {
 
             this._cache[
                 ref.key
-            ] = {
-
-                id:
-                    ref.key,
-
-                ...payload
-
-            };
+            ] = payload;
 
             return {
 
-                success:true,
+                success: true,
 
                 id:
                     ref.key,
@@ -382,7 +428,7 @@ const PedidoService = {
 
             return {
 
-                success:false,
+                success: false,
 
                 error:
                     error.message
@@ -544,6 +590,14 @@ const PedidoService = {
 
         try {
 
+            if (!id) {
+
+                throw new Error(
+                    "ID do pedido obrigatório."
+                );
+
+            }
+
             await this
                 ._db()
                 .ref(
@@ -551,7 +605,10 @@ const PedidoService = {
                 )
                 .update({
 
-                    status,
+                    status:
+                        this._safeString(
+                            status
+                        ),
 
                     updatedAt:
                         Date.now()
@@ -564,6 +621,9 @@ const PedidoService = {
 
                 this._cache[id].status =
                     status;
+
+                this._cache[id].updatedAt =
+                    Date.now();
 
             }
 
@@ -583,12 +643,84 @@ const PedidoService = {
     },
 
     // ==========================================================
+    // ATUALIZAR PEDIDO
+    // ==========================================================
+
+    async update(
+        id,
+        partialData = {}
+    ) {
+
+        try {
+
+            if (!id) {
+
+                throw new Error(
+                    "ID obrigatório."
+                );
+
+            }
+
+            const payload = {
+
+                ...partialData,
+
+                updatedAt:
+                    Date.now()
+
+            };
+
+            await this
+                ._db()
+                .ref(
+                    `${this._getPath()}/${id}`
+                )
+                .update(
+                    payload
+                );
+
+            if (
+                this._cache[id]
+            ) {
+
+                this._cache[id] = {
+
+                    ...this._cache[id],
+
+                    ...payload
+
+                };
+
+            }
+
+            return true;
+
+        } catch (error) {
+
+            console.error(
+                "[PedidoService:update]",
+                error
+            );
+
+            return false;
+
+        }
+
+    },
+
+    // ==========================================================
     // EXCLUIR
     // ==========================================================
 
     async delete(id) {
 
         try {
+
+            if (!id) {
+
+                return false;
+
+            }
 
             await this
                 ._db()
@@ -697,13 +829,13 @@ const PedidoService = {
 
         try {
 
-            if(ref){
+            if (ref) {
 
                 ref.off();
 
             }
 
-        } catch(error){
+        } catch (error) {
 
             console.error(
                 "[PedidoService:unsubscribe]",
@@ -717,7 +849,7 @@ const PedidoService = {
 };
 
 // ==========================================================
-// EXPORT
+// EXPORTS
 // ==========================================================
 
 window.PedidoService =
@@ -727,5 +859,5 @@ window.pedidoService =
     PedidoService;
 
 console.log(
-    "📦 PedidoService Premium v5.0 carregado."
+    "📦 PedidoService Premium v6.0 carregado."
 );

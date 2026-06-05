@@ -43,7 +43,6 @@
             backdrop-filter: blur(16px);
             border: 1px solid var(--border-dark);
         }
-        /* Custom Inputs Admin Mode */
         input, select, textarea {
             background: #181818 !important;
             border: 1px solid #282828 !important;
@@ -55,14 +54,12 @@
             box-shadow: 0 0 0 3px rgba(202, 168, 92, 0.15);
             outline: none;
         }
-        /* Custom Toggle Switch UI */
         .toggle-checkbox:checked + .toggle-label {
             background-color: var(--gold);
         }
         .toggle-checkbox:checked + .toggle-label .toggle-dot {
             transform: translateX(100%);
         }
-        /* HUD Loader Overlay */
         #hud-loader {
             background: rgba(7, 7, 7, 0.95);
             transition: opacity 0.4s ease, visibility 0.4s ease;
@@ -99,6 +96,7 @@
     <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <form id="form-configuracoes" onsubmit="salvarConfiguracoesAdmin(event)" class="space-y-8">
             
+            <!-- SEÇÃO DE IDENTIDADE E COMUNICAÇÃO ATUALIZADA COM COMPONENTE DE LOGO -->
             <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
                 <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
                     <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
@@ -114,6 +112,20 @@
                         <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Slogan / Chamada Institucional</label>
                         <input type="text" id="cfg-slogan" class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: Atacado de Joias no Bruto">
                     </div>
+                    
+                    <!-- NOVO NO: URL DA LOGOMARCA COM PREVIEW OPERACIONAL EM TEMPO REAL -->
+                    <div class="md:col-span-2 bg-black/30 p-4 rounded-2xl border border-zinc-900/60 flex flex-col md:flex-row gap-4 items-center">
+                        <div class="w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center p-2 shrink-0 overflow-hidden">
+                            <img id="logo-preview" src="" alt="Logo Preview" class="max-w-full max-h-full object-contain hidden">
+                            <span id="logo-placeholder" class="text-xs text-zinc-600 font-mono text-center">Sem Logo</span>
+                        </div>
+                        <div class="flex-1 w-full">
+                            <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-1">URL Logotipo da Empresa (.png, .jpg ou link web)</label>
+                            <input type="url" id="cfg-logoUrl" oninput="atualizarPreviewLogo(this.value)" class="w-full rounded-xl px-4 py-2.5 text-xs font-mono" placeholder="https://exemplo.com/sua-logo.png">
+                            <p class="text-[10px] text-zinc-500 mt-1 uppercase tracking-wide">Cole o link da imagem da sua logomarca para renderização nos catálogos e romaneios gerados.</p>
+                        </div>
+                    </div>
+
                     <div class="md:col-span-2">
                         <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">WhatsApp Oficial de Vendas (Com DDD e sem símbolos) *</label>
                         <input type="text" id="cfg-whatsapp" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="Ex: 19999999999">
@@ -193,7 +205,7 @@
 
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Mensagem do Alerta / Conteúdo Textual</label>
-                        <textarea id="cfg-bannerTexto" rows="3" class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: 🔥 ATENÇÃO: Frete Grátis nas compras acima de R$100,00 para todas as galvânicas parceiras em Limeira!"></textarea>
+                        <textarea id="cfg-bannerTexto" rows="3" class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: 🔥 ATENÇÃO: Frete Grátis nas compras acima de R$100,00 para todas as galvânicas parceiras in Limeira!"></textarea>
                     </div>
                 </div>
             </section>
@@ -211,11 +223,13 @@
         </form>
     </main>
 
+    <!-- IMPORTAÇÃO EXPLICITA DE SEGURANÇA E FALLBACK DE CONFIGURAÇÃO REMOTA -->
+    <script src="../js/firebase/firebase-config.js"></script>
+
     <script>
-        // Singleton Database Handler em conformidade com barramento global
+        // Singleton Database Handler em conformidade com barramento global protegido
         const db = window.db || firebase.database();
 
-        // Fallback dinâmico IQ200 para injeção segura de isolamento geográfico multiloja
         if (typeof window.getAbellaPath !== 'function') {
             window.getAbellaPath = function(node) {
                 const root = window.ABELLA_DB_ROOT || 'abella';
@@ -224,8 +238,23 @@
         }
 
         /**
-         * Dispara Toasts Customizados Dinâmicos na UI do Administrador
+         * Monitoramento reativo local da imagem inserida por link de rede
          */
+        function atualizarPreviewLogo(url) {
+            const preview = document.getElementById('logo-preview');
+            const placeholder = document.getElementById('logo-placeholder');
+            
+            if (url && url.trim() !== "") {
+                preview.src = url.trim();
+                preview.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                preview.src = "";
+                preview.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+        }
+
         function spawnAdminToast(msg, isError = false) {
             const container = document.getElementById('toast-container');
             if (!container) return;
@@ -240,7 +269,6 @@
             
             container.appendChild(toast);
 
-            // Reflow triggers CSS animation
             setTimeout(() => {
                 toast.classList.remove('translate-y-4', 'opacity-0');
             }, 50);
@@ -251,9 +279,6 @@
             }, 4000);
         }
 
-        /**
-         * Leitura atômica dos parâmetros no Firebase Realtime Database via getAbellaPath
-         */
         async function carregarConfiguracoesAssincronas() {
             const loader = document.getElementById('hud-loader');
             try {
@@ -265,10 +290,15 @@
                     data = snap.val() || {};
                 }
 
-                // Injeção higienizada com operadores de coalescência nula mapeados no manual estrutural
                 document.getElementById('cfg-name').value = data.name ?? 'Abella Joias';
                 document.getElementById('cfg-slogan').value = data.slogan ?? '';
                 document.getElementById('cfg-whatsapp').value = data.whatsapp ?? '';
+                
+                // População e validação visual de carregamento do nó da Logo
+                const logoLink = data.logoUrl ?? '';
+                document.getElementById('cfg-logoUrl').value = logoLink;
+                atualizarPreviewLogo(logoLink);
+
                 document.getElementById('cfg-pedidoMinimo').value = data.pedidoMinimo ?? 300;
                 document.getElementById('cfg-freteFixo').value = data.freteFixo ?? 15;
                 document.getElementById('cfg-freteGratisAlvo').value = data.freteGratisAlvo ?? 100;
@@ -279,11 +309,7 @@
                 document.getElementById('cfg-bannerTexto').value = data.bannerTexto ?? '';
                 
                 const timeField = document.getElementById('cfg-ultimaAtualizacao');
-                if (data.ultimaAtualizacao) {
-                    timeField.innerText = data.ultimaAtualizacao;
-                } else {
-                    timeField.innerText = 'Nenhum registro encontrado';
-                }
+                timeField.innerText = data.ultimaAtualizacao ?? 'Nenhum registro encontrado';
 
             } catch (err) {
                 console.error("Falha Forense Crítica na Leitura Assíncrona do RTDB:", err);
@@ -296,13 +322,9 @@
             }
         }
 
-        /**
-         * Sanitiza inputs e grava as configurações no nó estrutural isolado
-         */
         async function salvarConfiguracoesAdmin(e) {
             e.preventDefault();
             
-            // Tratamento estrito contra injeção maliciosa de scripts e quebras de markup
             const sanitizarString = (str) => String(str).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
             const higienizarWhats = (num) => String(num).replace(/\D/g, '');
 
@@ -312,11 +334,11 @@
                 return;
             }
 
-            // Construção estrita do payload com coerção explícita de tipos primitivos numéricos
             const payload = {
                 name: sanitizarString(document.getElementById('cfg-name').value),
                 slogan: sanitizarString(document.getElementById('cfg-slogan').value),
                 whatsapp: whatsProcessado,
+                logoUrl: document.getElementById('cfg-logoUrl').value.trim(), // Captura e salvamento da Logo
                 pedidoMinimo: Math.abs(parseFloat(document.getElementById('cfg-pedidoMinimo').value) || 0),
                 freteFixo: Math.abs(parseFloat(document.getElementById('cfg-freteFixo').value) || 0),
                 freteGratisAlvo: Math.abs(parseFloat(document.getElementById('cfg-freteGratisAlvo').value) || 0),
@@ -330,7 +352,6 @@
 
             try {
                 const path = window.getAbellaPath('settings');
-                // Mutação atômica destrutiva controlada via barramento centralizado
                 await db.ref(path).set(payload);
                 
                 document.getElementById('cfg-ultimaAtualizacao').innerText = payload.ultimaAtualizacao;
@@ -341,7 +362,6 @@
             }
         }
 
-        // Event-driven Orchestrator Initialization
         document.addEventListener('DOMContentLoaded', carregarConfiguracoesAssincronas);
     </script>
 </body>

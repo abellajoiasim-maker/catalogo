@@ -1,1034 +1,458 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>
-        Subcategorias | Abella Admin
-    </title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Módulo Administrativo • Gestão de Subcategorias</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <style>
-
-        ::-webkit-scrollbar{
-            width:8px;
+        :root {
+            --gold: #caa85c;
+            --gold-hover: #b5944a;
+            --bg-dark: #070707;
+            --card-dark: #121212;
+            --border-dark: #222222;
         }
-
-        ::-webkit-scrollbar-track{
-            background:#09090b;
+        body { 
+            background: var(--bg-dark); 
+            color: #eee; 
+            font-family: 'Inter', sans-serif; 
         }
-
-        ::-webkit-scrollbar-thumb{
-            background:#3f3f46;
-            border-radius:999px;
+        .serif { 
+            font-family: 'Cinzel', serif; 
         }
-
-        ::-webkit-scrollbar-thumb:hover{
-            background:#52525b;
+        .gold-text { 
+            color: var(--gold); 
         }
-
-        .animate-fade{
-            animation:fade .25s ease;
+        .glass-panel {
+            background: rgba(18, 18, 18, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-dark);
         }
-
-        @keyframes fade{
-
-            from{
-                opacity:0;
-                transform:translateY(6px);
-            }
-
-            to{
-                opacity:1;
-                transform:translateY(0);
-            }
-
+        .input-dark {
+            background: #181818 !important; 
+            border: 1px solid #282828 !important; 
+            color: white !important;
+            padding: 12px 14px; 
+            border-radius: 12px; 
+            width: 100%;
+            font-size: 12px; 
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
+        .input-dark:focus { 
+            border-color: var(--gold) !important; 
+            outline: none; 
+            background: #222 !important; 
+            box-shadow: 0 0 0 3px rgba(202, 168, 92, 0.15);
+        }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
     </style>
-
 </head>
+<body class="p-4 md:p-8 antialiased">
 
-<body class="bg-zinc-900 text-zinc-100 p-4 md:p-6 font-sans min-h-screen overflow-x-hidden">
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 pointer-events-none space-y-3"></div>
 
-    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        <!-- FORM -->
-        <div class="md:col-span-1 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl h-fit space-y-4 sticky top-4">
-
-            <div class="flex items-center justify-between border-b border-zinc-900 pb-3">
-
-                <h3 class="text-sm font-black uppercase tracking-wider text-white">
-
-                    Vincular Subcategoria
-
-                </h3>
-
-                <div
-                    id="statusFirebase"
-                    class="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold"
-                >
-
-                    ONLINE
-
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-950/60 p-6 rounded-2xl border border-zinc-900 gap-4">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors">
+                    ← Menu
+                </a>
+                <div>
+                    <h1 class="serif gold-text text-xl uppercase tracking-[0.15em]">Subcategorias Relacionais</h1>
+                    <p class="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Gerenciamento de Subnós da Árvore de Categorias</p>
                 </div>
+            </div>
+            <div class="flex items-center gap-2 bg-zinc-900/60 px-4 py-2 rounded-xl border border-zinc-800/50">
+                <span class="w-2 h-2 rounded-full bg-[#caa85c] animate-pulse"></span>
+                <span class="text-[11px] font-mono text-zinc-400 tracking-wider">ECOSYSTEM OVER getAbellaPath()</span>
+            </div>
+        </header>
 
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-4 glass-panel p-6 rounded-3xl h-fit space-y-5 shadow-2xl">
+                <div class="flex items-center gap-2 border-b border-zinc-900 pb-3">
+                    <span class="w-1.5 h-4 bg-[#caa85c] rounded-full"></span>
+                    <h3 id="formTitulo" class="serif text-xs font-bold text-white uppercase tracking-wider">Nova Subcategoria</h3>
+                </div>
+                
+                <form id="formSubcat" class="space-y-4 text-left" onsubmit="executingSalvamentoSubUI(event)">
+                    <input type="hidden" id="subOldSlug">
+                    <input type="hidden" id="subOldCatMaeSlug">
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Selecione a Categoria Mãe *</label>
+                        <select id="selectCatMae" required class="input-dark">
+                            <option value="">Sincronizando categorias...</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Título da Subcategoria *</label>
+                        <input type="text" id="subName" required placeholder="Ex: Chokers, Argolas, Aneis" class="input-dark">
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Caminho da Imagem (Opcional)</label>
+                        <input type="text" id="subImage" placeholder="Ex: images/produtos/chokers.jpg ou gs://" class="input-dark">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Ordem (Index)</label>
+                            <input type="number" id="subOrder" value="0" min="0" class="input-dark text-center font-mono">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Estado Visual</label>
+                            <select id="subStatus" class="input-dark">
+                                <option value="ativo">Ativo (Visível)</option>
+                                <option value="pausado">Pausado (Oculto)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" id="btnCancelarEdicao" onclick="resetarFormularioEstado()" class="hidden w-1/3 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-bold py-3 rounded-xl text-[10px] uppercase tracking-wider transition-all border border-zinc-800">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="flex-1 bg-[#caa85c] hover:bg-[#b5944a] text-black font-black py-3 rounded-xl text-[10px] uppercase tracking-wider transition-all shadow-lg active:scale-[0.98]">
+                            Gravar Subnó Mestre
+                        </button>
+                    </div>
+                </form>
             </div>
 
-            <!-- SELECT CATEGORY -->
-            <div class="space-y-1">
-
-                <label class="text-[10px] uppercase text-zinc-400 font-bold">
-
-                    Categoria Mãe *
-
-                </label>
-
-                <select
-                    id="selectCatMae"
-                    onchange="mudarCategoriaMaeFiltro()"
-                    class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
-                >
-
-                    <option value="">
-
-                        Carregando categorias...
-
-                    </option>
-
-                </select>
-
+            <div class="lg:col-span-8 glass-panel p-6 rounded-3xl flex flex-col shadow-2xl">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-zinc-900 pb-4 mb-4 gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-4 bg-[#caa85c] rounded-full"></span>
+                        <h3 class="serif text-xs font-bold text-white uppercase tracking-wider">Estruturas Ativas na Árvore</h3>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto bg-zinc-950 px-3 py-1.5 rounded-xl border border-zinc-900">
+                        <span class="text-[9px] uppercase font-mono text-zinc-500 whitespace-nowrap">Filtrar Categoria:</span>
+                        <select id="filtroCatMae" onchange="renderizarSubcategoriasFiltradas()" class="bg-transparent text-[11px] text-[#caa85c] font-bold uppercase tracking-wider outline-none cursor-pointer">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="loading" class="text-center py-16 text-[#caa85c] text-xs font-mono uppercase tracking-widest animate-pulse">
+                    ⏳ Estabelecendo conexão segura com Firebase Realtime Database...
+                </div>
+                
+                <div id="lista-subcategorias" class="space-y-3 overflow-y-auto max-h-[65vh] pr-1"></div>
             </div>
-
-            <!-- FORM -->
-            <form id="formSubcat" class="space-y-4 pt-2">
-
-                <input
-                    type="hidden"
-                    id="subOldSlug"
-                >
-
-                <!-- NAME -->
-                <div class="space-y-1">
-
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">
-
-                        Nome da Subcategoria *
-
-                    </label>
-
-                    <input
-                        type="text"
-                        id="subName"
-                        required
-                        placeholder="Ex: Cravejados"
-                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c] transition-all"
-                    >
-
-                </div>
-
-                <!-- IMAGE -->
-                <div class="space-y-1">
-
-                    <label class="text-[10px] uppercase text-zinc-400 font-bold">
-
-                        Imagem (URL)
-
-                    </label>
-
-                    <input
-                        type="text"
-                        id="subImage"
-                        placeholder="https://..."
-                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs outline-none focus:border-[#caa85c] transition-all"
-                    >
-
-                </div>
-
-                <!-- PREVIEW -->
-                <div
-                    id="previewImageContainer"
-                    class="hidden"
-                >
-
-                    <p class="text-[10px] uppercase text-zinc-500 font-bold mb-2">
-
-                        Preview
-
-                    </p>
-
-                    <img
-                        id="previewImage"
-                        class="w-full h-40 object-cover rounded-xl border border-zinc-800 bg-zinc-900"
-                    >
-
-                </div>
-
-                <!-- BUTTON -->
-                <button
-                    type="submit"
-                    id="btnSalvar"
-                    class="w-full bg-[#caa85c] hover:brightness-110 text-black font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all"
-                >
-
-                    Gravar Subcategoria
-
-                </button>
-
-            </form>
-
         </div>
-
-        <!-- LIST -->
-        <div class="md:col-span-2 bg-zinc-950 border border-zinc-800 p-5 rounded-2xl flex flex-col min-h-[500px]">
-
-            <div class="flex items-center justify-between border-b border-zinc-900 pb-3 mb-4">
-
-                <h3 class="text-sm font-black uppercase tracking-wider text-white">
-
-                    Subcategorias da Seção
-
-                </h3>
-
-                <div
-                    id="contadorSubcats"
-                    class="text-[10px] text-zinc-500 uppercase font-bold"
-                >
-
-                    0 itens
-
-                </div>
-
-            </div>
-
-            <!-- LIST -->
-            <div
-                id="lista-subcategorias"
-                class="space-y-3 text-left flex-1"
-            >
-
-                <div class="text-zinc-500 text-xs italic py-6 text-center">
-
-                    Selecione uma categoria mãe.
-
-                </div>
-
-            </div>
-
-        </div>
-
     </div>
 
-    <!-- SERVICES -->
-    <script src="../js/firebase/firebase-config.js"></script>
-
-    <script src="../js/services/categoriaService.js"></script>
-
-    <script src="../js/services/subcategoriaService.js"></script>
-
     <script>
+        // Singleton Database Handler em total conformidade com o barramento do contexto global
+        const db = window.db || firebase.database();
 
-        // =========================================================
-        // FIREBASE STATUS
-        // =========================================================
-
-        firebase
-            .database()
-            .ref('.info/connected')
-            .on('value', snap => {
-
-                const online = snap.val();
-
-                const el =
-                    document.getElementById(
-                        'statusFirebase'
-                    );
-
-                if(online){
-
-                    el.innerHTML = 'ONLINE';
-
-                    el.className =
-                        'text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold';
-
-                }else{
-
-                    el.innerHTML = 'OFFLINE';
-
-                    el.className =
-                        'text-[10px] px-2 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-bold';
-
-                }
-
-            });
-
-        // =========================================================
-        // INIT
-        // =========================================================
-
-        document.addEventListener(
-            'DOMContentLoaded',
-            async () => {
-
-                await popularCategoriasMae();
-
-                configurarPreviewImagem();
-
-                document
-                    .getElementById('formSubcat')
-                    .addEventListener(
-                        'submit',
-                        salvarSubcategoriaUI
-                    );
-
-            }
-        );
-
-        // =========================================================
-        // HELPERS
-        // =========================================================
-
-        function gerarSlug(texto){
-
-            return texto
-                .toLowerCase()
-                .trim()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/(^-|-$)/g, "");
-
+        // Injetor Dinâmico de Segurança para Resolução Multiloja
+        if (typeof window.getAbellaPath !== 'function') {
+            window.getAbellaPath = function(node) {
+                const root = window.ABELLA_DB_ROOT || 'abella';
+                return node ? `${root}/${node}` : root;
+            };
         }
 
-        function limparFormulario(){
+        const DOM = {
+            form: document.getElementById('formSubcat'),
+            titulo: document.getElementById('formTitulo'),
+            oldSlug: document.getElementById('subOldSlug'),
+            oldCatSlug: document.getElementById('subOldCatMaeSlug'),
+            selectCatMae: document.getElementById('selectCatMae'),
+            filtroCatMae: document.getElementById('filtroCatMae'),
+            name: document.getElementById('subName'),
+            image: document.getElementById('subImage'),
+            order: document.getElementById('subOrder'),
+            status: document.getElementById('subStatus'),
+            btnCancelar: document.getElementById('btnCancelarEdicao'),
+            loading: document.getElementById('loading'),
+            lista: document.getElementById('lista-subcategorias')
+        };
 
-            document
-                .getElementById('formSubcat')
-                .reset();
+        // Cache local estrutural otimizado contra vazamento de memória e chamadas cíclicas
+        let categoriasCache = {};
 
-            document
-                .getElementById('subOldSlug')
-                .value = '';
+        document.addEventListener('DOMContentLoaded', carregarCategoriasEAtivar);
 
-            document
-                .getElementById('previewImageContainer')
-                .classList.add('hidden');
+        /**
+         * Emite Toasts Customizados Premium na Área Administrativa
+         */
+        function spawnAdminToast(msg, isError = false) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
 
-            document
-                .getElementById('btnSalvar')
-                .innerHTML =
-                    'Gravar Subcategoria';
-
+            const toast = document.createElement('div');
+            toast.className = `px-5 py-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 transform translate-y-4 opacity-0 flex items-center gap-3 border shadow-xl ${
+                isError 
+                ? 'bg-rose-950/90 text-rose-300 border-rose-800' 
+                : 'bg-zinc-900/95 text-emerald-400 border-zinc-800'
+            }`;
+            toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span> <span>${msg}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 50);
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
         }
 
-        function configurarPreviewImagem(){
+        /**
+         * Executa a carga atômica do nó pai e monta os seletores relacionais
+         */
+        async function carregarCategoriasEAtivar() {
+            try {
+                const path = window.getAbellaPath('categories');
+                const snap = await db.ref(path).once('value');
+                categoriasCache = snap.val() || {};
+                
+                DOM.selectCatMae.innerHTML = '<option value="">— SELECONE A CATEGORIA MÃE —</option>';
+                DOM.filtroCatMae.innerHTML = '<option value="">MOSTRAR TODAS</option>';
 
-            const input =
-                document.getElementById(
-                    'subImage'
-                );
+                Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
+                    const nomeStr = cat.name || catSlug;
 
-            input.addEventListener(
-                'input',
-                () => {
+                    const optForm = document.createElement('option');
+                    optForm.value = catSlug;
+                    optForm.innerText = nomeStr.toUpperCase();
+                    DOM.selectCatMae.appendChild(optForm);
 
-                    const url =
-                        input.value.trim();
-
-                    const container =
-                        document.getElementById(
-                            'previewImageContainer'
-                        );
-
-                    const preview =
-                        document.getElementById(
-                            'previewImage'
-                        );
-
-                    if(!url){
-
-                        container.classList.add(
-                            'hidden'
-                        );
-
-                        return;
-
-                    }
-
-                    preview.src = url;
-
-                    preview.onload = () => {
-
-                        container.classList.remove(
-                            'hidden'
-                        );
-
-                    };
-
-                    preview.onerror = () => {
-
-                        container.classList.add(
-                            'hidden'
-                        );
-
-                    };
-
-                }
-            );
-
-        }
-
-        // =========================================================
-        // LOAD CATEGORY
-        // =========================================================
-
-        async function popularCategoriasMae(){
-
-            const select =
-                document.getElementById(
-                    'selectCatMae'
-                );
-
-            try{
-
-                select.innerHTML =
-                    '<option value="">Carregando...</option>';
-
-                const categorias =
-                    await categoriaService.listarTodas();
-
-                select.innerHTML =
-                    '<option value="" disabled selected>Escolha uma categoria...</option>';
-
-                if(!categorias){
-
-                    select.innerHTML =
-                        '<option value="">Nenhuma categoria encontrada</option>';
-
-                    return;
-
-                }
-
-                Object.keys(categorias).forEach(slug => {
-
-                    const categoria =
-                        categorias[slug];
-
-                    const option =
-                        document.createElement(
-                            'option'
-                        );
-
-                    option.value = slug;
-
-                    option.textContent =
-                        categoria?.name || slug;
-
-                    select.appendChild(option);
-
+                    const optFiltro = document.createElement('option');
+                    optFiltro.value = catSlug;
+                    optFiltro.innerText = nomeStr.toUpperCase();
+                    DOM.filtroCatMae.appendChild(optFiltro);
                 });
 
-            }catch(error){
+                renderizarSubcategoriasFiltradas();
 
-                console.error(
-                    'Erro categorias:',
-                    error
-                );
-
-                select.innerHTML =
-                    '<option value="">Falha ao carregar</option>';
-
+            } catch (err) {
+                console.error("Erro Forense Crítico ao processar mapeamento de nós mães:", err);
+                DOM.loading.innerText = "❌ Falha crítica de permissão ou rede ao ler chaves do Firebase.";
+                spawnAdminToast("Não foi possível carregar as categorias mães.", true);
             }
-
         }
 
-        // =========================================================
-        // LOAD SUBCATEGORIES
-        // =========================================================
-
-        async function mudarCategoriaMaeFiltro(){
-
-            const catSlug =
-                document.getElementById(
-                    'selectCatMae'
-                ).value;
-
-            const container =
-                document.getElementById(
-                    'lista-subcategorias'
-                );
-
-            const contador =
-                document.getElementById(
-                    'contadorSubcats'
-                );
-
-            if(!catSlug){
-
-                container.innerHTML = `
-                    <div class="text-zinc-500 text-xs italic py-6 text-center">
-                        Selecione uma categoria mãe.
-                    </div>
-                `;
-
-                contador.innerHTML =
-                    '0 itens';
-
-                return;
-
-            }
-
-            container.innerHTML = `
-                <div class="text-zinc-500 text-xs py-6 text-center">
-                    ⏳ Carregando...
-                </div>
-            `;
-
-            try{
-
-                const subs =
-                    await subcategoriaService
-                        .obterPorCategoria(
-                            catSlug
-                        );
-
-                container.innerHTML = '';
-
-                if(
-                    !subs ||
-                    Object.keys(subs).length === 0
-                ){
-
-                    contador.innerHTML =
-                        '0 itens';
-
-                    container.innerHTML = `
-                        <div class="text-zinc-600 text-xs italic py-6 text-center border border-dashed border-zinc-800 rounded-2xl">
-                            Nenhuma subcategoria vinculada.
-                        </div>
-                    `;
-
-                    return;
-
-                }
-
-                contador.innerHTML =
-                    `${Object.keys(subs).length} itens`;
-
-                Object.keys(subs).forEach(subSlug => {
-
-                    const s =
-                        subs[subSlug] || {};
-
-                    const ativo =
-                        s.active !== false;
-
-                    const div =
-                        document.createElement(
-                            'div'
-                        );
-
-                    div.className =
-                        'animate-fade flex items-center justify-between gap-4 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl';
-
-                    div.innerHTML = `
-
-                        <div class="flex items-center gap-4 flex-1 min-w-0">
-
-                            ${
-                                s.image
-                                ? `
-                                    <img
-                                        src="${s.image}"
-                                        class="w-16 h-16 rounded-xl object-cover border border-zinc-800 bg-zinc-950 shrink-0"
-                                    >
-                                `
-                                : `
-                                    <div class="w-16 h-16 rounded-xl border border-dashed border-zinc-800 bg-zinc-950 flex items-center justify-center text-zinc-700 text-[10px] shrink-0">
-                                        SEM IMG
-                                    </div>
-                                `
-                            }
-
-                            <div class="min-w-0 flex-1">
-
-                                <h4 class="text-xs text-white font-black uppercase truncate">
-
-                                    ${s.name || subSlug}
-
-                                </h4>
-
-                                <div class="flex items-center gap-2 mt-2">
-
-                                    <span class="
-                                        text-[9px]
-                                        px-2
-                                        py-1
-                                        rounded-full
-                                        font-black
-                                        uppercase
-                                        tracking-wider
-
-                                        ${
-                                            ativo
-                                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                                        }
-                                    ">
-
-                                        ${
-                                            ativo
-                                            ? 'Ativa'
-                                            : 'Pausada'
-                                        }
-
-                                    </span>
-
-                                </div>
-
-                                <p class="text-[10px] text-zinc-500 font-mono mt-2 break-all">
-
-                                    abella/categories/${catSlug}/subcategories/${subSlug}
-
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div class="flex items-center gap-2 shrink-0">
-
-                            <!-- EDIT -->
-                            <button
-                                onclick='editarSubcatUI(
-                                    ${JSON.stringify(subSlug)},
-                                    ${JSON.stringify(s.name || "")},
-                                    ${JSON.stringify(s.image || "")}
-                                )'
-                                class="bg-zinc-800 hover:bg-zinc-700 px-3 py-2 text-[10px] font-black rounded-xl transition-all"
-                            >
-
-                                Editar
-
-                            </button>
-
-                            <!-- PAUSE -->
-                            <button
-                                onclick="toggleStatusSubcat(
-                                    '${subSlug}',
-                                    ${ativo}
-                                )"
-                                class="
-                                    ${
-                                        ativo
-                                        ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
-                                        : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
-                                    }
-                                    px-3 py-2 text-[10px] font-black rounded-xl transition-all
-                                "
-                            >
-
-                                ${
-                                    ativo
-                                    ? 'Pausar'
-                                    : 'Ativar'
-                                }
-
-                            </button>
-
-                            <!-- DELETE -->
-                            <button
-                                onclick="deletarSubcatUI('${subSlug}')"
-                                class="bg-red-950/20 hover:bg-red-950/40 border border-red-900/40 text-red-400 px-3 py-2 text-[10px] font-black rounded-xl transition-all"
-                            >
-
-                                Excluir
-
-                            </button>
-
-                        </div>
-                    `;
-
-                    container.appendChild(div);
-
-                });
-
-            }catch(error){
-
-                console.error(
-                    'Erro subcategorias:',
-                    error
-                );
-
-                contador.innerHTML =
-                    'Erro';
-
-                container.innerHTML = `
-                    <div class="text-red-400 text-xs py-6 text-center border border-red-900/30 rounded-2xl bg-red-950/10">
-                        ❌ Falha ao carregar subcategorias.
-                    </div>
-                `;
-
-            }
-
-        }
-
-        // =========================================================
-        // EDIT
-        // =========================================================
-
-        function editarSubcatUI(
-            slug,
-            name,
-            img
-        ){
-
-            document
-                .getElementById(
-                    'subOldSlug'
-                )
-                .value = slug;
-
-            document
-                .getElementById(
-                    'subName'
-                )
-                .value = name || '';
-
-            document
-                .getElementById(
-                    'subImage'
-                )
-                .value = img || '';
-
-            document
-                .getElementById(
-                    'btnSalvar'
-                )
-                .innerHTML =
-                    'Atualizar Subcategoria';
-
-            if(img){
-
-                const preview =
-                    document.getElementById(
-                        'previewImage'
-                    );
-
-                preview.src = img;
-
-                document
-                    .getElementById(
-                        'previewImageContainer'
-                    )
-                    .classList.remove(
-                        'hidden'
-                    );
-
-            }
-
-            window.scrollTo({
-                top:0,
-                behavior:'smooth'
-            });
-
-        }
-
-        // =========================================================
-        // SAVE
-        // =========================================================
-
-        async function salvarSubcategoriaUI(e){
-
-            e.preventDefault();
-
-            const btn =
-                document.getElementById(
-                    'btnSalvar'
-                );
-
-            try{
-
-                const catSlug =
-                    document.getElementById(
-                        'selectCatMae'
-                    ).value;
-
-                if(!catSlug){
-
-                    alert(
-                        'Escolha uma categoria.'
-                    );
-
-                    return;
-
-                }
-
-                const name =
-                    document
-                        .getElementById(
-                            'subName'
-                        )
-                        .value
-                        .trim();
-
-                if(!name){
-
-                    alert(
-                        'Informe o nome.'
-                    );
-
-                    return;
-
-                }
-
-                const image =
-                    document
-                        .getElementById(
-                            'subImage'
-                        )
-                        .value
-                        .trim();
-
-                const slug =
-                    gerarSlug(name);
-
-                const oldSlug =
-                    document
-                        .getElementById(
-                            'subOldSlug'
-                        )
-                        .value;
-
-                btn.disabled = true;
-
-                btn.innerHTML =
-                    'Salvando...';
-
-                let dadosAntigos = {};
-
-                if(oldSlug){
-
-                    try{
-
-                        dadosAntigos =
-                            await subcategoriaService
-                                .obter(
-                                    catSlug,
-                                    oldSlug
-                                ) || {};
-
-                    }catch(e){
-
-                        console.error(e);
-
+        /**
+         * Renderiza as subcategorias ordenadas a partir do Cache de Memória
+         */
+        function renderizarSubcategoriasFiltradas() {
+            DOM.lista.innerHTML = '';
+            DOM.loading.classList.remove('hidden');
+
+            const filtroAtivo = DOM.filtroCatMae.value;
+            let listaAgrupada = [];
+
+            // Extrai as subcategorias normalizando o schema legado para o padrão global (paused)
+            Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
+                if (filtroAtivo && catSlug !== filtroAtivo) return;
+                
+                const subs = cat.subcategories || {};
+                Object.entries(subs).forEach(([subSlug, subData]) => {
+                    // Normalização do estado lógico para compatibilidade estrita com o catálogo
+                    let isPaused = false;
+                    if (subData.paused !== undefined) {
+                        isPaused = !!subData.paused;
+                    } else if (subData.status === 'pausado') {
+                        isPaused = true;
                     }
 
-                }
-
-                // REMOVE SLUG ANTIGO
-                if(
-                    oldSlug &&
-                    oldSlug !== slug
-                ){
-
-                    await subcategoriaService
-                        .deletar(
-                            catSlug,
-                            oldSlug
-                        );
-
-                }
-
-                // SAVE
-                await subcategoriaService
-                    .salvar(
-                        catSlug,
-                        slug,
-                        {
-
-                            ...dadosAntigos,
-
-                            name,
-                            image,
-                            slug,
-
-                            active:
-                                dadosAntigos.active !== false,
-
-                            createdAt:
-                                dadosAntigos.createdAt ||
-                                Date.now(),
-
-                            updatedAt:
-                                Date.now()
-
-                        }
-                    );
-
-                limparFormulario();
-
-                await mudarCategoriaMaeFiltro();
-
-            }catch(error){
-
-                console.error(
-                    'Erro salvar:',
-                    error
-                );
-
-                alert(
-                    'Falha ao salvar.'
-                );
-
-            }finally{
-
-                btn.disabled = false;
-
-                btn.innerHTML =
-                    'Gravar Subcategoria';
-
-            }
-
-        }
-
-        // =========================================================
-        // DELETE
-        // =========================================================
-
-        async function deletarSubcatUI(subSlug){
-
-            const catSlug =
-                document
-                    .getElementById(
-                        'selectCatMae'
-                    )
-                    .value;
-
-            if(!catSlug){
-
-                alert(
-                    'Selecione uma categoria.'
-                );
-
-                return;
-
-            }
-
-            const confirmar =
-                confirm(
-                    'Deseja deletar permanentemente esta subcategoria?'
-                );
-
-            if(!confirmar){
-                return;
-            }
-
-            try{
-
-                await subcategoriaService
-                    .deletar(
-                        catSlug,
-                        subSlug
-                    );
-
-                await mudarCategoriaMaeFiltro();
-
-            }catch(error){
-
-                console.error(
-                    'Erro deletar:',
-                    error
-                );
-
-                alert(
-                    'Falha ao deletar.'
-                );
-
-            }
-
-        }
-
-        // =========================================================
-        // TOGGLE STATUS
-        // =========================================================
-
-        async function toggleStatusSubcat(
-            subSlug,
-            statusAtual
-        ){
-
-            try{
-
-                const catSlug =
-                    document
-                        .getElementById(
-                            'selectCatMae'
-                        )
-                        .value;
-
-                if(!catSlug){
-                    return;
-                }
-
-                const dados =
-                    await subcategoriaService
-                        .obter(
-                            catSlug,
-                            subSlug
-                        );
-
-                if(!dados){
-                    return;
-                }
-
-                await subcategoriaService
-                    .salvar(
+                    listaAgrupada.push({
                         catSlug,
                         subSlug,
-                        {
+                        name: subData.name || subSlug,
+                        image: subData.image || '',
+                        order: parseInt(subData.order) || 0,
+                        paused: isPaused
+                    });
+                });
+            });
 
-                            ...dados,
+            DOM.loading.classList.add('hidden');
 
-                            active:
-                                !statusAtual,
-
-                            updatedAt:
-                                Date.now()
-
-                        }
-                    );
-
-                await mudarCategoriaMaeFiltro();
-
-            }catch(error){
-
-                console.error(
-                    'Erro status:',
-                    error
-                );
-
-                alert(
-                    'Falha ao alterar status.'
-                );
-
+            if (listaAgrupada.length === 0) {
+                DOM.lista.innerHTML = `<p class="text-zinc-600 text-xs italic py-12 text-center font-mono">[Nenhuma estrutura de subnó vinculada para exibição]</p>`;
+                return;
             }
 
+            // Ordenação pelo índice numérico estipulado
+            listaAgrupada.sort((a, b) => a.order - b.order);
+
+            listaAgrupada.forEach(item => {
+                const nomeMae = categoriasCache[item.catSlug]?.name || item.catSlug;
+                const card = document.createElement('div');
+                
+                card.className = `flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-zinc-900/40 border rounded-2xl gap-4 transition-all hover:bg-zinc-900/80 ${
+                    item.paused 
+                    ? 'border-rose-950/40 bg-rose-950/5 opacity-60' 
+                    : 'border-zinc-800/80'
+                }`;
+
+                card.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                            <span class="text-sm font-bold ${item.paused ? 'text-rose-400/80 line-through' : 'text-white'} uppercase tracking-wide">${item.name}</span>
+                            <span class="text-[9px] px-2.5 py-0.5 bg-zinc-950 text-[#caa85c] rounded-md border border-zinc-800 uppercase font-mono font-bold tracking-wider">↳ MÃE: ${nomeMae}</span>
+                            ${item.paused ? '<span class="text-[8px] px-2 py-0.5 bg-rose-950 text-rose-300 rounded border border-rose-800 uppercase font-bold tracking-widest">PAUSADO (OCULTO)</span>' : ''}
+                        </div>
+                        <p class="text-[10px] text-zinc-500 font-mono truncate">PATH: abella/categories/${item.catSlug}/subcategories/${item.subSlug} | Ordem: ${item.order}</p>
+                    </div>
+                    <div class="flex items-center gap-2 justify-end">
+                        <button type="button" onclick="ativarModoEdicao('${item.catSlug}', '${item.subSlug}', \`${item.name}\`, '${item.image}', ${item.order}, ${item.paused})" 
+                                class="bg-zinc-950 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase tracking-wider">
+                            Editar
+                        </button>
+                        <button type="button" onclick="alternarEstadoPausa('${item.catSlug}', '${item.subSlug}', ${item.paused})" 
+                                class="bg-zinc-950 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase tracking-wider ${item.paused ? 'text-emerald-400 hover:bg-emerald-950/20' : 'text-amber-500 hover:bg-amber-950/20'}">
+                            ${item.paused ? 'Reativar' : 'Pausar'}
+                        </button>
+                        <button type="button" onclick="executarRemocaoSub('${item.catSlug}', '${item.subSlug}')" 
+                                class="bg-rose-950/20 hover:bg-rose-900 text-rose-400 hover:text-white border border-rose-900/30 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase">
+                            🗑️
+                        </button>
+                    </div>
+                `;
+                DOM.lista.appendChild(card);
+            });
         }
 
-    </script>
+        /**
+         * Migra e distribui chaves e valores estruturais para o formulário de mutação
+         */
+        function activarModoEdicao(catSlug, subSlug, name, img, order, isPaused) {
+            DOM.oldSlug.value = subSlug;
+            DOM.oldCatSlug.value = catSlug;
+            DOM.selectCatMae.value = catSlug;
+            DOM.name.value = name;
+            DOM.image.value = img;
+            DOM.order.value = order;
+            DOM.status.value = isPaused ? 'pausado' : 'ativo';
+            
+            DOM.titulo.innerText = "Modificar Subcategoria";
+            DOM.btnCancelar.classList.remove('hidden');
+            DOM.name.focus();
+        }
 
+        /**
+         * Reseta e desliga flagstates do formulário
+         */
+        function resetarFormularioEstado() {
+            DOM.form.reset();
+            DOM.oldSlug.value = '';
+            DOM.oldCatSlug.value = '';
+            DOM.titulo.innerText = "Nova Subcategoria";
+            DOM.btnCancelar.classList.add('hidden');
+        }
+
+        /**
+         * Sanitiza o payload e realiza mutação de escrita controlada via getAbellaPath
+         */
+        async function executingSalvamentoSubUI(e) {
+            e.preventDefault();
+            
+            const catSlug = DOM.selectCatMae.value;
+            if(!catSlug) { spawnAdminToast("Selecione uma categoria mãe.", true); return; }
+
+            const name = DOM.name.value.trim();
+            // Gerador Estrito de Slugs Higienizados em conformidade com URLs amigáveis
+            const slug = name.toLowerCase()
+                             .normalize("NFD")
+                             .replace(/[\u0300-\u036f]/g, "")
+                             .replace(/[^a-z0-9]+/g, "-")
+                             .replace(/(^-|-$)/g, "");
+
+            const oldSlug = DOM.oldSlug.value;
+            const oldCatSlug = DOM.oldCatSlug.value;
+
+            // XSS Prevention Shield
+            const sanitizarStr = (str) => String(str).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+
+            const payload = {
+                name: sanitizarStr(name),
+                image: sanitizarStr(DOM.image.value),
+                order: Math.abs(parseInt(DOM.order.value, 10) || 0),
+                paused: DOM.status.value === 'pausado',
+                timestamp: Date.now()
+            };
+
+            try {
+                // Operação de limpeza anti-duplicação se houver transmutação de chaves/slugs ou de categoria mãe
+                if (oldSlug) {
+                    if (oldSlug !== slug || oldCatSlug !== catSlug) {
+                        const pathRemocao = window.getAbellaPath(`categories/${oldCatSlug || catSlug}/subcategories/${oldSlug}`);
+                        await db.ref(pathRemocao).remove();
+                    }
+                }
+
+                const pathGravacao = window.getAbellaPath(`categories/${catSlug}/subcategories/${slug}`);
+                await db.ref(pathGravacao).set(payload);
+                
+                spawnAdminToast("Estrutura de subcategoria persistida com sucesso.");
+                resetarFormularioEstado();
+                await carregarCategoriasEAtivar(); 
+
+            } catch(err) {
+                console.error("Falha Crítica na Escrita de Subnó:", err);
+                spawnAdminToast("Falha operacional ao gravar no Firebase RTDB.", true);
+            }
+        }
+
+        /**
+         * Intercepta a flag de pausa e executa atualização síncrona otimizando tráfego de rede
+         */
+        async function alternarEstadoPausa(catSlug, subSlug, estadoPausaAtual) {
+            const novoEstadoPausa = !estadoPausaAtual;
+            try {
+                const path = window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`);
+                // Mutação local rápida (Update) atendendo aos requisitos de performance forense
+                await db.ref(path).update({ paused: novoEstadoPausa });
+                
+                // Otimização de Performance: atualiza memória local sem bater uma nova requisição pesada de leitura
+                if(categoriasCache[catSlug] && categoriasCache[catSlug].subcategories && categoriasCache[catSlug].subcategories[subSlug]) {
+                    categoriasCache[catSlug].subcategories[subSlug].paused = novoEstadoPausa;
+                    categoriasCache[catSlug].subcategories[subSlug].status = novoEstadoPausa ? 'pausado' : 'ativo';
+                }
+                
+                renderizarSubcategoriasFiltradas();
+                spawnAdminToast(`Subcategoria configurada como ${novoEstadoPausa ? 'Oculta' : 'Visível'}.`);
+            } catch (err) {
+                console.error("Erro ao alterar chave logical state no Realtime Database:", err);
+                spawnAdminToast("Não foi possível alterar o estado de visibilidade.", true);
+            }
+        }
+
+        /**
+         * Remove definitivamente o registro lógico da árvore
+         */
+        async function executarRemocaoSub(catSlug, subSlug) {
+            if(!confirm("⚠️ ATENÇÃO: Confirmar a exclusão permanente e irrevogável deste subnó no Firebase?")) return;
+            
+            try {
+                const path = window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`);
+                await db.ref(path).remove();
+                
+                spawnAdminToast("Registro removido com sucesso da árvore relacional.");
+                await carregarCategoriasEAtivar();
+            } catch(err) {
+                console.error("Falha ao expurgar registro físico do banco:", err);
+                spawnAdminToast("Erro ao tentar deletar subcategoria.", true);
+            }
+        }
+    </script>
 </body>
 </html>

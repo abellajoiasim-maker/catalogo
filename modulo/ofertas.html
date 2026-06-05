@@ -1,1079 +1,492 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
     <meta charset="UTF-8">
-
-    <title>Ofertas Premium • Abella Joias</title>
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <title>Painel Comercial - Abella Joias</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-
+    <!-- Font Awesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase App e Database (Versões Compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        /* Estilização Customizada para manter a identidade visual do ecossistema */
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px -2px rgba(184, 142, 69, 0.05), 0 2px 8px -1px rgba(0, 0, 0, 0.02);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px -2px rgba(184, 142, 69, 0.1), 0 4px 12px -1px rgba(0, 0, 0, 0.03);
+        }
+        .input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            color: #1e293b;
+            transition: all 0.2s ease;
+        }
+        .input:focus {
+            outline: none;
+            border-color: #b88e45;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(184, 142, 69, 0.15);
+        }
+        .btn-gold {
+            background: linear-gradient(135deg, #b88e45 0%, #9a7432 100%);
+            color: white;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(184, 142, 69, 0.2);
+        }
+        .btn-gold:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(184, 142, 69, 0.3);
+            filter: brightness(1.05);
+        }
+        .btn-gold:active {
+            transform: translateY(0);
+        }
     </style>
-
 </head>
+<body class="bg-[#fcfbf7] min-h-screen text-slate-800 font-sans antialiased">
 
-<body>
+    <!-- Container Principal -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Header do Módulo -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 pb-6 border-b border-gold/10">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Campanhas & Ofertas Relâmpago</h1>
+                <p class="text-slate-500 mt-1">Gerencie descontos em massa, etiquetas promocionais e cupons ativos na Abella Joias.</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex gap-3">
+                <button onclick="limparTodasOfertas()" class="px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-lg transition-colors flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-trash-can"></i> Limpar Todas as Ofertas Ativas
+                </button>
+            </div>
+        </div>
 
-    <div class="min-h-screen p-4 md:p-8">
-
-        <div class="max-w-7xl mx-auto space-y-6">
-
-            <!-- HEADER -->
-
-            <div class="glass rounded-[2rem] p-6 md:p-8 flex flex-col xl:flex-row justify-between gap-6 items-start xl:items-center">
-
+        <!-- Grid de Métricas Rápidas -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <div class="card p-6 flex items-center gap-4">
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-fire text-2xl"></i></div>
                 <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Produtos em Oferta</p>
+                    <h3 id="count-ofertas" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+            <div class="card p-6 flex items-center gap-4">
+                <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i class="fa-solid fa-ticket text-2xl"></i></div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cupons Ativos</p>
+                    <h3 id="count-cupons" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+            <div class="card p-6 flex items-center gap-4">
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-bolt text-2xl"></i></div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Flash Sales Hoje</p>
+                    <h3 id="count-flash" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+            <div class="card p-6 flex items-center gap-4">
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-percent text-2xl"></i></div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Desconto Médio</p>
+                    <h3 id="avg-desconto" class="text-2xl font-bold text-slate-800">0%</h3>
+                </div>
+            </div>
+        </div>
 
-                    <div class="flex items-center gap-3 flex-wrap">
-
-                        <div class="w-14 h-14 rounded-2xl bg-[#caa85c] flex items-center justify-center text-black text-2xl font-black">
-                            %
+        <!-- Área de Trabalho Principal -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Coluna da Esquerda: Formulário de Configuração -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="card p-6 glass">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-[#b88e45]"></i> Configurar Nova Ação Comercial
+                    </h2>
+                    
+                    <form id="form-campanha" onsubmit="prevenirEnvio(event)" class="space-y-5">
+                        <!-- Nome e Ícone da Campanha -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Campanha (Ex: Black Friday)</label>
+                                <input type="text" id="campanha-nome" class="input" placeholder="Digite o nome da ação" value="Oferta Especial" oninput="atualizarPreview()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Ícone / Badge</label>
+                                <select id="campanha-icone" class="input" onchange="atualizarPreview()">
+                                    <option value="🔥">🔥 Fogo</option>
+                                    <option value="⚡">⚡ Raio</option>
+                                    <option value="💎">💎 Diamante</option>
+                                    <option value="✨">✨ Brilho</option>
+                                    <option value="🎁">🎁 Presente</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div>
-
-                            <h1 class="text-3xl md:text-4xl font-black">
-                                Ofertas Premium
-                            </h1>
-
-                            <p class="text-zinc-500 mt-1 text-sm">
-                                Central completa de campanhas, descontos, cupons, etiquetas e promoções automáticas.
-                            </p>
-
+                        <!-- Escopo da Campanha (Filtros de Destino) -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Categoria Alvo</label>
+                                <select id="campanha-categoria" class="input" onchange="carregarSubcategorias()">
+                                    <option value="">Selecione uma categoria...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Subcategoria (Opcional)</label>
+                                <select id="campanha-subcategoria" class="input">
+                                    <option value="">Todas as subcategorias</option>
+                                </select>
+                            </div>
                         </div>
 
-                    </div>
+                        <!-- Regras de Desconto e Cores -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Desconto (%)</label>
+                                <input type="number" id="campanha-desconto" class="input" min="1" max="99" value="15" oninput="atualizarPreview()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cor de Fundo da Badge</label>
+                                <input type="color" id="campanha-cor" class="input h-[46px] p-1 cursor-pointer" value="#b88e45" oninput="atualizarPreview()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Cor do Texto</label>
+                                <select id="campanha-cor-texto" class="input" onchange="atualizarPreview()">
+                                    <option value="#ffffff">Branco</option>
+                                    <option value="#1e293b">Escuro (Slate)</option>
+                                </select>
+                            </div>
+                        </div>
 
+                        <!-- Ações -->
+                        <div class="pt-2 flex justify-end gap-3">
+                            <button type="button" onclick="limparCampos()" class="px-5 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-sm transition-colors">
+                                Limpar Painel
+                            </button>
+                            <button type="button" onclick="aplicarCampanha()" class="px-6 py-2.5 btn-gold text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> Aplicar Campanha em Lote
+                            </button>
+                        </div>
+                    </form>
                 </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full xl:w-auto">
-
-                    <div class="card p-4 text-center">
-                        <p class="text-zinc-500 text-[10px] uppercase font-bold">
-                            Campanhas
-                        </p>
-                        <h2 id="totalCampanhas" class="text-2xl font-black gold mt-1">
-                            0
-                        </h2>
-                    </div>
-
-                    <div class="card p-4 text-center">
-                        <p class="text-zinc-500 text-[10px] uppercase font-bold">
-                            Cupons
-                        </p>
-                        <h2 id="totalCupons" class="text-2xl font-black gold mt-1">
-                            0
-                        </h2>
-                    </div>
-
-                    <div class="card p-4 text-center">
-                        <p class="text-zinc-500 text-[10px] uppercase font-bold">
-                            Flash
-                        </p>
-                        <h2 id="totalFlash" class="text-2xl font-black gold mt-1">
-                            0
-                        </h2>
-                    </div>
-
-                    <div class="card p-4 text-center">
-                        <p class="text-zinc-500 text-[10px] uppercase font-bold">
-                            Selos
-                        </p>
-                        <h2 id="totalBadges" class="text-2xl font-black gold mt-1">
-                            0
-                        </h2>
-                    </div>
-
-                </div>
-
             </div>
 
-            <!-- GRID -->
-
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-                <!-- LEFT -->
-
-                <div class="xl:col-span-2 space-y-6">
-
-                    <!-- CAMPANHA -->
-
-                    <div class="card p-6 md:p-8">
-
-                        <div class="flex items-center justify-between gap-4 flex-wrap">
-
-                            <div>
-
-                                <h2 class="text-2xl font-black">
-                                    🏷️ Campanha por Categoria
-                                </h2>
-
-                                <p class="text-zinc-500 text-sm mt-1">
-                                    Crie liquidações em lote com selos automáticos.
-                                </p>
-
-                            </div>
-
-                            <div class="badge bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                EM MASSA
-                            </div>
-
+            <!-- Coluna da Direita: Preview Visual e Central de Cupons -->
+            <div class="space-y-6">
+                <!-- Card de Preview em Tempo Real -->
+                <div class="card p-6 bg-slate-900 text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-[#b88e45]/10 rounded-full blur-2xl pointer-events-none"></div>
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-[#b88e45] mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-eye"></i> Preview no App do Cliente
+                    </h2>
+                    
+                    <div class="bg-white rounded-xl p-4 text-slate-800 shadow-lg relative max-w-[240px] mx-auto">
+                        <!-- Imagem de Joia Fictícia Simulada -->
+                        <div class="w-full h-40 bg-slate-100 rounded-lg mb-3 flex items-center justify-center text-slate-300 relative">
+                            <i class="fa-solid fa-gem text-4xl text-slate-300"></i>
+                            <!-- Badge Customizada Dinâmica -->
+                            <span id="preview-badge" class="absolute top-2 left-2 text-[10px] font-extrabold px-2 py-1 rounded shadow-sm whitespace-nowrap transition-all">
+                                🔥 15% OFF
+                            </span>
                         </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Categoria
-                                </label>
-
-                                <select id="categoriaCampanha" class="input mt-2">
-                                    <option value="">Selecione...</option>
-                                </select>
+                        <div class="space-y-1">
+                            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Abella Signature</span>
+                            <h4 class="font-semibold text-sm text-slate-800 truncate">Anel Solitário Cristal Gold</h4>
+                            <div class="flex items-baseline gap-2 pt-1">
+                                <span id="preview-preco-de" class="text-xs text-slate-400 line-through">R$ 199,90</span>
+                                <span id="preview-preco-por" class="text-sm font-bold text-red-600">R$ 169,92</span>
                             </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Subcategoria
-                                </label>
-
-                                <select id="subcategoriaCampanha" class="input mt-2">
-                                    <option value="">Todas</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Desconto %
-                                </label>
-
-                                <input type="number" id="descontoCampanha" value="10" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Nome da Oferta
-                                </label>
-
-                                <input type="text" id="nomeCampanha" value="SUPER OFERTA" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Cor do Selo
-                                </label>
-
-                                <input type="color" id="corCampanha" value="#caa85c" class="input mt-2 h-14">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Ícone
-                                </label>
-
-                                <select id="iconeCampanha" class="input mt-2">
-                                    <option value="🔥">🔥 Relâmpago</option>
-                                    <option value="💎">💎 Luxo</option>
-                                    <option value="🏷️">🏷️ Oferta</option>
-                                    <option value="⚡">⚡ Flash</option>
-                                    <option value="🛍️">🛍️ Promo</option>
-                                </select>
-                            </div>
-
                         </div>
-
-                        <div class="mt-6 flex flex-wrap gap-3">
-
-                            <button onclick="aplicarCampanha()" class="btn-gold px-8 h-14 rounded-2xl">
-                                APLICAR CAMPANHA
-                            </button>
-
-                            <button onclick="removerCampanha()" class="bg-zinc-800 hover:bg-zinc-700 px-8 h-14 rounded-2xl font-black uppercase tracking-[0.15em]">
-                                REMOVER
-                            </button>
-
-                        </div>
-
                     </div>
-
-                    <!-- CUPONS -->
-
-                    <div class="card p-6 md:p-8">
-
-                        <div class="flex items-center justify-between flex-wrap gap-4">
-
-                            <div>
-
-                                <h2 class="text-2xl font-black">
-                                    🎟️ Gestão de Cupons
-                                </h2>
-
-                                <p class="text-zinc-500 text-sm mt-1">
-                                    Cupons por valor, primeira compra, PIX, aniversário e campanhas exclusivas.
-                                </p>
-
-                            </div>
-
-                            <div class="badge bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                                CUPONS
-                            </div>
-
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-8">
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Código
-                                </label>
-
-                                <input type="text" id="cupomCodigo" value="ABELLA10" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Tipo
-                                </label>
-
-                                <select id="cupomTipo" class="input mt-2">
-                                    <option value="percentual">Percentual %</option>
-                                    <option value="valor">Valor Fixo</option>
-                                    <option value="frete">Frete Grátis</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Desconto
-                                </label>
-
-                                <input type="number" id="cupomValor" value="10" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Compra Mínima
-                                </label>
-
-                                <input type="number" id="cupomMinimo" value="0" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Limite de Uso
-                                </label>
-
-                                <input type="number" id="cupomLimite" value="999" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Validade
-                                </label>
-
-                                <input type="date" id="cupomValidade" class="input mt-2">
-                            </div>
-
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
-
-                            <label class="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-                                <input type="checkbox" id="cupomPrimeiraCompra">
-                                <span class="text-sm">
-                                    Primeira Compra
-                                </span>
-                            </label>
-
-                            <label class="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-                                <input type="checkbox" id="cupomPix">
-                                <span class="text-sm">
-                                    Exclusivo PIX
-                                </span>
-                            </label>
-
-                            <label class="flex items-center gap-3 bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-                                <input type="checkbox" id="cupomAtivo" checked>
-                                <span class="text-sm">
-                                    Cupom Ativo
-                                </span>
-                            </label>
-
-                        </div>
-
-                        <div class="mt-6">
-
-                            <button onclick="criarCupom()" class="btn-gold px-8 h-14 rounded-2xl">
-                                CRIAR CUPOM
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                    <!-- FLASH -->
-
-                    <div class="card p-6 md:p-8">
-
-                        <div class="flex items-center justify-between flex-wrap gap-4">
-
-                            <div>
-
-                                <h2 class="text-2xl font-black">
-                                    ⚡ Oferta Relâmpago
-                                </h2>
-
-                                <p class="text-zinc-500 text-sm mt-1">
-                                    Promoções com contagem regressiva automática.
-                                </p>
-
-                            </div>
-
-                            <div class="badge bg-red-500/20 text-red-400 border border-red-500/30">
-                                FLASH SALE
-                            </div>
-
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Título
-                                </label>
-
-                                <input type="text" id="flashTitulo" value="OFERTA RELÂMPAGO" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Desconto %
-                                </label>
-
-                                <input type="number" id="flashDesconto" value="15" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Início
-                                </label>
-
-                                <input type="datetime-local" id="flashInicio" class="input mt-2">
-                            </div>
-
-                            <div>
-                                <label class="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-bold">
-                                    Encerramento
-                                </label>
-
-                                <input type="datetime-local" id="flashFim" class="input mt-2">
-                            </div>
-
-                        </div>
-
-                        <div class="mt-6">
-
-                            <button onclick="criarFlash()" class="btn-gold px-8 h-14 rounded-2xl">
-                                PUBLICAR OFERTA FLASH
-                            </button>
-
-                        </div>
-
-                    </div>
-
                 </div>
 
-                <!-- RIGHT -->
-
-                <div class="space-y-6">
-
-                    <!-- PREVIEW -->
-
-                    <div class="card p-6">
-
-                        <h2 class="text-xl font-black">
-                            👁️ Preview da Oferta
-                        </h2>
-
-                        <div class="mt-6 bg-black rounded-[2rem] border border-zinc-900 overflow-hidden">
-
-                            <div class="aspect-square relative">
-
-                                <img
-                                    src="https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1200&auto=format&fit=crop"
-                                    class="w-full h-full object-cover">
-
-                                <div id="previewBadge"
-                                     class="absolute top-4 left-4 px-4 py-2 rounded-full text-xs font-black uppercase tracking-[0.15em]"
-                                     style="background:#caa85c;color:black;">
-
-                                    🔥 10% OFF
-
-                                </div>
-
-                            </div>
-
-                            <div class="p-5">
-
-                                <h3 class="text-xl font-black">
-                                    Gargantilha Premium
-                                </h3>
-
-                                <div class="flex items-end justify-between mt-5">
-
-                                    <div>
-
-                                        <p class="text-zinc-500 line-through text-sm">
-                                            R$ 99,90
-                                        </p>
-
-                                        <h4 class="text-3xl font-black gold">
-                                            R$ 79,90
-                                        </h4>
-
-                                    </div>
-
-                                    <div class="text-right">
-
-                                        <p class="text-emerald-400 font-black text-sm">
-                                            Você economiza
-                                        </p>
-
-                                        <p class="text-emerald-400 font-black text-xl">
-                                            R$ 20,00
-                                        </p>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
+                <!-- Cadastro de Cupons de Desconto -->
+                <div class="card p-6 glass">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-ticket text-purple-600"></i> Criar Cupom de Loja
+                    </h2>
+                    <div class="space-y-3">
+                        <div>
+                            <input type="text" id="cupom-codigo" class="input font-mono uppercase tracking-widest text-center font-bold" placeholder="EX: ABELLA10">
                         </div>
-
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="number" id="cupom-valor" class="input" placeholder="Valor (R$ ou %)" min="1">
+                            <select id="cupom-tipo" class="input">
+                                <option value="porcentagem">Porcentagem (%)</option>
+                                <option value="fixo">Fixo (R$)</option>
+                            </select>
+                        </div>
+                        <button onclick="criarCupom()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Ativar Cupom
+                        </button>
                     </div>
-
-                    <!-- LOG -->
-
-                    <div class="card p-6">
-
-                        <div class="flex items-center justify-between">
-
-                            <h2 class="text-xl font-black">
-                                📜 Log Operacional
-                            </h2>
-
-                            <button onclick="limparLog()" class="text-xs text-red-400">
-                                Limpar
-                            </button>
-
-                        </div>
-
-                        <div id="log"
-                             class="mt-5 bg-black rounded-2xl border border-zinc-900 p-4 h-[420px] overflow-y-auto text-xs space-y-2 scrollbar">
-
-                            <p class="text-zinc-500">
-                                Sistema inicializado.
-                            </p>
-
-                        </div>
-
-                    </div>
-
                 </div>
-
             </div>
 
         </div>
-
     </div>
 
-    <script src="../js/firebase/firebase-config.js"></script>
-
+    <!-- Script de Lógica do Sistema -->
     <script>
+        // Inicialização Segura do Firebase (Adapte as credenciais se necessário)
+        const firebaseConfig = {
+            databaseURL: "https://abella-joias-default-rtdb.firebaseio.com/" 
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
 
-        const db =
-            firebase.database();
+        // Estrutura em cache para categorias
+        let cacheCategorias = {};
 
-        const categoriasSelect =
-            document.getElementById(
-                'categoriaCampanha'
-            );
+        // Previne comportamento padrão de recarga de formulários
+        function prevenirEnvio(e) {
+            e.preventDefault();
+        }
 
-        const subcategoriasSelect =
-            document.getElementById(
-                'subcategoriaCampanha'
-            );
+        // Carrega as Categorias cadastradas no banco
+        async function carregarCategorias() {
+            try {
+                const selectCat = document.getElementById('campanha-categoria');
+                const snapshot = await db.ref('abella/categories').once('value');
+                cacheCategorias = snapshot.val() || {};
 
-        document.addEventListener(
-            'DOMContentLoaded',
-            async () => {
-
-                await carregarCategorias();
-
-                atualizarPreview();
-
-            }
-        );
-
-        async function carregarCategorias(){
-
-            try{
-
-                const snap =
-                    await db.ref(
-                        'abella/categories'
-                    ).once('value');
-
-                const cats =
-                    snap.val() || {};
-
-                categoriasSelect.innerHTML =
-                    `<option value="">Selecione...</option>`;
-
-                Object.keys(cats).forEach(key => {
-
-                    categoriasSelect.innerHTML += `
-
-                        <option value="${key}">
-                            ${cats[key].name || key}
-                        </option>
-
-                    `;
-
+                selectCat.innerHTML = '<option value="">Selecione uma categoria...</option>';
+                
+                Object.keys(cacheCategorias).forEach(key => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = cacheCategorias[key].name || key;
+                    selectCat.appendChild(option);
                 });
-
-            }catch(e){
-
-                console.error(e);
-
+            } catch (error) {
+                console.error("Erro ao carregar categorias:", error);
             }
-
         }
 
-        categoriasSelect.addEventListener(
-            'change',
-            async function(){
+        // Atualiza dinamicamente as subcategorias baseadas na categoria pai escolhida
+        function carregarSubcategorias() {
+            const categoriaId = document.getElementById('campanha-categoria').value;
+            const selectSub = document.getElementById('campanha-subcategoria');
+            
+            selectSub.innerHTML = '<option value="">Todas as subcategorias</option>';
 
-                const cat =
-                    this.value;
-
-                subcategoriasSelect.innerHTML =
-                    `<option value="">Todas</option>`;
-
-                if(!cat) return;
-
-                const snap =
-                    await db.ref(
-                        `abella/categories/${cat}/subcategories`
-                    ).once('value');
-
-                const subs =
-                    snap.val() || {};
-
-                Object.keys(subs).forEach(key => {
-
-                    subcategoriasSelect.innerHTML += `
-
-                        <option value="${key}">
-                            ${subs[key].name || key}
-                        </option>
-
-                    `;
-
+            if (categoriaId && cacheCategorias[categoriaId] && cacheCategorias[categoriaId].subcategories) {
+                const subs = cacheCategorias[categoriaId].subcategories;
+                Object.keys(subs).forEach(subKey => {
+                    const option = document.createElement('option');
+                    option.value = subKey;
+                    option.textContent = subs[subKey].name || subKey;
+                    selectSub.appendChild(option);
                 });
-
             }
-        );
-
-        function log(msg,color='text-zinc-400'){
-
-            const el =
-                document.getElementById(
-                    'log'
-                );
-
-            el.innerHTML =
-                `
-
-                    <div class="${color}">
-                        ${new Date().toLocaleTimeString()} • ${msg}
-                    </div>
-
-                ` + el.innerHTML;
-
         }
 
-        function limparLog(){
+        // Atualiza o componente visual de Preview baseado nos inputs em tempo real
+        function atualizarPreview() {
+            const nome = document.getElementById('campanha-nome').value || 'Oferta';
+            const icone = document.getElementById('campanha-icone').value;
+            const desconto = parseInt(document.getElementById('campanha-desconto').value) || 0;
+            const corBg = document.getElementById('campanha-cor').value;
+            const corTexto = document.getElementById('campanha-cor-texto').value;
 
-            document.getElementById(
-                'log'
-            ).innerHTML = '';
+            // Atualiza a badge flutuante
+            const badge = document.getElementById('preview-badge');
+            badge.innerHTML = `${icone} ${desconto}% OFF - ${nome}`;
+            badge.style.backgroundColor = corBg;
+            badge.style.color = corTexto;
 
+            // Calcula simulação matemática do valor real do produto
+            const precoBaseFicticio = 199.90;
+            const fatorDesconto = (100 - desconto) / 100;
+            const precoFinalFicticio = precoBaseFicticio * fatorDesconto;
+
+            document.getElementById('preview-preco-por').textContent = `R$ ${precoFinalFicticio.toFixed(2).replace('.', ',')}`;
         }
 
-        function atualizarPreview(){
+        // Atualiza de forma performática e robusta os contadores do dashboard principal
+        async function atualizarContadores() {
+            try {
+                const snapProds = await db.ref('abella/products').once('value');
+                const prods = snapProds.val() || {};
+                
+                let totalOfertas = 0;
+                let somaDescontos = 0;
 
-            const desconto =
-                document.getElementById(
-                    'descontoCampanha'
-                ).value || 10;
-
-            const nome =
-                document.getElementById(
-                    'nomeCampanha'
-                ).value || 'OFERTA';
-
-            const cor =
-                document.getElementById(
-                    'corCampanha'
-                ).value;
-
-            const icone =
-                document.getElementById(
-                    'iconeCampanha'
-                ).value;
-
-            const badge =
-                document.getElementById(
-                    'previewBadge'
-                );
-
-            badge.innerText =
-                `${icone} ${desconto}% OFF`;
-
-            badge.style.background =
-                cor;
-
-            badge.style.color =
-                '#000';
-
-        }
-
-        document.getElementById('descontoCampanha').addEventListener('input', atualizarPreview);
-        document.getElementById('nomeCampanha').addEventListener('input', atualizarPreview);
-        document.getElementById('corCampanha').addEventListener('input', atualizarPreview);
-        document.getElementById('iconeCampanha').addEventListener('change', atualizarPreview);
-
-        async function aplicarCampanha(){
-
-            const categoria =
-                categoriasSelect.value;
-
-            if(!categoria){
-
-                alert(
-                    'Selecione uma categoria.'
-                );
-
-                return;
-
-            }
-
-            const subcategoria =
-                subcategoriasSelect.value;
-
-            const desconto =
-                parseFloat(
-                    document.getElementById(
-                        'descontoCampanha'
-                    ).value || 0
-                );
-
-            const nome =
-                document.getElementById(
-                    'nomeCampanha'
-                ).value;
-
-            const cor =
-                document.getElementById(
-                    'corCampanha'
-                ).value;
-
-            const icone =
-                document.getElementById(
-                    'iconeCampanha'
-                ).value;
-
-            try{
-
-                log(
-                    'Buscando produtos...',
-                    'text-yellow-400'
-                );
-
-                const snap =
-                    await db.ref(
-                        'abella/products'
-                    ).once('value');
-
-                const prods =
-                    snap.val() || {};
-
-                let count = 0;
-
-                for(const id in prods){
-
-                    const p =
-                        prods[id];
-
-                    const matchCategoria =
-                        p.category === categoria;
-
-                    const matchSub =
-                        !subcategoria ||
-                        p.subcategory === subcategoria;
-
-                    if(matchCategoria && matchSub){
-
-                        await db.ref(
-                            `abella/products/${id}`
-                        ).update({
-
-                            promo:
-                                desconto,
-
-                            badge:
-                                `${icone} ${nome}`,
-
-                            badgeColor:
-                                cor,
-
-                            ofertaAtiva:
-                                true
-
-                        });
-
-                        count++;
-
+                Object.keys(prods).forEach(id => {
+                    if (prods[id].ofertaAtiva || prods[id].promo > 0) {
+                        totalOfertas++;
+                        somaDescontos += (parseInt(prods[id].promo) || 0);
                     }
+                });
 
+                const mediaDesconto = totalOfertas > 0 ? Math.round(somaDescontos / totalOfertas) : 0;
+                document.getElementById('count-ofertas').textContent = totalOfertas;
+                document.getElementById('avg-desconto').textContent = `${mediaDesconto}%`;
+
+                // Busca estatísticas de Cupons ativos
+                const snapCupons = await db.ref('abella/coupons').once('value');
+                const cupons = snapCupons.val() || {};
+                document.getElementById('count-cupons').textContent = Object.keys(cupons).length;
+
+                // Flash sales simulado por flag de urgência interna
+                let flashCount = 0;
+                Object.keys(prods).forEach(id => {
+                    if(prods[id].flashSale === true) flashCount++;
+                });
+                document.getElementById('count-flash').textContent = flashCount;
+
+            } catch (error) {
+                console.error("Erro ao atualizar indicadores de controle:", error);
+            }
+        }
+
+        // Executa a injeção em lote (Multi-location update) otimizada para o Firebase
+        async function aplicarCampanha() {
+            const categoria = document.getElementById('campanha-categoria').value;
+            const subcategoria = document.getElementById('campanha-subcategoria').value;
+            const desconto = parseInt(document.getElementById('campanha-desconto').value) || 0;
+            const nome = document.getElementById('campanha-nome').value || 'Oferta';
+            const icone = document.getElementById('campanha-icone').value;
+            const corBg = document.getElementById('campanha-cor').value;
+            const corTexto = document.getElementById('campanha-cor-texto').value;
+
+            if (!categoria) {
+                alert('Por favor, selecione pelo menos uma Categoria Alvo para aplicar o desconto em lote.');
+                return;
+            }
+
+            try {
+                const snapProds = await db.ref('abella/products').once('value');
+                const prods = snapProds.val() || {};
+                
+                const updates = {};
+                let countAfetados = 0;
+
+                // Monta a payload de atualização em memória
+                Object.keys(prods).forEach(id => {
+                    const p = prods[id];
+                    const matchCategoria = (p.category === categoria);
+                    const matchSub = !subcategoria || (p.subcategory === subcategoria);
+
+                    if (matchCategoria && matchSub) {
+                        updates[`abella/products/${id}/promo`] = desconto;
+                        updates[`abella/products/${id}/badge`] = `${icone} ${nome}`;
+                        updates[`abella/products/${id}/badgeColor`] = corBg;
+                        updates[`abella/products/${id}/badgeTextColor`] = corTexto;
+                        updates[`abella/products/${id}/ofertaAtiva`] = true;
+                        countAfetados++;
+                    }
+                });
+
+                if (countAfetados === 0) {
+                    alert('Nenhum produto correspondente aos filtros foi encontrado para modificação.');
+                    return;
                 }
 
-                log(
-                    `✅ ${count} produtos atualizados.`,
-                    'text-emerald-400'
-                );
+                // Envia a transação em lote unificada de alta velocidade
+                await db.ref().update(updates);
+                alert(`Sucesso! Campanha aplicada a ${countAfetados} produto(s) simultaneamente.`);
+                
+                await atualizarContadores();
+                limparCampos();
 
-                atualizarContadores();
-
-                alert(
-                    'Campanha aplicada com sucesso.'
-                );
-
-            }catch(e){
-
-                console.error(e);
-
-                log(
-                    'Erro ao aplicar campanha.',
-                    'text-red-400'
-                );
-
+            } catch (error) {
+                console.error("Falha ao propagar modificação em lote:", error);
+                alert('Erro interno de processamento ao comunicar-se com o banco de dados.');
             }
-
         }
 
-        async function removerCampanha(){
-
-            const categoria =
-                categoriasSelect.value;
-
-            if(!categoria){
-
-                alert(
-                    'Selecione uma categoria.'
-                );
-
-                return;
-
-            }
-
-            try{
-
-                const snap =
-                    await db.ref(
-                        'abella/products'
-                    ).once('value');
-
-                const prods =
-                    snap.val() || {};
-
-                let count = 0;
-
-                for(const id in prods){
-
-                    const p =
-                        prods[id];
-
-                    if(p.category === categoria){
-
-                        await db.ref(
-                            `abella/products/${id}`
-                        ).update({
-
-                            promo:0,
-                            badge:'',
-                            badgeColor:'',
-                            ofertaAtiva:false
-
-                        });
-
-                        count++;
-
-                    }
-
-                }
-
-                log(
-                    `🗑️ Campanha removida de ${count} produtos.`,
-                    'text-red-400'
-                );
-
-                alert(
-                    'Campanha removida.'
-                );
-
-            }catch(e){
-
-                console.error(e);
-
-            }
-
-        }
-
-        async function criarCupom(){
-
-            const codigo =
-                document.getElementById(
-                    'cupomCodigo'
-                ).value.trim().toUpperCase();
-
-            if(!codigo){
-
-                alert(
-                    'Digite um código.'
-                );
-
-                return;
-
-            }
-
-            const payload = {
-
-                codigo,
-
-                tipo:
-                    document.getElementById(
-                        'cupomTipo'
-                    ).value,
-
-                valor:
-                    parseFloat(
-                        document.getElementById(
-                            'cupomValor'
-                        ).value || 0
-                    ),
-
-                minimo:
-                    parseFloat(
-                        document.getElementById(
-                            'cupomMinimo'
-                        ).value || 0
-                    ),
-
-                limite:
-                    parseInt(
-                        document.getElementById(
-                            'cupomLimite'
-                        ).value || 0
-                    ),
-
-                validade:
-                    document.getElementById(
-                        'cupomValidade'
-                    ).value,
-
-                primeiraCompra:
-                    document.getElementById(
-                        'cupomPrimeiraCompra'
-                    ).checked,
-
-                pix:
-                    document.getElementById(
-                        'cupomPix'
-                    ).checked,
-
-                ativo:
-                    document.getElementById(
-                        'cupomAtivo'
-                    ).checked,
-
-                criadoEm:
-                    Date.now()
-
-            };
-
-            try{
-
-                await db.ref(
-                    `abella/cupons/${codigo}`
-                ).set(payload);
-
-                log(
-                    `🎟️ Cupom ${codigo} criado.`,
-                    'text-indigo-400'
-                );
-
-                atualizarContadores();
-
-                alert(
-                    'Cupom salvo.'
-                );
-
-            }catch(e){
-
-                console.error(e);
-
-            }
-
-        }
-
-        async function criarFlash(){
-
-            const payload = {
-
-                titulo:
-                    document.getElementById(
-                        'flashTitulo'
-                    ).value,
-
-                desconto:
-                    parseFloat(
-                        document.getElementById(
-                            'flashDesconto'
-                        ).value || 0
-                    ),
-
-                inicio:
-                    document.getElementById(
-                        'flashInicio'
-                    ).value,
-
-                fim:
-                    document.getElementById(
-                        'flashFim'
-                    ).value,
-
-                ativo:true,
-                criadoEm:Date.now()
-
-            };
-
-            try{
-
-                const ref =
-                    db.ref(
-                        'abella/ofertasFlash'
-                    ).push();
-
-                await ref.set(payload);
-
-                log(
-                    `⚡ Oferta relâmpago criada.`,
-                    'text-red-400'
-                );
-
-                atualizarContadores();
-
-                alert(
-                    'Oferta Flash publicada.'
-                );
-
-            }catch(e){
-
-                console.error(e);
-
-            }
-
-        }
-
-        async function atualizarContadores(){
-
-            try{
-
-                const cupons =
-                    await db.ref(
-                        'abella/cupons'
-                    ).once('value');
-
-                const flash =
-                    await db.ref(
-                        'abella/ofertasFlash'
-                    ).once('value');
-
-                const prods =
-                    await db.ref(
-                        'abella/products'
-                    ).once('value');
-
-                let badges = 0;
-
-                prods.forEach(p => {
-
-                    if(
-                        p.val().badge
-                    ){
-
-                        badges++;
-
-                    }
-
+        // Reseta globalmente todas as marcas promocionais de produtos do banco
+        async function limparTodasOfertas() {
+            if (!confirm('Esta ação removerá o preço promocional e badges de TODOS os produtos do banco. Deseja prosseguir?')) return;
+
+            try {
+                const snapProds = await db.ref('abella/products').once('value');
+                const prods = snapProds.val() || {};
+                
+                const updates = {};
+                Object.keys(prods).forEach(id => {
+                    updates[`abella/products/${id}/promo`] = 0;
+                    updates[`abella/products/${id}/badge`] = "";
+                    updates[`abella/products/${id}/badgeColor`] = "";
+                    updates[`abella/products/${id}/badgeTextColor`] = "";
+                    updates[`abella/products/${id}/ofertaAtiva`] = false;
                 });
 
-                document.getElementById(
-                    'totalCupons'
-                ).innerText =
-                    cupons.exists()
-                    ? Object.keys(cupons.val()).length
-                    : 0;
-
-                document.getElementById(
-                    'totalFlash'
-                ).innerText =
-                    flash.exists()
-                    ? Object.keys(flash.val()).length
-                    : 0;
-
-                document.getElementById(
-                    'totalBadges'
-                ).innerText =
-                    badges;
-
-                document.getElementById(
-                    'totalCampanhas'
-                ).innerText =
-                    badges;
-
-            }catch(e){
-
-                console.error(e);
-
+                await db.ref().update(updates);
+                alert('Toda a tabela de preços comerciais foi restaurada ao valor original com sucesso.');
+                await atualizarContadores();
+            } catch (error) {
+                console.error("Erro ao resetar catálogo comercial:", error);
             }
-
         }
 
-        atualizarContadores();
+        // Salva e ativa um novo cupom no banco de dados
+        async function criarCupom() {
+            const codigo = document.getElementById('cupom-codigo').value.trim().toUpperCase();
+            const valor = parseFloat(document.getElementById('cupom-valor').value);
+            const tipo = document.getElementById('cupom-tipo').value;
 
+            if (!codigo || !valor) {
+                alert('Preencha corretamente o código e o valor correspondente do cupom.');
+                return;
+            }
+
+            try {
+                await db.ref(`abella/coupons/${codigo}`).set({
+                    code: codigo,
+                    value: valor,
+                    type: tipo,
+                    active: true,
+                    createdAt: new Date().toISOString()
+                });
+
+                alert(`Cupom [ ${codigo} ] inserido e ativado no e-commerce!`);
+                document.getElementById('cupom-codigo').value = '';
+                document.getElementById('cupom-valor').value = '';
+                
+                await atualizarContadores();
+            } catch (error) {
+                console.error("Erro ao criar cupom:", error);
+            }
+        }
+
+        // Reseta os campos do formulário para o estado inicial padrão
+        function limparCampos() {
+            document.getElementById('form-campanha').reset();
+            document.getElementById('campanha-nome').value = "Oferta Especial";
+            document.getElementById('campanha-desconto').value = "15";
+            document.getElementById('campanha-cor').value = "#b88e45";
+            atualizarPreview();
+        }
+
+        // Inicialização de ciclo de vida da Aplicação
+        document.addEventListener('DOMContentLoaded', async () => {
+            await carregarCategorias();
+            atualizarPreview();
+            await atualizarContadores();
+        });
     </script>
-
 </body>
 </html>

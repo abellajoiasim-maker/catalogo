@@ -349,46 +349,234 @@
             }
         }
 
-        async function carregarCategoria(){
-            try{
-                if(typeof window.getAbellaPath !== 'function') return;
-                
-                // Consulta oficial unificada utilizando as diretrizes arquiteturais
-                const snap = await db.ref(window.getAbellaPath('categories')).child(categoriaSlug).once('value');
-                
-                if(snap.exists()){
-                    categoriaAtual = snap.val();
-                } else {
-                    // Fallback inteligente insensível a maiúsculas/minúsculas
-                    const allSnap = await db.ref(window.getAbellaPath('categories')).once('value');
-                    const all = allSnap.val() || {};
-                    const found = Object.entries(all).find(([key]) => key.toLowerCase() === categoriaSlug.toLowerCase());
-                    if(found){
-                        categoriaAtual = found[1];
-                    }
-                }
+       async function carregarCategoria(){
 
-                if(!categoriaAtual){
-                    mostrarErro('Categoria não encontrada.');
-                    return;
-                }
+    try{
 
-                preencherHero();
+        if(
+            typeof window.getAbellaPath !== 'function'
+        ){
 
-                const subcategorias = categoriaAtual.subcategories || categoriaAtual.subcategorias || {};
-                const listaSubcategorias = Object.entries(subcategorias);
+            throw new Error(
+                'getAbellaPath indisponível.'
+            );
 
-                if(listaSubcategorias.length === 0){
-                    window.location.href = `produtos.html?categoria=${encodeURIComponent(categoriaSlug)}`;
-                    return;
-                }
-
-                renderizarSubcategorias(listaSubcategorias);
-            }catch(error){
-                console.error('Erro carregarCategoria:', error);
-                mostrarErro('Erro ao carregar categoria.');
-            }
         }
+
+        // =====================================================
+        // BUSCA OFICIAL
+        // =====================================================
+
+        const snapshot =
+
+            await db
+                .ref(
+                    window.getAbellaPath(
+                        'categories'
+                    )
+                )
+                .once('value');
+
+        const categorias =
+            snapshot.val() || {};
+
+        // =====================================================
+        // BUSCA FORENSE
+        // =====================================================
+
+        let categoriaEncontrada = null;
+        let categoriaKey = null;
+
+        Object.entries(categorias)
+            .forEach(([key, categoria]) => {
+
+                if(categoriaEncontrada){
+                    return;
+                }
+
+                const slugBanco = String(
+
+                    categoria.slug ||
+                    key ||
+                    ''
+
+                )
+                .trim()
+                .toLowerCase();
+
+                const nomeBanco = String(
+
+                    categoria.name ||
+                    categoria.nome ||
+                    ''
+
+                )
+                .trim()
+                .toLowerCase();
+
+                const slugAtual = String(
+                    categoriaSlug || ''
+                )
+                .trim()
+                .toLowerCase();
+
+                if(
+
+                    key.toLowerCase() === slugAtual ||
+
+                    slugBanco === slugAtual ||
+
+                    nomeBanco === slugAtual
+
+                ){
+
+                    categoriaEncontrada =
+                        categoria;
+
+                    categoriaKey =
+                        key;
+
+                }
+
+            });
+
+        // =====================================================
+        // NÃO ENCONTRADA
+        // =====================================================
+
+        if(!categoriaEncontrada){
+
+            mostrarErro(
+                'Categoria não encontrada.'
+            );
+
+            return;
+
+        }
+
+        // =====================================================
+        // PAUSED
+        // =====================================================
+
+        if(
+            categoriaEncontrada.paused === true
+        ){
+
+            mostrarErro(
+                'Categoria indisponível.'
+            );
+
+            return;
+
+        }
+
+        categoriaAtual =
+            categoriaEncontrada;
+
+        categoriaSlug =
+            categoriaKey;
+
+        preencherHero();
+
+        // =====================================================
+        // SUBCATEGORIAS
+        // =====================================================
+
+        let subcategorias =
+
+            categoriaAtual.subcategories ||
+
+            categoriaAtual.subCategories ||
+
+            categoriaAtual.subcategorias ||
+
+            {};
+
+        // =====================================================
+        // NORMALIZA ARRAY
+        // =====================================================
+
+        if(
+            Array.isArray(subcategorias)
+        ){
+
+            const normalizado = {};
+
+            subcategorias.forEach((item,index)=>{
+
+                if(!item){
+                    return;
+                }
+
+                const slug =
+
+                    item.slug ||
+
+                    item.name ||
+
+                    item.nome ||
+
+                    `sub_${index}`;
+
+                normalizado[slug] =
+                    item;
+
+            });
+
+            subcategorias =
+                normalizado;
+
+        }
+
+        const listaSubcategorias =
+            Object.entries(
+                subcategorias || {}
+            )
+            .filter(([_,sub]) => {
+
+                return (
+                    sub &&
+                    sub.paused !== true
+                );
+
+            });
+
+        // =====================================================
+        // SEM SUBCATEGORIA
+        // =====================================================
+
+        if(
+            listaSubcategorias.length === 0
+        ){
+
+            window.location.href =
+
+                `produtos.html?id=${encodeURIComponent(
+                    categoriaSlug
+                )}`;
+
+            return;
+
+        }
+
+        renderizarSubcategorias(
+            listaSubcategorias
+        );
+
+    }catch(error){
+
+        console.error(
+            '[subcategorias] carregarCategoria:',
+            error
+        );
+
+        mostrarErro(
+            'Erro ao carregar categoria.'
+        );
+
+    }
+
+}
 
         function preencherHero(){
             const nome = categoriaAtual.name || categoriaAtual.nome || categoriaSlug;
@@ -465,7 +653,8 @@
         function abrirProdutos(subcategoria){
             const categoria = encodeURIComponent(categoriaSlug);
             const sub = encodeURIComponent(subcategoria);
-            window.location.href = `produtos.html?categoria=${categoria}&subcategoria=${sub}`;
+            window.location.href window.location.href =
+`produtos.html?id=${categoria}&sub=${sub}`;= `produtos.html?categoria=${categoria}&subcategoria=${sub}`;
         }
 
         document.addEventListener('DOMContentLoaded', async () => {

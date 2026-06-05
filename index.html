@@ -451,38 +451,47 @@
     <script src="js/services/carrinhoService.js"></script>
     
     <script>
-        const db = firebase.database();
+        // db exposto globalmente pelo firebase-config.js via window.db
+        const db = window.db;
 
-        /* ─── Logo da marca ─────────────────────────────────────────── */
-        async function carregarLogoAbella() {
-            try {
-                const snap = await db.ref('abella/settings/logoUrl').once('value');
-                const img      = document.getElementById('abellaLogoImg');
-                const fallback = document.getElementById('abellaLogoFallback');
-                if (snap.exists() && snap.val()) {
-                    let logo = snap.val();
-                    img.src = typeof resolverImagemFirebase !== 'undefined'
-                        ? resolverImagemFirebase(logo) : logo;
-                    img.onload = () => {
-                        img.classList.remove('hidden');
-                        fallback?.classList.add('hidden');
-                    };
-                }
-            } catch (e) {
-                console.error('Erro ao carregar logo:', e);
-            }
-        }
-
-        /* ─── Settings globais (banner, parcelamento, PIX, WhatsApp) ── */
+        /* ─── Settings globais ───────────────────────────────────────────
+           Nó oficial: getAbellaPath('settings')
+           Campos oficiais: name, slogan, whatsapp, bannerAtivo, bannerTexto,
+                            pix, parcelas, logoUrl
+        ────────────────────────────────────────────────────────────────── */
         async function carregarSettings() {
             try {
-                const snap = await db.ref('abella/settings').once('value');
+                const snap = await db.ref(getAbellaPath('settings')).once('value');
                 if (!snap.exists()) return;
                 const s = snap.val();
 
-                // Banner
+                // Logo — campo logoUrl dentro de settings
+                if (s.logoUrl) {
+                    const img      = document.getElementById('abellaLogoImg');
+                    const fallback = document.getElementById('abellaLogoFallback');
+                    if (img) {
+                        img.src = typeof resolverImagemFirebase !== 'undefined'
+                            ? resolverImagemFirebase(s.logoUrl) : s.logoUrl;
+                        img.onload = () => {
+                            img.classList.remove('hidden');
+                            fallback?.classList.add('hidden');
+                        };
+                    }
+                }
+
+                // Nome / slogan
+                if (s.name) {
+                    const el = document.getElementById('nome');
+                    if (el) el.textContent = s.name;
+                }
+                if (s.slogan) {
+                    const el = document.getElementById('slogan');
+                    if (el) el.textContent = s.slogan;
+                }
+
+                // Banner — campos: bannerAtivo (bool), bannerTexto (string)
                 if (s.bannerAtivo && s.bannerTexto) {
-                    const bannerEl = document.getElementById('banner');
+                    const bannerEl  = document.getElementById('banner');
                     const bannerTxt = document.getElementById('bannerTexto');
                     if (bannerEl && bannerTxt) {
                         bannerTxt.textContent = s.bannerTexto;
@@ -490,23 +499,23 @@
                     }
                 }
 
-                // Parcelamento
-                if (s.parcelamento) {
+                // Parcelas — campo oficial: parcelas (number)
+                if (s.parcelas) {
                     const el = document.getElementById('parcelamento');
-                    if (el) el.textContent = s.parcelamento;
+                    if (el) el.textContent = `${s.parcelas}x sem juros`;
                     const fp = document.getElementById('float-parcelas');
-                    if (fp) fp.textContent = `Até ${s.parcelamento}`;
+                    if (fp) fp.textContent = `Até ${s.parcelas}x sem juros`;
                 }
 
-                // PIX
-                if (s.descontoPix) {
+                // PIX — campo oficial: pix (number, percentual)
+                if (s.pix) {
                     const el = document.getElementById('pix');
-                    if (el) el.textContent = `${s.descontoPix}% OFF`;
+                    if (el) el.textContent = `${s.pix}% OFF`;
                     const fp = document.getElementById('float-pix');
-                    if (fp) fp.textContent = `PIX ${s.descontoPix}% OFF`;
+                    if (fp) fp.textContent = `PIX ${s.pix}% OFF`;
                 }
 
-                // WhatsApp
+                // WhatsApp — campo oficial: whatsapp (string)
                 if (s.whatsapp) {
                     const numero = s.whatsapp.replace(/\D/g, '');
                     const link   = `https://wa.me/55${numero}`;
@@ -515,20 +524,25 @@
                     if (wa)  wa.href  = link;
                     if (fwa) fwa.href = link;
                 }
+
             } catch (e) {
                 console.error('Erro ao carregar settings:', e);
             }
         }
 
-        /* ─── Renderização de um card de categoria ───────────────────── */
+        /* ─── Card de categoria ──────────────────────────────────────────
+           Nó oficial: getAbellaPath('categories')
+           Campos oficiais: name, slug, paused, subcategories
+           Filtro: paused === true  →  ocultar
+           Link: usa slug se disponível, senão o id do nó
+        ────────────────────────────────────────────────────────────────── */
         function criarCardCategoria(id, cat) {
-            const href  = `categoria.html?id=${encodeURIComponent(id)}`;
-            const nome  = cat.nome  || 'Categoria';
-            const desc  = cat.descricao || '';
-            const total = cat.totalProdutos != null ? cat.totalProdutos : (cat.produtos ? Object.keys(cat.produtos).length : 0);
+            const slug = cat.slug || id;
+            const href = `categoria.html?id=${encodeURIComponent(slug)}`;
+            const nome = cat.name || 'Categoria';
 
-            // Imagem: usa resolverImagemFirebase se disponível
-            let imgSrc = cat.imagemUrl || cat.imagem || '';
+            // image é o campo oficial do schema
+            let imgSrc = cat.image || '';
             if (imgSrc && typeof resolverImagemFirebase !== 'undefined') {
                 imgSrc = resolverImagemFirebase(imgSrc);
             }
@@ -536,6 +550,14 @@
             const imgHtml = imgSrc
                 ? `<img src="${imgSrc}" alt="${nome}" class="w-full h-full object-cover" loading="lazy">`
                 : `<div class="w-full h-full flex items-center justify-center text-5xl">💍</div>`;
+
+            // Conta subcategorias ativas se existirem
+            const subCount = cat.subcategories
+                ? Object.values(cat.subcategories).filter(s => !s.paused).length
+                : 0;
+            const badge = subCount > 0
+                ? `${subCount} ${subCount === 1 ? 'subcategoria' : 'subcategorias'}`
+                : 'Ver produtos';
 
             const card = document.createElement('a');
             card.href      = href;
@@ -549,9 +571,8 @@
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
                     <div class="absolute bottom-0 left-0 right-0 p-4">
                         <h3 class="serif text-base font-bold leading-snug">${nome}</h3>
-                        ${desc ? `<p class="text-zinc-400 text-xs mt-1 line-clamp-2">${desc}</p>` : ''}
                         <div class="flex items-center justify-between mt-3">
-                            <span class="text-[11px] uppercase tracking-[.2em] gold font-black">${total} ${total === 1 ? 'produto' : 'produtos'}</span>
+                            <span class="text-[11px] uppercase tracking-[.2em] gold font-black">${badge}</span>
                             <div class="arrow-btn">→</div>
                         </div>
                     </div>
@@ -561,17 +582,16 @@
         }
 
         /* ─── Carregar e renderizar categorias ───────────────────────── */
-        let todasCategorias = []; // cache para filtro de busca
+        let todasCategorias = [];
 
         async function carregarCategorias() {
-            const loading = document.getElementById('loading');
-            const grid    = document.getElementById('grid-categorias');
+            const loading  = document.getElementById('loading');
+            const grid     = document.getElementById('grid-categorias');
             const noResult = document.getElementById('no-result');
 
             try {
-                const snap = await db.ref('abella/categorias').once('value');
+                const snap = await db.ref(getAbellaPath('categories')).once('value');
 
-                // Oculta skeletons
                 if (loading) {
                     loading.classList.add('hidden');
                     loading.setAttribute('aria-busy', 'false');
@@ -583,9 +603,10 @@
                 }
 
                 const data = snap.val();
+
+                // Filtra paused === true (campo oficial de ocultação)
                 todasCategorias = Object.entries(data)
-                    .filter(([, cat]) => cat && cat.ativo !== false)
-                    .sort(([, a], [, b]) => (a.ordem ?? 999) - (b.ordem ?? 999));
+                    .filter(([, cat]) => cat && cat.paused !== true);
 
                 renderizarCategorias(todasCategorias);
 
@@ -614,12 +635,10 @@
             }
 
             noResult.classList.add('hidden');
-            lista.forEach(([id, cat]) => {
-                grid.appendChild(criarCardCategoria(id, cat));
-            });
+            lista.forEach(([id, cat]) => grid.appendChild(criarCardCategoria(id, cat)));
         }
 
-        /* ─── Filtro de busca ────────────────────────────────────────── */
+        /* ─── Filtro de busca — filtra pelo campo oficial: name ──────── */
         function iniciarBusca() {
             const input = document.getElementById('busca');
             if (!input) return;
@@ -630,8 +649,8 @@
                     return;
                 }
                 const filtrado = todasCategorias.filter(([, cat]) =>
-                    (cat.nome        || '').toLowerCase().includes(termo) ||
-                    (cat.descricao   || '').toLowerCase().includes(termo)
+                    (cat.name || '').toLowerCase().includes(termo) ||
+                    (cat.slug || '').toLowerCase().includes(termo)
                 );
                 renderizarCategorias(filtrado);
             });
@@ -647,13 +666,13 @@
                 const tel = document.getElementById('cart-total');
                 if (el)  el.textContent  = count;
                 if (tel) tel.textContent = typeof formatarMoeda === 'function'
-                    ? formatarMoeda(total) : `R$ ${total.toFixed(2).replace('.', ',')}`;
-            } catch (e) { /* silencioso */ }
+                    ? formatarMoeda(total)
+                    : `R$ ${total.toFixed(2).replace('.', ',')}`;
+            } catch (e) { /* silencioso — carrinho pode estar vazio */ }
         }
 
         /* ─── Init ───────────────────────────────────────────────────── */
         document.addEventListener('DOMContentLoaded', () => {
-            carregarLogoAbella();
             carregarSettings();
             carregarCategorias();
             iniciarBusca();

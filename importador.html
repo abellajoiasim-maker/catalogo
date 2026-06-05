@@ -9,6 +9,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    
+    <!-- BIBLIOTECA SHEETJS PARA LER .XLSX DIRETO NO NAVEGADOR -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
         body {
@@ -61,7 +64,7 @@
                         Super Importador Premium
                     </h1>
                     <p class="text-zinc-400 text-sm leading-relaxed max-w-3xl">
-                        Sistema inteligente de importação e exportação CSV totalmente integrado ao catálogo premium Abella Joias.
+                        Sistema inteligente de importação e exportação CSV/.XLSX totalmente integrado ao catálogo premium Abella Joias.
                     </p>
                 </div>
 
@@ -93,19 +96,20 @@
             <div class="xl:col-span-2 space-y-6">
                 <div class="glass rounded-[2rem] p-8 space-y-6">
                     <div>
-                        <h2 class="text-2xl font-black">📦 Importador CSV Inteligente</h2>
+                        <h2 class="text-2xl font-black">📦 Importador Excel / CSV Inteligente</h2>
                         <p class="text-zinc-500 text-sm mt-2">
-                            Compatível com categorias, subcategorias, promoções, variações, imagens Firebase Storage e catálogo premium.
+                            Compatível com planilhas .xlsx do Excel/Google Sheets. Ignora células vazias e organiza o catálogo automaticamente.
                         </p>
                     </div>
 
                     <!-- UPLOAD -->
                     <div class="border-2 border-dashed border-zinc-800 rounded-[2rem] p-10 text-center bg-black/40">
-                        <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="atualizarArquivo(this)">
-                        <label for="csvFile" id="csvLabel" class="cursor-pointer block space-y-4">
+                        <!-- Aceita tanto .csv quanto .xlsx agora -->
+                        <input type="file" id="importFile" accept=".csv, .xlsx" class="hidden" onchange="atualizarArquivo(this)">
+                        <label for="importFile" id="importLabel" class="cursor-pointer block space-y-4">
                             <div class="text-6xl">📂</div>
                             <div>
-                                <h3 class="text-xl font-black">Clique para selecionar seu CSV</h3>
+                                <h3 class="text-xl font-black">Clique para selecionar seu CSV ou Planilha .XLSX</h3>
                                 <p class="text-zinc-500 text-sm mt-2">Compatível com Google Sheets, Excel e LibreOffice</p>
                             </div>
                         </label>
@@ -132,14 +136,14 @@
 
                     <!-- BUTTONS -->
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button onclick="executarImportacaoCSV()" id="btnImportar" class="btn-gold rounded-2xl h-14 uppercase tracking-[0.2em] text-sm">
-                            🚀 Importar CSV
+                        <button onclick="executarImportacao()" id="btnImportar" class="btn-gold rounded-2xl h-14 uppercase tracking-[0.2em] text-sm">
+                            🚀 Importar Planilha
                         </button>
                         <button onclick="exportarCSV()" class="bg-zinc-900 border border-zinc-800 rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-sm hover:border-[#caa85c] transition-all">
                             📤 Exportar CSV
                         </button>
                         <button onclick="baixarModeloCSV()" class="bg-zinc-900 border border-zinc-800 rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-sm hover:border-[#caa85c] transition-all">
-                            📥 Modelo CSV
+                            📥 Modelo Planilha
                         </button>
                     </div>
                 </div>
@@ -157,7 +161,7 @@
                     </div>
 
                     <div id="logConsole" class="bg-black rounded-3xl border border-zinc-900 p-6 h-[420px] overflow-y-auto scrollbar text-sm space-y-2">
-                        <p class="log-info">Sistema inicializado.</p>
+                        <p class="log-info">Sistema inicializado e pronto para .CSV ou .XLSX.</p>
                     </div>
                 </div>
             </div>
@@ -165,30 +169,18 @@
             <!-- SIDEBAR -->
             <div class="space-y-6">
                 <div class="glass rounded-[2rem] p-8">
-                    <h2 class="text-xl font-black mb-6">📋 Estrutura CSV</h2>
+                    <h2 class="text-xl font-black mb-6">📋 Estrutura da Planilha</h2>
                     <div class="space-y-3 text-sm">
-                        <div class="glass rounded-2xl p-4">1. Nome</div>
-                        <div class="glass rounded-2xl p-4">2. SKU</div>
-                        <div class="glass rounded-2xl p-4">3. Categoria</div>
-                        <div class="glass rounded-2xl p-4">4. Subcategoria</div>
-                        <div class="glass rounded-2xl p-4">5. Preço</div>
-                        <div class="glass rounded-2xl p-4">6. Peso</div>
-                        <div class="glass rounded-2xl p-4">7. URL Imagem</div>
-                        <div class="glass rounded-2xl p-4">8. Variação</div>
-                        <div class="glass rounded-2xl p-4">9. Opções</div>
-                        <div class="glass rounded-2xl p-4">10. Pausado</div>
-                    </div>
-                </div>
-
-                <div class="glass rounded-[2rem] p-8">
-                    <h2 class="text-xl font-black mb-6">⚡ Recursos</h2>
-                    <div class="space-y-4 text-sm">
-                        <div class="flex items-start gap-3"><span>✅</span><span>Compatível com gs:// Firebase Storage</span></div>
-                        <div class="flex items-start gap-3"><span>✅</span><span>Ignora e pula células vazias sem quebrar colunas</span></div>
-                        <div class="flex items-start gap-3"><span>✅</span><span>Cria categorias e subcategorias automaticamente</span></div>
-                        <div class="flex items-start gap-3"><span>✅</span><span>Atualiza produtos existentes de forma incremental</span></div>
-                        <div class="flex items-start gap-3"><span>✅</span><span>Compatível com variações premium</span></div>
-                        <div class="flex items-start gap-3"><span>✅</span><span>Exportação limpa padrão RFC 4180</span></div>
+                        <div class="glass rounded-2xl p-4">Col A / 1. Nome</div>
+                        <div class="glass rounded-2xl p-4">Col B / 2. SKU</div>
+                        <div class="glass rounded-2xl p-4">Col C / 3. Categoria</div>
+                        <div class="glass rounded-2xl p-4">Col D / 4. Subcategoria</div>
+                        <div class="glass rounded-2xl p-4">Col E / 5. Preço</div>
+                        <div class="glass rounded-2xl p-4">Col F / 6. Peso</div>
+                        <div class="glass rounded-2xl p-4">Col G / 7. URL Imagem</div>
+                        <div class="glass rounded-2xl p-4">Col H / 8. Variação</div>
+                        <div class="glass rounded-2xl p-4">Col I / 9. Opções</div>
+                        <div class="glass rounded-2xl p-4">Col J / 10. Pausado</div>
                     </div>
                 </div>
             </div>
@@ -214,18 +206,18 @@
 
     function atualizarArquivo(input) {
         const file = input.files[0];
-        document.getElementById('csvLabel').innerHTML = file
+        document.getElementById('importLabel').innerHTML = file
             ? `
                 <div class="text-6xl">✅</div>
                 <div>
                     <h3 class="text-xl font-black">${file.name}</h3>
-                    <p class="text-zinc-500 text-sm mt-2">Arquivo pronto para importação.</p>
+                    <p class="text-zinc-500 text-sm mt-2">Arquivo reconhecido com sucesso.</p>
                 </div>
             `
             : `
                 <div class="text-6xl">📂</div>
                 <div>
-                    <h3 class="text-xl font-black">Clique para selecionar seu CSV</h3>
+                    <h3 class="text-xl font-black">Clique para selecionar seu CSV ou Planilha .XLSX</h3>
                     <p class="text-zinc-500 text-sm mt-2">Compatível com Google Sheets, Excel e LibreOffice</p>
                 </div>
             `;
@@ -242,7 +234,7 @@
         document.getElementById('logConsole').innerHTML = '';
     }
 
-    // Processador robusto de linha CSV que aceita aspas e preserva colunas vazias
+    // Processador manual para fallback de arquivos text/csv padrão
     function parseCSVLine(line) {
         const arr = [];
         let quote = false;
@@ -251,7 +243,7 @@
         for (let i = 0; i < line.length; i++) {
             let char = line[i];
             if (char === '"') {
-                quote = !quote; // Alterna o estado de aspas
+                quote = !quote;
             } else if (char === ',' && !quote) {
                 arr.push(cell.trim());
                 cell = '';
@@ -286,123 +278,146 @@
         }
     }
 
-    async function executarImportacaoCSV() {
-    const file = document.getElementById('csvFile').files[0];
-    if (!file) {
-        alert('Por favor, selecione um arquivo CSV primeiro.');
-        return;
-    }
-
-    const incremental = document.getElementById('incrementalMode').checked;
-    const resetCategorias = document.getElementById('resetCategorias').checked;
-    const btn = document.getElementById('btnImportar');
-    btn.disabled = true;
-
-    try {
-        log('🚀 Iniciando processamento do arquivo...', 'info');
-
-        if (!incremental) {
-            log('🗑️ Removendo catálogo antigo (Modo limpo)...', 'warning');
-            await db.ref('abella/products').remove();
-        }
-        if (resetCategorias) {
-            log('🗑️ Resetando árvore de categorias antigas...', 'warning');
-            await db.ref('abella/categories').remove();
+    // INTERPRETADOR UNIFICADO (Lê CSV e Transforma planilhas .XLSX)
+    async function executarImportacao() {
+        const file = document.getElementById('importFile').files[0];
+        if (!file) {
+            alert('Por favor, selecione um arquivo válido (.csv ou .xlsx) primeiro.');
+            return;
         }
 
-        const texto = await file.text();
-        const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
-        
-        log(`📦 ${linhas.length - 1} registros detectados. Processando...`, 'info');
+        const incremental = document.getElementById('incrementalMode').checked;
+        const resetCategorias = document.getElementById('resetCategorias').checked;
+        const btn = document.getElementById('btnImportar');
+        btn.disabled = true;
 
-        let processados = 0;
+        try {
+            log(`🚀 Lendo o arquivo: ${file.name}...`, 'info');
 
-        for (let i = 1; i < linhas.length; i++) {
-            const colunas = parseCSVLine(linhas[i]);
-
-            if (colunas.length === 0 || (colunas.length === 1 && colunas[0] === '')) {
-                continue; 
+            if (!incremental) {
+                log('🗑️ Removendo catálogo antigo (Modo limpo)...', 'warning');
+                await db.ref('abella/products').remove();
+            }
+            if (resetCategorias) {
+                log('🗑️ Resetando árvore de categorias antigas...', 'warning');
+                await db.ref('abella/categories').remove();
             }
 
-            // Captura os dados limpando as aspas
-            const nome = colunas[0] ? colunas[0].replace(/^"|"$/g, '').trim() : '';
-            const sku = colunas[1] ? colunas[1].replace(/^"|"$/g, '').trim() : '';
-            const categoriaNome = colunas[2] ? colunas[2].replace(/^"|"$/g, '').trim() : '';
-            const subcategoriaNome = colunas[3] ? colunas[3].replace(/^"|"$/g, '').trim() : '';
-            
-            const precoCru = colunas[4] ? colunas[4].replace(/[^0-9.,]/g, '').replace(',', '.') : '';
-            const pesoCru = colunas[5] ? colunas[5].replace(/[^0-9.,]/g, '').replace(',', '.') : '';
+            let matrizDados = [];
 
-            const imagem = colunas[6] ? colunas[6].replace(/^"|"$/g, '').trim() : '';
-            const variacao = colunas[7] ? colunas[7].replace(/^"|"$/g, '').trim() : '';
-            const opcoes = colunas[8] ? colunas[8].replace(/^"|"$/g, '').trim() : '';
-            const pausadoStr = colunas[9] ? colunas[9].toLowerCase().trim() : '';
-
-            // Validação obrigatória dos pilares vitais do produto
-            if (!nome || !sku || !categoriaNome) {
-                log(`⚠️ Linha ${i + 1} ignorada: Falta dados obrigatórios (Nome, SKU ou Categoria).`, 'warning');
-                continue;
+            // IDENTIFICA SE O ARQUIVO É EXCEL (.XLSX) OU TEXTO (.CSV)
+            if (file.name.endsWith('.xlsx')) {
+                log('📊 Formato .XLSX detectado. Convertendo matriz de dados via SheetJS...', 'info');
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                // Pega a primeira aba da planilha
+                const nomeAba = workbook.SheetNames[0];
+                const aba = workbook.Sheets[nomeAba];
+                // Transforma em uma matriz bidimensional (Array de Arrays)
+                matrizDados = XLSX.utils.sheet_to_json(aba, { header: 1, defval: "" });
+            } else {
+                log('📄 Formato .CSV detectado. Processando quebras de texto normais...', 'info');
+                const texto = await file.text();
+                const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
+                matrizDados = linhas.map(linha => parseCSVLine(linha));
             }
 
-            const categoriaSlug = slugify(categoriaNome);
-            const skuLimpo = sku.replace(/[\.\$#\[\]\/]/g, '-');
+            if (matrizDados.length <= 1) {
+                log('⚠️ A planilha lida está vazia ou contém apenas o cabeçalho.', 'warning');
+                btn.disabled = false;
+                return;
+            }
 
-            // Atualiza a categoria base
-            await db.ref(`abella/categories/${categoriaSlug}`).update({
-                name: categoriaNome,
-                slug: categoriaSlug,
-                paused: false
-            });
+            log(`📦 ${matrizDados.length - 1} registros detectados na fila de processamento.`, 'info');
+            let processados = 0;
 
-            // Cria a subcategoria APENAS se houver conteúdo nela
-            if (subcategoriaNome) {
-                const subcategoriaSlug = slugify(subcategoriaNome);
-                await db.ref(`abella/categories/${categoriaSlug}/subcategories/${subcategoriaSlug}`).update({
-                    name: subcategoriaNome,
-                    slug: subcategoriaSlug,
+            // Começa no índice 1 para pular a linha de títulos (Cabeçalho)
+            for (let i = 1; i < matrizDados.length; i++) {
+                const colunas = matrizDados[i];
+
+                if (!colunas || colunas.length === 0 || (colunas.length === 1 && colunas[0] === '')) {
+                    continue; 
+                }
+
+                // Captura os dados de forma segura independente do formato original
+                const nome = colunas[0] ? String(colunas[0]).replace(/^"|"$/g, '').trim() : '';
+                const sku = colunas[1] ? String(colunas[1]).replace(/^"|"$/g, '').trim() : '';
+                const categoriaNome = colunas[2] ? String(colunas[2]).replace(/^"|"$/g, '').trim() : '';
+                const subcategoriaNome = colunas[3] ? String(colunas[3]).replace(/^"|"$/g, '').trim() : '';
+                
+                const precoCru = colunas[4] !== undefined && colunas[4] !== null ? String(colunas[4]).replace(/[^0-9.,]/g, '').replace(',', '.') : '';
+                const pesoCru = colunas[5] !== undefined && colunas[5] !== null ? String(colunas[5]).replace(/[^0-9.,]/g, '').replace(',', '.') : '';
+
+                const imagem = colunas[6] ? String(colunas[6]).replace(/^"|"$/g, '').trim() : '';
+                const variacao = colunas[7] ? String(colunas[7]).replace(/^"|"$/g, '').trim() : '';
+                const opcoes = colunas[8] ? String(colunas[8]).replace(/^"|"$/g, '').trim() : '';
+                const pausadoStr = colunas[9] ? String(colunas[9]).toLowerCase().trim() : '';
+
+                // Validação vital obrigatória
+                if (!nome || !sku || !categoriaNome) {
+                    log(`⚠️ Linha ${i + 1} ignorada: Faltam dados obrigatórios (Nome, SKU ou Categoria).`, 'warning');
+                    continue;
+                }
+
+                const categoriaSlug = slugify(categoriaNome);
+                const skuLimpo = sku.replace(/[\.\$#\[\]\/]/g, '-');
+
+                // Sincroniza árvore de categoria comercial
+                await db.ref(`abella/categories/${categoriaSlug}`).update({
+                    name: categoriaNome,
+                    slug: categoriaSlug,
                     paused: false
                 });
+
+                // Se houver subcategoria preenchida, cria seu nó correspondente
+                if (subcategoriaNome) {
+                    const subcategoriaSlug = slugify(subcategoriaNome);
+                    await db.ref(`abella/categories/${categoriaSlug}/subcategories/${subcategoriaSlug}`).update({
+                        name: subcategoriaNome,
+                        slug: subcategoriaSlug,
+                        paused: false
+                    });
+                }
+
+                // Cria o modelo limpo
+                const produto = {
+                    id: skuLimpo,
+                    sku: sku,
+                    name: nome,
+                    category: categoriaSlug,
+                    updatedAt: Date.now()
+                };
+
+                // REGRAS DE PULO DE CÉLULA VAZIA (Preserva as informações anteriores no Firebase)
+                if (subcategoriaNome) produto.subcategory = slugify(subcategoriaNome);
+                if (precoCru !== '')  produto.price = parseFloat(precoCru) || 0;
+                if (pesoCru !== '')   produto.weight = parseFloat(pesoCru) || 0;
+                if (imagem)           produto.image = imagem;
+                if (variacao)         produto.variacaoTipo = variacao;
+                if (opcoes)           produto.opcoesPersonalizadas = opcoes;
+                
+                if (pausadoStr !== '') {
+                    produto.paused = pausadoStr.includes('true');
+                } else {
+                    produto.paused = false;
+                }
+
+                // Atualização incremental nativa por chave hash única
+                await db.ref(`abella/products/${skuLimpo}`).update(produto);
+                processados++;
             }
 
-            // Monte o objeto base apenas com o estritamente obrigatório
-            const produto = {
-                id: skuLimpo,
-                sku: sku,
-                name: nome,
-                category: categoriaSlug,
-                updatedAt: Date.now()
-            };
+            log(`🎉 Sucesso! ${processados} produtos foram injetados/atualizados no banco de dados.`, 'success');
+            atualizarEstatisticas();
 
-            // IGNORAR CÉLULAS VAZIAS: Insere as propriedades de forma dinâmica se existirem dados
-            if (subcategoriaNome) produto.subcategory = slugify(subcategoriaNome);
-            if (precoCru !== '')  produto.price = parseFloat(precoCru) || 0;
-            if (pesoCru !== '')   produto.weight = parseFloat(pesoCru) || 0;
-            if (imagem)           produto.image = imagem;
-            if (variacao)         produto.variacaoTipo = variacao;
-            if (opcoes)           produto.opcoesPersonalizadas = opcoes;
-            
-            // Trata o status pausado somente se a célula foi preenchida
-            if (pausadoStr !== '') {
-                produto.paused = pausadoStr.includes('true');
-            } else {
-                produto.paused = false; // Fallback padrão seguro
-            }
-
-            // Injeta ou atualiza mantendo campos vazios intocados se for o caso
-            await db.ref(`abella/products/${skuLimpo}`).update(produto);
-            processados++;
+        } catch(e) {
+            console.error(e);
+            log(`❌ Falha crítica no interpretador: ${e.message}`, 'error');
+        } finally {
+            btn.disabled = false;
         }
-
-        log(`🎉 Sucesso! ${processados} produtos foram injetados e normalizados.`, 'success');
-        atualizarEstatisticas();
-
-    } catch(e) {
-        console.error(e);
-        log(`❌ Falha crítica: ${e.message}`, 'error');
-    } finally {
-        btn.disabled = false;
     }
-}
+
     async function exportarCSV() {
         try {
             const snap = await db.ref('abella/products').once('value');
@@ -411,7 +426,6 @@
             let csv = `Nome,SKU,Categoria,Subcategoria,Preco,Peso,Imagem,Variacao,Opcoes,Pausado\n`;
 
             Object.values(produtos).forEach(p => {
-                // Escapa strings usando aspas duplas de forma adequada para evitar quebras por vírgula interna
                 csv += `"${(p.name || '').replace(/"/g, '""')}",`;
                 csv += `"${(p.sku || '').replace(/"/g, '""')}",`;
                 csv += `"${(p.category || '').replace(/"/g, '""')}",`;
@@ -445,7 +459,6 @@
         link.click();
     }
 
-    // Inicialização da interface
     atualizarEstatisticas();
 </script>
 

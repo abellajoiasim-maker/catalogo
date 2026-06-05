@@ -313,26 +313,26 @@
                     </div>
                 </div>
 
-                <div class="relative fade-up">
-                    <div class="hero-img-wrap">
-                        <img src="https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1400&auto=format&fit=crop"
-                             class="w-full h-full object-cover"
-                             alt="Joias Abella — Coleção Premium"
-                             loading="lazy">
-                    </div>
-                    <div class="hero-float">
-                        <div class="flex items-center justify-between gap-4">
-                            <div>
-                                <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Experiência Premium</p>
-                                <h3 class="text-xl font-black mt-1">Compra Inteligente</h3>
-                            </div>
-                            <div class="text-right">
-                                <p id="float-pix" class="text-emerald-400 font-black text-base">PIX 10% OFF</p>
-                                <p id="float-parcelas" class="text-zinc-500 text-sm">Até 6x sem juros</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div class="relative fade-up">
+    <div class="hero-img-wrap">
+        <img id="heroBannerImg" src="https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1400&auto=format&fit=crop"
+             class="w-full h-full object-cover"
+             alt="Joias Abella — Coleção Premium"
+             loading="lazy">
+    </div>
+    <div class="hero-float">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Experiência Premium</p>
+                <h3 class="text-xl font-black mt-1">Compra Inteligente</h3>
+            </div>
+            <div class="text-right">
+                <p id="float-pix" class="text-emerald-400 font-black text-base">PIX 10% OFF</p>
+                <p id="float-parcelas" class="text-zinc-500 text-sm">Até 6x sem juros</p>
+            </div>
+        </div>
+    </div>
+</div>
 
             </div>
         </div>
@@ -470,15 +470,24 @@
                     const cfg = snapSettings.val();
                     
                     // Identidade Visual / Logomarca Corporativa
+// Atualização dinâmica da Logomarca
                     if (cfg.logoUrl) {
                         const img = document.getElementById('abellaLogoImg');
                         const fallback = document.getElementById('abellaLogoFallback');
                         if (img) {
-                            img.src = resolverImagemFirebase(cfg.logoUrl);
+                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(cfg.logoUrl) : cfg.logoUrl;
                             img.onload = () => {
                                 img.classList.remove('hidden');
                                 fallback?.classList.add('hidden');
                             };
+                        }
+                    }
+
+                    // Atualização automática do Banner de Campanha Hero (Nas 3 páginas)
+                    if (cfg.bannerHeroUrl) {
+                        const bannerImg = document.getElementById('heroBannerImg');
+                        if (bannerImg) {
+                            bannerImg.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(cfg.bannerHeroUrl) : cfg.bannerHeroUrl;
                         }
                     }
 

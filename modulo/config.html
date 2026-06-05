@@ -1,489 +1,348 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
     <meta charset="UTF-8">
+    <title>Painel Administrativo • Configurações Globais</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Configurações Gerais | Abella Admin</title>
-
-    <!-- Tailwind -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
-
-        ::-webkit-scrollbar{
-            width:8px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-
-        ::-webkit-scrollbar-track{
-            background:#09090b;
+        :root {
+            --gold: #caa85c;
+            --gold-hover: #b5944a;
+            --bg-dark: #070707;
+            --card-dark: #121212;
+            --border-dark: #222222;
         }
-
-        ::-webkit-scrollbar-thumb{
-            background:#3f3f46;
-            border-radius:999px;
+        body {
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
-
-        ::-webkit-scrollbar-thumb:hover{
-            background:#52525b;
+        .serif {
+            font-family: 'Cinzel', serif;
         }
-
-        .animate-fade{
-            animation:fade .25s ease;
+        .gold-text {
+            color: var(--gold);
         }
-
-        @keyframes fade{
-
-            from{
-                opacity:0;
-                transform:translateY(6px);
-            }
-
-            to{
-                opacity:1;
-                transform:translateY(0);
-            }
+        .glass-panel {
+            background: rgba(18, 18, 18, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-dark);
         }
-
+        /* Custom Inputs Admin Mode */
+        input, select, textarea {
+            background: #181818 !important;
+            border: 1px solid #282828 !important;
+            color: #ffffff !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--gold) !important;
+            box-shadow: 0 0 0 3px rgba(202, 168, 92, 0.15);
+            outline: none;
+        }
+        /* Custom Toggle Switch UI */
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: var(--gold);
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-dot {
+            transform: translateX(100%);
+        }
+        /* HUD Loader Overlay */
+        #hud-loader {
+            background: rgba(7, 7, 7, 0.95);
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
     </style>
-
 </head>
+<body class="bg-black text-white antialiased">
 
-<body class="bg-zinc-900 text-zinc-100 p-4 md:p-6 font-sans min-h-screen overflow-x-hidden">
+    <div id="hud-loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center">
+        <div class="w-12 h-12 border-4 border-zinc-800 border-t-[#caa85c] rounded-full animate-spin mb-4"></div>
+        <p class="serif gold-text tracking-[0.2em] text-xs uppercase animate-pulse">Sincronizando Parâmetros Corporativos...</p>
+    </div>
 
-    <div class="max-w-2xl mx-auto space-y-6 text-left">
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 pointer-events-none space-y-3"></div>
 
-        <!-- HEADER -->
-        <div class="bg-zinc-950 p-6 rounded-2xl border border-zinc-800 animate-fade">
-
-            <div class="flex items-center justify-between gap-4">
-
+    <header class="border-b border-zinc-900 bg-zinc-950/80 sticky top-0 backdrop-blur-md z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors">
+                    ← Voltar ao Menu
+                </a>
                 <div>
-
-                    <h2 class="text-xl font-black text-white">
-                        ⚙️ Configurações Gerais do Sistema
-                    </h2>
-
-                    <p class="text-xs text-zinc-500 mt-1 leading-relaxed">
-                        Controle parâmetros financeiros, parcelamento, descontos PIX
-                        e recebimento operacional do catálogo.
-                    </p>
-
+                    <h1 class="serif gold-text text-lg md:text-xl uppercase tracking-[0.15em]">Painel de Controle</h1>
+                    <p class="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Parâmetros Operacionais & Comerciais</p>
                 </div>
-
-                <div
-                    id="statusFirebase"
-                    class="text-[10px] px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-wider shrink-0"
-                >
-                    ONLINE
-                </div>
-
             </div>
-
+            <div class="flex items-center gap-2 bg-zinc-900/60 px-4 py-2 rounded-xl border border-zinc-800/50">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-[11px] font-mono text-zinc-400 tracking-wider">MODO ADMINISTRATIVE INFRA</span>
+            </div>
         </div>
+    </header>
 
-        <!-- FORM -->
-        <form
-            id="formConfig"
-            class="bg-zinc-950 border border-zinc-800 p-6 rounded-2xl space-y-6 animate-fade"
-        >
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <form id="form-configuracoes" onsubmit="salvarConfiguracoesAdmin(event)" class="space-y-8">
+            
+            <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+                <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                    <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                    <h2 class="serif text-lg md:text-xl uppercase tracking-wider text-white">Identidade & Comunicação</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Nome Corporativo da Marca *</label>
+                        <input type="text" id="cfg-name" required class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: Abella Joias">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Slogan / Chamada Institucional</label>
+                        <input type="text" id="cfg-slogan" class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: Atacado de Joias no Bruto">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">WhatsApp Oficial de Vendas (Com DDD e sem símbolos) *</label>
+                        <input type="text" id="cfg-whatsapp" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="Ex: 19999999999">
+                        <p class="text-[10px] text-zinc-500 mt-1.5 uppercase tracking-wide">Este número receberá a string estruturada dos carrinhos de checkout fechados pelos compradores.</p>
+                    </div>
+                </div>
+            </section>
 
-            <!-- GRID -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                <!-- PIX -->
-                <div class="space-y-1">
-
-                    <label class="text-[10px] uppercase text-zinc-400 font-black">
-                        Desconto à Vista no PIX (%) *
-                    </label>
-
-                    <input
-                        type="number"
-                        id="cfgPix"
-                        required
-                        min="0"
-                        max="50"
-                        step="0.1"
-                        placeholder="5"
-                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
-                    >
-
-                    <p class="text-[10px] text-zinc-600">
-                        Percentual aplicado automaticamente em pagamentos via PIX.
-                    </p>
-
+            <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+                <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                    <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                    <h2 class="serif text-lg md:text-xl uppercase tracking-wider text-white">Regras Financeiras & Logística</h2>
                 </div>
 
-                <!-- PARCELAS -->
-                <div class="space-y-1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Pedido Mínimo Corporativo (R$) *</label>
+                        <input type="number" id="cfg-pedidoMinimo" step="0.01" min="0" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Valor Base do Frete Fixo (R$) *</label>
+                        <input type="number" id="cfg-freteFixo" step="0.01" min="0" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Meta para Frete Grátis (R$) *</label>
+                        <input type="number" id="cfg-freteGratisAlvo" step="0.01" min="0" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Desconto para Pagamento via PIX (%) *</label>
+                        <input type="number" id="cfg-pix" step="1" min="0" max="100" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Limite Máximo de Parcelamento *</label>
+                        <select id="cfg-parcelas" required class="w-full rounded-xl px-4 py-3.5 text-sm">
+                            <option value="1">1x sem juros</option>
+                            <option value="2">2x sem juros</option>
+                            <option value="3">3x sem juros</option>
+                            <option value="4">4x sem juros</option>
+                            <option value="5">5x sem juros</option>
+                            <option value="6">6x sem juros</option>
+                            <option value="7">7x sem juros</option>
+                            <option value="8">8x sem juros</option>
+                            <option value="9">9x sem juros</option>
+                            <option value="10">10x sem juros</option>
+                            <option value="12">12x sem juros</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Status Operacional da Loja *</label>
+                        <select id="cfg-statusLoja" required class="w-full rounded-xl px-4 py-3.5 text-sm">
+                            <option value="aberto">🔓 Aberta para Pedidos</option>
+                            <option value="fechado">🔒 Fechada para Manutenção</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
 
-                    <label class="text-[10px] uppercase text-zinc-400 font-black">
-                        Parcelamento Máximo Cartão *
-                    </label>
-
-                    <input
-                        type="number"
-                        id="cfgParcelas"
-                        required
-                        min="1"
-                        max="12"
-                        step="1"
-                        placeholder="6"
-                        class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
-                    >
-
-                    <p class="text-[10px] text-zinc-600">
-                        Quantidade máxima de parcelas exibidas no checkout.
-                    </p>
-
+            <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+                <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                    <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                    <h2 class="serif text-lg md:text-xl uppercase tracking-wider text-white">Banner Informativo Global</h2>
                 </div>
 
-            </div>
-
-            <!-- WHATS -->
-            <div class="space-y-1">
-
-                <label class="text-[10px] uppercase text-zinc-400 font-black">
-                    WhatsApp Corporativo *
-                </label>
-
-                <input
-                    type="text"
-                    id="cfgWhatsapp"
-                    required
-                    maxlength="20"
-                    inputmode="numeric"
-                    placeholder="5519988207658"
-                    class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs text-white outline-none focus:border-[#caa85c] transition-all"
-                >
-
-                <p class="text-[10px] text-zinc-600 font-mono leading-relaxed">
-                    Insira o número completo contendo DDI + DDD + número,
-                    sem espaços, hífens ou parênteses.
-                </p>
-
-            </div>
-
-            <!-- PREVIEW -->
-            <div
-                class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-3"
-            >
-
-                <div class="flex items-center justify-between">
-
-                    <h3 class="text-[11px] uppercase tracking-wider text-zinc-400 font-black">
-                        Pré-visualização operacional
-                    </h3>
-
-                    <div
-                        class="text-[9px] text-zinc-600 uppercase tracking-widest"
-                    >
-                        abella/settings/general
+                <div class="flex flex-col space-y-4">
+                    <div class="flex items-center justify-between bg-zinc-900/40 p-4 rounded-xl border border-zinc-800">
+                        <div>
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wide">Exibir Alerta no Topo do Catálogo</h3>
+                            <p class="text-xs text-zinc-500 mt-0.5">Ativa ou desativa a régua superior de promoções e recados importantes.</p>
+                        </div>
+                        <div class="relative inline-block w-12 h-6 align-middle select-none transition duration-200 ease-in">
+                            <input type="checkbox" id="cfg-bannerAtivo" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-zinc-700 border-4 border-transparent appearance-none cursor-pointer checked:right-0 checked:bg-white checked:border-zinc-900"/>
+                            <label for="cfg-bannerAtivo" class="toggle-label block overflow-hidden h-6 rounded-full bg-zinc-800 cursor-pointer">
+                                <span class="toggle-dot block w-6 h-6 rounded-full bg-zinc-500 transition-transform duration-200 ease-in"></span>
+                            </label>
+                        </div>
                     </div>
 
-                </div>
-
-                <div class="space-y-2 text-xs">
-
-                    <div class="flex items-center justify-between gap-4">
-                        <span class="text-zinc-500">
-                            Desconto PIX:
-                        </span>
-
-                        <span
-                            id="previewPix"
-                            class="text-white font-black"
-                        >
-                            0%
-                        </span>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Mensagem do Alerta / Conteúdo Textual</label>
+                        <textarea id="cfg-bannerTexto" rows="3" class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: 🔥 ATENÇÃO: Frete Grátis nas compras acima de R$100,00 para todas as galvânicas parceiras em Limeira!"></textarea>
                     </div>
-
-                    <div class="flex items-center justify-between gap-4">
-                        <span class="text-zinc-500">
-                            Parcelamento:
-                        </span>
-
-                        <span
-                            id="previewParcelas"
-                            class="text-white font-black"
-                        >
-                            0x
-                        </span>
-                    </div>
-
-                    <div class="flex items-center justify-between gap-4">
-                        <span class="text-zinc-500">
-                            WhatsApp:
-                        </span>
-
-                        <span
-                            id="previewWhatsapp"
-                            class="text-white font-black break-all text-right"
-                        >
-                            —
-                        </span>
-                    </div>
-
                 </div>
+            </section>
 
-            </div>
-
-            <!-- ACTIONS -->
-            <div class="pt-4 border-t border-zinc-900 flex items-center justify-between gap-4 flex-wrap">
-
-                <div
-                    id="statusSave"
-                    class="text-[11px] text-zinc-600"
-                >
-                    Aguardando alterações...
+            <div class="bg-zinc-950/90 border border-zinc-900 rounded-2xl p-4 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky bottom-6 backdrop-blur-md shadow-2xl">
+                <div class="text-center sm:text-left">
+                    <p class="text-xs text-zinc-400">Última modificação registrada nesta instância:</p>
+                    <p id="cfg-ultimaAtualizacao" class="text-xs font-mono font-bold text-[#caa85c] mt-0.5">Sincronizando...</p>
                 </div>
-
-                <button
-                    type="submit"
-                    id="btnSalvar"
-                    class="bg-[#caa85c] hover:brightness-110 text-black font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    💾 Gravar Parâmetros
+                <button type="submit" class="h-14 px-8 rounded-xl bg-[#caa85c] hover:bg-[#b5944a] text-black font-black uppercase tracking-[0.15em] text-xs transition-all duration-150 transform active:scale-95 shadow-lg shadow-[#caa85c]/10">
+                    💾 Gravar Parâmetros no Firebase
                 </button>
-
             </div>
 
         </form>
-
-    </div>
-
-    <!-- FIREBASE -->
-    <script src="../js/firebase/firebase-config.js"></script>
-
-    <!-- SERVICES -->
-    <script src="../js/services/configService.js"></script>
+    </main>
 
     <script>
+        // Singleton Database Handler em conformidade com barramento global
+        const db = window.db || firebase.database();
 
-        // =========================================================
-        // FIREBASE STATUS
-        // =========================================================
+        // Fallback dinâmico IQ200 para injeção segura de isolamento geográfico multiloja
+        if (typeof window.getAbellaPath !== 'function') {
+            window.getAbellaPath = function(node) {
+                const root = window.ABELLA_DB_ROOT || 'abella';
+                return node ? `${root}/${node}` : root;
+            };
+        }
 
-        firebase
-            .database()
-            .ref('.info/connected')
-            .on('value', snap => {
+        /**
+         * Dispara Toasts Customizados Dinâmicos na UI do Administrador
+         */
+        function spawnAdminToast(msg, isError = false) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
 
-                const online = snap.val();
+            const toast = document.createElement('div');
+            toast.className = `px-5 py-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 transform translate-y-4 opacity-0 flex items-center gap-3 border shadow-xl ${
+                isError 
+                ? 'bg-rose-950/90 text-rose-300 border-rose-800' 
+                : 'bg-zinc-900/95 text-emerald-400 border-zinc-800'
+            }`;
+            toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span> <span>${msg}</span>`;
+            
+            container.appendChild(toast);
 
-                const el =
-                    document.getElementById('statusFirebase');
+            // Reflow triggers CSS animation
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 50);
 
-                if(online){
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
 
-                    el.innerHTML = 'ONLINE';
-
-                    el.className =
-                        'text-[10px] px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-wider shrink-0';
-
-                }else{
-
-                    el.innerHTML = 'OFFLINE';
-
-                    el.className =
-                        'text-[10px] px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 font-black uppercase tracking-wider shrink-0';
+        /**
+         * Leitura atômica dos parâmetros no Firebase Realtime Database via getAbellaPath
+         */
+        async function carregarConfiguracoesAssincronas() {
+            const loader = document.getElementById('hud-loader');
+            try {
+                const path = window.getAbellaPath('settings');
+                const snap = await db.ref(path).once('value');
+                
+                let data = {};
+                if (snap.exists()) {
+                    data = snap.val() || {};
                 }
-            });
 
-        // =========================================================
-        // INIT
-        // =========================================================
+                // Injeção higienizada com operadores de coalescência nula mapeados no manual estrutural
+                document.getElementById('cfg-name').value = data.name ?? 'Abella Joias';
+                document.getElementById('cfg-slogan').value = data.slogan ?? '';
+                document.getElementById('cfg-whatsapp').value = data.whatsapp ?? '';
+                document.getElementById('cfg-pedidoMinimo').value = data.pedidoMinimo ?? 300;
+                document.getElementById('cfg-freteFixo').value = data.freteFixo ?? 15;
+                document.getElementById('cfg-freteGratisAlvo').value = data.freteGratisAlvo ?? 100;
+                document.getElementById('cfg-pix').value = data.pix ?? 10;
+                document.getElementById('cfg-parcelas').value = data.parcelas ?? 6;
+                document.getElementById('cfg-statusLoja').value = data.statusLoja ?? 'aberto';
+                document.getElementById('cfg-bannerAtivo').checked = data.bannerAtivo ?? false;
+                document.getElementById('cfg-bannerTexto').value = data.bannerTexto ?? '';
+                
+                const timeField = document.getElementById('cfg-ultimaAtualizacao');
+                if (data.ultimaAtualizacao) {
+                    timeField.innerText = data.ultimaAtualizacao;
+                } else {
+                    timeField.innerText = 'Nenhum registro encontrado';
+                }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-
-            configurarEventosPreview();
-
-            await carregarCamposConfig();
-
-            document
-                .getElementById('formConfig')
-                .addEventListener(
-                    'submit',
-                    salvarConfiguracoesGerais
-                );
-        });
-
-        // =========================================================
-        // PREVIEW
-        // =========================================================
-
-        function configurarEventosPreview(){
-
-            [
-                'cfgPix',
-                'cfgParcelas',
-                'cfgWhatsapp'
-            ].forEach(id => {
-
-                document
-                    .getElementById(id)
-                    .addEventListener(
-                        'input',
-                        atualizarPreview
-                    );
-            });
-        }
-
-        function atualizarPreview(){
-
-            const pix =
-                document.getElementById('cfgPix').value || 0;
-
-            const parcelas =
-                document.getElementById('cfgParcelas').value || 0;
-
-            const whatsapp =
-                document.getElementById('cfgWhatsapp').value || '—';
-
-            document.getElementById('previewPix')
-                .innerHTML = `${pix}%`;
-
-            document.getElementById('previewParcelas')
-                .innerHTML = `${parcelas}x`;
-
-            document.getElementById('previewWhatsapp')
-                .innerHTML = whatsapp;
-        }
-
-        // =========================================================
-        // LOAD CONFIG
-        // =========================================================
-
-        async function carregarCamposConfig(){
-
-            try{
-
-                // =====================================================
-                // PADRÃO OFICIAL:
-                // abella/settings/general
-                // =====================================================
-
-                const s =
-                    await configService.obterConfiguracoes();
-
-                document.getElementById('cfgPix').value =
-                    s?.pixDesc ?? 5;
-
-                document.getElementById('cfgParcelas').value =
-                    s?.parcelasMax ?? 6;
-
-                document.getElementById('cfgWhatsapp').value =
-                    s?.whatsEmpresa ?? '5519988207658';
-
-                atualizarPreview();
-
-                document.getElementById('statusSave')
-                    .innerHTML =
-                    'Configurações carregadas com sucesso.';
-
-            }catch(error){
-
-                console.error(
-                    'Erro ao carregar configurações:',
-                    error
-                );
-
-                document.getElementById('statusSave')
-                    .innerHTML =
-                    'Falha ao carregar configurações.';
+            } catch (err) {
+                console.error("Falha Forense Crítica na Leitura Assíncrona do RTDB:", err);
+                spawnAdminToast("Falha ao puxar configurações da árvore Firebase.", true);
+            } finally {
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.classList.add('hidden'), 400);
+                }
             }
         }
 
-        // =========================================================
-        // SAVE CONFIG
-        // =========================================================
-
-        async function salvarConfiguracoesGerais(e){
-
+        /**
+         * Sanitiza inputs e grava as configurações no nó estrutural isolado
+         */
+        async function salvarConfiguracoesAdmin(e) {
             e.preventDefault();
+            
+            // Tratamento estrito contra injeção maliciosa de scripts e quebras de markup
+            const sanitizarString = (str) => String(str).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+            const higienizarWhats = (num) => String(num).replace(/\D/g, '');
 
-            const btn =
-                document.getElementById('btnSalvar');
+            const whatsProcessado = higienizarWhats(document.getElementById('cfg-whatsapp').value);
+            if (whatsProcessado.length < 10) {
+                spawnAdminToast("O número de WhatsApp informado é inválido.", true);
+                return;
+            }
 
-            const status =
-                document.getElementById('statusSave');
+            // Construção estrita do payload com coerção explícita de tipos primitivos numéricos
+            const payload = {
+                name: sanitizarString(document.getElementById('cfg-name').value),
+                slogan: sanitizarString(document.getElementById('cfg-slogan').value),
+                whatsapp: whatsProcessado,
+                pedidoMinimo: Math.abs(parseFloat(document.getElementById('cfg-pedidoMinimo').value) || 0),
+                freteFixo: Math.abs(parseFloat(document.getElementById('cfg-freteFixo').value) || 0),
+                freteGratisAlvo: Math.abs(parseFloat(document.getElementById('cfg-freteGratisAlvo').value) || 0),
+                pix: Math.abs(parseInt(document.getElementById('cfg-pix').value, 10) || 0),
+                parcelas: parseInt(document.getElementById('cfg-parcelas').value, 10) || 6,
+                statusLoja: document.getElementById('cfg-statusLoja').value,
+                bannerAtivo: document.getElementById('cfg-bannerAtivo').checked,
+                bannerTexto: sanitizarString(document.getElementById('cfg-bannerTexto').value),
+                ultimaAtualizacao: new Date().toLocaleString('pt-BR') + ' (Painel Administrativo)'
+            };
 
-            try{
-
-                btn.disabled = true;
-
-                btn.innerHTML =
-                    'Salvando...';
-
-                status.innerHTML =
-                    'Persistindo dados operacionais...';
-
-                const payload = {
-
-                    // =================================================
-                    // NÓ:
-                    // abella/settings/general
-                    // =================================================
-
-                    pixDesc: parseFloat(
-                        document.getElementById('cfgPix')
-                            .value || 0
-                    ),
-
-                    parcelasMax: parseInt(
-                        document.getElementById('cfgParcelas')
-                            .value || 1
-                    ),
-
-                    whatsEmpresa:
-                        document
-                            .getElementById('cfgWhatsapp')
-                            .value
-                            .replace(/\D/g, ''),
-
-                    updatedAt: Date.now()
-                };
-
-                await configService
-                    .salvarConfiguracoes(payload);
-
-                status.innerHTML =
-                    '✨ Configurações atualizadas com sucesso!';
-
-                await carregarCamposConfig();
-
-            }catch(error){
-
-                console.error(
-                    'Erro ao salvar configurações:',
-                    error
-                );
-
-                status.innerHTML =
-                    '❌ Falha ao persistir configurações.';
-
-                alert(
-                    'Falha ao persistir novos dados de configuração corporativa.'
-                );
-
-            }finally{
-
-                btn.disabled = false;
-
-                btn.innerHTML =
-                    '💾 Gravar Parâmetros';
+            try {
+                const path = window.getAbellaPath('settings');
+                // Mutação atômica destrutiva controlada via barramento centralizado
+                await db.ref(path).set(payload);
+                
+                document.getElementById('cfg-ultimaAtualizacao').innerText = payload.ultimaAtualizacao;
+                spawnAdminToast("Parâmetros operacionais gravados com sucesso no Firebase.");
+            } catch (err) {
+                console.error("Falha Forense Crítica na Escrita Assíncrona do RTDB:", err);
+                spawnAdminToast("Erro ao gravar os dados. Verifique a console de rede.", true);
             }
         }
 
+        // Event-driven Orchestrator Initialization
+        document.addEventListener('DOMContentLoaded', carregarConfiguracoesAssincronas);
     </script>
-
 </body>
 </html>
-```

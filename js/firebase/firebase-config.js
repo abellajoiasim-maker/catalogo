@@ -36,6 +36,9 @@
     // ==========================================================
     // CONFIGURAÇÃO OFICIAL FIREBASE
     // ==========================================================
+    // ==========================================================
+    // CONFIGURAÇÃO OFICIAL FIREBASE
+    // ==========================================================
     const firebaseConfig = Object.freeze({
 
         apiKey:
@@ -61,6 +64,26 @@
 
     });
 
+    // ==========================================================
+    // INICIALIZAÇÃO SEGURA
+    // ==========================================================
+    let app = null;
+
+    try {
+
+        app = firebase.apps.length
+            ? firebase.app()
+            : firebase.initializeApp(firebaseConfig);
+
+    } catch (error) {
+
+        console.error(
+            '[Firebase] Falha crítica ao inicializar aplicação:',
+            error
+        );
+
+        return;
+    }
     // ==========================================================
     // INICIALIZAÇÃO SEGURA
     // ==========================================================

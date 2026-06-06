@@ -451,14 +451,47 @@
             }
             return url;
         }
+        
+       async function carregarBannerHome() {
+    try {
+
+        const snap = await db
+            .ref('abella/home')
+            .once('value');
+
+        const home = snap.val() || {};
+
+        const banner =
+            home.banner_home_desktop || '';
+
+        if (banner) {
+            const hero =
+                document.getElementById('heroBannerImg');
+
+            if (hero) {
+                hero.src =
+                    resolverImagemFirebase(banner);
+            }
+        }
+
+    } catch (e) {
+        console.error(
+            'Erro carregar banner home:',
+            e
+        );
+    }
+}
 
         // DISPARADOR E CONTROLADOR DA FILA DO GRID 
-        document.addEventListener('DOMContentLoaded', async () => {
-            const grid = document.getElementById('grid-categorias');
-            const loading = document.getElementById('loading');
-            const noResult = document.getElementById('no-result');
+document.addEventListener('DOMContentLoaded', async () => {
 
-            try {
+    const grid = document.getElementById('grid-categorias');
+    const loading = document.getElementById('loading');
+    const noResult = document.getElementById('no-result');
+
+    await carregarBannerHome();
+
+    try {
                 // Sincroniza parâmetros operacionais e categorias em paralelo absoluto
                 const [snapSettings, snapCategories] = await Promise.all([
                     db.ref('abella/settings').once('value'),
@@ -480,14 +513,6 @@
                                 img.classList.remove('hidden');
                                 fallback?.classList.add('hidden');
                             };
-                        }
-                    }
-
-                    // Atualização automática do Banner de Campanha Hero (Nas 3 páginas)
-                    if (cfg.bannerHeroUrl) {
-                        const bannerImg = document.getElementById('heroBannerImg');
-                        if (bannerImg) {
-                            bannerImg.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(cfg.bannerHeroUrl) : cfg.bannerHeroUrl;
                         }
                     }
 

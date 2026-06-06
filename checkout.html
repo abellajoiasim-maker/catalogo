@@ -679,62 +679,115 @@ CONFIG.pedidoMinimo = parseFloat(
             }
         }
 
-        function construirTextoRomaneio(){
-            const t = calcularTotais();
-            const nome = document.getElementById('cli-nome').value || 'Não informado';
-            const whats = document.getElementById('cli-whats').value || 'Não informado';
-            const cidadeCliente = document.getElementById('cli-cidade').value.trim();
-            
-            const rua = document.getElementById('ent-rua').value || '';
-            const numero = document.getElementById('ent-numero').value || '';
-            const bairro = document.getElementById('ent-bairro').value || '';
-            const cidade = document.getElementById('ent-cidade').value || '';
-            const uf = document.getElementById('ent-uf').value || '';
-            const cep = document.getElementById('ent-cep').value || '';
-            const obs = document.getElementById('obs-pedido').value || 'Sem observações';
+function construirTextoRomaneio(){
 
-            let texto = '';
-            texto += 'ABELLA JOIAS\n';
-            texto += 'ROMANEIO DE PEDIDO\n';
-            texto += '====================================\n\n';
-            texto += `CLIENTE: ${nome}\n`;
-            texto += `WHATSAPP: ${whats}\n`;
-            texto += `CPF/CNPJ: ${documento}\n\n`;
-            texto += 'ENDEREÇO DE ENTREGA\n';
-            texto += `${rua}, ${numero}\n`;
-            texto += `${bairro}\n`;
-            texto += `${cidade} - ${uf}\n`;
-            texto += `CEP: ${cep}\n\n`;
-            texto += 'ITENS DO PEDIDO\n';
-            texto += '------------------------------------\n';
+    const t =
+        calcularTotais();
 
-            itensCarrinho.forEach(item => {
-                const qtd = parseInt(item.quantidade || item.qtd || 1);
-                const preco = parseFloat(
-    item.precoFinal ??
-    item.price ??
-    item.preco ??
-    item.precoUnitario ??
-    0
-)
-                const nomeItem = item.name || item.nome || 'Produto';
-                texto += `${qtd}x ${nomeItem} - ${money.formatar(preco * qtd)}\n`;
-            });
+    const nome =
+        document.getElementById('cli-nome').value ||
+        'Não informado';
 
-            texto += '------------------------------------\n';
-            texto += `TOTAL PEÇAS: ${t.qtd}\n`;
-            texto += `PESO TOTAL: ${t.peso.toFixed(2)}g\n`;
-            texto += `SUBTOTAL: ${money.formatar(t.subtotal)}\n`;
-            if (t.desconto > 0) {
-                texto += `DESCONTO PIX (${CONFIG.descontoPix}%): ${money.formatar(t.desconto)}\n`;
-            }
-            texto += `TOTAL GERAL: ${money.formatar(t.total)}\n`;
-            texto += `FORMA DE PAGAMENTO: ${t.pagamento}\n\n`;
-            texto += `OBSERVAÇÕES:\n${obs}\n`;
+    const whats =
+        document.getElementById('cli-whats').value ||
+        'Não informado';
 
-            return texto;
-        }
+    const cidadeCliente =
+        document.getElementById('cli-cidade').value ||
+        'Não informado';
 
+    const localEntrega =
+        document.getElementById('ent-local').value ||
+        '';
+
+    const rua =
+        document.getElementById('ent-rua').value ||
+        '';
+
+    const numero =
+        document.getElementById('ent-numero').value ||
+        '';
+
+    const bairro =
+        document.getElementById('ent-bairro').value ||
+        '';
+
+    const cidadeEntrega =
+        document.getElementById('ent-cidade').value ||
+        '';
+
+    const obs =
+        document.getElementById('obs-pedido').value ||
+        'Sem observações';
+
+    let texto = '';
+
+    texto += 'ABELLA JOIAS\n';
+    texto += 'ROMANEIO DE PEDIDO\n';
+    texto += '====================================\n\n';
+
+    texto += `CLIENTE: ${nome}\n`;
+    texto += `WHATSAPP: ${whats}\n`;
+    texto += `CIDADE DO CLIENTE: ${cidadeCliente}\n\n`;
+
+    texto += 'LOCAL DE ENTREGA\n';
+    texto += '------------------------------------\n';
+    texto += `LOCAL: ${localEntrega}\n`;
+    texto += `ENDEREÇO: ${rua}, ${numero}\n`;
+    texto += `BAIRRO: ${bairro}\n`;
+    texto += `CIDADE: ${cidadeEntrega}\n\n`;
+
+    texto += 'ITENS DO PEDIDO\n';
+    texto += '------------------------------------\n';
+
+    itensCarrinho.forEach(item => {
+
+        const qtd =
+            parseInt(
+                item.quantidade ||
+                item.qtd ||
+                1
+            );
+
+        const preco =
+            parseFloat(
+                item.precoFinal ??
+                item.price ??
+                item.preco ??
+                item.precoUnitario ??
+                0
+            );
+
+        const nomeItem =
+            item.name ||
+            item.nome ||
+            'Produto';
+
+        texto +=
+            `${qtd}x ${nomeItem} - ${money.formatar(preco * qtd)}\n`;
+    });
+
+    texto += '------------------------------------\n';
+
+    texto += `TOTAL PEÇAS: ${t.qtd}\n`;
+    texto += `PESO TOTAL: ${t.peso.toFixed(2)}g\n`;
+    texto += `SUBTOTAL: ${money.formatar(t.subtotal)}\n`;
+
+    if (t.desconto > 0) {
+
+        texto +=
+            `DESCONTO PIX (${CONFIG.descontoPix}%): ${money.formatar(t.desconto)}\n`;
+    }
+
+    texto += `TOTAL GERAL: ${money.formatar(t.total)}\n`;
+    texto += `FORMA DE PAGAMENTO: ${t.pagamento}\n\n`;
+
+    texto += 'OBSERVAÇÕES\n';
+    texto += '------------------------------------\n';
+    texto += `${obs}\n`;
+
+    return texto;
+}
         function visualizarRomaneio(){
             // Escape básico de caracteres no pre para exibição segura
             const textoRomaneio = construirTextoRomaneio().replace(/</g, "&lt;").replace(/>/g, "&gt;");

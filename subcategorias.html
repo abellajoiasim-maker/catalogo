@@ -301,6 +301,7 @@
         const db = window.db;
         let categoriaSlug = '';
         let categoriaAtual = null;
+        let bannerSubcategoria = '';
 
         function resolverImagemFirebase(url){
             try{
@@ -326,6 +327,27 @@
                 return 'https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA';
             }
         }
+
+        async function carregarBannerSubcategoria() {
+    try {
+
+        const snap = await db
+            .ref('abella/home')
+            .once('value');
+
+        const home = snap.val() || {};
+
+        bannerSubcategoria =
+            home.banner_subcategoria || '';
+
+    } catch (error) {
+
+        console.error(
+            'Erro carregar banner subcategoria:',
+            error
+        );
+    }
+}
 
         function atualizarCarrinho(){
             try{
@@ -412,22 +434,37 @@
             }
         }
 function preencherHero(){
-    const nome = categoriaAtual.name || categoriaAtual.nome || categoriaSlug;
+
+    const nome =
+        categoriaAtual.name ||
+        categoriaAtual.nome ||
+        categoriaSlug;
 
     document.getElementById('categoriaNome').innerText = nome;
 
-    document.title = `${nome} • Subcategorias • Abella Joias`;
+    document.title =
+        `${nome} • Subcategorias • Abella Joias`;
 
     document.getElementById('categoriaDescricao').innerText =
         categoriaAtual.description ||
         categoriaAtual.descricao ||
         'Explore as linhas exclusivas da coleção premium Abella Joias.';
 
-    // TESTE TEMPORÁRIO DO BANNER
-    document.getElementById('heroImagem').src =
-'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=1920';
-}
+    const hero = document.getElementById('heroImagem');
+
+    if (bannerSubcategoria) {
+
+        hero.src =
+            resolverImagemFirebase(
+                bannerSubcategoria
+            );
+
+    } else {
+
+        hero.src =
+            'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=1920';
     }
+}
 }
 
         function renderizarSubcategorias(lista){
@@ -514,8 +551,11 @@ grid.innerHTML = `
                     return;
                 }
 
-                await carregarLogoAbella();
-                await carregarCategoria();
+await carregarLogoAbella();
+
+await carregarBannerSubcategoria();
+
+await carregarCategoria();
             }catch(error){
                 console.error('Erro INIT:', error);
                 mostrarErro('Erro ao iniciar página.');

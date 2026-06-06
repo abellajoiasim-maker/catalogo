@@ -486,17 +486,18 @@
                 createdAt:
                     createdAt,
 
-              updatedAt:
+updatedAt:
 
     produto.updatedAt ||
 
     createdAt
 
 };
-        // ======================================================
-        // LISTAR TODOS
-        // ======================================================
 
+},
+
+// ======================================================
+// LISTAR TODOS
         async listarTodos(
             forceRefresh = false
         ) {

@@ -453,6 +453,7 @@
         }
         
 async function carregarBannerHome() {
+
     try {
 
         const snap = await db
@@ -462,16 +463,40 @@ async function carregarBannerHome() {
         const home = snap.val() || {};
 
         const banner =
-            home.imagemDesktop || '';
+            home.imagemDesktop ||
+            home.banner_categoria ||
+            home.banner_subcategoria ||
+            '';
 
-        if (banner) {
+        const hero =
+            document.getElementById('heroBannerImg');
 
-            document.getElementById('heroBannerImg').src =
+        if (hero && banner) {
+
+            hero.src =
                 resolverImagemFirebase(banner);
+
+        } else {
+
+            hero.src =
+                'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1400&auto=format&fit=crop';
         }
 
     } catch (e) {
-        console.error(e);
+
+        console.error(
+            'Erro carregar banner home:',
+            e
+        );
+
+        const hero =
+            document.getElementById('heroBannerImg');
+
+        if (hero) {
+
+            hero.src =
+                'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1400&auto=format&fit=crop';
+        }
     }
 }
 

@@ -300,7 +300,6 @@
                 Date.now();
 
          return {
-            }; 
 
                 // ==============================================
                 // IDENTIFICAÇÃO
@@ -487,15 +486,13 @@
                 createdAt:
                     createdAt,
 
-                updatedAt:
+              updatedAt:
 
-                    produto.updatedAt ||
+    produto.updatedAt ||
 
-                    createdAt
+    createdAt
 
-            });
-        },
-
+};
         // ======================================================
         // LISTAR TODOS
         // ======================================================

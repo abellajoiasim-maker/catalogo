@@ -299,7 +299,8 @@
 
                 Date.now();
 
-            return Object.freeze({
+         return {
+            }; 
 
                 // ==============================================
                 // IDENTIFICAÇÃO
@@ -704,9 +705,6 @@
     // EXPORT GLOBAL
     // ==========================================================
 
-    window.produtoService =
-        Object.freeze(
-            produtoService
-        );
-
+   window.produtoService =
+    produtoService;
 })();

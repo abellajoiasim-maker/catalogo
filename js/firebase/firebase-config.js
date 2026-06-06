@@ -24,7 +24,7 @@
     // ==========================================================
     // EVITA REINICIALIZAÇÃO DUPLICADA
     // ==========================================================
-    if (window.__ABELLA_FIREBASE_INITIALIZED__) {
+    if (window.__ABELLA_FIREBASE_INITIALIZED__ === true) {
 
         console.warn(
             '[Firebase] Instância global já inicializada.'
@@ -36,18 +36,30 @@
     // ==========================================================
     // CONFIGURAÇÃO OFICIAL FIREBASE
     // ==========================================================
-    // ==========================================================
-    // CONFIGURAÇÃO OFICIAL FIREBASE
-    // ==========================================================
-   const firebaseConfig = Object.freeze({
-    apiKey: 'AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY',
-    authDomain: 'catalogo-abella-joias.firebaseapp.com',
-    databaseURL: 'https://catalogo-abella-joias-default-rtdb.firebaseio.com',
-    projectId: 'catalogo-abella-joias',
-    storageBucket: 'catalogo-abella-joias.firebasestorage.app',
-    messagingSenderId: '727568435294',
-    appId: '1:727568435294:web:442c0179ecf0686dff4ccf'
-});
+    const firebaseConfig = Object.freeze({
+
+        apiKey:
+            'AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY',
+
+        authDomain:
+            'catalogo-abella-joias.firebaseapp.com',
+
+        databaseURL:
+            'https://catalogo-abella-joias-default-rtdb.firebaseio.com',
+
+        projectId:
+            'catalogo-abella-joias',
+
+        storageBucket:
+            'catalogo-abella-joias.firebasestorage.app',
+
+        messagingSenderId:
+            '727568435294',
+
+        appId:
+            '1:727568435294:web:442c0179ecf0686dff4ccf'
+
+    });
 
     // ==========================================================
     // INICIALIZAÇÃO SEGURA
@@ -56,27 +68,7 @@
 
     try {
 
-        app = firebase.apps.length
-            ? firebase.app()
-            : firebase.initializeApp(firebaseConfig);
-
-    } catch (error) {
-
-        console.error(
-            '[Firebase] Falha crítica ao inicializar aplicação:',
-            error
-        );
-
-        return;
-    }
-    // ==========================================================
-    // INICIALIZAÇÃO SEGURA
-    // ==========================================================
-    let app = null;
-
-    try {
-
-        app = firebase.apps.length
+        app = firebase.apps.length > 0
             ? firebase.app()
             : firebase.initializeApp(firebaseConfig);
 
@@ -102,7 +94,9 @@
     // ==========================================================
     try {
 
-        if (typeof firebase.database === 'function') {
+        if (
+            typeof firebase.database === 'function'
+        ) {
 
             db = firebase.database();
 
@@ -128,7 +122,9 @@
     // ==========================================================
     try {
 
-        if (typeof firebase.storage === 'function') {
+        if (
+            typeof firebase.storage === 'function'
+        ) {
 
             storage = firebase.storage();
 
@@ -154,7 +150,9 @@
     // ==========================================================
     try {
 
-        if (typeof firebase.auth === 'function') {
+        if (
+            typeof firebase.auth === 'function'
+        ) {
 
             auth = firebase.auth();
 
@@ -170,7 +168,7 @@
     }
 
     // ==========================================================
-    // EXPORTAÇÃO GLOBAL SEGURA
+    // EXPORTAÇÃO GLOBAL
     // ==========================================================
     window.firebaseApp = app;
 
@@ -181,18 +179,18 @@
     window.auth = auth;
 
     // ==========================================================
-    // ESTRUTURA OFICIAL DO PROJETO
+    // RAIZ OFICIAL DO PROJETO
     // ==========================================================
     window.ABELLA_DB_ROOT = 'abella';
 
     // ==========================================================
-    // HELPERS GLOBAIS
+    // HELPER OFICIAL
     // ==========================================================
     window.getAbellaPath = function (path = '') {
 
-        const cleanPath =
-            String(path || '')
-                .replace(/^\/+/, '');
+        const cleanPath = String(
+            path || ''
+        ).replace(/^\/+/, '');
 
         return cleanPath
             ? `${window.ABELLA_DB_ROOT}/${cleanPath}`
@@ -202,31 +200,34 @@
     // ==========================================================
     // MONITOR DE CONEXÃO
     // ==========================================================
-    if (db) {
+    if (
+        db &&
+        typeof db.ref === 'function'
+    ) {
 
         try {
 
-           db.ref('.info/connected')
-    .on('value', snapshot => {
+            db.ref('.info/connected')
+                .on('value', (snapshot) => {
 
-        const connected =
-            snapshot.val() === true;
+                    const connected =
+                        snapshot.val() === true;
 
-        window.__ABELLA_FIREBASE_CONNECTED__ =
-            connected;
+                    window.__ABELLA_FIREBASE_CONNECTED__ =
+                        connected;
 
-        window.dispatchEvent(
-            new CustomEvent(
-                'abella-connection',
-                {
-                    detail: {
-                        connected
-                    }
-                }
-            )
-        );
+                    window.dispatchEvent(
+                        new CustomEvent(
+                            'abella-connection',
+                            {
+                                detail: {
+                                    connected
+                                }
+                            }
+                        )
+                    );
 
-    });
+                });
 
         } catch (error) {
 
@@ -239,8 +240,16 @@
     }
 
     // ==========================================================
-    // FLAG GLOBAL DE SEGURANÇA
+    // FLAGS GLOBAIS
     // ==========================================================
-    window.__ABELLA_FIREBASE_INITIALIZED__ = true;
+    window.__ABELLA_FIREBASE_CONNECTED__ =
+        false;
+
+    window.__ABELLA_FIREBASE_INITIALIZED__ =
+        true;
+
+    console.info(
+        '[Firebase] Inicialização concluída com sucesso.'
+    );
 
 })();

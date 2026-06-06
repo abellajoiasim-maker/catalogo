@@ -622,9 +622,15 @@
         }
 
         function normalizarTexto(texto){
-            return (texto || '').toString().trim().toLowerCase();
-        }
 
+    return (texto || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-');
+}
         async function carregarProdutos(){
             try{
                 const loading = document.getElementById('loading');
@@ -659,7 +665,8 @@
 
                     if(!categoria) return true;
 
-                    const categoriaOK = (catProduto === categoria || catProduto.includes(categoria) || categoria.includes(catProduto));
+                    const categoriaOK =
+    catProduto === categoria;
                     if(!categoriaOK) return false;
 
                     if(!subcategoria) return true;

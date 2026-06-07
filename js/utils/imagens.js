@@ -89,3 +89,7 @@ function obterImagemProduto(nomeArquivo) {
         `${STORAGE_ROOT}/produtos/${nomeArquivo}`
     );
 }
+
+function resolverImagemFirebase(path){
+    return ImageHelper.converterGsUrl(path);
+}

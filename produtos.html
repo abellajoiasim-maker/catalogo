@@ -532,48 +532,14 @@
     <script src="js/utils/storage.js"></script>
     <script src="js/services/carrinhoService.js"></script>
     <script src="js/services/produtoService.js"></script>
+    <script src="js/utils/image-helper.js"></script>
+    <script src="js/utils/imagens.js"></script>
 
     <script>
         let produtos = [];
         let produtosFiltrados = [];
         let produtoAtual = null;
         let descontoPixGlobal = 5; 
-
-        function resolverImagemFirebase(path){
-            if(!path) return '';
-            path = String(path).trim();
-
-            if(path.startsWith('http://') || path.startsWith('https://')){
-                return path;
-            }
-
-            if(path.startsWith('gs://')){
-                try{
-                    const semGs = path.replace('gs://', '');
-                    const partes = semGs.split('/');
-                    const bucket = partes.shift();
-                    const arquivo = partes.join('/');
-                    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
-                }catch(e){
-                    console.error('Erro imagem Firebase:', e);
-                    return '';
-                }
-            }
-
-            if(path.startsWith('images/') || path.startsWith('/images/')){
-                return path.replace(/^\/+/,'');
-            }
-
-            if(path.startsWith('Abella/') || path.startsWith('/Abella/')){
-                return path.replace(/^\/+/,'');
-            }
-
-            if(!path.includes('://') && !path.startsWith('data:')){
-                return `images/${path}`;
-            }
-
-            return path;
-        }
 
         async function carregarLogoHeader(){
             try{

@@ -47,7 +47,7 @@ function obterImagemCategoriaGrid(slug) {
     if (!slug) return obterImagemFallback();
 
     return resolverImagemFirebase(
-        `${STORAGE_ROOT}/categorias-grid/${slug}.jpg`
+        `${STORAGE_ROOT}/categoria-grid/${slug}.jpg`
     );
 }
 
@@ -73,7 +73,7 @@ function obterImagemSubcategoriaGrid(slug) {
     if (!slug) return obterImagemFallback();
 
     return resolverImagemFirebase(
-        `${STORAGE_ROOT}/subcategorias-grid/${slug}.jpg`
+        `${STORAGE_ROOT}/subcategoria-grid/${slug}.jpg`
     );
 }
 

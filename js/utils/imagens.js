@@ -126,7 +126,7 @@ function obterImagemProduto(nomeArquivo) {
 function resolverImagemFirebase(path) {
 
     if (!path)
-        return obterImagemFallback();
+        return ImageHelper.PLACEHOLDER;
 
     return ImageHelper.converterGsUrl(path);
 }

@@ -170,18 +170,19 @@
             <div class="space-y-6">
                 <div class="glass rounded-[2rem] p-8">
                     <h2 class="text-xl font-black mb-6">📋 Estrutura da Planilha</h2>
-                    <div class="space-y-3 text-sm">
-                        <div class="glass rounded-2xl p-4">Col A / 1. Nome</div>
-                        <div class="glass rounded-2xl p-4">Col B / 2. SKU</div>
-                        <div class="glass rounded-2xl p-4">Col C / 3. Categoria</div>
-                        <div class="glass rounded-2xl p-4">Col D / 4. Subcategoria</div>
-                        <div class="glass rounded-2xl p-4">Col E / 5. Preço</div>
-                        <div class="glass rounded-2xl p-4">Col F / 6. Peso</div>
-                        <div class="glass rounded-2xl p-4">Col G / 7. URL Imagem</div>
-                        <div class="glass rounded-2xl p-4">Col H / 8. Variação</div>
-                        <div class="glass rounded-2xl p-4">Col I / 9. Opções</div>
-                        <div class="glass rounded-2xl p-4">Col J / 10. Pausado</div>
-                    </div>
+                   <div class="space-y-3 text-sm">
+    <div class="glass rounded-2xl p-4">Col A / 1. Nome</div>
+    <div class="glass rounded-2xl p-4">Col B / 2. SKU</div>
+    <div class="glass rounded-2xl p-4">Col C / 3. Categoria</div>
+    <div class="glass rounded-2xl p-4">Col D / 4. Subcategoria</div>
+    <div class="glass rounded-2xl p-4">Col E / 5. Preço</div>
+    <div class="glass rounded-2xl p-4">Col F / 6. Peso</div>
+    <div class="glass rounded-2xl p-4">Col G / 7. URL Imagem</div>
+    <div class="glass rounded-2xl p-4">Col H / 8. Descrição</div>
+    <div class="glass rounded-2xl p-4">Col I / 9. Variação</div>
+    <div class="glass rounded-2xl p-4">Col J / 10. Opções</div>
+    <div class="glass rounded-2xl p-4">Col K / 11. Pausado</div>
+</div>
                 </div>
             </div>
 
@@ -348,10 +349,25 @@
                 const precoCru = colunas[4] !== undefined && colunas[4] !== null ? String(colunas[4]).replace(/[^0-9.,]/g, '').replace(',', '.') : '';
                 const pesoCru = colunas[5] !== undefined && colunas[5] !== null ? String(colunas[5]).replace(/[^0-9.,]/g, '').replace(',', '.') : '';
 
-                const imagem = colunas[6] ? String(colunas[6]).replace(/^"|"$/g, '').trim() : '';
-                const variacao = colunas[7] ? String(colunas[7]).replace(/^"|"$/g, '').trim() : '';
-                const opcoes = colunas[8] ? String(colunas[8]).replace(/^"|"$/g, '').trim() : '';
-                const pausadoStr = colunas[9] ? String(colunas[9]).toLowerCase().trim() : '';
+                const imagem = colunas[6]
+    ? String(colunas[6]).replace(/^"|"$/g, '').trim()
+    : '';
+
+const descricao = colunas[7]
+    ? String(colunas[7]).trim()
+    : '';
+
+const variacao = colunas[8]
+    ? String(colunas[8]).replace(/^"|"$/g, '').trim()
+    : '';
+
+const opcoes = colunas[9]
+    ? String(colunas[9]).replace(/^"|"$/g, '').trim()
+    : '';
+
+const pausadoStr = colunas[10]
+    ? String(colunas[10]).toLowerCase().trim()
+    : '';
 
                 // Validação vital obrigatória
                 if (!nome || !sku || !categoriaNome) {
@@ -380,27 +396,40 @@
                 }
 
                 // Cria o modelo limpo
-                const produto = {
-                    id: skuLimpo,
-                    sku: sku,
-                    name: nome,
-                    category: categoriaSlug,
-                    updatedAt: Date.now()
-                };
+               const produto = {
+    id: skuLimpo,
+    sku: sku,
+    name: nome,
+    category: categoriaSlug,
+    updatedAt: Date.now()
+};
 
-                // REGRAS DE PULO DE CÉLULA VAZIA (Preserva as informações anteriores no Firebase)
-                if (subcategoriaNome) produto.subcategory = slugify(subcategoriaNome);
-                if (precoCru !== '')  produto.price = parseFloat(precoCru) || 0;
-                if (pesoCru !== '')   produto.weight = parseFloat(pesoCru) || 0;
-                if (imagem)           produto.image = imagem;
-                if (variacao)         produto.variacaoTipo = variacao;
-                if (opcoes)           produto.opcoesPersonalizadas = opcoes;
-                
-                if (pausadoStr !== '') {
-                    produto.paused = pausadoStr.includes('true');
-                } else {
-                    produto.paused = false;
-                }
+if (subcategoriaNome)
+    produto.subcategory = slugify(subcategoriaNome);
+
+if (precoCru !== '')
+    produto.price = parseFloat(precoCru) || 0;
+
+if (pesoCru !== '')
+    produto.weight = parseFloat(pesoCru) || 0;
+
+if (imagem)
+    produto.image = imagem;
+
+if (descricao)
+    produto.description = descricao;
+
+if (variacao)
+    produto.variacaoTipo = variacao;
+
+if (opcoes)
+    produto.opcoesPersonalizadas = opcoes;
+
+if (pausadoStr !== '') {
+    produto.paused = pausadoStr.includes('true');
+} else {
+    produto.paused = false;
+}
 
                 // Atualização incremental nativa por chave hash única
                 await db.ref(`abella/products/${skuLimpo}`).update(produto);
@@ -423,7 +452,7 @@
             const snap = await db.ref('abella/products').once('value');
             const produtos = snap.val() || {};
 
-            let csv = `Nome,SKU,Categoria,Subcategoria,Preco,Peso,Imagem,Variacao,Opcoes,Pausado\n`;
+         let csv = `Nome,SKU,Categoria,Subcategoria,Preco,Peso,Imagem,Descricao,Variacao,Opcoes,Pausado\n`;
 
             Object.values(produtos).forEach(p => {
                 csv += `"${(p.name || '').replace(/"/g, '""')}",`;
@@ -432,8 +461,9 @@
                 csv += `"${(p.subcategory || '').replace(/"/g, '""')}",`;
                 csv += `"${p.price || 0}",`;
                 csv += `"${p.weight || 0}",`;
-                csv += `"${(p.image || '').replace(/"/g, '""')}",`;
-                csv += `"${(p.variacaoTipo || 'Padrão').replace(/"/g, '""')}",`;
+csv += `"${(p.image || '').replace(/"/g, '""')}",`;
+csv += `"${(p.description || '').replace(/"/g, '""')}",`;
+csv += `"${(p.variacaoTipo || 'Padrão').replace(/"/g, '""')}",`;
                 csv += `"${(p.opcoesPersonalizadas || '').replace(/"/g, '""')}",`;
                 csv += `"${p.paused || false}"\n`;
             });
@@ -450,15 +480,29 @@
         }
     }
 
-    function baixarModeloCSV() {
-        const modelo = `Nome,SKU,Categoria,Subcategoria,Preco,Peso,Imagem,Variacao,Opcoes,Pausado\n"Gargantilha Elo Português, Luxo","ACG-001","Correntes & Colares","Premium","49.90","12.5","gs://catalogo-abella-joias.firebasestorage.app/images/produtos/ACG-001.png","Padrão","","false"`;
-        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), modelo], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'modelo-importacao-abella.csv';
-        link.click();
-    }
+   function baixarModeloCSV() {
 
+    const modelo =
+`Nome,SKU,Categoria,Subcategoria,Preco,Peso,Imagem,Descricao,Variacao,Opcoes,Pausado
+"Gargantilha Elo Português Luxo","ACG-001","Correntes & Colares","Premium","49.90","12.5","gs://catalogo-abella-joias.firebasestorage.app/images/produtos/ACG-001.jpg","Gargantilha premium com banho hipoalergênico e acabamento de luxo.","Padrão","","false"`;
+
+    const blob = new Blob(
+        [new Uint8Array([0xEF, 0xBB, 0xBF]), modelo],
+        { type: 'text/csv;charset=utf-8;' }
+    );
+
+    const link = document.createElement('a');
+
+    link.href = URL.createObjectURL(blob);
+    link.download = 'modelo-importacao-abella.csv';
+
+    link.click();
+
+    log(
+        '📥 Modelo CSV atualizado com campo Descrição.',
+        'success'
+    );
+}
     atualizarEstatisticas();
 </script>
 

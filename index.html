@@ -453,18 +453,33 @@
         }
         
 async function carregarBannerHome() {
+
     try {
-        const snap = await db.ref('abella/home').once('value');
-        const home = snap.val() || {};
 
-        const hero = document.getElementById('heroBannerImg');
+        const snap =
+            await db.ref('abella/categories')
+            .once('value');
 
-        if (hero && home.banner_categoria) {
-            hero.src = resolverImagemFirebase(home.banner_categoria);
-        }
+        if(!snap.exists()) return;
 
-    } catch (e) {
-        console.error('Erro carregar banner home:', e);
+        const categorias =
+            Object.values(snap.val());
+
+        if(!categorias.length) return;
+
+        const primeira =
+            categorias[0];
+
+        const slug =
+            primeira.slug;
+
+        document
+            .getElementById('heroBannerImg')
+            .src =
+            obterImagemCategoria(slug);
+
+    } catch(e){
+        console.error(e);
     }
 }
 
@@ -473,8 +488,6 @@ async function carregarBannerHome() {
 
         if (hero) {
 
-            hero.src =
-                'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1400&auto=format&fit=crop';
         }
     }
 }
@@ -580,9 +593,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Injeção Atômica por DocumentFragment (Zero atrasos de renderização no DOM)
                 const fragmento = document.createDocumentFragment();
 
-                listaCategorias.forEach(cat => {
-                    const nomeCat = cat.nome || cat.name || 'Joia';
-                    const imgCat = resolverImagemFirebase(cat.imagem || cat.image || '');
+               listaCategorias.forEach(cat => {
+
+    const nomeCat =
+        cat.nome ||
+        cat.name ||
+        'Joia';
+
+    const slugCat =
+        cat.slug ||
+        cat.categorySlug ||
+        nomeCat
+            .toLowerCase()
+            .trim()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g,'-');
+
+    const imgCat =
+        obterImagemCategoriaGrid(
+            slugCat
+        );
 
                     const div = document.createElement('div');
                     div.className = "cat-card aspect-[3/4] relative group rounded-2xl overflow-hidden shadow-md";
@@ -592,7 +623,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     };
 
                     div.innerHTML = `
-                        <img src="${imgCat}" alt="${nomeCat}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                        <img
+    src="${imgCat}"
+    alt="${nomeCat}"
+    loading="lazy"
+    onerror="this.src='images/fallback.jpg'"
+    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+>
                         <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
                             <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Coleção Premium</p>
                             <h3 class="serif text-white text-base md:text-lg font-bold tracking-wide uppercase mt-1 leading-tight">${nomeCat}</h3>

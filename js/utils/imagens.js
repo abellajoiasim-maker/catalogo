@@ -6,10 +6,25 @@ const STORAGE_ROOT =
     'gs://catalogo-abella-joias.firebasestorage.app/images';
 
 /* ==========================================================
+   NORMALIZAÇÃO
+   ========================================================== */
+
+function normalizarSlug(valor) {
+
+    return String(valor || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '-');
+}
+
+/* ==========================================================
    FALLBACK
    ========================================================== */
 
 function obterImagemFallback() {
+
     return resolverImagemFirebase(
         `${STORAGE_ROOT}/fallback.jpg`
     );
@@ -20,18 +35,22 @@ function obterImagemFallback() {
    ========================================================== */
 
 function obterLogo() {
+
     return resolverImagemFirebase(
         `${STORAGE_ROOT}/logo/logo.png`
     );
 }
 
 /* ==========================================================
-   CATEGORIAS
-   HERO GRANDE (AMBIENTADA)
+   CATEGORIAS - HERO
    ========================================================== */
 
 function obterImagemCategoria(slug) {
-    if (!slug) return obterImagemFallback();
+
+    slug = normalizarSlug(slug);
+
+    if (!slug)
+        return obterImagemFallback();
 
     return resolverImagemFirebase(
         `${STORAGE_ROOT}/categorias/${slug}.jpg`
@@ -39,12 +58,15 @@ function obterImagemCategoria(slug) {
 }
 
 /* ==========================================================
-   CATEGORIAS
-   CARD DO GRID
+   CATEGORIAS - GRID
    ========================================================== */
 
 function obterImagemCategoriaGrid(slug) {
-    if (!slug) return obterImagemFallback();
+
+    slug = normalizarSlug(slug);
+
+    if (!slug)
+        return obterImagemFallback();
 
     return resolverImagemFirebase(
         `${STORAGE_ROOT}/categoria-grid/${slug}.jpg`
@@ -52,12 +74,15 @@ function obterImagemCategoriaGrid(slug) {
 }
 
 /* ==========================================================
-   SUBCATEGORIAS
-   HERO GRANDE (AMBIENTADA)
+   SUBCATEGORIAS - HERO
    ========================================================== */
 
 function obterImagemSubcategoria(slug) {
-    if (!slug) return obterImagemFallback();
+
+    slug = normalizarSlug(slug);
+
+    if (!slug)
+        return obterImagemFallback();
 
     return resolverImagemFirebase(
         `${STORAGE_ROOT}/subcategorias/${slug}.jpg`
@@ -65,12 +90,15 @@ function obterImagemSubcategoria(slug) {
 }
 
 /* ==========================================================
-   SUBCATEGORIAS
-   CARD DO GRID
+   SUBCATEGORIAS - GRID
    ========================================================== */
 
 function obterImagemSubcategoriaGrid(slug) {
-    if (!slug) return obterImagemFallback();
+
+    slug = normalizarSlug(slug);
+
+    if (!slug)
+        return obterImagemFallback();
 
     return resolverImagemFirebase(
         `${STORAGE_ROOT}/subcategoria-grid/${slug}.jpg`
@@ -79,17 +107,26 @@ function obterImagemSubcategoriaGrid(slug) {
 
 /* ==========================================================
    PRODUTOS
-   IMAGEM CATÁLOGO
    ========================================================== */
 
 function obterImagemProduto(nomeArquivo) {
-    if (!nomeArquivo) return obterImagemFallback();
+
+    if (!nomeArquivo)
+        return obterImagemFallback();
 
     return resolverImagemFirebase(
         `${STORAGE_ROOT}/produtos/${nomeArquivo}`
     );
 }
 
-function resolverImagemFirebase(path){
+/* ==========================================================
+   FIREBASE STORAGE
+   ========================================================== */
+
+function resolverImagemFirebase(path) {
+
+    if (!path)
+        return obterImagemFallback();
+
     return ImageHelper.converterGsUrl(path);
 }

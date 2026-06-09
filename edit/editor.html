@@ -178,7 +178,7 @@
   }
 
   // =======================
-  // Utilidades e Sanitização
+  // Utilidades e Conversores de Links
   // =======================
   function escapeHtml(str) {
     return String(str ?? '')
@@ -193,9 +193,29 @@
     return String(str ?? '').replaceAll("'", "\\'").replaceAll('"', '&quot;');
   }
 
-  // Conversor inteligente de caminhos gs:// para URLs HTTPS válidas
+  // Converte links gs:// e links de visualização do Google Drive para links brutos diretos
   function converterGsUrl(url) {
-    const stringUrl = String(url ?? '').trim();
+    let stringUrl = String(url ?? '').trim();
+    if (!stringUrl) return '';
+
+    // Tratamento para links do Google Drive
+    if (stringUrl.includes('drive.google.com')) {
+      try {
+        let idArquivo = '';
+        if (stringUrl.includes('/d/')) {
+          idArquivo = stringUrl.split('/d/')[1].split('/')[0];
+        } else if (stringUrl.includes('id=')) {
+          idArquivo = stringUrl.split('id=')[1].split('&')[0];
+        }
+        if (idArquivo) {
+          return `https://drive.google.com/uc?export=view&id=${idArquivo}`;
+        }
+      } catch (err) {
+        console.error('Erro ao converter link do Google Drive:', err);
+      }
+    }
+
+    // Tratamento para links gs:// do Firebase Storage
     if (stringUrl.startsWith('gs://')) {
       try {
         const semProtocolo = stringUrl.replace('gs://', '');
@@ -204,22 +224,19 @@
 
         const bucket = semProtocolo.substring(0, primeiraBarra);
         const caminhoArquivo = semProtocolo.substring(primeiraBarra + 1);
-        
         const caminhoCodificado = encodeURIComponent(caminhoArquivo);
         return `https://firebasestorage.googleapis.com/v1/b/${bucket}/o/${caminhoCodificado}?alt=media`;
       } catch (e) {
-        console.error('Erro ao converter URL do Storage:', e);
-        return stringUrl;
+        console.error('Erro ao converter URL gs://:', e);
       }
     }
     return stringUrl;
   }
 
-  // Monitora alterações nos inputs de imagem e atualiza o preview em tempo real
   function tratarInputImagem(inputElement, previewId) {
     if (!inputElement) return;
-    let valor = inputElement.value;
-    if (valor.startsWith('gs://')) {
+    let valor = inputElement.value.trim();
+    if (valor.startsWith('gs://') || valor.includes('drive.google.com')) {
       valor = converterGsUrl(valor);
       inputElement.value = valor;
     }
@@ -233,7 +250,7 @@
   function handleImageError(img) {
     img.style.display = 'none';
     if (img.parentNode) {
-      const fallback = img.parentNode.querySelector('.fallback-text');
+      const fallback = img.parentNode.querySelector('.fallback-container');
       if (fallback) fallback.style.display = 'flex';
     }
   }
@@ -363,10 +380,10 @@
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-4 flex-1">
               <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative">
-                <div class="fallback-text absolute inset-0 flex items-center justify-center text-[10px] text-zinc-600 hidden">Erro</div>
+                <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-[10px] text-zinc-600 ${produto.image ? 'hidden' : ''}">Sem Foto</div>
                 ${produto.image ? `
-                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="handleImageError(this)"/>
-                ` : `<span class="text-[10px] text-zinc-600">Sem Foto</span>`}
+                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>
+                ` : ''}
               </div>
               <div>
                 <div class="font-bold">${escapeHtml(produto.name || '')}${pausedTag}</div>
@@ -421,10 +438,11 @@
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative">
+                <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-xl z-0">📁</div>
                 ${urlMiniatura ? `
-                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="this.parentNode.innerHTML='📁'"/>
-                ` : '📁'}
+                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>
+                ` : ''}
               </div>
               <div>
                 <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
@@ -474,18 +492,17 @@
     filtradas.forEach(x => {
       const safeCat = escapeAttr(x.catSlug);
       const safeSub = escapeAttr(x.subSlug);
-      
-      // FIX — Mapeado para ler 'grid' ou 'hero' diretamente (conforme gravado no seu Realtime DB)
       const urlMiniatura = converterGsUrl(x.subObj?.grid || x.subObj?.hero || x.subObj?.gridImage || x.subObj?.heroImage);
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative">
+                <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-xl z-0">📁</div>
                 ${urlMiniatura ? `
-                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="this.parentNode.innerHTML='📁'"/>
-                ` : '📁'}
+                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>
+                ` : ''}
               </div>
               <div>
                 <div class="font-bold">${escapeHtml(x.subObj?.name || x.subObj?.title || x.subSlug)}</div>
@@ -530,7 +547,7 @@
 
       <div class="text-xs text-zinc-400 mb-1">Preview do Produto:</div>
       <img id="previewProduto" src="${escapeHtml(urlPreview)}" class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input id="editImagem" class="input-dark" placeholder="URL da imagem ou gs://" value="${escapeHtml(produto.image || '')}" oninput="tratarInputImagem(this, 'previewProduto')">
+      <input id="editImagem" class="input-dark" placeholder="URL da imagem, gs:// ou Google Drive" value="${escapeHtml(produto.image || '')}" oninput="tratarInputImagem(this, 'previewProduto')">
 
       <input id="editPreco" class="input-dark" placeholder="Preço" value="${escapeHtml(produto.price ?? 0)}">
       <input id="editPeso" class="input-dark" placeholder="Peso" value="${escapeHtml(produto.weight ?? 0)}">
@@ -609,8 +626,8 @@
     abrirDrawer('Editar Categoria', `
       <input id="editCatName" class="input-dark" placeholder="Nome" value="${escapeHtml(cat.name || '')}">
       <textarea id="editCatDescription" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
-      <input id="editCatHero" class="input-dark" placeholder="Hero Image URL ou gs://" value="${escapeHtml(cat.hero || cat.heroImage || '')}">
-      <input id="editCatGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(cat.grid || cat.gridImage || '')}">
+      <input id="editCatHero" class="input-dark" placeholder="Hero Image URL, gs:// ou Drive" value="${escapeHtml(cat.hero || cat.heroImage || '')}">
+      <input id="editCatGrid" class="input-dark" placeholder="Grid Image URL, gs:// ou Drive" value="${escapeHtml(cat.grid || cat.gridImage || '')}">
       <input id="editCatOrder" type="number" class="input-dark" placeholder="Ordem" value="${escapeHtml(cat.order || 0)}">
 
       <label class="flex gap-2 items-center text-sm mb-2"><input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}> Categoria Destaque Home</label>
@@ -640,7 +657,6 @@
     const sub = categoriasCache[catSlug]?.subcategories?.[subSlug];
     if (!sub) return;
 
-    // Garante compatibilidade caso esteja salvo como 'grid' ou 'gridImage'
     const linkGridOriginal = sub.grid || sub.gridImage || '';
     const linkHeroOriginal = sub.hero || sub.heroImage || '';
 
@@ -653,18 +669,17 @@
       
       <div class="text-xs text-zinc-400 mb-1">Preview Grid Image:</div>
       <img id="previewSubGrid" src="${escapeHtml(urlPreviewGrid)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input id="subGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(linkGridOriginal)}" oninput="tratarInputImagem(this, 'previewSubGrid')">
+      <input id="subGrid" class="input-dark" placeholder="Grid Image URL, gs:// ou Drive" value="${escapeHtml(linkGridOriginal)}" oninput="tratarInputImagem(this, 'previewSubGrid')">
 
       <div class="text-xs text-zinc-400 mb-1 mt-2">Preview Hero Image:</div>
       <img id="previewSubHero" src="${escapeHtml(urlPreviewHero)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input id="subHero" class="input-dark" placeholder="Hero Image URL ou gs://" value="${escapeHtml(linkHeroOriginal)}" oninput="tratarInputImagem(this, 'previewSubHero')">
+      <input id="subHero" class="input-dark" placeholder="Hero Image URL, gs:// ou Drive" value="${escapeHtml(linkHeroOriginal)}" oninput="tratarInputImagem(this, 'previewSubHero')">
 
       <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-4 font-bold">Salvar</button>
     `);
   }
 
   async function salvarSubcategoria(catSlug, subSlug) {
-    // Salva exatamente nas chaves simplificadas 'grid' e 'hero' para dar match perfeito com o banco
     await db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
       name:        document.getElementById('subName').value,
       description: document.getElementById('subDescription').value,
@@ -751,7 +766,7 @@
     setStatus('✅ Editor pronto.', 'ok');
   })();
 
-  // Global Handlers
+  // Handlers Globais
   window.editarProduto               = editarProduto;
   window.salvarProduto               = salvarProduto;
   window.duplicarProduto             = duplicarProduto;

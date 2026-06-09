@@ -5,13 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Super Editor V5</title>
 
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
+  <!-- Config Firebase -->
   <script src="../js/firebase/firebase-config.js"></script>
 
   <style>
@@ -41,18 +44,12 @@
       border-radius: 0.75rem;
       padding: 0.5rem 1rem;
       font-size: 0.75rem;
-      cursor: pointer;
-    }
-
-    .tab-btn:hover {
-      background: rgba(255,255,255,0.10);
     }
   </style>
 </head>
 
 <body class="bg-black text-white">
   <div class="max-w-7xl mx-auto p-4">
-
     <!-- Header -->
     <header class="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 mb-4">
       <div class="flex justify-between items-center">
@@ -60,6 +57,7 @@
           <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V5</h1>
           <p class="text-xs text-zinc-500">Centro Operacional Abella</p>
         </div>
+
         <div class="flex gap-2">
           <button
             id="btnRefresh"
@@ -78,14 +76,17 @@
         <div class="text-zinc-500 text-[10px]">Produtos</div>
         <div id="statProdutos" class="text-2xl font-bold">0</div>
       </div>
+
       <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
         <div class="text-zinc-500 text-[10px]">Categorias</div>
         <div id="statCategorias" class="text-2xl font-bold">0</div>
       </div>
+
       <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
         <div class="text-zinc-500 text-[10px]">Subcategorias</div>
         <div id="statSubs" class="text-2xl font-bold">0</div>
       </div>
+
       <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
         <div class="text-zinc-500 text-[10px]">Pausados</div>
         <div id="statPausados" class="text-2xl font-bold">0</div>
@@ -101,19 +102,32 @@
           class="w-full md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
           placeholder="Buscar SKU, Nome, Categoria ou Subcategoria..."
         />
-        <select id="filtroTipo" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm">
+
+        <select
+          id="filtroTipo"
+          class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
+        >
           <option value="todos">Todos</option>
           <option value="produto">Produtos</option>
           <option value="categoria">Categorias</option>
           <option value="subcategoria">Subcategorias</option>
         </select>
-        <select id="filtroCategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm">
+
+        <select
+          id="filtroCategoria"
+          class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
+        >
           <option value="">Todas Categorias</option>
         </select>
-        <select id="filtroSubcategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm">
+
+        <select
+          id="filtroSubcategoria"
+          class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
+        >
           <option value="">Todas Subcategorias</option>
         </select>
       </div>
+
       <div class="text-xs text-zinc-500 mt-2">
         ℹ️ Dica: a busca filtra a aba atual conforme os filtros acima.
       </div>
@@ -151,615 +165,906 @@
     </div>
   </div>
 
+  <!--
+    ✅ IMPORTANTE:
+    Carregue ANTES deste arquivo o seu:
+    js/firebase/firebase-config.js
+  -->
+
   <script>
-  // =======================
-  // FIX #3 — Aguarda Firebase SDK estar pronto antes de qualquer acesso
-  // =======================
-  function resolverDB() {
-    if (window.db) return window.db;
-    if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {
-      return window.firebase.database();
-    }
-    return null;
-  }
+// =======================
+// Firebase DB (config global)
+// =======================
 
-  // =======================
-  // Estado / Cache
-  // =======================
-  const statusEl = document.getElementById('status');
-  let produtosCache = [];
-  let categoriasCache = {};
-  let db = null;
-  let buscaDebounceTimer = null;
+const statusEl =
+    document.getElementById('status');
 
-  // =======================
-  // Status helper
-  // =======================
-  function setStatus(msg, type = 'info') {
+function setStatus(
+    msg,
+    type = 'info'
+) {
+
     const color =
-      type === 'error' ? 'text-red-400' :
-      type === 'ok'    ? 'text-green-400' :
-                         'text-zinc-500';
-    statusEl.className = `text-xs mt-6 ${color}`;
+        type === 'error'
+            ? 'text-red-400'
+            : type === 'ok'
+            ? 'text-green-400'
+            : 'text-zinc-500';
+
+    statusEl.className =
+        `text-xs mt-6 ${color}`;
+
     statusEl.textContent = msg;
-  }
+}
 
-  // =======================
-  // Util
-  // =======================
-  function escapeHtml(str) {
-    return String(str ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
-  }
+// Aguarda firebase-config.js
+const db =
+    window.db ||
+    (window.firebase
+        ? firebase.database()
+        : null);
 
-  // FIX #2 (segurança) — Escapa slugs usados em onclick inline
-  function escapeAttr(str) {
-    return String(str ?? '').replaceAll("'", "\\'").replaceAll('"', '&quot;');
-  }
+if (!db) {
 
-  function getActiveTab() {
-    const active = document.querySelector('.tab-btn.active');
-    return active?.dataset?.tab || 'produtos';
-  }
+    console.error(
+        '[EDITOR] Firebase Database não encontrada.'
+    );
 
-  // =======================
-  // Drawer
-  // =======================
-  function abrirDrawer(titulo, html) {
-    document.getElementById('drawerTitle').textContent = titulo;
-    document.getElementById('drawerContent').innerHTML = html;
-    document.getElementById('drawer').classList.remove('hidden');
-  }
+    console.log(
+        'window.firebase:',
+        window.firebase
+    );
 
-  function fecharDrawer() {
-    document.getElementById('drawer').classList.add('hidden');
-  }
+    console.log(
+        'window.db:',
+        window.db
+    );
 
-  // =======================
-  // Carregamento central
-  // =======================
-  async function carregarTudo() {
-    try {
-      const catSnap = await db.ref(window.getAbellaPath('categories')).once('value');
-      categoriasCache = catSnap.val() || {};
+    console.log(
+        'window.ABELLA_DB_ROOT:',
+        window.ABELLA_DB_ROOT
+    );
 
-      const prodSnap = await db.ref(window.getAbellaPath('products')).once('value');
-      produtosCache = [];
-      prodSnap.forEach(item => {
-        produtosCache.push({ id: item.key, ...item.val() });
-      });
+    setStatus(
+        '❌ Firebase não carregado. Verifique os scripts firebase-app-compat.js, firebase-database-compat.js e firebase-config.js',
+        'error'
+    );
 
+    throw new Error(
+        'Firebase DB ausente'
+    );
+}
+
+console.info(
+    '[EDITOR] Firebase conectado.'
+);
+
+console.log(
+    'DB ROOT:',
+    window.ABELLA_DB_ROOT
+);
+
+    // =======================
+    // Estado / Cache
+    // =======================
+    let produtosCache = [];
+    let categoriasCache = {};
+
+    // =======================
+    // Util
+    // =======================
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function getActiveTab() {
+      const active = document.querySelector('.tab-btn.active');
+      return active?.dataset?.tab || 'produtos';
+    }
+
+    // =======================
+    // Drawer
+    // =======================
+    function abrirDrawer(titulo, html) {
+      document.getElementById('drawerTitle').innerHTML = escapeHtml(titulo);
+      document.getElementById('drawerContent').innerHTML = html;
+      document.getElementById('drawer').classList.remove('hidden');
+    }
+
+    function fecharDrawer() {
+      document.getElementById('drawer').classList.add('hidden');
+    }
+
+    // =======================
+    // Carregamento
+    // =======================
+    async function carregarCategorias() {
+      const snap = await db.ref(
+    window.getAbellaPath(
+        'categories'
+    )
+)
+      .once('value');
+      categoriasCache = snap.val() || {};
       popularFiltros();
-      atualizarEstatisticas();
-      setStatus('✅ Dados carregados com sucesso.', 'ok');
-    } catch (erro) {
-      console.error(erro);
-      setStatus('❌ Erro ao carregar Firebase', 'error');
-    }
-  }
-
-  // =======================
-  // Estatísticas
-  // =======================
-  function atualizarEstatisticas() {
-    document.getElementById('statProdutos').innerText = produtosCache.length;
-    document.getElementById('statCategorias').innerText = Object.keys(categoriasCache).length;
-
-    let totalSubs = 0;
-    Object.values(categoriasCache).forEach(cat => {
-      totalSubs += Object.keys(cat?.subcategories || {}).length;
-    });
-    document.getElementById('statSubs').innerText = totalSubs;
-    document.getElementById('statPausados').innerText = produtosCache.filter(p => p.paused).length;
-  }
-
-  // =======================
-  // Filtros (UI)
-  // =======================
-  function popularFiltros() {
-    const selCat = document.getElementById('filtroCategoria');
-    const selSub = document.getElementById('filtroSubcategoria');
-
-    const cats = Object.keys(categoriasCache);
-    selCat.innerHTML = `<option value="">Todas Categorias</option>`;
-    cats.forEach(c => {
-      selCat.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
-    });
-
-    const allSubs = new Set();
-    Object.values(categoriasCache).forEach(cat => {
-      Object.keys(cat?.subcategories || {}).forEach(s => allSubs.add(s));
-    });
-
-    selSub.innerHTML = `<option value="">Todas Subcategorias</option>`;
-    [...allSubs].forEach(s => {
-      selSub.innerHTML += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
-    });
-  }
-
-  // =======================
-  // Render — Produtos
-  // =======================
-  function renderProdutos() {
-    const container = document.getElementById('tab-produtos');
-    container.innerHTML = '';
-
-    const termos     = (document.getElementById('buscaGlobal').value || '').toLowerCase();
-    const tipo       = document.getElementById('filtroTipo').value;
-    const filtroCat  = document.getElementById('filtroCategoria').value;
-    const filtroSub  = document.getElementById('filtroSubcategoria').value;
-
-    const filtrados = produtosCache.filter(p => {
-      const texto =
-        (p.name || '').toLowerCase() + ' ' +
-        (p.sku  || '').toLowerCase() + ' ' +
-        (p.category || '').toLowerCase() + ' ' +
-        (p.subcategory || p.subCategory || '').toLowerCase();
-
-      return (
-        (termos === '' || texto.includes(termos)) &&
-        (tipo === 'todos' || tipo === 'produto') &&
-        (!filtroCat || p.category === filtroCat) &&
-        (!filtroSub || (p.subcategory || p.subCategory || '') === filtroSub)
-      );
-    });
-
-    if (filtrados.length === 0) {
-      container.innerHTML = `<div class="text-sm text-zinc-500">Nenhum produto encontrado.</div>`;
-      return;
+    
     }
 
-    filtrados.forEach(produto => {
-      const pausedTag = produto.paused
-        ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>`
-        : '';
+    async function carregarProdutos() {
+      const snap = await db.ref(
+    window.getAbellaPath(
+        'products'
+    )
+).once('value');
+      produtosCache = [];
 
-      const id = escapeAttr(produto.id);
+      snap.forEach(item => {
+        produtosCache.push({ id: item.key, ...item.val() });async function salvarSubcategoria(
+    catSlug,
+    subSlug
+){
 
-      container.innerHTML += `
-        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
-          <div class="flex justify-between">
-            <div>
-              <div class="font-bold">
-                ${escapeHtml(produto.name || '')}
-                ${pausedTag}
-              </div>
-              <div class="text-xs text-zinc-500">SKU: ${escapeHtml(produto.sku || '')}</div>
-              <div class="text-xs text-zinc-500">Categoria: ${escapeHtml(produto.category || '')}</div>
-              <div class="text-xs text-zinc-500">Subcategoria: ${escapeHtml(produto.subcategory || produto.subCategory || '')}</div>
-              <div class="text-xs text-zinc-500">Preço: ${escapeHtml(produto.price ?? 0)}</div>
-              <div class="text-xs text-zinc-500">Peso: ${escapeHtml(produto.weight ?? 0)}</div>
-            </div>
-            <div class="flex gap-2 items-start">
-              <button onclick="editarProduto('${id}')"    title="Editar"     class="hover:opacity-90">✏</button>
-              <button onclick="duplicarProduto('${id}')"  title="Duplicar"   class="hover:opacity-90">📄</button>
-              <button onclick="pausarProduto('${id}')"    title="Pausar"     class="hover:opacity-90">⏸</button>
-              <button onclick="deletarProduto('${id}')"   title="Deletar"    class="hover:opacity-90">🗑</button>
-            </div>
-          </div>
-        </div>
-      `;
-    });
-  }
+    await db
+        .ref(
+            window.getAbellaPath(
+                `categories/${catSlug}/subcategories/${subSlug}`
+            )
+        )
+        .update({
 
-  // =======================
-  // Render — Categorias
-  // =======================
-  function renderCategorias() {
-    const el = document.getElementById('tab-categorias');
-    el.innerHTML = '';
+            name:
+                document.getElementById('subName').value,
 
-    const termos    = (document.getElementById('buscaGlobal').value || '').toLowerCase();
-    const tipo      = document.getElementById('filtroTipo').value;
-    const filtroCat = document.getElementById('filtroCategoria').value;
+            description:
+                document.getElementById('subDescription').value,
 
-    const entries = Object.entries(categoriasCache).filter(([slug, cat]) => {
-      const texto = ((cat?.name || slug) + ' ' + slug).toLowerCase();
-      return (
-        (tipo === 'todos' || tipo === 'categoria') &&
-        (!filtroCat || slug === filtroCat) &&
-        (termos === '' || texto.includes(termos))
-      );
-    });
+            heroImage:
+                document.getElementById('subHero').value,
 
-    if (entries.length === 0) {
-      el.innerHTML = `<div class="text-sm text-zinc-500">Nenhuma categoria encontrada.</div>`;
-      return;
-    }
+            gridImage:
+                document.getElementById('subGrid').value,
 
-    entries.forEach(([slug, cat]) => {
-      const safeSlug = escapeAttr(slug);
-      el.innerHTML += `
-        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
-          <div class="flex justify-between">
-            <div>
-              <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
-              <div class="text-xs text-zinc-500">${escapeHtml(slug)}</div>
-              <div class="text-xs text-zinc-500">Subs: ${Object.keys(cat?.subcategories || {}).length}</div>
-            </div>
-            <div class="flex gap-2 items-start">
-              <button onclick="editarCategoria('${safeSlug}')" title="Editar" class="hover:opacity-90">✏</button>
-            </div>
-          </div>
-        </div>
-      `;
-    });
-  }
+            updatedAt:
+                Date.now()
 
-  // =======================
-  // Render — Subcategorias
-  // =======================
-  function renderSubcategorias() {
-    const el = document.getElementById('tab-subcategorias');
-    el.innerHTML = '';
+        });
 
-    const termos   = (document.getElementById('buscaGlobal').value || '').toLowerCase();
-    const tipo     = document.getElementById('filtroTipo').value;
-    const filtroCat = document.getElementById('filtroCategoria').value;
-    const filtroSub = document.getElementById('filtroSubcategoria').value;
+    fecharDrawer();
 
-    const subs = [];
-    Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
-      Object.entries(cat?.subcategories || {}).forEach(([subSlug, subObj]) => {
-        subs.push({ catSlug, subSlug, subObj });
+    await carregarTudo();
+
+    renderCurrentTab();
+}
       });
-    });
-
-    const filtradas = subs.filter(x => {
-      const texto = ((x.subObj?.name || x.subObj?.title || '') + ' ' + x.subSlug + ' ' + x.catSlug).toLowerCase();
-      return (
-        (tipo === 'todos' || tipo === 'subcategoria') &&
-        (!filtroCat || x.catSlug === filtroCat) &&
-        (!filtroSub || x.subSlug === filtroSub) &&
-        (termos === '' || texto.includes(termos))
-      );
-    });
-
-    if (filtradas.length === 0) {
-      el.innerHTML = `<div class="text-sm text-zinc-500">Nenhuma subcategoria encontrada.</div>`;
-      return;
     }
 
-    filtradas.forEach(x => {
-      const safeCat = escapeAttr(x.catSlug);
-      const safeSub = escapeAttr(x.subSlug);
-      el.innerHTML += `
-        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
-          <div class="flex justify-between">
-            <div>
-              <div class="font-bold">${escapeHtml(x.subObj?.name || x.subObj?.title || x.subSlug)}</div>
-              <div class="text-xs text-zinc-500">Categoria: ${escapeHtml(x.catSlug)}</div>
-              <div class="text-xs text-zinc-500">SubSlug: ${escapeHtml(x.subSlug)}</div>
-            </div>
-            <div class="flex gap-2 items-start">
-              <button onclick="editarSubcategoria('${safeCat}', '${safeSub}')" title="Editar" class="hover:opacity-90">✏</button>
+    function atualizarEstatisticas() {
+      document.getElementById('statProdutos').innerText = produtosCache.length;
+      document.getElementById('statCategorias').innerText = Object.keys(categoriasCache).length;
+
+      let totalSubs = 0;
+      Object.values(categoriasCache).forEach(cat => {
+        totalSubs += Object.keys(cat?.subcategories || {}).length;
+      });
+      document.getElementById('statSubs').innerText = totalSubs;
+
+      document.getElementById('statPausados').innerText =
+        produtosCache.filter(p => p.paused).length;
+    }
+
+async function carregarTudo() {
+
+  try {
+
+    const catSnap =
+      await db.ref(
+    window.getAbellaPath(
+        'categories'
+    )
+).once('value');
+
+    categoriasCache =
+      catSnap.val() || {};
+
+    console.log(
+      'CATEGORIAS:',
+      categoriasCache
+    );
+
+    const prodSnap =
+      await db.ref(
+    window.getAbellaPath(
+        'products'
+    )
+)
+    .once('value');
+
+    produtosCache = [];
+
+    prodSnap.forEach(item => {
+
+      produtosCache.push({
+        id: item.key,
+        ...item.val()
+      });
+
+    });
+
+    console.log(
+      'PRODUTOS:',
+      produtosCache
+    );
+
+    popularFiltros();
+
+    atualizarEstatisticas();
+
+    setStatus(
+      '✅ Dados carregados com sucesso.',
+      'ok'
+    );
+
+  } catch (erro) {
+
+    console.error(erro);
+
+    setStatus(
+      '❌ Erro ao carregar Firebase',
+      'error'
+    );
+
+  }
+}
+
+    // =======================
+    // Filtros (UI)
+    // =======================
+    function popularFiltros() {
+      const selCat = document.getElementById('filtroCategoria');
+      const selSub = document.getElementById('filtroSubcategoria');
+
+      const cats = Object.keys(categoriasCache);
+
+      selCat.innerHTML = `<option value="">Todas Categorias</option>`;
+      cats.forEach(c => {
+        selCat.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+      });
+
+      const allSubs = new Set();
+      Object.entries(categoriasCache).forEach(([_, cat]) => {
+        const sc = cat?.subcategories || {};
+        Object.entries(sc).forEach(([subSlug]) => allSubs.add(subSlug));
+      });
+
+      selSub.innerHTML = `<option value="">Todas Subcategorias</option>`;
+      [...allSubs].forEach(s => {
+        selSub.innerHTML += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+      });
+    }
+
+    // =======================
+    // Render - Produtos
+    // =======================
+    function renderProdutos() {
+      const container = document.getElementById('tab-produtos');
+      container.innerHTML = '';
+
+      const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
+      const tipo = document.getElementById('filtroTipo').value;
+      const filtroCat = document.getElementById('filtroCategoria').value;
+      const filtroSub = document.getElementById('filtroSubcategoria').value;
+
+      const produtosFiltrados = produtosCache.filter(p => {
+        const texto =
+          (p.name || '').toLowerCase() + ' ' +
+          (p.sku || '').toLowerCase() + ' ' +
+          (p.category || '').toLowerCase() + ' ' +
+          ((p.subcategory || p.subCategory || '')).toLowerCase();
+
+        const bateTexto = texto.includes(termos) || termos === '';
+        const bateTipo = (tipo === 'todos' || tipo === 'produto');
+        const bateCat = !filtroCat || p.category === filtroCat;
+
+        const subProduto = p.subcategory || p.subCategory || '';
+        const bateSub = !filtroSub || subProduto === filtroSub;
+
+        return bateTexto && bateTipo && bateCat && bateSub;
+      });
+
+      if (produtosFiltrados.length === 0) {
+        container.innerHTML = `<div class="text-sm text-zinc-500">Nenhum produto encontrado.</div>`;
+        return;
+      }
+
+      produtosFiltrados.forEach(produto => {
+        const pausedTag = produto.paused
+          ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>`
+          : '';
+
+        container.innerHTML += `
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+            <div class="flex justify-between">
+              <div>
+                <div class="font-bold">
+                  ${escapeHtml(produto.name || '')}
+                  ${pausedTag}
+                </div>
+                <div class="text-xs text-zinc-500">SKU: ${escapeHtml(produto.sku || '')}</div>
+                <div class="text-xs text-zinc-500">Categoria: ${escapeHtml(produto.category || '')}</div>
+                <div class="text-xs text-zinc-500">Subcategoria: ${escapeHtml(produto.subcategory || produto.subCategory || '')}</div>
+                <div class="text-xs text-zinc-500">Preço: ${escapeHtml(produto.price ?? 0)}</div>
+                <div class="text-xs text-zinc-500">Peso: ${escapeHtml(produto.weight ?? 0)}</div>
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="editarProduto('${produto.id}')" class="hover:opacity-90">✏</button>
+                <button onclick="duplicarProduto('${produto.id}')" class="hover:opacity-90">📄</button>
+                <button onclick="pausarProduto('${produto.id}')" class="hover:opacity-90">⏸</button>
+                <button onclick="deletarProduto('${produto.id}')" class="hover:opacity-90">🗑</button>
+              </div>
             </div>
           </div>
-        </div>
-      `;
-    });
-  }
+        `;
+      });
+    }
 
-  function renderCurrentTab() {
-    const tab = getActiveTab();
-    if (tab === 'produtos')      renderProdutos();
-    if (tab === 'categorias')    renderCategorias();
-    if (tab === 'subcategorias') renderSubcategorias();
-  }
+    // =======================
+    // Render - Categorias
+    // =======================
+    function renderCategorias() {
+      const el = document.getElementById('tab-categorias');
+      el.innerHTML = '';
 
-  // =======================
-  // Drawer — Produtos
-  // =======================
-  function editarProduto(id) {
-    const produto = produtosCache.find(p => p.id === id);
+      const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
+      const tipo = document.getElementById('filtroTipo').value;
+      const filtroCat = document.getElementById('filtroCategoria').value;
+
+      const entries = Object.entries(categoriasCache).filter(([slug, cat]) => {
+        const bateTipo = (tipo === 'todos' || tipo === 'categoria');
+        const bateCat = !filtroCat || slug === filtroCat;
+
+        const texto = ((cat?.name || slug) + ' ' + slug).toLowerCase();
+        const bateTexto = texto.includes(termos) || termos === '';
+
+        return bateTipo && bateCat && bateTexto;
+      });
+
+      if (entries.length === 0) {
+        el.innerHTML = `<div class="text-sm text-zinc-500">Nenhuma categoria encontrada.</div>`;
+        return;
+      }
+
+      entries.forEach(([slug, cat]) => {
+        el.innerHTML += `
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+            <div class="flex justify-between">
+              <div>
+                <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
+                <div class="text-xs text-zinc-500">${escapeHtml(slug)}</div>
+                <div class="text-xs text-zinc-500">
+                  Subs: ${escapeHtml(Object.keys(cat?.subcategories || {}).length)}
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="editarCategoria('${slug}')" class="hover:opacity-90">✏</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // =======================
+    // Render - Subcategorias
+    // =======================
+    function renderSubcategorias() {
+      const el = document.getElementById('tab-subcategorias');
+      el.innerHTML = '';
+
+      const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
+      const tipo = document.getElementById('filtroTipo').value;
+      const filtroCat = document.getElementById('filtroCategoria').value;
+      const filtroSub = document.getElementById('filtroSubcategoria').value;
+
+      const subs = [];
+      Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
+        const sc = cat?.subcategories || {};
+        Object.entries(sc).forEach(([subSlug, subObj]) => {
+          subs.push({ catSlug, subSlug, subObj });
+        });
+      });
+
+      const subsFiltradas = subs.filter(x => {
+        const bateTipo = (tipo === 'todos' || tipo === 'subcategoria');
+        const bateCat = !filtroCat || x.catSlug === filtroCat;
+        const bateSub = !filtroSub || x.subSlug === filtroSub;
+
+        const nomeSub =
+          (x.subObj?.name || x.subObj?.title || '') + ' ' + x.subSlug;
+
+        const texto = (nomeSub + ' ' + x.catSlug).toLowerCase();
+        const bateTexto = texto.includes(termos) || termos === '';
+
+        return bateTipo && bateCat && bateSub && bateTexto;
+      });
+
+      if (subsFiltradas.length === 0) {
+        el.innerHTML = `<div class="text-sm text-zinc-500">Nenhuma subcategoria encontrada.</div>`;
+        return;
+      }
+
+      subsFiltradas.forEach(x => {
+        el.innerHTML += `
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+            <div class="flex justify-between">
+              <div>
+                <div class="font-bold">${escapeHtml(x.subObj?.name || x.subObj?.title || x.subSlug)}</div>
+                <div class="text-xs text-zinc-500">Categoria: ${escapeHtml(x.catSlug)}</div>
+                <div class="text-xs text-zinc-500">SubSlug: ${escapeHtml(x.subSlug)}</div>
+              </div>
+
+              <div class="flex gap-2">
+    <button
+        onclick="editarSubcategoria('${x.catSlug}','${x.subSlug}')"
+        class="hover:opacity-90"
+    >
+        ✏
+    </button>
+</div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderCurrentTab() {
+      const tab = getActiveTab();
+      if (tab === 'produtos') renderProdutos();
+      if (tab === 'categorias') renderCategorias();
+      if (tab === 'subcategorias') renderSubcategorias();
+    }
+
+    // =======================
+    // Drawer - Produtos
+    // =======================
+   function editarProduto(id) {
+
+    const produto =
+        produtosCache.find(p => p.id === id);
+
     if (!produto) return;
 
     let categoriasHtml = '';
+
     Object.keys(categoriasCache).forEach(cat => {
-      categoriasHtml += `
-        <option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>
-          ${escapeHtml(cat)}
-        </option>
-      `;
+
+        categoriasHtml += `
+            <option
+                value="${cat}"
+                ${produto.category === cat ? 'selected' : ''}
+            >
+                ${cat}
+            </option>
+        `;
     });
 
     abrirDrawer('Editar Produto', `
-      <input id="editNome"    class="input-dark" placeholder="Nome"   value="${escapeHtml(produto.name  || '')}">
-      <input id="editSku"     class="input-dark" placeholder="SKU"    value="${escapeHtml(produto.sku   || '')}">
 
-      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">
-        ${categoriasHtml}
-      </select>
+        <input
+            id="editNome"
+            class="input-dark"
+            value="${produto.name || ''}"
+        >
 
-      <select id="editSubcategoria" class="input-dark"></select>
+        <input
+            id="editSku"
+            class="input-dark"
+            value="${produto.sku || ''}"
+        >
 
-      <img
-        id="previewProduto"
-        src="${escapeHtml(produto.image || '')}"
-        class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2"
-        onerror="this.style.display='none'"
-      >
+        <select
+            id="editCategoria"
+            class="input-dark"
+            onchange="carregarSubcategoriasProduto()"
+        >
+            ${categoriasHtml}
+        </select>
 
-      <input
-        id="editImagem"
-        class="input-dark"
-        placeholder="URL da imagem"
-        value="${escapeHtml(produto.image || '')}"
-        oninput="document.getElementById('previewProduto').src=this.value; document.getElementById('previewProduto').style.display='block'"
-      >
+        <select
+            id="editSubcategoria"
+            class="input-dark"
+        >
+        </select>
 
-      <input id="editPreco" class="input-dark" placeholder="Preço"  value="${escapeHtml(produto.price  ?? 0)}">
-      <input id="editPeso"  class="input-dark" placeholder="Peso"   value="${escapeHtml(produto.weight ?? 0)}">
+        <img
+            id="previewProduto"
+            src="${produto.image || ''}"
+            class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2"
+        >
 
-      <button
-        onclick="salvarProduto('${escapeAttr(id)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2"
-      >
-        Salvar
-      </button>
+        <input
+            id="editImagem"
+            class="input-dark"
+            value="${produto.image || ''}"
+            oninput="
+                document.getElementById('previewProduto').src=this.value
+            "
+        >
+
+        <input
+            id="editPreco"
+            class="input-dark"
+            value="${produto.price ?? 0}"
+        >
+
+        <input
+            id="editPeso"
+            class="input-dark"
+            value="${produto.weight ?? 0}"
+        >
+
+        <button
+            onclick="salvarProduto('${id}')"
+            class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2"
+        >
+            Salvar
+        </button>
+
     `);
 
     carregarSubcategoriasProduto(
-      produto.category,
-      produto.subcategory || produto.subCategory
+        produto.category,
+        produto.subcategory || produto.subCategory
     );
-  }
+}
 
-  function carregarSubcategoriasProduto(categoriaSelecionada, subSelecionada = '') {
-    const categoria = categoriaSelecionada || document.getElementById('editCategoria')?.value;
-    const select    = document.getElementById('editSubcategoria');
-    if (!select) return;
+    function carregarSubcategoriasProduto(
+    categoriaSelecionada,
+    subSelecionada = ''
+){
 
-    select.innerHTML = '<option value="">Nenhuma</option>';
-    const subs = categoriasCache[categoria]?.subcategories || {};
+    const categoria =
+        categoriaSelecionada ||
+        document.getElementById('editCategoria').value;
 
-    Object.entries(subs).forEach(([slug, sub]) => {
-      select.innerHTML += `
-        <option value="${escapeHtml(slug)}" ${slug === subSelecionada ? 'selected' : ''}>
-          ${escapeHtml(sub.name || slug)}
-        </option>
-      `;
+    const select =
+        document.getElementById('editSubcategoria');
+
+    if(!select) return;
+
+    select.innerHTML =
+        '<option value="">Nenhuma</option>';
+
+    const subs =
+        categoriasCache[categoria]
+        ?.subcategories || {};
+
+    Object.entries(subs).forEach(([slug,sub])=>{
+
+        select.innerHTML += `
+            <option
+                value="${slug}"
+                ${slug === subSelecionada ? 'selected' : ''}
+            >
+                ${sub.name || slug}
+            </option>
+        `;
     });
-  }
+}
 
-  async function salvarProduto(id) {
-    await db.ref(window.getAbellaPath(`products/${id}`)).update({
-      name:       document.getElementById('editNome').value,
-      sku:        document.getElementById('editSku').value,
-      category:   document.getElementById('editCategoria').value,
-      subcategory:document.getElementById('editSubcategoria').value,
-      price:      parseFloat(document.getElementById('editPreco').value) || 0,
-      weight:     parseFloat(document.getElementById('editPeso').value) || 0,
-      image:      document.getElementById('editImagem').value,
-      updatedAt:  Date.now()
-    });
-    fecharDrawer();
-    await carregarTudo();
-    renderCurrentTab();
-  }
+    async function salvarProduto(id) {
+     await db.ref(
+    window.getAbellaPath(
+        `products/${id}`
+    )
+).update({
 
-  async function duplicarProduto(id) {
-    const produto = produtosCache.find(p => p.id === id);
-    if (!produto) return;
+    name:
+        document.getElementById('editNome').value,
 
-    const copia = { ...produto, sku: (produto.sku || '') + '-COPY', createdAt: Date.now(), updatedAt: Date.now() };
-    delete copia.id;
+    sku:
+        document.getElementById('editSku').value,
 
-    await db.ref(window.getAbellaPath('products')).push(copia);
-    await carregarTudo();
-    renderCurrentTab();
-  }
+    category:
+        document.getElementById('editCategoria').value,
 
-  async function pausarProduto(id) {
-    const produto = produtosCache.find(p => p.id === id);
-    if (!produto) return;
+    subcategory:
+        document.getElementById('editSubcategoria').value,
 
-    await db.ref(window.getAbellaPath(`products/${id}`)).update({
-      paused: !produto.paused,
-      updatedAt: Date.now()
-    });
-    await carregarTudo();
-    renderCurrentTab();
-  }
+    price:
+        parseFloat(document.getElementById('editPreco').value) || 0,
 
-  async function deletarProduto(id) {
-    if (!confirm('Excluir produto permanentemente?')) return;
-    await db.ref(window.getAbellaPath(`products/${id}`)).remove();
-    await carregarTudo();
-    renderCurrentTab();
-  }
+    weight:
+        parseFloat(document.getElementById('editPeso').value) || 0,
 
-  // =======================
-  // Drawer — Categorias
-  // =======================
-  function editarCategoria(slug) {
+    image:
+        document.getElementById('editImagem').value,
+
+    updatedAt:
+        Date.now()
+
+});
+
+      fecharDrawer();
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    async function duplicarProduto(id) {
+      const produto = produtosCache.find(p => p.id === id);
+      if (!produto) return;
+
+      const copia = {
+        ...produto,
+        sku: (produto.sku || '') + '-COPY',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      delete copia.id;
+
+      await db.ref(
+    window.getAbellaPath(
+        'products'
+    )
+).push(copia);
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    async function pausarProduto(id) {
+      const produto = produtosCache.find(p => p.id === id);
+      if (!produto) return;
+
+      await db.ref(
+    window.getAbellaPath(
+        `products/${id}`
+    )
+).update({
+        paused: !produto.paused,
+        updatedAt: Date.now()
+      });
+
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    async function deletarProduto(id) {
+      if (!confirm('Excluir produto?')) return;
+      await db.ref(
+    window.getAbellaPath(
+        `products/${id}`
+    )
+).remove();
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    // =======================
+    // Drawer - Categorias
+    // =======================
+    function editarCategoria(slug) {
+
     const cat = categoriasCache[slug];
     if (!cat) return;
 
     abrirDrawer('Editar Categoria', `
-      <input
-        id="editCatName"
-        class="input-dark"
-        placeholder="Nome"
-        value="${escapeHtml(cat.name || '')}"
-      >
 
-      <textarea id="editCatDescription" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
+        <input
+            id="editCatName"
+            class="input-dark"
+            placeholder="Nome"
+            value="${cat.name || ''}"
+        >
 
-      <input id="editCatHero"  class="input-dark" placeholder="Hero Image"  value="${escapeHtml(cat.heroImage  || '')}">
-      <input id="editCatGrid"  class="input-dark" placeholder="Grid Image"  value="${escapeHtml(cat.gridImage  || '')}">
+        <textarea
+            id="editCatDescription"
+            class="input-dark"
+            placeholder="Descrição"
+        >${cat.description || ''}</textarea>
 
-      <input
-        id="editCatOrder"
-        type="number"
-        class="input-dark"
-        placeholder="Ordem"
-        value="${escapeHtml(cat.order || 0)}"
-      >
+        <input
+            id="editCatHero"
+            class="input-dark"
+            placeholder="Hero Image"
+            value="${cat.heroImage || ''}"
+        >
 
-      <label class="flex gap-2 items-center text-sm mb-2">
-        <input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}>
-        Categoria Destaque Home
-      </label>
+        <input
+            id="editCatGrid"
+            class="input-dark"
+            placeholder="Grid Image"
+            value="${cat.gridImage || ''}"
+        >
 
-      <label class="flex gap-2 items-center text-sm mb-4">
-        <input id="editCatActive" type="checkbox" ${cat.active !== false ? 'checked' : ''}>
-        Ativa
-      </label>
+        <input
+            id="editCatOrder"
+            type="number"
+            class="input-dark"
+            placeholder="Ordem"
+            value="${cat.order || 0}"
+        >
 
-      <button
-        onclick="salvarCategoria('${escapeAttr(slug)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold"
-      >
-        Salvar
-      </button>
+        <label class="flex gap-2 items-center text-sm">
+            <input
+                id="editCatFeatured"
+                type="checkbox"
+                ${cat.featured ? 'checked' : ''}
+            >
+            Categoria Destaque Home
+        </label>
+
+        <label class="flex gap-2 items-center text-sm">
+            <input
+                id="editCatActive"
+                type="checkbox"
+                ${cat.active !== false ? 'checked' : ''}
+            >
+            Ativa
+        </label>
+
+        <button
+            onclick="salvarCategoria('${slug}')"
+            class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold"
+        >
+            Salvar
+        </button>
     `);
-  }
+}
 
-  // FIX #2 — Função salvarCategoria implementada (estava ausente)
-  async function salvarCategoria(slug) {
-    await db.ref(window.getAbellaPath(`categories/${slug}`)).update({
-      name:        document.getElementById('editCatName').value,
-      description: document.getElementById('editCatDescription').value,
-      heroImage:   document.getElementById('editCatHero').value,
-      gridImage:   document.getElementById('editCatGrid').value,
-      order:       parseInt(document.getElementById('editCatOrder').value) || 0,
-      featured:    document.getElementById('editCatFeatured').checked,
-      active:      document.getElementById('editCatActive').checked,
-      updatedAt:   Date.now()
-    });
-    fecharDrawer();
-    await carregarTudo();
-    renderCurrentTab();
-  }
+   function editarSubcategoria(catSlug, subSlug){
 
-  // =======================
-  // Drawer — Subcategorias
-  // =======================
-  function editarSubcategoria(catSlug, subSlug) {
-    const sub = categoriasCache[catSlug]?.subcategories?.[subSlug];
-    if (!sub) return;
+    const sub =
+        categoriasCache[catSlug]
+        ?.subcategories?.[subSlug];
 
-    abrirDrawer('Editar Subcategoria', `
-      <input      id="subName"        class="input-dark" placeholder="Nome"       value="${escapeHtml(sub.name        || '')}">
-      <textarea   id="subDescription" class="input-dark" placeholder="Descrição">${escapeHtml(sub.description || '')}</textarea>
-      <input      id="subHero"        class="input-dark" placeholder="Hero Image" value="${escapeHtml(sub.heroImage   || '')}">
-      <input      id="subGrid"        class="input-dark" placeholder="Grid Image" value="${escapeHtml(sub.gridImage   || '')}">
+    if(!sub) return;
 
-      <button
-        onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-2 font-bold"
-      >
-        Salvar
-      </button>
+    abrirDrawer("Editar Subcategoria",`
+
+        <input
+            id="subName"
+            class="input-dark"
+            value="${sub.name || ''}"
+        >
+
+        <textarea
+            id="subDescription"
+            class="input-dark"
+        >${sub.description || ''}</textarea>
+
+        <input
+            id="subHero"
+            class="input-dark"
+            value="${sub.heroImage || ''}"
+        >
+
+        <input
+            id="subGrid"
+            class="input-dark"
+            value="${sub.gridImage || ''}"
+        >
+
+        <button
+            onclick="salvarSubcategoria(
+                '${catSlug}',
+                '${subSlug}'
+            )"
+            class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full"
+        >
+            Salvar
+        </button>
     `);
-  }
+}
 
-  // FIX #1 e #4 — Declaração única e no lugar correto (removida a versão órfã dentro do forEach)
-  async function salvarSubcategoria(catSlug, subSlug) {
-    await db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
-      name:        document.getElementById('subName').value,
-      description: document.getElementById('subDescription').value,
-      heroImage:   document.getElementById('subHero').value,
-      gridImage:   document.getElementById('subGrid').value,
-      updatedAt:   Date.now()
-    });
-    fecharDrawer();
-    await carregarTudo();
-    renderCurrentTab();
-  }
+async function salvarSubcategoria(
+    catSlug,
+    subSlug
+){
 
-  // =======================
-  // Wiring UI
-  // =======================
-  function wireSearch() {
-    const ids = ['buscaGlobal', 'filtroTipo', 'filtroCategoria', 'filtroSubcategoria'];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
+    await db
+        .ref(
+            window.getAbellaPath(
+                `categories/${catSlug}/subcategories/${subSlug}`
+            )
+        )
+        .update({
 
-      // FIX — Debounce na busca de texto para não re-renderizar a cada tecla
-      if (id === 'buscaGlobal') {
-        el.addEventListener('input', () => {
-          clearTimeout(buscaDebounceTimer);
-          buscaDebounceTimer = setTimeout(() => renderCurrentTab(), 250);
+            name:
+                document.getElementById('subName').value,
+
+            description:
+                document.getElementById('subDescription').value,
+
+            heroImage:
+                document.getElementById('subHero').value,
+
+            gridImage:
+                document.getElementById('subGrid').value,
+
+            updatedAt:
+                Date.now()
+
         });
-      } else {
+
+    fecharDrawer();
+
+    await carregarTudo();
+
+    renderCurrentTab();
+}
+    // =======================
+    // Wiring UI
+    // =======================
+    function wireSearch() {
+      const ids = ['buscaGlobal', 'filtroTipo', 'filtroCategoria', 'filtroSubcategoria'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => renderCurrentTab());
         el.addEventListener('change', () => renderCurrentTab());
-      }
-    });
-  }
+      });
+    }
 
-  function wireTabs() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+    function wireTabs() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
 
-        ['produtos', 'categorias', 'subcategorias'].forEach(tab => {
-          document.getElementById('tab-' + tab).classList.add('hidden');
+          document.getElementById('tab-produtos').classList.add('hidden');
+          document.getElementById('tab-categorias').classList.add('hidden');
+          document.getElementById('tab-subcategorias').classList.add('hidden');
+
+          document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+          renderCurrentTab();
         });
+      });
+    }
 
-        document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+    // =======================
+    // Boot
+    // =======================
+    (async function init() {
+      wireTabs();
+      wireSearch();
+
+      document.getElementById('btnRefresh').addEventListener('click', async () => {
+        setStatus('Carregando...', 'info');
+        await carregarTudo();
         renderCurrentTab();
       });
-    });
-  }
 
-  // =======================
-  // Boot — FIX #3: resolve o DB de forma segura antes de tudo
-  // =======================
-  (async function init() {
-    // Tenta resolver o DB; aguarda até 3s se necessário
-    let tentativas = 0;
-    while (!db && tentativas < 30) {
-      db = resolverDB();
-      if (!db) {
-        await new Promise(r => setTimeout(r, 100));
-        tentativas++;
-      }
-    }
-
-    if (!db) {
-      setStatus('❌ Firebase não carregado. Verifique firebase-app-compat.js, firebase-database-compat.js e firebase-config.js', 'error');
-      console.error('[EDITOR] Firebase Database não encontrada após 3s.');
-      return;
-    }
-
-    console.info('[EDITOR] Firebase conectado. DB ROOT:', window.ABELLA_DB_ROOT);
-
-    wireTabs();
-    wireSearch();
-
-    document.getElementById('btnRefresh').addEventListener('click', async () => {
-      setStatus('Carregando...', 'info');
+      setStatus('Carregando dados do Firebase...', 'info');
       await carregarTudo();
       renderCurrentTab();
-    });
-
-    setStatus('Carregando dados do Firebase...', 'info');
-    await carregarTudo();
-    renderCurrentTab();
-    setStatus('✅ Editor pronto.', 'ok');
-  })();
+      setStatus('✅ Editor pronto.', 'ok');
+    })();
 
   // =======================
-  // Expor handlers globais para onclick inline no HTML gerado
-  // =======================
-  window.editarProduto               = editarProduto;
-  window.salvarProduto               = salvarProduto;
-  window.duplicarProduto             = duplicarProduto;
-  window.pausarProduto               = pausarProduto;
-  window.deletarProduto              = deletarProduto;
-  window.editarCategoria             = editarCategoria;
-  window.salvarCategoria             = salvarCategoria;
-  window.editarSubcategoria          = editarSubcategoria;
-  window.salvarSubcategoria          = salvarSubcategoria;
-  window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
-  window.fecharDrawer                = fecharDrawer;
+// Expor handlers globais pro HTML onclick
+// =======================
+window.editarProduto = editarProduto;
+window.salvarProduto = salvarProduto;
+window.duplicarProduto = duplicarProduto;
+window.pausarProduto = pausarProduto;
+window.deletarProduto = deletarProduto;
+
+window.editarCategoria = editarCategoria;
+
+// COMENTE ESTA LINHA SE A FUNÇÃO NÃO EXISTIR
+// window.salvarCategoria = salvarCategoria;
+
+window.editarSubcategoria = editarSubcategoria;
+window.salvarSubcategoria = salvarSubcategoria;
+
+window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
+
+window.fecharDrawer = fecharDrawer;
   </script>
 </body>
 </html>

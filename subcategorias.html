@@ -4,224 +4,536 @@
     <meta charset="UTF-8">
     <title>Subcategorias • Abella Joias</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv=\"Cache-Control\" content=\"no-cache, no-store, must-revalidate\">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
-        :root {
-            --gold: #caa85c;
-            --bg: #050505;
-            --card: #101010;
-            --line: #1f1f1f;
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
         }
-        body {
-            background: radial-gradient(circle at top, #171717 0%, #050505 100%);
-            color: #fff;
-            font-family: 'Inter', sans-serif;
+        :root{
+            --gold:#caa85c;
+            --bg:#050505;
+            --card:#101010;
+            --line:#1f1f1f;
         }
-        .font-cinzel { font-family: 'Cinzel', serif; }
-        .sub-card {
-            background: rgba(16, 16, 16, 0.7);
-            border: 1px solid var(--line);
-            backdrop-filter: blur(12px);
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        html{
+            scroll-behavior:smooth;
+            overflow-x:hidden;
         }
-        .sub-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--gold);
-            box-shadow: 0 12px 30px rgba(202, 168, 92, 0.1);
+        body{
+            background: radial-gradient(circle at top,#171717 0%,#050505 45%);
+            color:white;
+            font-family:'Inter',sans-serif;
+            min-height:100vh;
+            overflow-x:hidden;
+            width:100%;
         }
-        .back-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            border: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.03);
-            color: #a1a1aa;
-            padding: 0.6rem 1.2rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            font-weight: 600;
-            transition: all 0.3s;
+        img{
+            max-width:100%;
+            display:block;
         }
-        .back-button:hover {
-            border-color: var(--gold);
-            color: #fff;
-            background: rgba(202, 168, 92, 0.05);
+        /* =========================================================
+           BOTÃO VOLTAR PREMIUM ABELLA
+        ========================================================= */
+        .back-button{
+            display:flex;
+            align-items:center;
+            gap:10px;
+            height:48px;
+            padding:0 18px;
+            border-radius:16px;
+            background: linear-gradient(135deg, rgba(202,168,92,.18), rgba(202,168,92,.08));
+            border:1px solid rgba(202,168,92,.35);
+            color:#f5e7c2;
+            font-size:11px;
+            font-weight:900;
+            letter-spacing:.14em;
+            text-transform:uppercase;
+            cursor:pointer;
+            transition:.25s ease;
+            backdrop-filter:blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,.35);
+            flex-shrink:0;
         }
-        .fallback-sub {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #121212;
-            font-size: 2.2rem;
-            z-index: 1;
+        .back-button:hover{
+            transform:translateY(-2px);
+            border-color:#caa85c;
+        }
+        .back-button:active{
+            transform:scale(.98);
+        }
+        .back-button-icon{
+            width:28px;
+            height:28px;
+            border-radius:10px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:rgba(255,255,255,.08);
+            font-size:14px;
+            flex-shrink:0;
+        }
+        @media(max-width:768px){
+            .back-button{
+                width:48px;
+                padding:0;
+                justify-content:center;
+            }
+            .back-button span:last-child{
+                display:none;
+            }
+        }
+        .serif{
+            font-family:'Cinzel',serif;
+        }
+        .gold{
+            color:var(--gold);
+        }
+        .glass{
+            background:rgba(18,18,18,.92);
+            backdrop-filter:blur(18px);
+            border:1px solid rgba(255,255,255,.06);
+        }
+        .hover-lift{
+            transition:.28s ease;
+        }
+        .hover-lift:hover{
+            transform:translateY(-5px);
+            border-color:rgba(202,168,92,.4);
+        }
+        .hero-glow{
+            position:absolute;
+            width:500px;
+            height:500px;
+            background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+            opacity:.05;
+            filter:blur(80px);
+            pointer-events:none;
+        }
+        .scrollbar::-webkit-scrollbar{
+            width:6px;
+        }
+        .scrollbar::-webkit-scrollbar-thumb{
+            background:#333;
+            border-radius:20px;
+        }
+        .fade-in{
+            animation:fade .4s ease forwards;
+        }
+        @keyframes fade{
+            from{
+                opacity:0;
+                transform:translateY(12px);
+            }
+            to{
+                opacity:1;
+                transform:translateY(0);
+            }
+        }
+        /* =========================================================
+           MOBILE EXPERIENCE
+        ========================================================= */
+        @media(max-width:768px){
+            .hero-glow{
+                display:none;
+            }
+            #categoriaNome{
+                font-size:2.4rem !important;
+                line-height:1.05 !important;
+            }
+            #categoriaDescricao{
+                font-size:14px !important;
+                line-height:1.7 !important;
+                margin-top:22px !important;
+            }
+            .subcategoria-grid{
+                grid-template-columns:1fr !important;
+                gap:16px !important;
+            }
+            .subcategoria-card{
+                border-radius:24px !important;
+            }
+            .subcategoria-card .image-area{
+                aspect-ratio:1/1;
+            }
+            .subcategoria-card .content-area{
+                padding:18px !important;
+            }
+            .subcategoria-card h3{
+                font-size:20px !important;
+                line-height:1.2 !important;
+            }
+            .subcategoria-card p{
+                font-size:13px !important;
+                margin-top:10px !important;
+            }
+            .subcategoria-card .arrow-btn{
+                width:48px !important;
+                height:48px !important;
+                border-radius:16px !important;
+                font-size:18px !important;
+            }
+            header .max-w-7xl{
+                height:auto !important;
+                min-height:76px;
+                padding-top:14px;
+                padding-bottom:14px;
+            }
+            .header-actions{
+     
+                
+                
+                gap:10px !important;
+            }
+            .cart-btn{
+                padding:0 14px !important;
+                font-size:10px !important;
+                height:48px !important;
+                border-radius:16px !important;
+            }
+            .hero-section{
+                padding-top:50px !important;
+                padding-bottom:50px !important;
+            }
+            #loading .glass{
+                padding:40px 20px !important;
+                border-radius:24px !important;
+            }
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body>
 
-    <header class="w-full border-b border-zinc-900/60 bg-black/40 backdrop-blur-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <button onclick="window.location.href='index.html'" class="back-button">
-                <span>← Voltar</span>
-            </button>
-            <h1 id="header-logo-text" class="font-cinzel text-lg tracking-[0.2em] font-bold text-[#caa85c] cursor-pointer" onclick="window.location.href='index.html'">
-                ABELLA JOIAS
-            </h1>
-            <div class="w-20"></div>
+    <div class="hero-glow top-[-200px] left-[-200px]"></div>
+    <div class="hero-glow bottom-[-200px] right-[-200px]"></div>
+
+    <header class="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-2xl">
+        <div class="max-w-7xl mx-auto px-4 md:px-8 min-h-[80px] flex items-center justify-between gap-4">
+            
+            <a href="index.html" class="flex items-center gap-3 min-w-0">
+                <div id="abellaLogoContainer" class="w-11 h-11 rounded-2xl overflow-hidden bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center border border-[#caa85c]/20 shrink-0">
+                    <span id="abellaLogoFallback" class="text-black font-black text-lg serif">A</span>
+                    <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
+                </div>
+                <div class="min-w-0">
+                    <h1 class="serif gold text-sm md:text-2xl uppercase tracking-[0.16em] truncate">
+                        Abella Joias
+                    </h1>
+                    <p class="text-[9px] md:text-[10px] uppercase tracking-[0.28em] text-zinc-500 mt-1">
+                        Catálogo Premium
+                    </p>
+                </div>
+            </a>
+
+            <div class="flex items-center gap-3 header-actions shrink-0">
+                <button onclick="window.history.back()" class="back-button">
+                    <span class="back-button-icon">←</span>
+                    <span>Voltar</span>
+                </button>
+
+                <a href="carrinho.html" class="cart-btn relative h-12 px-5 rounded-2xl bg-[#caa85c] text-black flex items-center justify-center text-[10px] md:text-xs font-black uppercase tracking-[0.16em] whitespace-nowrap">
+                    🛒
+                    <span class="hidden sm:inline ml-2">Carrinho</span>
+                    <span id="cartCount" class="ml-2 bg-black text-white rounded-full min-w-[22px] h-5 px-1.5 flex items-center justify-center text-[10px]">0</span>
+                </a>
+            </div>
         </div>
     </header>
 
-    <div id="banner-container" class="w-full h-[220px] md:h-[280px] bg-zinc-950 relative overflow-hidden hidden border-b border-zinc-900">
-        <img id="banner-img" src="" alt="Banner Categoria" class="w-full h-full object-cover opacity-30">
-        <div class="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/50"></div>
+    <section class="relative overflow-hidden">
+    
+    <img
+        id="heroImagem"
+        src=""
+        class="absolute inset-0 w-full h-full object-cover"
+        alt="Banner"
+    >
+
+    <div class="absolute inset-0 bg-black/70"></div>
+
+    <div class="hero-section relative max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-24">
+        <div class="max-w-4xl">
+            <p class="gold uppercase tracking-[0.35em] text-[10px] md:text-xs font-black">
+                Categoria Premium
+            </p>
+
+            <h2
+                id="categoriaNome"
+                class="serif text-4xl md:text-7xl font-black leading-none mt-5 break-words"
+            >
+                Carregando...
+            </h2>
+
+            <p
+                id="categoriaDescricao"
+                class="text-zinc-400 text-base md:text-lg leading-relaxed mt-8 max-w-2xl"
+            >
+                Explore as linhas exclusivas da coleção premium Abella Joias.
+            </p>
+        </div>
     </div>
 
-    <main class="max-w-7xl mx-auto px-4 py-10 flex-1 w-full">
-        <div class="mb-8">
-            <h2 id="categoria-titulo" class="font-cinzel text-xl md:text-3xl font-bold tracking-wider text-zinc-100 uppercase">...</h2>
-            <p id="categoria-desc" class="text-xs md:text-sm text-zinc-500 mt-2 max-w-2xl font-light leading-relaxed"></p>
+</section>
+
+    <div id="loading" class="max-w-7xl mx-auto px-4 md:px-8 pb-10 md:pb-12">
+        <div class="glass rounded-[2rem] p-10 md:p-16 text-center">
+            <div class="w-14 h-14 md:w-16 md:h-16 border-4 border-zinc-800 border-t-[#caa85c] rounded-full animate-spin mx-auto"></div>
+            <p class="text-zinc-500 uppercase tracking-[0.25em] text-[10px] md:text-xs font-black mt-8">
+                Carregando Subcategorias
+            </p>
         </div>
+    </div>
 
-        <div id="loading" class="text-center py-16">
-            <div class="inline-block w-6 h-6 border-2 border-zinc-800 border-t-[#caa85c] rounded-full animate-spin"></div>
-        </div>
+    <main id="gridSubcategorias" class="max-w-7xl mx-auto px-4 md:px-8 pb-16 md:pb-20 hidden"></main>
 
-        <div id="grid-subcategorias" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"></div>
-    </main>
+    <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/services/carrinhoService.js"></script>
+    <script src="js/utils/image-helper.js"></script>
+    <script src="js/utils/imagens.js"></script>
+    
 
-    <script src="../js/firebase/firebase-config.js"></script>
     <script>
+        const db = window.db;
         let categoriaSlug = '';
+        let categoriaAtual = null;
+        let bannerSubcategoria = '';
 
-        function converterGsUrl(url) {
-            let stringUrl = String(url ?? '').trim();
-            if (!stringUrl) return '';
+async function carregarBannerSubcategoria() {
 
-            if (stringUrl.includes('drive.google.com')) {
-                try {
-                    let idArquivo = '';
-                    if (stringUrl.includes('/d/')) {
-                        idArquivo = stringUrl.split('/d/')[1].split('/')[0];
-                    } else if (stringUrl.includes('id=')) {
-                        idArquivo = stringUrl.split('id=')[1].split('&')[0];
-                    }
-                    if (idArquivo) return `https://drive.google.com/uc?export=view&id=${idArquivo}`;
-                } catch (err) { console.error(err); }
+    try {
+
+        const snap = await db
+            .ref('abella/home')
+            .once('value');
+
+        const home = snap.val() || {};
+
+        bannerSubcategoria =
+            home.banner_subcategoria || '';
+
+    } catch (error) {
+
+        console.error(
+            'Erro carregar banner subcategoria:',
+            error
+        );
+    }
+}
+
+        function atualizarCarrinho(){
+            try{
+                if(window.carrinhoService && typeof carrinhoService.obterResumo === 'function'){
+                    const resumo = carrinhoService.obterResumo();
+                    document.getElementById('cartCount').innerText = resumo.totalPecas || 0;
+                    return;
+                }
+                const cart = JSON.parse(localStorage.getItem('abella_carrinho') || '[]');
+                const total = cart.reduce((acc, item) => acc + (parseInt(item.quantidade) || 0), 0);
+                document.getElementById('cartCount').innerText = total;
+            }catch(error){
+                console.error('Erro atualizarCarrinho:', error);
+                document.getElementById('cartCount').innerText = '0';
             }
-
-            if (stringUrl.startsWith('gs://')) {
-                try {
-                    const semProtocolo = stringUrl.replace('gs://', '');
-                    const primeiraBarra = semProtocolo.indexOf('/');
-                    if (primeiraBarra === -1) return stringUrl;
-                    const bucket = semProtocolo.substring(0, primeiraBarra);
-                    const caminhoArquivo = semProtocolo.substring(primeiraBarra + 1);
-                    return `https://firebasestorage.googleapis.com/v1/b/${bucket}/o/${encodeURIComponent(caminhoArquivo)}?alt=media`;
-                } catch (e) { console.error(e); }
-            }
-            return stringUrl;
         }
 
-        function handleImageError(img) {
-            img.style.display = 'none';
-            const fallback = img.parentNode.querySelector('.fallback-sub');
-            if (fallback) fallback.style.setProperty('display', 'flex', 'important');
+        async function carregarLogoAbella(){
+            try{
+                if(typeof window.getAbellaPath !== 'function') return;
+                const snap = await db.ref(window.getAbellaPath('settings')).once('value');
+                if(!snap.exists()) return;
+                
+                const config = snap.val() || {};
+                let logo = config.logo || config.logoUrl || '';
+                if(!logo) return;
+
+                const img = document.getElementById('abellaLogoImg');
+                const fallback = document.getElementById('abellaLogoFallback');
+                if(!img) return;
+
+                img.src = resolverImagemFirebase(logo);
+                img.onload = () => {
+                    img.classList.remove('hidden');
+                    fallback?.classList.add('hidden');
+                };
+                img.onerror = () => {
+                    img.classList.add('hidden');
+                    fallback?.classList.remove('hidden');
+                };
+            }catch(error){
+                console.error('Erro logo:', error);
+            }
         }
 
-        async function sincronizarRealtime() {
-            const grid = document.getElementById('grid-subcategorias');
-            const titulo = document.getElementById('categoria-titulo');
-            const desc = document.getElementById('categoria-desc');
+       async function carregarCategoria(){
+            try{
+                if(typeof window.getAbellaPath !== 'function') return;
+                
+                // 1. Busca todas as categorias para garantir a varredura pelo campo 'slug' correto
+                const allSnap = await db.ref(window.getAbellaPath('categories')).once('value');
+                const all = allSnap.val() || {};
+                
+                // 2. Procura de forma inteligente comparando com o campo slug interno
+                const found = Object.entries(all).find(([key, value]) => {
+                    const itemSlug = value.slug || value.id || key;
+                    return String(itemSlug).toLowerCase() === String(categoriaSlug).toLowerCase();
+                });
+
+                if(found){
+                    categoriaAtual = found[1];
+                }
+
+                if(!categoriaAtual){
+                    mostrarErro('Categoria não encontrada.');
+                    return;
+                }
+
+                preencherHero();
+
+                // 3. Lê as subcategorias tratando tanto a escrita em inglês quanto em português
+                const subcategorias = categoriaAtual.subcategories || categoriaAtual.subcategorias || {};
+                const listaSubcategorias = Object.entries(subcategorias);
+
+                if(listaSubcategorias.length === 0){
+                    window.location.href = `produtos.html?categoria=${encodeURIComponent(categoriaSlug)}`;
+                    return;
+                }
+
+                renderizarSubcategorias(listaSubcategorias);
+            }catch(error){
+                console.error('Erro carregarCategoria:', error);
+                mostrarErro('Erro ao carregar categoria.');
+            }
+        }
+function preencherHero(){
+
+    const nome =
+        categoriaAtual.name ||
+        categoriaAtual.nome ||
+        categoriaSlug;
+
+    document.getElementById('categoriaNome').innerText = nome;
+
+    document.title =
+        `${nome} • Subcategorias • Abella Joias`;
+
+    document.getElementById('categoriaDescricao').innerText =
+        categoriaAtual.description ||
+        categoriaAtual.descricao ||
+        'Explore as linhas exclusivas da coleção premium Abella Joias.';
+
+    const hero = document.getElementById('heroImagem');
+
+hero.src = resolverImagemFirebase(
+    bannerSubcategoria ||
+    categoriaAtual.image ||
+    categoriaAtual.imagem ||
+    ''
+);
+}
+        function renderizarSubcategorias(lista){
+            const grid = document.getElementById('gridSubcategorias');
             const loading = document.getElementById('loading');
 
-            const db = window.firebase.database();
-            const path = window.getAbellaPath ? window.getAbellaPath(`categories/${categoriaSlug}`) : `categories/${categoriaSlug}`;
+            loading.classList.add('hidden');
+            grid.classList.remove('hidden');
 
-            // .on('value') garante a atualização imediata em tempo real sem precisar atualizar a página
-            db.ref(path).on('value', (snapshot) => {
-                if(loading) loading.classList.add('hidden');
-                grid.innerHTML = '';
-
-                const catData = snapshot.val();
-                if (!catData) {
-                    titulo.innerText = "CATEGORIA NÃO ENCONTRADA";
-                    return;
-                }
-
-                titulo.innerText = (catData.name || categoriaSlug).toUpperCase();
-                desc.innerText = catData.description || "Explore nossa coleção completa de produtos premium.";
-
-                // Banner Hero
-                const bannerUrl = converterGsUrl(catData.heroImage || catData.hero || '');
-                if (bannerUrl) {
-                    const bContainer = document.getElementById('banner-container');
-                    const bImg = document.getElementById('banner-img');
-                    bImg.src = bannerUrl;
-                    bContainer.classList.remove('hidden');
-                }
-
-                const subs = catData.subcategories || {};
-                const subsArray = Object.entries(subs).map(([slug, content]) => ({ slug, ...content }));
-
-                if (subsArray.length === 0) {
-                    grid.innerHTML = `<p class="col-span-full text-center text-xs text-zinc-500 py-10">NENHUMA SUBCATEGORIA CADASTRADA.</p>`;
-                    return;
-                }
-
-                subsArray.forEach(sub => {
-                    const imgUrl = converterGsUrl(sub.gridImage || sub.grid || sub.heroImage || sub.hero || '');
-                    
-                    const card = document.createElement('div');
-                    card.className = 'sub-card rounded-2xl overflow-hidden cursor-pointer flex flex-col group';
-                    card.onclick = () => abrirProdutos(sub.slug);
-
-                    card.innerHTML = `
-                        <div class="w-full aspect-square relative bg-zinc-950 overflow-hidden flex items-center justify-center">
-                            <div class="fallback-sub absolute inset-0 flex items-center justify-center">📁</div>
-                            <img 
-                                src="${imgUrl}" 
-                                alt="${sub.name || sub.title || sub.slug}" 
-                                class="w-full h-full object-cover relative z-10 group-hover:scale-105 transition-transform duration-700"
-                                onerror="handleImageError(this)"
-                            >
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 z-20"></div>
-                        </div>
-                        <div class="p-4 flex-1 flex flex-col justify-between bg-zinc-900/40 border-t border-zinc-900">
-                            <h4 class="font-cinzel text-xs md:text-sm font-bold tracking-wide text-zinc-200 group-hover:text-[#caa85c] transition-colors line-clamp-1">
-                                ${(sub.name || sub.title || sub.slug).toUpperCase()}
-                            </h4>
-                            <span class="text-[9px] uppercase font-mono tracking-widest text-zinc-500 mt-2 block">Ver Coleção →</span>
-                        </div>
-                    `;
-                    grid.appendChild(card);
-                });
-            });
-        }
-
-        function abrirProdutos(subcategoria){
-            const cat = encodeURIComponent(categoriaSlug);
-            const sub = encodeURIComponent(subcategoria);
-            window.location.href = `produtos.html?categoria=${cat}&subcategoria=${sub}`;
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            categoriaSlug = (params.get('categoria') || params.get('id') || '').toString().trim();
-
-            if (!categoriaSlug) {
-                window.location.href = 'index.html';
+            if(!lista.length){
+                grid.innerHTML = `
+                    <div class="glass rounded-[2rem] p-12 text-center">
+                        <div class="text-6xl mb-6">💎</div>
+                        <h2 class="text-2xl md:text-3xl font-black">Nenhuma subcategoria encontrada</h2>
+                    </div>
+                `;
                 return;
             }
-            sincronizarRealtime();
+
+grid.innerHTML = `
+                <div class="subcategoria-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6 w-full fade-in">
+                    ${lista
+                        .filter(([_, sub]) => sub && sub.paused !== true) // Filtra os ativos primeiro
+                        .map(([slug, sub]) => {
+                            let image = resolverImagemFirebase(
+                                sub.image || sub.imagem || sub.cover || sub.banner || categoriaAtual.image || categoriaAtual.imagem
+                            );
+
+                            return `
+                                <div onclick="abrirProdutos('${slug}')" class="subcategoria-card glass rounded-[2rem] overflow-hidden cursor-pointer hover-lift group border border-white/5">
+                                    <div class="image-area aspect-square overflow-hidden relative bg-black">
+                                        <img src="${image}" alt="${sub.name || slug}" class="w-full h-full object-cover group-hover:scale-105 transition-all duration-700" loading="lazy" onerror="this.src='https://via.placeholder.com/1200x1200/111111/caa85c?text=ABELLA'">
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent"></div>
+                                        <div class="absolute top-4 left-4">
+                                            <div class="bg-black/70 border border-white/10 backdrop-blur-xl rounded-full px-3 py-1.5 text-[9px] uppercase tracking-[0.22em] font-black">Subcategoria</div>
+                                        </div>
+                                    </div>
+                                    <div class="content-area p-5 md:p-6 flex items-center justify-between gap-4">
+                                        <div class="min-w-0 flex-1">
+                                            <h3 class="text-xl md:text-2xl font-black leading-tight break-words">${sub.name || sub.nome || slug}</h3>
+                                            <p class="text-zinc-500 text-xs md:text-sm mt-3 leading-relaxed">Clique para explorar os produtos premium desta coleção.</p>
+                                        </div>
+                                        <div class="arrow-btn w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-[#caa85c] text-black flex items-center justify-center font-black text-lg md:text-xl shrink-0">→</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                </div>
+            `;
+        }
+
+        function mostrarErro(texto){
+            const loading = document.getElementById('loading');
+            loading.innerHTML = `
+                <div class="glass rounded-[2rem] p-10 md:p-16 text-center border border-red-500/20">
+                    <div class="text-6xl mb-6">⚠</div>
+                    <h2 class="text-2xl md:text-3xl font-black">${texto}</h2>
+                    <div class="mt-8 flex justify-center">
+                        <button onclick="window.history.back()" class="back-button">
+                            <span class="back-button-icon">←</span>
+                            <span>Voltar</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+       function abrirProdutos(subcategoria){
+    const categoria = encodeURIComponent(categoriaSlug);
+    const sub = encodeURIComponent(subcategoria);
+
+    window.location.href =
+        `produtos.html?categoria=${categoria}&subcategoria=${sub}`;
+}
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try{
+                atualizarCarrinho();
+                const params = new URLSearchParams(window.location.search);
+                categoriaSlug = (params.get('categoria') || params.get('id') || '').toString().trim();
+
+                if(!categoriaSlug){
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+await carregarLogoAbella();
+
+await carregarBannerSubcategoria();
+
+await carregarCategoria();
+            }catch(error){
+                console.error('Erro INIT:', error);
+                mostrarErro('Erro ao iniciar página.');
+            }
         });
+
+        window.abrirProdutos = abrirProdutos;
     </script>
 </body>
 </html>

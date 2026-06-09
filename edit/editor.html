@@ -246,12 +246,60 @@
         produtosCache.filter(p => p.paused).length;
     }
 
-    async function carregarTudo() {
-      await carregarCategorias();
-      await carregarProdutos();
-      atualizarEstatisticas();
-      setStatus('✅ Dados carregados com sucesso.', 'ok');
-    }
+async function carregarTudo() {
+
+  try {
+
+    const catSnap =
+      await db.ref('abella/categories').once('value');
+
+    categoriasCache =
+      catSnap.val() || {};
+
+    console.log(
+      'CATEGORIAS:',
+      categoriasCache
+    );
+
+    const prodSnap =
+      await db.ref('abella/products').once('value');
+
+    produtosCache = [];
+
+    prodSnap.forEach(item => {
+
+      produtosCache.push({
+        id: item.key,
+        ...item.val()
+      });
+
+    });
+
+    console.log(
+      'PRODUTOS:',
+      produtosCache
+    );
+
+    popularFiltros();
+
+    atualizarEstatisticas();
+
+    setStatus(
+      '✅ Dados carregados com sucesso.',
+      'ok'
+    );
+
+  } catch (erro) {
+
+    console.error(erro);
+
+    setStatus(
+      '❌ Erro ao carregar Firebase',
+      'error'
+    );
+
+  }
+}
 
     // =======================
     // Filtros (UI)
@@ -858,18 +906,26 @@
       setStatus('✅ Editor pronto.', 'ok');
     })();
 
-    // =======================
-    // Expor handlers globais pro HTML onclick
-    // =======================
-    window.editarProduto = editarProduto;
-    window.salvarProduto = salvarProduto;
-    window.duplicarProduto = duplicarProduto;
-    window.pausarProduto = pausarProduto;
-    window.deletarProduto = deletarProduto;
+  // =======================
+// Expor handlers globais pro HTML onclick
+// =======================
+window.editarProduto = editarProduto;
+window.salvarProduto = salvarProduto;
+window.duplicarProduto = duplicarProduto;
+window.pausarProduto = pausarProduto;
+window.deletarProduto = deletarProduto;
 
-    window.editarCategoria = editarCategoria;
-    window.salvarCategoria = salvarCategoria;
+window.editarCategoria = editarCategoria;
 
+// COMENTE ESTA LINHA SE A FUNÇÃO NÃO EXISTIR
+// window.salvarCategoria = salvarCategoria;
+
+window.editarSubcategoria = editarSubcategoria;
+window.salvarSubcategoria = salvarSubcategoria;
+
+window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
+
+window.fecharDrawer = fecharDrawer;
   </script>
 </body>
 </html>

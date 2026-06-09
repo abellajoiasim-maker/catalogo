@@ -147,6 +147,16 @@
                         </select>
                     </div>
                 </div>
+
+                <div class="mb-4">
+
+    <input
+        type="text"
+        id="buscaSub"
+        placeholder="Buscar subcategoria..."
+        class="input-dark">
+
+</div>
                 
                 <div id="loading" class="text-center py-16 text-[#caa85c] text-xs font-mono uppercase tracking-widest animate-pulse">
                     ⏳ Estabelecendo conexão segura com Firebase Realtime Database...
@@ -219,8 +229,14 @@
         async function carregarCategoriasEAtivar() {
             try {
                 const path = window.getAbellaPath('categories');
-                const snap = await db.ref(path).once('value');
-                categoriasCache = snap.val() || {};
+               const snap = await db.ref(path).once('value');
+categoriasCache = snap.val() || {};
+
+const snapProdutos =
+    await db.ref(window.getAbellaPath('produtos')).once('value');
+
+produtosCache =
+    snapProdutos.val() || {};
                 
                 DOM.selectCatMae.innerHTML = '<option value="">— SELECONE A CATEGORIA MÃE —</option>';
                 DOM.filtroCatMae.innerHTML = '<option value="">MOSTRAR TODAS</option>';
@@ -257,7 +273,7 @@
 
             const filtroAtivo = DOM.filtroCatMae.value;
             let listaAgrupada = [];
-
+         
             // Extrai as subcategorias normalizando o schema legado para o padrão global (paused)
             Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
                 if (filtroAtivo && catSlug !== filtroAtivo) return;
@@ -272,14 +288,22 @@
                         isPaused = true;
                     }
 
-                    listaAgrupada.push({
-                        catSlug,
-                        subSlug,
-                        name: subData.name || subSlug,
-                        image: subData.image || '',
-                        order: parseInt(subData.order) || 0,
-                        paused: isPaused
-                    });
+                   const totalProdutos =
+    Object.values(produtosCache)
+        .filter(prod =>
+            prod.subcategoria === subSlug ||
+            prod.subcategory === subSlug
+        ).length;
+
+listaAgrupada.push({
+    catSlug,
+    subSlug,
+    name: subData.name || subSlug,
+    image: subData.image || '',
+    order: parseInt(subData.order) || 0,
+    paused: isPaused,
+    totalProdutos
+});
                 });
             });
 
@@ -303,20 +327,53 @@
                     : 'border-zinc-800/80'
                 }`;
 
-                card.innerHTML = `
-                    <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                            <span class="text-sm font-bold ${item.paused ? 'text-rose-400/80 line-through' : 'text-white'} uppercase tracking-wide">${item.name}</span>
-                            <span class="text-[9px] px-2.5 py-0.5 bg-zinc-950 text-[#caa85c] rounded-md border border-zinc-800 uppercase font-mono font-bold tracking-wider">↳ MÃE: ${nomeMae}</span>
-                            ${item.paused ? '<span class="text-[8px] px-2 py-0.5 bg-rose-950 text-rose-300 rounded border border-rose-800 uppercase font-bold tracking-widest">PAUSADO (OCULTO)</span>' : ''}
-                        </div>
-                        <p class="text-[10px] text-zinc-500 font-mono truncate">PATH: abella/categories/${item.catSlug}/subcategories/${item.subSlug} | Ordem: ${item.order}</p>
-                    </div>
-                    <div class="flex items-center gap-2 justify-end">
+card.innerHTML = `
+<div class="flex items-center gap-4 flex-1">
+
+    <img
+        src="${item.image || 'images/fallback.jpg'}"
+        onerror="this.src='images/fallback.jpg'"
+        class="w-16 h-16 rounded-xl object-cover border border-zinc-800 bg-zinc-950 flex-shrink-0">
+
+    <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2 mb-1.5">
+
+            <span class="text-sm font-bold ${item.paused ? 'text-rose-400/80 line-through' : 'text-white'} uppercase tracking-wide">
+                ${item.name}
+            </span>
+
+            <span class="text-[9px] px-2.5 py-0.5 bg-zinc-950 text-[#caa85c] rounded-md border border-zinc-800 uppercase font-mono font-bold tracking-wider">
+                ↳ MÃE: ${nomeMae}
+            </span>
+
+            ${
+                item.paused
+                ? '<span class="text-[8px] px-2 py-0.5 bg-rose-950 text-rose-300 rounded border border-rose-800 uppercase font-bold tracking-widest">PAUSADO</span>'
+                : ''
+            }
+
+        </div>
+
+        <p class="text-[10px] text-zinc-500 font-mono truncate">
+            PATH: abella/categories/${item.catSlug}/subcategories/${item.subSlug}
+        </p>
+
+       <p class="text-[10px] text-zinc-600 font-mono">
+    Ordem: ${item.order}
+</p>
+
+<p class="text-[10px] text-emerald-400 font-bold mt-1">
+    ${item.totalProdutos} produto(s)
+</p>
+    </div>
+
+</div>
+
+<div class="flex items-center gap-2 justify-end">
 
     <button
         type="button"
-        onclick="window.location.href='produtos.html?subcategoria=${item.subSlug}'"
+       onclick="window.location.href='produtos.html?subcategoria=${encodeURIComponent(item.subSlug)}'"
         class="bg-blue-950 hover:bg-blue-900 text-blue-300 border border-blue-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase tracking-wider">
         📦 Produtos
     </button>
@@ -343,7 +400,7 @@
     </button>
 
 </div>
-                `;
+`;
                 DOM.lista.appendChild(card);
             });
         }
@@ -470,6 +527,26 @@
                 spawnAdminToast("Erro ao tentar deletar subcategoria.", true);
             }
         }
+
+        document.addEventListener('input', (e) => {
+
+    if (e.target.id !== 'buscaSub') return;
+
+    const termo =
+        e.target.value.toLowerCase();
+
+    document.querySelectorAll('#lista-subcategorias > div')
+        .forEach(card => {
+
+            const texto =
+                card.innerText.toLowerCase();
+
+            card.style.display =
+                texto.includes(termo)
+                    ? ''
+                    : 'none';
+        });
+});
     </script>
 </body>
 </html>

@@ -7,8 +7,11 @@
     <title>Módulo Administrativo • Gestão de Subcategorias</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+<script src="../js/firebase/firebase-config.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
@@ -196,7 +199,8 @@
         };
 
         // Cache local estrutural otimizado contra vazamento de memória e chamadas cíclicas
-        let categoriasCache = {};
+       let categoriasCache = {};
+       let produtosCache = {};
 
         document.addEventListener('DOMContentLoaded', carregarCategoriasEAtivar);
 
@@ -267,12 +271,13 @@ produtosCache =
         /**
          * Renderiza as subcategorias ordenadas a partir do Cache de Memória
          */
-        function renderizarSubcategoriasFiltradas() {
-            DOM.lista.innerHTML = '';
-            DOM.loading.classList.remove('hidden');
+       function renderizarSubcategoriasFiltradas() {
 
-            const filtroAtivo = DOM.filtroCatMae.value;
-            let listaAgrupada = [];
+    DOM.lista.innerHTML = '';
+    DOM.loading.classList.remove('hidden');
+
+    const filtroAtivo = DOM.filtroCatMae.value;
+    let listaAgrupada = [];
          
             // Extrai as subcategorias normalizando o schema legado para o padrão global (paused)
             Object.entries(categoriasCache).forEach(([catSlug, cat]) => {

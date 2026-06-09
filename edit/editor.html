@@ -146,7 +146,7 @@
 
   <script>
   // =======================
-  // Resolução do Firebase SDK
+  // FIX #3 — Aguarda Firebase SDK estar pronto antes de qualquer acesso
   // =======================
   function resolverDB() {
     if (window.db) return window.db;
@@ -178,7 +178,7 @@
   }
 
   // =======================
-  // Utilidades e Conversores de Links
+  // Util
   // =======================
   function escapeHtml(str) {
     return String(str ?? '')
@@ -191,6 +191,11 @@
 
   function escapeAttr(str) {
     return String(str ?? '').replaceAll("'", "\\'").replaceAll('"', '&quot;');
+  }
+
+  function getActiveTab() {
+    const active = document.querySelector('.tab-btn.active');
+    return active?.dataset?.tab || 'produtos';
   }
 
   // Converte links gs:// e links de visualização do Google Drive para links brutos diretos
@@ -255,13 +260,8 @@
     }
   }
 
-  function getActiveTab() {
-    const active = document.querySelector('.tab-btn.active');
-    return active?.dataset?.tab || 'produtos';
-  }
-
   // =======================
-  // Drawer Controls
+  // Drawer
   // =======================
   function abrirDrawer(titulo, html) {
     document.getElementById('drawerTitle').textContent = titulo;
@@ -269,13 +269,14 @@
     document.getElementById('drawer').classList.remove('hidden');
   }
 
+  // Corrigido para limpar o html ao fechar
   function fecharDrawer() {
     document.getElementById('drawer').classList.add('hidden');
     document.getElementById('drawerContent').innerHTML = '';
   }
 
   // =======================
-  // Carregamento Centralizado
+  // Carregamento central
   // =======================
   async function carregarTudo() {
     try {
@@ -313,7 +314,7 @@
   }
 
   // =======================
-  // Filtros Dinâmicos
+  // Filtros (UI)
   // =======================
   function popularFiltros() {
     const selCat = document.getElementById('filtroCategoria');
@@ -339,11 +340,11 @@
   }
 
   // =======================
-  // Renderizadores de Listagem
+  // Render — Produtos
   // =======================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
-    
+
     const termos     = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo       = document.getElementById('filtroTipo').value;
     const filtroCat  = document.getElementById('filtroCategoria').value;
@@ -408,9 +409,12 @@
     container.innerHTML = htmlBuffer;
   }
 
+  // =======================
+  // Render — Categorias
+  // =======================
   function renderCategorias() {
     const el = document.getElementById('tab-categorias');
-    
+
     const termos    = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo      = document.getElementById('filtroTipo').value;
     const filtroCat = document.getElementById('filtroCategoria').value;
@@ -432,7 +436,7 @@
     let htmlBuffer = '';
     entries.forEach(([slug, cat]) => {
       const safeSlug = escapeAttr(slug);
-      const urlMiniatura = converterGsUrl(cat?.grid || cat?.hero || cat?.gridImage || cat?.heroImage);
+      const urlMiniatura = converterGsUrl(cat?.grid || cat?.gridImage || cat?.hero || cat?.heroImage);
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -458,9 +462,12 @@
     el.innerHTML = htmlBuffer;
   }
 
+  // =======================
+  // Render — Subcategorias
+  // =======================
   function renderSubcategorias() {
     const el = document.getElementById('tab-subcategorias');
-    
+
     const termos   = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo     = document.getElementById('filtroTipo').value;
     const filtroCat = document.getElementById('filtroCategoria').value;
@@ -492,7 +499,7 @@
     filtradas.forEach(x => {
       const safeCat = escapeAttr(x.catSlug);
       const safeSub = escapeAttr(x.subSlug);
-      const urlMiniatura = converterGsUrl(x.subObj?.grid || x.subObj?.hero || x.subObj?.gridImage || x.subObj?.heroImage);
+      const urlMiniatura = converterGsUrl(x.subObj?.grid || x.subObj?.gridImage || x.subObj?.hero || x.subObj?.heroImage);
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -526,36 +533,64 @@
   }
 
   // =======================
-  // Drawers de Edição
+  // Drawer — Produtos
   // =======================
   function editarProduto(id) {
     const produto = produtosCache.find(p => p.id === id);
     if (!produto) return;
 
-    let htmlCats = '';
+    let categoriasHtml = '';
     Object.keys(categoriasCache).forEach(cat => {
-      htmlCats += `<option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
+      categoriasHtml += `
+        <option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>
+          ${escapeHtml(cat)}
+        </option>
+      `;
     });
 
     const urlPreview = converterGsUrl(produto.image);
 
     abrirDrawer('Editar Produto', `
-      <input id="editNome" class="input-dark" placeholder="Nome" value="${escapeHtml(produto.name || '')}">
-      <input id="editSku" class="input-dark" placeholder="SKU" value="${escapeHtml(produto.sku || '')}">
-      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">${htmlCats}</select>
+      <input id="editNome"    class="input-dark" placeholder="Nome"   value="${escapeHtml(produto.name  || '')}">
+      <input id="editSku"     class="input-dark" placeholder="SKU"    value="${escapeHtml(produto.sku   || '')}">
+
+      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">
+        ${categoriasHtml}
+      </select>
+
       <select id="editSubcategoria" class="input-dark"></select>
 
       <div class="text-xs text-zinc-400 mb-1">Preview do Produto:</div>
-      <img id="previewProduto" src="${escapeHtml(urlPreview)}" class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input id="editImagem" class="input-dark" placeholder="URL da imagem, gs:// ou Google Drive" value="${escapeHtml(produto.image || '')}" oninput="tratarInputImagem(this, 'previewProduto')">
+      <img
+        id="previewProduto"
+        src="${escapeHtml(urlPreview)}"
+        class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2"
+        onerror="this.style.display='none'"
+      >
 
-      <input id="editPreco" class="input-dark" placeholder="Preço" value="${escapeHtml(produto.price ?? 0)}">
-      <input id="editPeso" class="input-dark" placeholder="Peso" value="${escapeHtml(produto.weight ?? 0)}">
+      <input
+        id="editImagem"
+        class="input-dark"
+        placeholder="URL da imagem, gs:// ou Google Drive"
+        value="${escapeHtml(produto.image || '')}"
+        oninput="tratarInputImagem(this, 'previewProduto')"
+      >
 
-      <button onclick="salvarProduto('${escapeAttr(id)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2">Salvar</button>
+      <input id="editPreco" class="input-dark" placeholder="Preço"  value="${escapeHtml(produto.price  ?? 0)}">
+      <input id="editPeso"  class="input-dark" placeholder="Peso"   value="${escapeHtml(produto.weight ?? 0)}">
+
+      <button
+        onclick="salvarProduto('${escapeAttr(id)}')"
+        class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2"
+      >
+        Salvar
+      </button>
     `);
 
-    carregarSubcategoriasProduto(produto.category, produto.subcategory || produto.subCategory);
+    carregarSubcategoriasProduto(
+      produto.category,
+      produto.subcategory || produto.subCategory
+    );
   }
 
   function carregarSubcategoriasProduto(categoriaSelecionada, subSelecionada = '') {
@@ -563,13 +598,16 @@
     const select    = document.getElementById('editSubcategoria');
     if (!select) return;
 
-    let subOptions = '<option value="">Nenhuma</option>';
+    select.innerHTML = '<option value="">Nenhuma</option>';
     const subs = categoriasCache[categoria]?.subcategories || {};
 
     Object.entries(subs).forEach(([slug, sub]) => {
-      subOptions += `<option value="${escapeHtml(slug)}" ${slug === subSelecionada ? 'selected' : ''}>${escapeHtml(sub.name || slug)}</option>`;
+      select.innerHTML += `
+        <option value="${escapeHtml(slug)}" ${slug === subSelecionada ? 'selected' : ''}>
+          ${escapeHtml(sub.name || slug)}
+        </option>
+      `;
     });
-    select.innerHTML = subOptions;
   }
 
   async function salvarProduto(id) {
@@ -619,30 +657,65 @@
     renderCurrentTab();
   }
 
+  // =======================
+  // Drawer — Categorias
+  // =======================
   function editarCategoria(slug) {
     const cat = categoriasCache[slug];
     if (!cat) return;
 
     abrirDrawer('Editar Categoria', `
-      <input id="editCatName" class="input-dark" placeholder="Nome" value="${escapeHtml(cat.name || '')}">
+      <input
+        id="editCatName"
+        class="input-dark"
+        placeholder="Nome"
+        value="${escapeHtml(cat.name || '')}"
+      >
+
       <textarea id="editCatDescription" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
-      <input id="editCatHero" class="input-dark" placeholder="Hero Image URL, gs:// ou Drive" value="${escapeHtml(cat.hero || cat.heroImage || '')}">
-      <input id="editCatGrid" class="input-dark" placeholder="Grid Image URL, gs:// ou Drive" value="${escapeHtml(cat.grid || cat.gridImage || '')}">
-      <input id="editCatOrder" type="number" class="input-dark" placeholder="Ordem" value="${escapeHtml(cat.order || 0)}">
 
-      <label class="flex gap-2 items-center text-sm mb-2"><input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}> Categoria Destaque Home</label>
-      <label class="flex gap-2 items-center text-sm mb-4"><input id="editCatActive" type="checkbox" ${cat.active !== false ? 'checked' : ''}> Ativa</label>
+      <input id="editCatHero"  class="input-dark" placeholder="Hero Image URL, gs:// ou Drive"  value="${escapeHtml(cat.hero || cat.heroImage  || '')}">
+      <input id="editCatGrid"  class="input-dark" placeholder="Grid Image URL, gs:// ou Drive"  value="${escapeHtml(cat.grid || cat.gridImage  || '')}">
 
-      <button onclick="salvarCategoria('${escapeAttr(slug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold">Salvar</button>
+      <input
+        id="editCatOrder"
+        type="number"
+        class="input-dark"
+        placeholder="Ordem"
+        value="${escapeHtml(cat.order || 0)}"
+      >
+
+      <label class="flex gap-2 items-center text-sm mb-2">
+        <input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}>
+        Categoria Destaque Home
+      </label>
+
+      <label class="flex gap-2 items-center text-sm mb-4">
+        <input id="editCatActive" type="checkbox" ${cat.active !== false ? 'checked' : ''}>
+        Ativa
+      </label>
+
+      <button
+        onclick="salvarCategoria('${escapeAttr(slug)}')"
+        class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold"
+      >
+        Salvar
+      </button>
     `);
   }
 
   async function salvarCategoria(slug) {
+    const imgValueHero = document.getElementById('editCatHero').value;
+    const imgValueGrid = document.getElementById('editCatGrid').value;
+
+    // Dupla compatibilidade para Categorias: grava nos dois formatos de chaves
     await db.ref(window.getAbellaPath(`categories/${slug}`)).update({
       name:        document.getElementById('editCatName').value,
       description: document.getElementById('editCatDescription').value,
-      hero:        document.getElementById('editCatHero').value,
-      grid:        document.getElementById('editCatGrid').value,
+      hero:        imgValueHero,
+      heroImage:   imgValueHero,
+      grid:        imgValueGrid,
+      gridImage:   imgValueGrid,
       order:       parseInt(document.getElementById('editCatOrder').value) || 0,
       featured:    document.getElementById('editCatFeatured').checked,
       active:      document.getElementById('editCatActive').checked,
@@ -653,6 +726,9 @@
     renderCurrentTab();
   }
 
+  // =======================
+  // Drawer — Subcategorias
+  // =======================
   function editarSubcategoria(catSlug, subSlug) {
     const sub = categoriasCache[catSlug]?.subcategories?.[subSlug];
     if (!sub) return;
@@ -664,27 +740,39 @@
     const urlPreviewHero = converterGsUrl(linkHeroOriginal);
 
     abrirDrawer('Editar Subcategoria', `
-      <input id="subName" class="input-dark" placeholder="Nome" value="${escapeHtml(sub.name || sub.title || '')}">
-      <textarea id="subDescription" class="input-dark" placeholder="Descrição">${escapeHtml(sub.description || '')}</textarea>
+      <input      id="subName"        class="input-dark" placeholder="Nome"       value="${escapeHtml(sub.name || sub.title || '')}">
+      <textarea   id="subDescription" class="input-dark" placeholder="Descrição">${escapeHtml(sub.description || '')}</textarea>
       
       <div class="text-xs text-zinc-400 mb-1">Preview Grid Image:</div>
       <img id="previewSubGrid" src="${escapeHtml(urlPreviewGrid)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input id="subGrid" class="input-dark" placeholder="Grid Image URL, gs:// ou Drive" value="${escapeHtml(linkGridOriginal)}" oninput="tratarInputImagem(this, 'previewSubGrid')">
+      <input      id="subGrid"        class="input-dark" placeholder="Grid Image URL, gs:// ou Drive" value="${escapeHtml(linkGridOriginal)}" oninput="tratarInputImagem(this, 'previewSubGrid')">
 
       <div class="text-xs text-zinc-400 mb-1 mt-2">Preview Hero Image:</div>
       <img id="previewSubHero" src="${escapeHtml(urlPreviewHero)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input id="subHero" class="input-dark" placeholder="Hero Image URL, gs:// ou Drive" value="${escapeHtml(linkHeroOriginal)}" oninput="tratarInputImagem(this, 'previewSubHero')">
+      <input      id="subHero"        class="input-dark" placeholder="Hero Image URL, gs:// ou Drive" value="${escapeHtml(linkHeroOriginal)}" oninput="tratarInputImagem(this, 'previewSubHero')">
 
-      <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-4 font-bold">Salvar</button>
+      <button
+        onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')"
+        class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-4 font-bold"
+      >
+        Salvar
+      </button>
     `);
   }
 
   async function salvarSubcategoria(catSlug, subSlug) {
+    const imgValueGrid = document.getElementById('subGrid').value;
+    const imgValueHero = document.getElementById('subHero').value;
+
+    // FIX CHAVE: Atualiza e salva em ambas as chaves (novas e legadas)
+    // Isso garante que tanto o Editor quanto a página pública (subcategorias.html) leiam sem erros!
     await db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
       name:        document.getElementById('subName').value,
       description: document.getElementById('subDescription').value,
-      grid:        document.getElementById('subGrid').value,
-      hero:        document.getElementById('subHero').value,
+      grid:        imgValueGrid,
+      gridImage:   imgValueGrid,
+      hero:        imgValueHero,
+      heroImage:   imgValueHero,
       updatedAt:   Date.now()
     });
     fecharDrawer();
@@ -693,7 +781,7 @@
   }
 
   // =======================
-  // Wiring UI (Listeners)
+  // Wiring UI
   // =======================
   function wireSearch() {
     const ids = ['buscaGlobal', 'filtroTipo', 'filtroCategoria', 'filtroSubcategoria'];
@@ -748,17 +836,16 @@
       return;
     }
 
+    console.info('[EDITOR] Firebase conectado. DB ROOT:', window.ABELLA_DB_ROOT);
+
     wireTabs();
     wireSearch();
 
-    const refreshBtn = document.getElementById('btnRefresh');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', async () => {
-        setStatus('Carregando...', 'info');
-        await carregarTudo();
-        renderCurrentTab();
-      });
-    }
+    document.getElementById('btnRefresh').addEventListener('click', async () => {
+      setStatus('Carregando...', 'info');
+      await carregarTudo();
+      renderCurrentTab();
+    });
 
     setStatus('Carregando dados do Firebase...', 'info');
     await carregarTudo();
@@ -766,7 +853,7 @@
     setStatus('✅ Editor pronto.', 'ok');
   })();
 
-  // Handlers Globais
+  // Expor handlers globais
   window.editarProduto               = editarProduto;
   window.salvarProduto               = salvarProduto;
   window.duplicarProduto             = duplicarProduto;

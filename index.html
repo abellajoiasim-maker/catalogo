@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv=\"Cache-Control\" content=\"no-cache, no-store, must-revalidate\">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta name="description" content="Abella Joias — Plataforma corporativa premium de pedidos. Compre joias com clareza, segurança e total transparência.">
     <meta name="robots" content="index, follow">
     <meta property="og:title" content="Abella Joias • Catálogo Premium">
@@ -14,7 +14,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel=\"stylesheet\">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
         body {
@@ -42,7 +42,7 @@
             box-shadow: 0 12px 30px rgba(202, 168, 92, 0.08);
         }
         .fallback-container {
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             background: #121212;
@@ -68,7 +68,7 @@
                 type="text" 
                 id="busca" 
                 placeholder="PROCURAR CATEGORIA..." 
-                class="w-full bg-zinc-900/60 border border-zinc-800 rounded-full px-6 py-3.5 pl-12 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border(#caa85c) transition-all font-medium tracking-wide"
+                class="w-full bg-zinc-900/60 border border-zinc-800 rounded-full px-6 py-3.5 pl-12 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#caa85c] transition-all font-medium tracking-wide"
             >
             <span class="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 text-lg">🔍</span>
         </div>
@@ -93,6 +93,7 @@
 
     <script src="../js/firebase/firebase-config.js"></script>
     <script>
+        // Função para garantir suporte a links gs://, Google Drive ou URLs externas
         function converterGsUrl(url) {
             let stringUrl = String(url ?? '').trim();
             if (!stringUrl) return '';
@@ -140,7 +141,7 @@
                 const db = window.firebase.database();
                 const path = window.getAbellaPath ? window.getAbellaPath('categories') : 'categories';
 
-                // .on('value') garante a atualização imediata em tempo real sem precisar atualizar a página
+                // Monitoramento em Tempo Real (.on('value')): Alterou no editor, muda na hora aqui
                 db.ref(path).on('value', (snapshot) => {
                     loading.classList.add('hidden');
                     grid.innerHTML = '';
@@ -162,6 +163,7 @@
                     }
 
                     categoriasOrdenadas.forEach(cat => {
+                        // Resiliência de dados: Tenta ler chaves novas e antigas para não quebrar nunca
                         const rawImage = cat.gridImage || cat.grid || cat.heroImage || cat.hero || '';
                         const urlFinal = converterGsUrl(rawImage);
 
@@ -173,7 +175,7 @@
 
                         card.innerHTML = `
                             <div class="w-full aspect-square relative bg-zinc-950 overflow-hidden flex items-center justify-center">
-                                <div class="fallback-container absolute inset-0 flex items-center justify-center">📁</div>
+                                <div class="fallback-container absolute inset-0 flex items-center justify-center text-zinc-700">📁</div>
                                 <img 
                                     src="${urlFinal}" 
                                     alt="${cat.name || cat.slug}" 

@@ -17,187 +17,599 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        :root {
+            --gold: #caa85c;
+            --gold-dark: #a8863a;
+            --gold-light: #e2c07a;
+            --bg: #070707;
+            --bg-card: #111111;
+            --bg-card2: #0d0d0d;
+            --border: #1e1e1e;
+            --border-gold: rgba(202,168,92,.25);
+            --text-muted: #666;
+            --text-dim: #444;
+            --emerald: #34d399;
+        }
+
         body {
-            background: #050505;
+            background: var(--bg);
             color: #fff;
             font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
-        .cinzel { font-family: 'Cinzel', serif; }
-        .gold-gradient {
-            background: linear-gradient(135deg, #caa85c 0%, #f1e0b5 50%, #caa85c 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+
+        .serif { font-family: 'Cinzel', serif; }
+        .gold  { color: var(--gold); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-dark); }
+
+        /* Glass */
+        .glass {
+            background: rgba(7,7,7,.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
-        .gold-bg {
-            background: linear-gradient(135deg, #caa85c 0%, #e5ca8d 100%);
+
+        /* Hover lift */
+        .hover-lift {
+            transition: transform .35s cubic-bezier(.22,1,.36,1), border-color .25s;
         }
+        .hover-lift:hover {
+            transform: translateY(-6px);
+            border-color: var(--gold) !important;
+        }
+
+        /* Hero gradient */
+        .hero-gradient {
+            background:
+                radial-gradient(ellipse at top left, rgba(61,47,21,.55) 0%, transparent 45%),
+                radial-gradient(ellipse at bottom right, rgba(26,26,26,.4) 0%, transparent 45%);
+        }
+
+        /* Grain overlay */
+        .grain::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            border-radius: inherit;
+        }
+
+        /* Pulse dot */
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .6; transform: scale(1.4); }
+        }
+        .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+        /* Fade-in */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeUp .55s ease forwards; }
+
+        /* Skeleton Shimmer */
+        @keyframes shimmer {
+            0%   { background-position: -700px 0; }
+            100% { background-position: 700px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #111 25%, #1a1a1a 50%, #111 75%);
+            background-size: 700px 100%;
+            animation: shimmer 1.5s infinite linear;
+            border-radius: 1.5rem;
+        }
+
+        /* Card categoria */
         .cat-card {
-            background: linear-gradient(180deg, #101010 0%, #0a0a0a 100%);
-            border: 1px solid #1a1a1a;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform .35s cubic-bezier(.22,1,.36,1), border-color .25s, box-shadow .35s;
         }
         .cat-card:hover {
-            transform: translateY(-4px);
-            border-color: #caa85c;
-            box-shadow: 0 12px 30px rgba(202, 168, 92, 0.08);
+            transform: translateY(-6px);
+            border-color: var(--gold);
+            box-shadow: 0 20px 60px rgba(202,168,92,.1);
         }
-        .fallback-container {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: #121212;
-            font-size: 2.5rem;
-            z-index: 1;
+        .cat-card img {
+            transition: transform .55s cubic-bezier(.22,1,.36,1);
+        }
+        .cat-card:hover img {
+            transform: scale(1.07);
+        }
+
+        /* Arrow btn */
+        .arrow-btn {
+            width: 44px; height: 44px;
+            border-radius: 14px;
+            background: var(--gold);
+            color: #000;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 900;
+            flex-shrink: 0;
+            transition: background .2s;
+        }
+        .cat-card:hover .arrow-btn { background: var(--gold-light); }
+
+        /* Stat card */
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            transition: border-color .25s;
+        }
+        .stat-card:hover { border-color: var(--border-gold); }
+
+        /* Mobile bar */
+        .mobile-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 50;
+            padding: .75rem;
+            background: linear-gradient(to top, #000 60%, transparent);
+        }
+
+        /* Empty state */
+        .empty-state {
+            grid-column: 1 / -1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 2rem;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        #busca:focus { outline: none; border-color: var(--gold); }
+
+        .badge {
+            display: inline-flex; align-items: center; gap: .5rem;
+            background: rgba(202,168,92,.08);
+            border: 1px solid rgba(202,168,92,.18);
+            border-radius: 999px;
+            padding: .35rem 1rem;
+        }
+
+        #abellaLogoContainer {
+            width: 44px; height: 44px;
+            border-radius: 14px;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--gold), #8b6a2b);
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(202,168,92,.2);
+            box-shadow: 0 4px 20px rgba(202,168,92,.12);
+            flex-shrink: 0;
+        }
+
+        .hero-img-wrap {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 3rem;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #000;
+        }
+        .hero-float {
+            position: absolute;
+            bottom: -1.5rem; left: 1.5rem; right: 1.5rem;
+            background: rgba(0,0,0,.96);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.25rem 1.5rem;
+        }
+
+        @media (max-width: 640px) {
+            .hero-float { bottom: -1rem; left: 1rem; right: 1rem; padding: 1rem; }
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
+<body class="min-h-screen">
 
-    <header class="w-full max-w-7xl mx-auto px-4 pt-8 md:pt-12 flex justify-center">
-        <div class="text-center">
-            <div id="logo-container" class="mb-4 flex justify-center">
-                <h1 class="cinzel text-3xl md:text-5xl font-bold tracking-[0.2em] gold-gradient">ABELLA JOIAS</h1>
+    <header class="sticky top-0 z-50 border-b border-zinc-900 glass">
+        <div class="max-w-7xl mx-auto px-4 md:px-6">
+            <div class="h-20 flex items-center justify-between gap-4">
+
+                <div class="flex items-center gap-4">
+                    <div id="abellaLogoContainer">
+                        <span id="abellaLogoFallback" class="text-black font-black text-xl serif">A</span>
+                        <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
+                    </div>
+                    <div>
+                        <h1 id="nome" class="serif gold text-lg md:text-2xl uppercase tracking-[.25em]">Abella Joias</h1>
+                        <p id="slogan" class="text-[10px] text-zinc-500 uppercase tracking-[.25em] mt-1">Catálogo Premium</p>
+                    </div>
+                </div>
+
+                <nav class="hidden lg:flex items-center gap-3" aria-label="Navegação principal">
+                    <a href="galvanicas.html"
+                       class="h-12 px-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] transition-all flex items-center gap-3 text-sm font-bold">
+                        ✨ Galvânicas Parceiras
+                        <span class="gold text-xs">Limeira →</span>
+                    </a>
+                    <a href="carrinho.html"
+                       class="h-12 px-5 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.15em] flex items-center gap-3">
+                        <span>🛒</span>
+                        <span id="cart-count">0</span>
+                        <span class="opacity-60">|</span>
+                        <span id="cart-total">R$ 0,00</span>
+                    </a>
+                </nav>
+
+                <a href="carrinho.html"
+                   class="lg:hidden w-12 h-12 rounded-2xl bg-[#caa85c] text-black flex items-center justify-center font-black"
+                   aria-label="Carrinho">
+                    🛒
+                </a>
             </div>
-            <p class="text-[10px] md:text-xs uppercase tracking-[0.4em] text-zinc-500 font-medium">Atacado de Semijoias • Linha no Bruto</p>
         </div>
     </header>
 
-    <main class="w-full max-w-7xl mx-auto px-4 py-12 flex-1">
-        <div class="max-w-xl mx-auto mb-10 relative">
-            <input 
-                type="text" 
-                id="busca" 
-                placeholder="PROCURAR CATEGORIA..." 
-                class="w-full bg-zinc-900/60 border border-zinc-800 rounded-full px-6 py-3.5 pl-12 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#caa85c] transition-all font-medium tracking-wide"
-            >
-            <span class="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 text-lg">🔍</span>
+    <div id="banner" class="hidden border-b border-[#caa85c]/20 bg-gradient-to-r from-[#1a1407] via-black to-[#1a1407]" role="banner">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center">
+            <p id="bannerTexto" class="gold font-black uppercase tracking-[.25em] text-xs md:text-sm"></p>
         </div>
+    </div>
 
-        <div id="loading" class="text-center py-20">
-            <div class="inline-block w-8 h-8 border-2 border-zinc-700 border-t-[#caa85c] rounded-full animate-spin mb-4"></div>
-            <p class="text-xs uppercase tracking-widest text-zinc-500 font-mono">Conectando ao banco de dados...</p>
+    <section class="hero-gradient border-b border-zinc-900">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-14 md:py-20">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+                <div class="fade-up">
+                    <div class="badge">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                        <span class="text-[11px] uppercase tracking-[.25em] gold font-black">Catálogo Corporativo Online</span>
+                    </div>
+
+                    <h2 class="serif text-4xl md:text-6xl leading-tight mt-6">
+                        Sua próxima coleção<br>começa aqui.
+                    </h2>
+                    <p class="text-zinc-400 text-lg leading-relaxed mt-6 max-w-2xl">
+                        Plataforma inteligente de pedidos. Compre com clareza, segurança e total transparência.
+                        Veja pesos, descontos, parcelamentos e economia em tempo real.
+                    </p>
+
+                    <div class="grid grid-cols-3 gap-4 mt-10">
+                        <div class="stat-card">
+                            <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Parcelamento</p>
+                            <p id="parcelamento" class="text-base font-black gold mt-2">6x sem juros</p>
+                        </div>
+                        <div class="stat-card">
+                            <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">PIX</p>
+                            <p id="pix" class="text-base font-black text-emerald-400 mt-2">10% OFF</p>
+                        </div>
+                        <div class="stat-card">
+                            <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Atendimento</p>
+                            <a id="whats" href="#" target="_blank" rel="noopener noreferrer"
+                               class="text-base font-black gold mt-2 block hover:text-[#e2c07a] transition-colors">
+                                WhatsApp
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 mt-10">
+                        <a href="#categorias"
+                           class="h-14 px-8 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] flex items-center justify-center hover:bg-[#b5944a] transition-colors">
+                            Explorar Categorias
+                        </a>
+                        <a href="galvanicas.html"
+                           class="h-14 px-8 rounded-2xl border border-zinc-700 hover:border-[#caa85c] font-black uppercase tracking-[.2em] flex items-center justify-center transition-all">
+                            Galvânicas Parceiras
+                        </a>
+                    </div>
+                </div>
+
+<div class="relative fade-up">
+    <div class="hero-img-wrap">
+        <img id="heroBannerImg" src="https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1400&auto=format&fit=crop"
+             class="w-full h-full object-cover"
+             alt="Joias Abella — Coleção Premium"
+             loading="lazy">
+    </div>
+    <div class="hero-float">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Experiência Premium</p>
+                <h3 class="text-xl font-black mt-1">Compra Inteligente</h3>
+            </div>
+            <div class="text-right">
+                <p id="float-pix" class="text-emerald-400 font-black text-base">PIX 10% OFF</p>
+                <p id="float-parcelas" class="text-zinc-500 text-sm">Até 6x sem juros</p>
+            </div>
         </div>
+    </div>
+</div>
 
-        <div id="no-result" class="hidden text-center py-20">
-            <p class="text-sm text-zinc-500 tracking-wide font-medium">NENHUMA CATEGORIA ENCONTRADA PARA A SUA BUSCA.</p>
+            </div>
         </div>
+    </section>
 
-        <div id="grid-categorias" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"></div>
+    <section class="border-b border-zinc-900" aria-label="Busca de categorias">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-8">
+            <div class="bg-[#111] border border-[#1e1e1e] rounded-[2rem] p-4 md:p-6">
+                <div class="flex flex-col lg:flex-row gap-4">
+                    <div class="flex-1 relative">
+                        <label for="busca" class="sr-only">Buscar categorias</label>
+                        <input type="search"
+                               id="busca"
+                               placeholder="Buscar categorias comerciais..."
+                               autocomplete="off"
+                               class="w-full h-14 rounded-2xl bg-black border border-zinc-800 px-5 pl-14 text-white text-sm transition-colors">
+                        <span class="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">🔎</span>
+                    </div>
+                    <a href="carrinho.html"
+                       class="h-14 px-8 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] flex items-center justify-center hover:bg-[#b5944a] transition-colors whitespace-nowrap">
+                        Finalizar Pedido
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main id="categorias" class="py-12 md:py-16">
+        <div class="max-w-7xl mx-auto px-4 md:px-6">
+
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+                <div>
+                    <p class="gold uppercase tracking-[.25em] text-xs font-black">Catálogo Premium</p>
+                    <h2 class="serif text-4xl md:text-5xl mt-3">Categorias Oficiais</h2>
+                </div>
+                <p class="text-zinc-500 leading-relaxed max-w-xl md:text-right">
+                    Explore categorias organizadas para facilitar seu pedido. Valores transparentes e experiência intuitiva.
+                </p>
+            </div>
+
+            <div id="loading" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+                <div class="skeleton aspect-[3/4]"></div>
+                <div class="skeleton aspect-[3/4]"></div>
+                <div class="skeleton aspect-[3/4]"></div>
+                <div class="skeleton aspect-[3/4] hidden md:block"></div>
+            </div>
+
+            <div id="grid-categorias" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+
+            <div id="no-result" class="hidden empty-state">
+                <p class="text-3xl mb-4">🔎</p>
+                <h3 class="text-xl font-black text-zinc-400">Nenhuma categoria encontrada.</h3>
+                <p class="text-zinc-600 mt-2 text-sm">Tente outro termo de busca.</p>
+            </div>
+        </div>
     </main>
 
-    <footer class="w-full border-t border-zinc-900 py-6 bg-black">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            <p class="text-[10px] text-zinc-600 uppercase tracking-widest font-mono">© 2026 Abella Joias. Todos os direitos reservados.</p>
+    <footer class="border-t border-zinc-900 mt-16">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <div>
+                    <h3 class="serif gold text-2xl uppercase tracking-[.25em]">Abella Joias</h3>
+                    <p class="text-zinc-500 leading-relaxed mt-4 text-sm">
+                        Plataforma corporativa premium desenvolvida para proporcionar uma experiência de compra clara, elegante e profissional.
+                    </p>
+                </div>
+                <nav aria-label="Links do rodapé">
+                    <p class="text-sm font-black uppercase tracking-[.2em] mb-4">Navegação</p>
+                    <ul class="space-y-3">
+                        <li><a href="#categorias" class="text-zinc-500 hover:text-white transition-colors text-sm">Categorias</a></li>
+                        <li><a href="galvanicas.html" class="text-zinc-500 hover:text-white transition-colors text-sm">Galvânicas</a></li>
+                        <li><a href="carrinho.html" class="text-zinc-500 hover:text-white transition-colors text-sm">Carrinho</a></li>
+                    </ul>
+                </nav>
+                <div>
+                    <p class="text-sm font-black uppercase tracking-[.2em] mb-4">Atendimento</p>
+                    <ul class="space-y-3">
+                        <li>
+                            <a id="footerWhats" href="#" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-white transition-colors text-sm">
+                                WhatsApp Comercial
+                            </a>
+                        </li>
+                        <li><p class="text-zinc-500 text-sm">Limeira • São Paulo</p></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-zinc-900 mt-12 pt-8 text-center">
+                <p class="text-zinc-600 text-sm">© Abella Joias • Plataforma Premium</p>
+            </div>
         </div>
     </footer>
 
-    <script src="../js/firebase/firebase-config.js"></script>
+    <div class="mobile-bar lg:hidden">
+        <a href="carrinho.html" class="w-full h-14 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] flex items-center justify-center gap-3">
+            🛒 <span>Finalizar Pedido</span>
+        </a>
+    </div>
+
+    <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/utils/money.js"></script>
+    <script src="js/utils/storage.js"></script>
+    <script src="js/services/carrinhoService.js"></script>
+    
     <script>
-        // Função para garantir suporte a links gs://, Google Drive ou URLs externas
-        function converterGsUrl(url) {
-            let stringUrl = String(url ?? '').trim();
-            if (!stringUrl) return '';
+        const db = firebase.database();
 
-            if (stringUrl.includes('drive.google.com')) {
-                try {
-                    let idArquivo = '';
-                    if (stringUrl.includes('/d/')) {
-                        idArquivo = stringUrl.split('/d/')[1].split('/')[0];
-                    } else if (stringUrl.includes('id=')) {
-                        idArquivo = stringUrl.split('id=')[1].split('&')[0];
-                    }
-                    if (idArquivo) return `https://drive.google.com/uc?export=view&id=${idArquivo}`;
-                } catch (err) { console.error('Erro link drive:', err); }
+        // Conversor e Higienizador seguro de Links de Imagem do Storage
+        function resolverImagemFirebase(url) {
+            if (!url) return 'https://placehold.co/300x400?text=Sem+Imagem';
+            if (url.startsWith('gs://')) {
+                const semGs = url.replace('gs://', '');
+                const primeiraBarra = semGs.indexOf('/');
+                const bucket = semGs.substring(0, primeiraBarra);
+                const caminho = semGs.substring(primeiraBarra + 1);
+                return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
             }
+            return url;
+        }
+        
+async function carregarBannerHome() {
+    try {
+        const snap = await db.ref('abella/home').once('value');
+        const home = snap.val() || {};
 
-            if (stringUrl.startsWith('gs://')) {
-                try {
-                    const semProtocolo = stringUrl.replace('gs://', '');
-                    const primeiraBarra = semProtocolo.indexOf('/');
-                    if (primeiraBarra === -1) return stringUrl;
-                    const bucket = semProtocolo.substring(0, primeiraBarra);
-                    const caminhoArquivo = semProtocolo.substring(primeiraBarra + 1);
-                    return `https://firebasestorage.googleapis.com/v1/b/${bucket}/o/${encodeURIComponent(caminhoArquivo)}?alt=media`;
-                } catch (e) { console.error('Erro link gs://:', e); }
-            }
-            return stringUrl;
+        const hero = document.getElementById('heroBannerImg');
+
+        if (hero && home.banner_categoria) {
+            hero.src = resolverImagemFirebase(home.banner_categoria);
         }
 
-        function handleImageError(img) {
-            img.style.display = 'none';
-            const fallback = img.parentNode.querySelector('.fallback-container');
-            if (fallback) fallback.style.setProperty('display', 'flex', 'important');
+    } catch (e) {
+        console.error('Erro carregar banner home:', e);
+    }
+}
+
+        const hero =
+            document.getElementById('heroBannerImg');
+
+        if (hero) {
+
+            hero.src =
+                'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1400&auto=format&fit=crop';
         }
+    }
+}
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            const grid = document.getElementById('grid-categorias');
-            const loading = document.getElementById('loading');
-            const noResult = document.getElementById('no-result');
 
-            try {
-                if (!window.firebase || !window.firebase.apps.length) {
-                    throw new Error("SDK do Firebase ausente ou não configurado.");
-                }
-                const db = window.firebase.database();
-                const path = window.getAbellaPath ? window.getAbellaPath('categories') : 'categories';
+        // DISPARADOR E CONTROLADOR DA FILA DO GRID 
+document.addEventListener('DOMContentLoaded', async () => {
 
-                // Monitoramento em Tempo Real (.on('value')): Alterou no editor, muda na hora aqui
-                db.ref(path).on('value', (snapshot) => {
-                    loading.classList.add('hidden');
-                    grid.innerHTML = '';
+    const grid = document.getElementById('grid-categorias');
+    const loading = document.getElementById('loading');
+    const noResult = document.getElementById('no-result');
+
+    await carregarBannerHome();
+
+    try {
+                // Sincroniza parâmetros operacionais e categorias em paralelo absoluto
+                const [snapSettings, snapCategories] = await Promise.all([
+                    db.ref('abella/settings').once('value'),
+                    db.ref('abella/categories').once('value')
+                ]);
+
+                // 1. APLICAÇÃO DOS PARÂMETROS GLOBAIS (Settings)
+                if (snapSettings.exists()) {
+                    const cfg = snapSettings.val();
                     
-                    const data = snapshot.val();
-                    if (!data) {
-                        grid.innerHTML = `<p class="col-span-full text-center text-xs text-zinc-500 py-10">NENHUMA CATEGORIA DISPONÍVEL NO MOMENTO.</p>`;
-                        return;
+                    // Identidade Visual / Logomarca Corporativa
+// Atualização dinâmica da Logomarca
+                    if (cfg.logoUrl) {
+                        const img = document.getElementById('abellaLogoImg');
+                        const fallback = document.getElementById('abellaLogoFallback');
+                        if (img) {
+                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(cfg.logoUrl) : cfg.logoUrl;
+                            img.onload = () => {
+                                img.classList.remove('hidden');
+                                fallback?.classList.add('hidden');
+                            };
+                        }
                     }
 
-                    const categoriasOrdenadas = Object.entries(data)
-                        .map(([slug, content]) => ({ slug, ...content }))
-                        .filter(c => c.active !== false)
-                        .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-                    if (categoriasOrdenadas.length === 0) {
-                        grid.innerHTML = `<p class="col-span-full text-center text-xs text-zinc-500 py-10">NENHUMA CATEGORIA ATIVA.</p>`;
-                        return;
+                    // Textos dinâmicos estruturados
+                    if (cfg.name) document.getElementById('nome').innerText = cfg.name;
+                    if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;
+                    
+                    // Regras Financeiras Ativas no Hero
+                    if (cfg.parcelas) {
+                        document.getElementById('parcelamento').innerText = `${cfg.parcelas}x sem juros`;
+                        if(document.getElementById('float-parcelas')) document.getElementById('float-parcelas').innerText = `Até ${cfg.parcelas}x sem juros`;
+                    }
+                    if (cfg.pix) {
+                        document.getElementById('pix').innerText = `${cfg.pix}% OFF`;
+                        if(document.getElementById('float-pix')) document.getElementById('float-pix').innerText = `PIX ${cfg.pix}% OFF`;
                     }
 
-                    categoriasOrdenadas.forEach(cat => {
-                        // Resiliência de dados: Tenta ler chaves novas e antigas para não quebrar nunca
-                        const rawImage = cat.gridImage || cat.grid || cat.heroImage || cat.hero || '';
-                        const urlFinal = converterGsUrl(rawImage);
+                    // Banner de Promoções Superior
+                    const banner = document.getElementById('banner');
+                    if (banner) {
+                        if (cfg.bannerAtivo && cfg.bannerTexto) {
+                            document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
+                            banner.classList.remove('hidden');
+                        } else {
+                            banner.classList.add('hidden');
+                        }
+                    }
 
-                        const card = document.createElement('div');
-                        card.className = 'cat-card rounded-2xl overflow-hidden cursor-pointer flex flex-col group';
-                        card.onclick = () => {
-                            window.location.href = `subcategorias.html?categoria=${encodeURIComponent(cat.slug)}`;
-                        };
+                    // Links Dinâmicos dos Canais de Venda (WhatsApp)
+                    if (cfg.whatsapp) {
+                        const linkWhats = `https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}`;
+                        const b1 = document.getElementById('whats');
+                        const b2 = document.getElementById('footerWhats');
+                        if (b1) b1.href = linkWhats;
+                        if (b2) b2.href = linkWhats;
+                    }
+                }
 
-                        card.innerHTML = `
-                            <div class="w-full aspect-square relative bg-zinc-950 overflow-hidden flex items-center justify-center">
-                                <div class="fallback-container absolute inset-0 flex items-center justify-center text-zinc-700">📁</div>
-                                <img 
-                                    src="${urlFinal}" 
-                                    alt="${cat.name || cat.slug}" 
-                                    class="w-full h-full object-cover relative z-10 group-hover:scale-105 transition-transform duration-700"
-                                    onerror="handleImageError(this)"
-                                >
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-20"></div>
+                // 2. FILTRAGEM E MONTAGEM DO GRID DE CATEGORIAS
+                let listaCategorias = [];
+
+                if (snapCategories.exists() && snapCategories.val()) {
+                    // Cenário Ideal: Carrega o nó estruturado de categorias criadas
+                    const dadosCat = snapCategories.val();
+                    listaCategorias = Array.isArray(dadosCat) ? dadosCat : Object.values(dadosCat);
+                } else {
+                    // Fallback Técnico: Se o nó categories estiver vazio, reconstrói via produtos
+                    const snapProdutos = await db.ref('abella/produtos').once('value');
+                    if (snapProdutos.exists()) {
+                        const prods = Object.values(snapProdutos.val());
+                        const categoriasUnicas = [...new Set(prods.map(p => p.categoria || p.category).filter(Boolean))];
+                        listaCategorias = categoriasUnicas.map(cat => ({
+                            nome: cat,
+                            imagem: prods.find(p => (p.categoria || p.category) === cat)?.image || ''
+                        }));
+                    }
+                }
+
+                // Oculta os esqueletos pisantes da tela (Skeletons)
+                if (loading) loading.classList.add('hidden');
+
+                if (!listaCategorias || listaCategorias.length === 0) {
+                    if (noResult) noResult.classList.remove('hidden');
+                    return;
+                }
+
+                // Injeção Atômica por DocumentFragment (Zero atrasos de renderização no DOM)
+                const fragmento = document.createDocumentFragment();
+
+                listaCategorias.forEach(cat => {
+                    const nomeCat = cat.nome || cat.name || 'Joia';
+                    const imgCat = resolverImagemFirebase(cat.imagem || cat.image || '');
+
+                    const div = document.createElement('div');
+                    div.className = "cat-card aspect-[3/4] relative group rounded-2xl overflow-hidden shadow-md";
+                    div.setAttribute('role', 'listitem');
+                    div.onclick = () => {
+                        window.location.href = `produtos.html?categoria=${encodeURIComponent(nomeCat.toLowerCase().trim())}`;
+                    };
+
+                    div.innerHTML = `
+                        <img src="${imgCat}" alt="${nomeCat}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
+                            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Coleção Premium</p>
+                            <h3 class="serif text-white text-base md:text-lg font-bold tracking-wide uppercase mt-1 leading-tight">${nomeCat}</h3>
+                            <div class="mt-3 pt-3 border-t border-white/10 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span class="text-[10px] uppercase font-bold text-[#caa85c] tracking-wider">Ver Produtos</span>
+                                <div class="arrow-btn text-xs bg-[#caa85c] text-black rounded-lg w-6 h-6 flex items-center justify-center font-bold">→</div>
                             </div>
-                            <div class="p-4 md:p-5 flex flex-col justify-end flex-1 relative z-30 -mt-12 bg-gradient-to-t from-black via-black/95 to-transparent">
-                                <h3 class="cinzel text-sm md:text-base font-bold tracking-wider text-zinc-100 group-hover:text-[#caa85c] transition-colors line-clamp-1">
-                                    ${(cat.name || cat.slug).toUpperCase()}
-                                </h3>
-                                <div class="flex items-center justify-between mt-2 pt-2 border-t border-zinc-900/50">
-                                    <span class="text-[9px] md:text-[10px] uppercase font-mono tracking-widest text-zinc-500">Explorar Linha</span>
-                                    <span class="text-xs text-[#caa85c] opacity-0 group-hover:opacity-100 translate-x-[-4px] group-hover:translate-x-0 transition-all duration-300">→</span>
-                                </div>
-                            </div>
-                        `;
-                        grid.appendChild(card);
-                    });
+                        </div>
+                    `;
+                    fragmento.appendChild(div);
                 });
 
+                // Limpa e desenha o grid com performance máxima instantânea
+                grid.innerHTML = '';
+                grid.appendChild(fragmento);
+
+                // 3. ENGENHARIA DE BUSCA LOCAL EM TEMPO REAL (Sem requisições extras)
                 const inputBusca = document.getElementById('busca');
                 if (inputBusca) {
                     inputBusca.addEventListener('input', (e) => {

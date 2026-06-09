@@ -1,186 +1,642 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Editor Full Master v4.0 • Abella Joias</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Super Editor V5</title>
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
-
-<style>
-body { background:#0b0b0b; color:#eee; font-family:'Poppins',sans-serif; }
-
-.input-dark { background:#1a1a1a;border:1px solid #333;color:#fff;padding:5px 7px;border-radius:6px;width:100%;font-size:10px; }
-.input-dark:focus { border-color:#caa85c; background:#222; outline:none; }
-
-.edit-sku { color:#caa85c; font-family:monospace; font-weight:bold; text-transform:uppercase; }
-
-tr.is-paused { opacity:.4; background:#2a1010 !important; }
-
-.btn-status { font-size:9px;font-weight:800;text-transform:uppercase;padding:4px 6px;border-radius:4px;cursor:pointer;width:44px; }
-.status-on { background:#15803d;color:#fff; }
-.status-off { background:#b91c1c;color:#fff; }
-
-.sticky-header th { position:sticky;top:0;background:#0b0b0b;z-index:10;border-bottom:2px solid #caa85c;font-size:9px; }
-
-.img-preview { width:34px;height:34px;object-fit:cover;background:#222;border-radius:4px;border:1px solid #444; }
-.img-error { border-color:#ef4444;background:#451a1a; }
-
-.highlight-var { border:1px solid #caa85c !important; }
-.highlight-sub { border:1px solid #818cf8 !important; }
-
-::-webkit-scrollbar { width:5px;height:5px; }
-::-webkit-scrollbar-thumb { background:#333; }
-</style>
+  <style>
+    .input-dark {
+      background-color: rgb(24 24 27); /* zinc-900 */
+      border: 1px solid rgb(39 39 42); /* zinc-800 */
+      color: white;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+    .tab-btn.active {
+      background: #caa85c;
+      color: black;
+      font-weight: 700;
+      border-radius: 0.75rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+    }
+    .tab-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: white;
+      border-radius: 0.75rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+    }
+  </style>
 </head>
 
-<body class="p-2">
+<body class="bg-black text-white">
+  <div class="max-w-7xl mx-auto p-4">
+    <!-- Header -->
+    <header class="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 mb-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V5</h1>
+          <p class="text-xs text-zinc-500">Centro Operacional Abella</p>
+        </div>
 
-<div class="max-w-[100%] mx-auto">
+        <div class="flex gap-2">
+          <button
+            id="btnRefresh"
+            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold"
+            type="button"
+          >
+            Atualizar
+          </button>
+        </div>
+      </div>
+    </header>
 
-<header class="bg-[#141414] p-4 rounded-xl border border-[#2a2a2a] mb-4 flex justify-between">
-<h1 class="text-xl font-bold text-[#caa85c]">Editor Full Master v4.0</h1>
+    <!-- Estatísticas -->
+    <section class="grid grid-cols-4 gap-3 mb-5">
+      <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
+        <div class="text-zinc-500 text-[10px]">Produtos</div>
+        <div id="statProdutos" class="text-2xl font-bold">0</div>
+      </div>
 
-<div class="flex gap-2">
-<button onclick="criarNovoProduto()" class="bg-white text-black px-4 py-2 text-[10px]">+ NOVO</button>
-<button onclick="carregarProdutos()" class="bg-[#caa85c] text-black px-4 py-2 text-[10px]">BUSCAR</button>
-</div>
-</header>
+      <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
+        <div class="text-zinc-500 text-[10px]">Categorias</div>
+        <div id="statCategorias" class="text-2xl font-bold">0</div>
+      </div>
 
-<table class="w-full text-[10px]">
-<thead class="sticky-header">
-<tr>
-<th>Status</th><th>Img</th><th>SKU</th><th>Nome</th><th>Preço</th><th>Ações</th>
-</tr>
-</thead>
-<tbody id="tabelaCorpo"></tbody>
-</table>
+      <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
+        <div class="text-zinc-500 text-[10px]">Subcategorias</div>
+        <div id="statSubs" class="text-2xl font-bold">0</div>
+      </div>
 
-</div>
+      <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
+        <div class="text-zinc-500 text-[10px]">Pausados</div>
+        <div id="statPausados" class="text-2xl font-bold">0</div>
+      </div>
+    </section>
 
-<script>
+    <!-- Busca Global -->
+    <section class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-4">
+      <div class="grid md:grid-cols-5 gap-3">
+        <input
+          id="buscaGlobal"
+          type="text"
+          class="w-full md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
+          placeholder="Buscar SKU, Nome, Categoria ou Subcategoria..."
+        />
 
-const firebaseConfig = {
-apiKey:"AIzaSyDPZBSX8W...",
-databaseURL:"https://catalogo-abella-joias-default-rtdb.firebaseio.com"
-};
+        <select
+          id="filtroTipo"
+          class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
+        >
+          <option value="todos">Todos</option>
+          <option value="produto">Produtos</option>
+          <option value="categoria">Categorias</option>
+          <option value="subcategoria">Subcategorias</option>
+        </select>
 
-if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+        <select
+          id="filtroCategoria"
+          class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
+        >
+          <option value="">Todas Categorias</option>
+        </select>
 
-let categoriasCache = {};
-let subcatPorPai = {};
+        <select
+          id="filtroSubcategoria"
+          class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
+        >
+          <option value="">Todas Subcategorias</option>
+        </select>
+      </div>
 
-async function carregarCategorias(){
-const snap = await db.ref('abella/categories').once('value');
-categoriasCache = snap.val() || {};
+      <div class="text-xs text-zinc-500 mt-2">
+        ℹ️ Dica: a busca filtra a aba atual conforme os filtros acima.
+      </div>
+    </section>
 
-subcatPorPai = {};
-Object.entries(categoriasCache).forEach(([k,v])=>{
-if(v.subcategories) subcatPorPai[k]=v.subcategories;
-});
-}
+    <!-- Tabs -->
+    <section class="flex gap-2 mb-4">
+      <button class="tab-btn active" data-tab="produtos" type="button">Produtos</button>
+      <button class="tab-btn" data-tab="categorias" type="button">Categorias</button>
+      <button class="tab-btn" data-tab="subcategorias" type="button">Subcategorias</button>
+    </section>
 
-function setStatus(msg){
-console.log(msg);
-}
+    <!-- Conteúdo por aba -->
+    <section>
+      <div id="tab-produtos"></div>
+      <div id="tab-categorias" class="hidden"></div>
+      <div id="tab-subcategorias" class="hidden"></div>
+    </section>
 
-function converterUrlStorage(url){
-if(!url || !url.startsWith('gs://')) return url;
-const clean=url.replace('gs://','');
-const i=clean.indexOf('/');
-const bucket=clean.substring(0,i);
-const path=clean.substring(i+1);
-return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(path)}?alt=media`;
-}
+    <!-- Footer status -->
+    <div id="status" class="text-xs text-zinc-500 mt-6"></div>
+  </div>
 
-function criarLinhaHTML(id,p){
+  <!-- Drawer -->
+  <div
+    id="drawer"
+    class="fixed top-0 right-0 h-full w-[520px] bg-zinc-950 border-l border-zinc-800 hidden z-50 overflow-y-auto"
+  >
+    <div class="p-5">
+      <div class="flex justify-between mb-5">
+        <h2 id="drawerTitle" class="text-lg font-bold">Editor</h2>
+        <button type="button" onclick="fecharDrawer()" class="text-xl leading-none">✕</button>
+      </div>
+      <div id="drawerContent"></div>
+    </div>
+  </div>
 
-const statusBtn = p.paused ? 'status-off' : 'status-on';
+  <!--
+    ✅ IMPORTANTE:
+    Carregue ANTES deste arquivo o seu:
+    js/firebase/firebase-config.js
+  -->
 
-return `
-<tr data-id="${id}">
-<td><button onclick="toggleStatus(this)" class="btn-status ${statusBtn}">${p.paused?'OFF':'ON'}</button></td>
-<td><input class="edit-img" value="${p.image||''}"></td>
-<td class="edit-sku">${p.sku||''}</td>
-<td><input class="edit-name" value="${p.name||''}"></td>
-<td><input class="edit-preco" value="${p.price||0}"></td>
-<td>
-<button onclick="salvarLinha(this)">💾</button>
-<button onclick="deletarProduto('${id}')">🗑</button>
-</td>
-</tr>`;
-}
+  <script>
+    // =======================
+    // Firebase DB (do seu config)
+    // =======================
+    const db = window.db;
 
-async function criarNovoProduto(){
+    const statusEl = document.getElementById('status');
+    function setStatus(msg, type = 'info') {
+      const color = type === 'error' ? 'text-red-400' : type === 'ok' ? 'text-green-400' : 'text-zinc-500';
+      statusEl.className = `text-xs mt-6 ${color}`;
+      statusEl.textContent = msg;
+    }
 
-const ref = db.ref('abella/products').push();
+    if (!db || typeof db.ref !== 'function') {
+      setStatus('❌ Firebase DB não carregado. Verifique se seu firebase-config.js foi incluído antes deste arquivo.', 'error');
+      throw new Error('Firebase DB ausente');
+    }
 
-const data = {
-sku:"SKU-NEW",
-name:"Novo Produto",
-price:0,
-paused:true,
-image:""
-};
+    // =======================
+    // Estado / Cache
+    // =======================
+    let produtosCache = [];
+    let categoriasCache = {};
 
-await ref.set(data);
+    // =======================
+    // Util
+    // =======================
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
 
-document.getElementById('tabelaCorpo')
-.insertAdjacentHTML('afterbegin',criarLinhaHTML(ref.key,data));
-}
+    function getActiveTab() {
+      const active = document.querySelector('.tab-btn.active');
+      return active?.dataset?.tab || 'produtos';
+    }
 
-async function carregarProdutos(){
+    // =======================
+    // Drawer
+    // =======================
+    function abrirDrawer(titulo, html) {
+      document.getElementById('drawerTitle').innerHTML = escapeHtml(titulo);
+      document.getElementById('drawerContent').innerHTML = html;
+      document.getElementById('drawer').classList.remove('hidden');
+    }
 
-await carregarCategorias();
+    function fecharDrawer() {
+      document.getElementById('drawer').classList.add('hidden');
+    }
 
-const snap = await db.ref('abella/products').once('value');
+    // =======================
+    // Carregamento
+    // =======================
+    async function carregarCategorias() {
+      const snap = await db.ref('abella/categories').once('value');
+      categoriasCache = snap.val() || {};
+      popularFiltros();
+    }
 
-let html="";
+    async function carregarProdutos() {
+      const snap = await db.ref('abella/products').once('value');
+      produtosCache = [];
 
-snap.forEach(c=>{
-html+=criarLinhaHTML(c.key,c.val());
-});
+      snap.forEach(item => {
+        produtosCache.push({ id: item.key, ...item.val() });
+      });
+    }
 
-document.getElementById('tabelaCorpo').innerHTML=html;
-}
+    function atualizarEstatisticas() {
+      document.getElementById('statProdutos').innerText = produtosCache.length;
+      document.getElementById('statCategorias').innerText = Object.keys(categoriasCache).length;
 
-async function toggleStatus(btn){
+      let totalSubs = 0;
+      Object.values(categoriasCache).forEach(cat => {
+        totalSubs += Object.keys(cat?.subcategories || {}).length;
+      });
+      document.getElementById('statSubs').innerText = totalSubs;
 
-const tr = btn.closest('tr');
-const id = tr.dataset.id;
-const on = btn.classList.contains('status-on');
+      document.getElementById('statPausados').innerText =
+        produtosCache.filter(p => p.paused).length;
+    }
 
-const newState = !on;
+    async function carregarTudo() {
+      await carregarCategorias();
+      await carregarProdutos();
+      atualizarEstatisticas();
+      setStatus('✅ Dados carregados com sucesso.', 'ok');
+    }
 
-await db.ref(`abella/products/${id}`).update({paused:!newState});
+    // =======================
+    // Filtros (UI)
+    // =======================
+    function popularFiltros() {
+      const selCat = document.getElementById('filtroCategoria');
+      const selSub = document.getElementById('filtroSubcategoria');
 
-btn.className='btn-status '+(newState?'status-on':'status-off');
-btn.innerText=newState?'ON':'OFF';
-}
+      const cats = Object.keys(categoriasCache);
 
-async function salvarLinha(btn){
-const tr=btn.closest('tr');
-const id=tr.dataset.id;
+      selCat.innerHTML = `<option value="">Todas Categorias</option>`;
+      cats.forEach(c => {
+        selCat.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+      });
 
-const data={
-sku:tr.querySelector('.edit-sku').innerText,
-name:tr.querySelector('.edit-name').value,
-price:parseFloat(tr.querySelector('.edit-preco').value)||0,
-image:tr.querySelector('.edit-img').value
-};
+      const allSubs = new Set();
+      Object.entries(categoriasCache).forEach(([_, cat]) => {
+        const sc = cat?.subcategories || {};
+        Object.entries(sc).forEach(([subSlug]) => allSubs.add(subSlug));
+      });
 
-await db.ref(`abella/products/${id}`).update(data);
-}
+      selSub.innerHTML = `<option value="">Todas Subcategorias</option>`;
+      [...allSubs].forEach(s => {
+        selSub.innerHTML += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+      });
+    }
 
-async function deletarProduto(id){
-await db.ref('abella/products/'+id).remove();
-carregarProdutos();
-}
+    // =======================
+    // Render - Produtos
+    // =======================
+    function renderProdutos() {
+      const container = document.getElementById('tab-produtos');
+      container.innerHTML = '';
 
-</script>
+      const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
+      const tipo = document.getElementById('filtroTipo').value;
+      const filtroCat = document.getElementById('filtroCategoria').value;
+      const filtroSub = document.getElementById('filtroSubcategoria').value;
+
+      const produtosFiltrados = produtosCache.filter(p => {
+        const texto =
+          (p.name || '').toLowerCase() + ' ' +
+          (p.sku || '').toLowerCase() + ' ' +
+          (p.category || '').toLowerCase() + ' ' +
+          ((p.subcategory || p.subCategory || '')).toLowerCase();
+
+        const bateTexto = texto.includes(termos) || termos === '';
+        const bateTipo = (tipo === 'todos' || tipo === 'produto');
+        const bateCat = !filtroCat || p.category === filtroCat;
+
+        const subProduto = p.subcategory || p.subCategory || '';
+        const bateSub = !filtroSub || subProduto === filtroSub;
+
+        return bateTexto && bateTipo && bateCat && bateSub;
+      });
+
+      if (produtosFiltrados.length === 0) {
+        container.innerHTML = `<div class="text-sm text-zinc-500">Nenhum produto encontrado.</div>`;
+        return;
+      }
+
+      produtosFiltrados.forEach(produto => {
+        const pausedTag = produto.paused
+          ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>`
+          : '';
+
+        container.innerHTML += `
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+            <div class="flex justify-between">
+              <div>
+                <div class="font-bold">
+                  ${escapeHtml(produto.name || '')}
+                  ${pausedTag}
+                </div>
+                <div class="text-xs text-zinc-500">SKU: ${escapeHtml(produto.sku || '')}</div>
+                <div class="text-xs text-zinc-500">Categoria: ${escapeHtml(produto.category || '')}</div>
+                <div class="text-xs text-zinc-500">Subcategoria: ${escapeHtml(produto.subcategory || produto.subCategory || '')}</div>
+                <div class="text-xs text-zinc-500">Preço: ${escapeHtml(produto.price ?? 0)}</div>
+                <div class="text-xs text-zinc-500">Peso: ${escapeHtml(produto.weight ?? 0)}</div>
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="editarProduto('${produto.id}')" class="hover:opacity-90">✏</button>
+                <button onclick="duplicarProduto('${produto.id}')" class="hover:opacity-90">📄</button>
+                <button onclick="pausarProduto('${produto.id}')" class="hover:opacity-90">⏸</button>
+                <button onclick="deletarProduto('${produto.id}')" class="hover:opacity-90">🗑</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // =======================
+    // Render - Categorias
+    // =======================
+    function renderCategorias() {
+      const el = document.getElementById('tab-categorias');
+      el.innerHTML = '';
+
+      const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
+      const tipo = document.getElementById('filtroTipo').value;
+      const filtroCat = document.getElementById('filtroCategoria').value;
+
+      const entries = Object.entries(categoriasCache).filter(([slug, cat]) => {
+        const bateTipo = (tipo === 'todos' || tipo === 'categoria');
+        const bateCat = !filtroCat || slug === filtroCat;
+
+        const texto = ((cat?.name || slug) + ' ' + slug).toLowerCase();
+        const bateTexto = texto.includes(termos) || termos === '';
+
+        return bateTipo && bateCat && bateTexto;
+      });
+
+      if (entries.length === 0) {
+        el.innerHTML = `<div class="text-sm text-zinc-500">Nenhuma categoria encontrada.</div>`;
+        return;
+      }
+
+      entries.forEach(([slug, cat]) => {
+        el.innerHTML += `
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+            <div class="flex justify-between">
+              <div>
+                <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
+                <div class="text-xs text-zinc-500">${escapeHtml(slug)}</div>
+                <div class="text-xs text-zinc-500">
+                  Subs: ${escapeHtml(Object.keys(cat?.subcategories || {}).length)}
+                </div>
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="editarCategoria('${slug}')" class="hover:opacity-90">✏</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // =======================
+    // Render - Subcategorias
+    // =======================
+    function renderSubcategorias() {
+      const el = document.getElementById('tab-subcategorias');
+      el.innerHTML = '';
+
+      const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
+      const tipo = document.getElementById('filtroTipo').value;
+      const filtroCat = document.getElementById('filtroCategoria').value;
+      const filtroSub = document.getElementById('filtroSubcategoria').value;
+
+      const subs = [];
+      Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
+        const sc = cat?.subcategories || {};
+        Object.entries(sc).forEach(([subSlug, subObj]) => {
+          subs.push({ catSlug, subSlug, subObj });
+        });
+      });
+
+      const subsFiltradas = subs.filter(x => {
+        const bateTipo = (tipo === 'todos' || tipo === 'subcategoria');
+        const bateCat = !filtroCat || x.catSlug === filtroCat;
+        const bateSub = !filtroSub || x.subSlug === filtroSub;
+
+        const nomeSub =
+          (x.subObj?.name || x.subObj?.title || '') + ' ' + x.subSlug;
+
+        const texto = (nomeSub + ' ' + x.catSlug).toLowerCase();
+        const bateTexto = texto.includes(termos) || termos === '';
+
+        return bateTipo && bateCat && bateSub && bateTexto;
+      });
+
+      if (subsFiltradas.length === 0) {
+        el.innerHTML = `<div class="text-sm text-zinc-500">Nenhuma subcategoria encontrada.</div>`;
+        return;
+      }
+
+      subsFiltradas.forEach(x => {
+        el.innerHTML += `
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+            <div class="flex justify-between">
+              <div>
+                <div class="font-bold">${escapeHtml(x.subObj?.name || x.subObj?.title || x.subSlug)}</div>
+                <div class="text-xs text-zinc-500">Categoria: ${escapeHtml(x.catSlug)}</div>
+                <div class="text-xs text-zinc-500">SubSlug: ${escapeHtml(x.subSlug)}</div>
+              </div>
+
+              <div class="flex gap-2">
+                <button class="opacity-50 cursor-not-allowed" disabled title="Edição não implementada">✏</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderCurrentTab() {
+      const tab = getActiveTab();
+      if (tab === 'produtos') renderProdutos();
+      if (tab === 'categorias') renderCategorias();
+      if (tab === 'subcategorias') renderSubcategorias();
+    }
+
+    // =======================
+    // Drawer - Produtos
+    // =======================
+    function editarProduto(id) {
+      const produto = produtosCache.find(p => p.id === id);
+      if (!produto) return;
+
+      let categoriasHtml = '';
+      Object.keys(categoriasCache).forEach(cat => {
+        categoriasHtml += `
+          <option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>
+            ${escapeHtml(cat)}
+          </option>
+        `;
+      });
+
+      abrirDrawer('Editar Produto', `
+        <input id="editNome" class="input-dark" value="${escapeHtml(produto.name || '')}" />
+        <input id="editSku" class="input-dark" value="${escapeHtml(produto.sku || '')}" />
+        <select id="editCategoria" class="input-dark">
+          ${categoriasHtml}
+        </select>
+        <input id="editPreco" class="input-dark" value="${escapeHtml(produto.price ?? 0)}" />
+        <input id="editPeso" class="input-dark" value="${escapeHtml(produto.weight ?? 0)}" />
+        <input id="editImagem" class="input-dark" value="${escapeHtml(produto.image || '')}" />
+
+        <button
+          onclick="salvarProduto('${escapeHtml(id)}')"
+          class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-1"
+          type="button"
+        >
+          Salvar
+        </button>
+      `);
+    }
+
+    async function salvarProduto(id) {
+      await db.ref(`abella/products/${id}`).update({
+        name: document.getElementById('editNome').value,
+        sku: document.getElementById('editSku').value,
+        category: document.getElementById('editCategoria').value,
+        price: parseFloat(document.getElementById('editPreco').value) || 0,
+        weight: parseFloat(document.getElementById('editPeso').value) || 0,
+        image: document.getElementById('editImagem').value,
+        updatedAt: Date.now()
+      });
+
+      fecharDrawer();
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    async function duplicarProduto(id) {
+      const produto = produtosCache.find(p => p.id === id);
+      if (!produto) return;
+
+      const copia = {
+        ...produto,
+        sku: (produto.sku || '') + '-COPY',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      delete copia.id;
+
+      await db.ref('abella/products').push(copia);
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    async function pausarProduto(id) {
+      const produto = produtosCache.find(p => p.id === id);
+      if (!produto) return;
+
+      await db.ref(`abella/products/${id}`).update({
+        paused: !produto.paused,
+        updatedAt: Date.now()
+      });
+
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    async function deletarProduto(id) {
+      if (!confirm('Excluir produto?')) return;
+      await db.ref(`abella/products/${id}`).remove();
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    // =======================
+    // Drawer - Categorias
+    // =======================
+    function editarCategoria(slug) {
+      const cat = categoriasCache[slug];
+      if (!cat) return;
+
+      abrirDrawer('Editar Categoria', `
+        <div class="text-xs text-zinc-500 mb-2">Slug (chave): ${escapeHtml(slug)}</div>
+        <input id="editCatName" class="input-dark" value="${escapeHtml(cat.name || '')}" />
+
+        <button
+          onclick="salvarCategoria('${escapeHtml(slug)}')"
+          class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-1"
+          type="button"
+        >
+          Salvar
+        </button>
+      `);
+    }
+
+    async function salvarCategoria(slug) {
+      await db.ref(`abella/categories/${slug}`).update({
+        name: document.getElementById('editCatName').value,
+        updatedAt: Date.now()
+      });
+
+      fecharDrawer();
+      await carregarTudo();
+      renderCurrentTab();
+    }
+
+    // =======================
+    // Wiring UI
+    // =======================
+    function wireSearch() {
+      const ids = ['buscaGlobal', 'filtroTipo', 'filtroCategoria', 'filtroSubcategoria'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => renderCurrentTab());
+        el.addEventListener('change', () => renderCurrentTab());
+      });
+    }
+
+    function wireTabs() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          document.getElementById('tab-produtos').classList.add('hidden');
+          document.getElementById('tab-categorias').classList.add('hidden');
+          document.getElementById('tab-subcategorias').classList.add('hidden');
+
+          document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+          renderCurrentTab();
+        });
+      });
+    }
+
+    // =======================
+    // Boot
+    // =======================
+    (async function init() {
+      wireTabs();
+      wireSearch();
+
+      document.getElementById('btnRefresh').addEventListener('click', async () => {
+        setStatus('Carregando...', 'info');
+        await carregarTudo();
+        renderCurrentTab();
+      });
+
+      setStatus('Carregando dados do Firebase...', 'info');
+      await carregarTudo();
+      renderCurrentTab();
+      setStatus('✅ Editor pronto.', 'ok');
+    })();
+
+    // =======================
+    // Expor handlers globais pro HTML onclick
+    // =======================
+    window.editarProduto = editarProduto;
+    window.salvarProduto = salvarProduto;
+    window.duplicarProduto = duplicarProduto;
+    window.pausarProduto = pausarProduto;
+    window.deletarProduto = deletarProduto;
+
+    window.editarCategoria = editarCategoria;
+    window.salvarCategoria = salvarCategoria;
+
+  </script>
 </body>
 </html>

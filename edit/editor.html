@@ -230,6 +230,14 @@
     }
   }
 
+  function handleImageError(img) {
+    img.style.display = 'none';
+    if (img.parentNode) {
+      const fallback = img.parentNode.querySelector('.fallback-text');
+      if (fallback) fallback.style.display = 'flex';
+    }
+  }
+
   function getActiveTab() {
     const active = document.querySelector('.tab-btn.active');
     return active?.dataset?.tab || 'produtos';
@@ -244,7 +252,6 @@
     document.getElementById('drawer').classList.remove('hidden');
   }
 
-  // Limpa o conteúdo ao fechar para evitar acúmulo de IDs de preview antigos
   function fecharDrawer() {
     document.getElementById('drawer').classList.add('hidden');
     document.getElementById('drawerContent').innerHTML = '';
@@ -315,7 +322,7 @@
   }
 
   // =======================
-  // Renderizadores de Listagem com Buffer de Strings (Sem Travar o Navegador)
+  // Renderizadores de Listagem
   // =======================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
@@ -355,9 +362,10 @@
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-4 flex-1">
-              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative">
+                <div class="fallback-text absolute inset-0 flex items-center justify-center text-[10px] text-zinc-600 hidden">Erro</div>
                 ${produto.image ? `
-                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="this.parentNode.innerHTML='<span class=\"text-[10px] text-zinc-600\">Erro</span>'"/>
+                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="handleImageError(this)"/>
                 ` : `<span class="text-[10px] text-zinc-600">Sem Foto</span>`}
               </div>
               <div>
@@ -407,7 +415,7 @@
     let htmlBuffer = '';
     entries.forEach(([slug, cat]) => {
       const safeSlug = escapeAttr(slug);
-      const urlMiniatura = converterGsUrl(cat?.gridImage || cat?.heroImage);
+      const urlMiniatura = converterGsUrl(cat?.grid || cat?.hero || cat?.gridImage || cat?.heroImage);
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -466,8 +474,9 @@
     filtradas.forEach(x => {
       const safeCat = escapeAttr(x.catSlug);
       const safeSub = escapeAttr(x.subSlug);
-      // Puxa a foto prioritária cadastrada para a subcategoria
-      const urlMiniatura = converterGsUrl(x.subObj?.gridImage || x.subObj?.heroImage);
+      
+      // FIX — Mapeado para ler 'grid' ou 'hero' diretamente (conforme gravado no seu Realtime DB)
+      const urlMiniatura = converterGsUrl(x.subObj?.grid || x.subObj?.hero || x.subObj?.gridImage || x.subObj?.heroImage);
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -500,15 +509,15 @@
   }
 
   // =======================
-  // Drawers de Edição com Preview Ativo
+  // Drawers de Edição
   // =======================
   function editarProduto(id) {
     const produto = produtosCache.find(p => p.id === id);
     if (!produto) return;
 
-    let categoriasHtml = '';
+    let htmlCats = '';
     Object.keys(categoriasCache).forEach(cat => {
-      categoriasHtml += `<option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
+      htmlCats += `<option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
     });
 
     const urlPreview = converterGsUrl(produto.image);
@@ -516,9 +525,10 @@
     abrirDrawer('Editar Produto', `
       <input id="editNome" class="input-dark" placeholder="Nome" value="${escapeHtml(produto.name || '')}">
       <input id="editSku" class="input-dark" placeholder="SKU" value="${escapeHtml(produto.sku || '')}">
-      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">${categoriasHtml}</select>
+      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">${htmlCats}</select>
       <select id="editSubcategoria" class="input-dark"></select>
 
+      <div class="text-xs text-zinc-400 mb-1">Preview do Produto:</div>
       <img id="previewProduto" src="${escapeHtml(urlPreview)}" class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
       <input id="editImagem" class="input-dark" placeholder="URL da imagem ou gs://" value="${escapeHtml(produto.image || '')}" oninput="tratarInputImagem(this, 'previewProduto')">
 
@@ -546,7 +556,6 @@
   }
 
   async function salvarProduto(id) {
-    const urlLimpa = converterGsUrl(document.getElementById('editImagem').value);
     await db.ref(window.getAbellaPath(`products/${id}`)).update({
       name:       document.getElementById('editNome').value,
       sku:        document.getElementById('editSku').value,
@@ -554,7 +563,7 @@
       subcategory:document.getElementById('editSubcategoria').value,
       price:      parseFloat(document.getElementById('editPreco').value) || 0,
       weight:     parseFloat(document.getElementById('editPeso').value) || 0,
-      image:      urlLimpa,
+      image:      document.getElementById('editImagem').value,
       updatedAt:  Date.now()
     });
     fecharDrawer();
@@ -600,8 +609,8 @@
     abrirDrawer('Editar Categoria', `
       <input id="editCatName" class="input-dark" placeholder="Nome" value="${escapeHtml(cat.name || '')}">
       <textarea id="editCatDescription" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
-      <input id="editCatHero" class="input-dark" placeholder="Hero Image URL ou gs://" value="${escapeHtml(cat.heroImage || '')}">
-      <input id="editCatGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(cat.gridImage || '')}">
+      <input id="editCatHero" class="input-dark" placeholder="Hero Image URL ou gs://" value="${escapeHtml(cat.hero || cat.heroImage || '')}">
+      <input id="editCatGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(cat.grid || cat.gridImage || '')}">
       <input id="editCatOrder" type="number" class="input-dark" placeholder="Ordem" value="${escapeHtml(cat.order || 0)}">
 
       <label class="flex gap-2 items-center text-sm mb-2"><input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}> Categoria Destaque Home</label>
@@ -612,14 +621,11 @@
   }
 
   async function salvarCategoria(slug) {
-    const urlHeroLimpa = converterGsUrl(document.getElementById('editCatHero').value);
-    const urlGridLimpa = converterGsUrl(document.getElementById('editCatGrid').value);
-
     await db.ref(window.getAbellaPath(`categories/${slug}`)).update({
       name:        document.getElementById('editCatName').value,
       description: document.getElementById('editCatDescription').value,
-      heroImage:   urlHeroLimpa,
-      gridImage:   urlGridLimpa,
+      hero:        document.getElementById('editCatHero').value,
+      grid:        document.getElementById('editCatGrid').value,
       order:       parseInt(document.getElementById('editCatOrder').value) || 0,
       featured:    document.getElementById('editCatFeatured').checked,
       active:      document.getElementById('editCatActive').checked,
@@ -634,35 +640,36 @@
     const sub = categoriasCache[catSlug]?.subcategories?.[subSlug];
     if (!sub) return;
 
-    // Converte os links gs:// para exibição imediata no preview do editor
-    const urlPreviewGrid = converterGsUrl(sub.gridImage);
-    const urlPreviewHero = converterGsUrl(sub.heroImage);
+    // Garante compatibilidade caso esteja salvo como 'grid' ou 'gridImage'
+    const linkGridOriginal = sub.grid || sub.gridImage || '';
+    const linkHeroOriginal = sub.hero || sub.heroImage || '';
+
+    const urlPreviewGrid = converterGsUrl(linkGridOriginal);
+    const urlPreviewHero = converterGsUrl(linkHeroOriginal);
 
     abrirDrawer('Editar Subcategoria', `
-      <input id="subName" class="input-dark" placeholder="Nome" value="${escapeHtml(sub.name || '')}">
+      <input id="subName" class="input-dark" placeholder="Nome" value="${escapeHtml(sub.name || sub.title || '')}">
       <textarea id="subDescription" class="input-dark" placeholder="Descrição">${escapeHtml(sub.description || '')}</textarea>
       
       <div class="text-xs text-zinc-400 mb-1">Preview Grid Image:</div>
       <img id="previewSubGrid" src="${escapeHtml(urlPreviewGrid)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input id="subGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(sub.gridImage || '')}" oninput="tratarInputImagem(this, 'previewSubGrid')">
+      <input id="subGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(linkGridOriginal)}" oninput="tratarInputImagem(this, 'previewSubGrid')">
 
       <div class="text-xs text-zinc-400 mb-1 mt-2">Preview Hero Image:</div>
       <img id="previewSubHero" src="${escapeHtml(urlPreviewHero)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input id="subHero" class="input-dark" placeholder="Hero Image URL ou gs://" value="${escapeHtml(sub.heroImage || '')}" oninput="tratarInputImagem(this, 'previewSubHero')">
+      <input id="subHero" class="input-dark" placeholder="Hero Image URL ou gs://" value="${escapeHtml(linkHeroOriginal)}" oninput="tratarInputImagem(this, 'previewSubHero')">
 
       <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-4 font-bold">Salvar</button>
     `);
   }
 
   async function salvarSubcategoria(catSlug, subSlug) {
-    const urlHeroLimpa = converterGsUrl(document.getElementById('subHero').value);
-    const urlGridLimpa = converterGsUrl(document.getElementById('subGrid').value);
-
+    // Salva exatamente nas chaves simplificadas 'grid' e 'hero' para dar match perfeito com o banco
     await db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
       name:        document.getElementById('subName').value,
       description: document.getElementById('subDescription').value,
-      heroImage:   urlHeroLimpa,
-      gridImage:   urlGridLimpa,
+      grid:        document.getElementById('subGrid').value,
+      hero:        document.getElementById('subHero').value,
       updatedAt:   Date.now()
     });
     fecharDrawer();
@@ -722,7 +729,7 @@
     }
 
     if (!db) {
-      setStatus('❌ Firebase não carregado. Verifique os scripts compat e o firebase-config.js', 'error');
+      setStatus('❌ Firebase não carregado.', 'error');
       return;
     }
 
@@ -744,9 +751,7 @@
     setStatus('✅ Editor pronto.', 'ok');
   })();
 
-  // =======================
-  // Escopo de Atribuições Globais
-  // =======================
+  // Global Handlers
   window.editarProduto               = editarProduto;
   window.salvarProduto               = salvarProduto;
   window.duplicarProduto             = duplicarProduto;
@@ -759,6 +764,7 @@
   window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
   window.fecharDrawer                = fecharDrawer;
   window.tratarInputImagem           = tratarInputImagem;
+  window.handleImageError            = handleImageError;
   </script>
 </body>
 </html>

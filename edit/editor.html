@@ -9,13 +9,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
-  <!-- Config -->
-  <script src="js/firebase/firebase-config.js"></script>
+  <!-- Config Firebase -->
+  <script src="../js/firebase/firebase-config.js"></script>
 
   <style>
     .input-dark {
@@ -172,22 +172,77 @@
   -->
 
   <script>
-    // =======================
-    // Firebase DB (do seu config)
-    // =======================
-    const db = window.db;
+// =======================
+// Firebase DB (config global)
+// =======================
 
-    const statusEl = document.getElementById('status');
-    function setStatus(msg, type = 'info') {
-      const color = type === 'error' ? 'text-red-400' : type === 'ok' ? 'text-green-400' : 'text-zinc-500';
-      statusEl.className = `text-xs mt-6 ${color}`;
-      statusEl.textContent = msg;
-    }
+const statusEl =
+    document.getElementById('status');
 
-    if (!db || typeof db.ref !== 'function') {
-      setStatus('❌ Firebase DB não carregado. Verifique se seu firebase-config.js foi incluído antes deste arquivo.', 'error');
-      throw new Error('Firebase DB ausente');
-    }
+function setStatus(
+    msg,
+    type = 'info'
+) {
+
+    const color =
+        type === 'error'
+            ? 'text-red-400'
+            : type === 'ok'
+            ? 'text-green-400'
+            : 'text-zinc-500';
+
+    statusEl.className =
+        `text-xs mt-6 ${color}`;
+
+    statusEl.textContent = msg;
+}
+
+// Aguarda firebase-config.js
+const db =
+    window.db ||
+    (window.firebase
+        ? firebase.database()
+        : null);
+
+if (!db) {
+
+    console.error(
+        '[EDITOR] Firebase Database não encontrada.'
+    );
+
+    console.log(
+        'window.firebase:',
+        window.firebase
+    );
+
+    console.log(
+        'window.db:',
+        window.db
+    );
+
+    console.log(
+        'window.ABELLA_DB_ROOT:',
+        window.ABELLA_DB_ROOT
+    );
+
+    setStatus(
+        '❌ Firebase não carregado. Verifique os scripts firebase-app-compat.js, firebase-database-compat.js e firebase-config.js',
+        'error'
+    );
+
+    throw new Error(
+        'Firebase DB ausente'
+    );
+}
+
+console.info(
+    '[EDITOR] Firebase conectado.'
+);
+
+console.log(
+    'DB ROOT:',
+    window.ABELLA_DB_ROOT
+);
 
     // =======================
     // Estado / Cache
@@ -229,13 +284,23 @@
     // Carregamento
     // =======================
     async function carregarCategorias() {
-      const snap = await db.ref('abella/categories').once('value');
+      const snap = await db.ref(
+    window.getAbellaPath(
+        'categories'
+    )
+)
+      .once('value');
       categoriasCache = snap.val() || {};
       popularFiltros();
+    
     }
 
     async function carregarProdutos() {
-      const snap = await db.ref('abella/products').once('value');
+      const snap = await db.ref(
+    window.getAbellaPath(
+        'produtos'
+    )
+).once('value');
       produtosCache = [];
 
       snap.forEach(item => {
@@ -262,7 +327,11 @@ async function carregarTudo() {
   try {
 
     const catSnap =
-      await db.ref('abella/categories').once('value');
+      await db.ref(
+    window.getAbellaPath(
+        'categories'
+    )
+).once('value');
 
     categoriasCache =
       catSnap.val() || {};
@@ -273,7 +342,12 @@ async function carregarTudo() {
     );
 
     const prodSnap =
-      await db.ref('abella/products').once('value');
+      await db.ref(
+    window.getAbellaPath(
+        'produtos'
+    )
+)
+    .once('value');
 
     produtosCache = [];
 
@@ -650,7 +724,11 @@ async function carregarTudo() {
 }
 
     async function salvarProduto(id) {
-     await db.ref(`abella/products/${id}`).update({
+     await db.ref(
+    window.getAbellaPath(
+        `produtos/${id}`
+    )
+).update({
 
     name:
         document.getElementById('editNome').value,
@@ -695,7 +773,11 @@ async function carregarTudo() {
       };
       delete copia.id;
 
-      await db.ref('abella/products').push(copia);
+      await db.ref(
+    window.getAbellaPath(
+        'produtos'
+    )
+).push(copia);
       await carregarTudo();
       renderCurrentTab();
     }
@@ -704,7 +786,11 @@ async function carregarTudo() {
       const produto = produtosCache.find(p => p.id === id);
       if (!produto) return;
 
-      await db.ref(`abella/products/${id}`).update({
+      await db.ref(
+    window.getAbellaPath(
+        `produtos/${id}`
+    )
+).update({
         paused: !produto.paused,
         updatedAt: Date.now()
       });
@@ -715,7 +801,11 @@ async function carregarTudo() {
 
     async function deletarProduto(id) {
       if (!confirm('Excluir produto?')) return;
-      await db.ref(`abella/products/${id}`).remove();
+      await db.ref(
+    window.getAbellaPath(
+        `produtos/${id}`
+    )
+).remove();
       await carregarTudo();
       renderCurrentTab();
     }
@@ -837,32 +927,35 @@ async function carregarTudo() {
     `);
 }
 
-    async function salvarSubcategoria(
+async function salvarSubcategoria(
     catSlug,
     subSlug
 ){
 
     await db
-    .ref(
-      `abella/categories/${catSlug}/subcategories/${subSlug}`
-    )
-    .update({
+        .ref(
+            window.getAbellaPath(
+                `categories/${catSlug}/subcategories/${subSlug}`
+            )
+        )
+        .update({
 
-        name:
-            document.getElementById('subName').value,
+            name:
+                document.getElementById('subName').value,
 
-        description:
-            document.getElementById('subDescription').value,
+            description:
+                document.getElementById('subDescription').value,
 
-        heroImage:
-            document.getElementById('subHero').value,
+            heroImage:
+                document.getElementById('subHero').value,
 
-        gridImage:
-            document.getElementById('subGrid').value,
+            gridImage:
+                document.getElementById('subGrid').value,
 
-        updatedAt:
-            Date.now()
-    });
+            updatedAt:
+                Date.now()
+
+        });
 
     fecharDrawer();
 

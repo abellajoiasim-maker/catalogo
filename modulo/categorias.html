@@ -171,20 +171,60 @@
             }
         }
 
-        function renderizarCategorias() {
-            DOM.lista.innerHTML = '';
-            DOM.loading.classList.add('hidden');
+        function escapeHtml(text = '') {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
-            let listaOrdenada = Object.entries(categoriasCache).map(([slug, data]) => ({
+function renderizarCategorias() {
+
+    DOM.lista.innerHTML = '';
+    DOM.loading.classList.add('hidden');
+
+    const listaOrdenada = Object.entries(categoriasCache)
+        .map(([slug, data = {}]) => {
+
+            const nome =
+                data.name ||
+                data.nome ||
+                slug;
+
+            const imagem =
+                data.image ||
+                data.imagem ||
+                '';
+
+            const ordem =
+                Number.isFinite(Number(data.order))
+                    ? Number(data.order)
+                    : 0;
+
+            const pausado =
+                typeof data.paused === 'boolean'
+                    ? data.paused
+                    : data.status === 'pausado';
+
+            const subcategorias =
+                data.subcategories ||
+                data.subcategorias ||
+                {};
+
+            return {
                 slug,
-                name: data.name || slug,
-                image: data.image || '',
-                order: parseInt(data.order) || 0,
-                paused: data.paused !== undefined ? !!data.paused : data.status === 'pausado',
-                subcategories: data.subcategories || {}
-            }));
-
-            listaOrdenada.sort((a, b) => a.order - b.order);
+                name: nome,
+                image: imagem,
+                order: ordem,
+                paused: pausado,
+                subcategories: subcategorias,
+                createdAt: data.createdAt || null,
+                updatedAt: data.updatedAt || null
+            };
+        })
+        .sort((a, b) => a.order - b.order);
 
             if (listaOrdenada.length === 0) {
                 DOM.lista.innerHTML = `<p class="text-zinc-600 text-xs italic py-12 text-center font-mono">[Nenhuma categoria principal cadastrada]</p>`;
@@ -199,13 +239,19 @@
                 card.innerHTML = `
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <span class="text-sm font-bold ${item.paused ? 'text-rose-400/80 line-through' : 'text-white'} uppercase tracking-wide">${item.name}</span>
+                            <span class="text-sm font-bold ${item.paused ? 'text-rose-400/80 line-through' : 'text-white'} uppercase tracking-wide">${escapeHtml(item.name)}</span>
                             <span class="text-[9px] px-2 py-0.5 bg-zinc-950 text-zinc-400 rounded-md border border-zinc-800 font-mono">${qtdSubs} Subcategorias vinculadas</span>
                         </div>
                         <p class="text-[10px] text-zinc-500 font-mono truncate">PATH: categories/${item.slug} | Ordem: ${item.order}</p>
                     </div>
                     <div class="flex items-center gap-2 justify-end">
-                        <button type="button" onclick="ativarModoEdicao('${item.slug}', \`${item.name}\`, '${item.image}', ${item.order}, ${item.paused})" class="bg-zinc-950 text-zinc-300 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase">Editar</button>
+                        <button type="button" onclick='ativarModoEdicao(
+"${item.slug}",
+${JSON.stringify(item.name)},
+${JSON.stringify(item.image)},
+${item.order},
+${item.paused}
+)' class="bg-zinc-950 text-zinc-300 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase">Editar</button>
                         <button type="button" onclick="alternarEstadoPausa('${item.slug}', ${item.paused})" class="bg-zinc-950 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase ${item.paused ? 'text-emerald-400' : 'text-amber-500'}">${item.paused ? 'Reativar' : 'Pausar'}</button>
                         <button type="button" onclick="executarRemocao('${item.slug}')" class="bg-rose-950/20 text-rose-400 border border-rose-900/30 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase">🗑️</button>
                     </div>
@@ -214,7 +260,7 @@
             });
         }
 
-        function activarModoEdicao(slug, name, img, order, isPaused) {
+        function ativarModoEdicao(slug, name, img, order, isPaused) {
             DOM.oldSlug.value = slug;
             DOM.name.value = name;
             DOM.image.value = img;
@@ -227,6 +273,8 @@
 
         function resetarFormularioEstado() {
             DOM.form.reset();
+            DOM.order.value = 0;
+            DOM.status.value = 'ativo';
             DOM.oldSlug.value = '';
             DOM.titulo.innerText = "Nova Categoria Mãe";
             DOM.btnCancelar.classList.add('hidden');
@@ -240,27 +288,66 @@
 
             // Mantém subcategorias intactas caso seja uma edição de nome
             const subcategoriesSalvas = oldSlug && categoriasCache[oldSlug] ? categoriasCache[oldSlug].subcategories || {} : {};
+            const agora = Date.now();
 
-            const payload = {
-                name: name.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-                image: DOM.image.value.trim(),
-                order: Math.abs(parseInt(DOM.order.value, 10) || 0),
-                paused: DOM.status.value === 'pausado',
-                subcategories: subcategoriesSalvas,
-                timestamp: Date.now()
-            };
+const payload = {
+    name: name.replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;"),
 
-            try {
-                if (oldSlug && oldSlug !== slug) {
-                    await db.ref(window.getAbellaPath(`categories/${oldSlug}`)).remove();
-                }
-                await db.ref(window.getAbellaPath(`categories/${slug}`)).set(payload);
-                spawnAdminToast("Categoria salva com sucesso.");
-                resetarFormularioEstado();
-                await carregarCategoriasMestres();
-            } catch(err) {
-                spawnAdminToast("Erro ao salvar categoria.", true);
-            }
+    slug,
+
+    image: DOM.image.value.trim(),
+
+    order: Math.abs(
+        parseInt(DOM.order.value, 10) || 0
+    ),
+
+    paused:
+        DOM.status.value === 'pausado',
+
+    subcategories:
+        subcategoriesSalvas,
+
+    createdAt:
+        oldSlug &&
+        categoriasCache[oldSlug]?.createdAt
+            ? categoriasCache[oldSlug].createdAt
+            : agora,
+
+    updatedAt:
+        agora
+};
+
+          
+               try {
+
+    if (oldSlug && oldSlug !== slug) {
+        await db.ref(
+            window.getAbellaPath(`categories/${oldSlug}`)
+        ).remove();
+    }
+
+    await db.ref(
+        window.getAbellaPath(`categories/${slug}`)
+    ).set(payload);
+
+    spawnAdminToast(
+        "Categoria salva com sucesso."
+    );
+
+    resetarFormularioEstado();
+
+    await carregarCategoriasMestres();
+
+} catch(err) {
+
+    console.error(err);
+
+    spawnAdminToast(
+        "Erro ao salvar categoria.",
+        true
+    );
+}
         }
 
         async function alternarEstadoPausa(slug, estadoPausaAtual) {
@@ -274,7 +361,7 @@
             }
         }
 
-        async function ejecutarRemocao(slug) {
+        async function executarRemocao(slug) {
             if(!confirm("⚠️ ATENÇÃO: Deletar esta categoria mãe irá remover as subcategorias vinculadas! Confirmar?")) return;
             try {
                 await db.ref(window.getAbellaPath(`categories/${slug}`)).remove();

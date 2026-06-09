@@ -62,7 +62,7 @@
         <div class="flex gap-2">
           <button
             id="btnRefresh"
-            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold"
+            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold disabled:opacity-50"
             type="button"
           >
             Atualizar
@@ -111,9 +111,6 @@
           <option value="">Todas Subcategorias</option>
         </select>
       </div>
-      <div class="text-xs text-zinc-500 mt-2">
-        ℹ️ Dica: a busca filtra a aba atual conforme os filtros acima.
-      </div>
     </section>
 
     <section class="flex gap-2 mb-4">
@@ -146,7 +143,7 @@
 
   <script>
   // =======================
-  // FIX #3 — Aguarda Firebase SDK estar pronto antes de qualquer acesso
+  // Resolução do Firebase SDK
   // =======================
   function resolverDB() {
     if (window.db) return window.db;
@@ -160,6 +157,7 @@
   // Estado / Cache
   // =======================
   const statusEl = document.getElementById('status');
+  const btnRefreshEl = document.getElementById('btnRefresh');
   let produtosCache = [];
   let categoriasCache = {};
   let db = null;
@@ -178,7 +176,7 @@
   }
 
   // =======================
-  // Util
+  // Utilidades e Sanitização
   // =======================
   function escapeHtml(str) {
     return String(str ?? '')
@@ -189,11 +187,12 @@
       .replaceAll("'", '&#039;');
   }
 
+  // Permite strings seguras para chamadas de funções inline
   function escapeAttr(str) {
     return String(str ?? '').replaceAll("'", "\\'").replaceAll('"', '&quot;');
   }
 
-  // NOVO — Conversor Inteligente de caminhos gs:// para URLs HTTPS válidas
+  // Conversor inteligente de caminhos gs:// para URLs HTTPS válidas
   function converterGsUrl(url) {
     const stringUrl = String(url ?? '').trim();
     if (stringUrl.startsWith('gs://')) {
@@ -205,9 +204,7 @@
         const bucket = semProtocolo.substring(0, primeiraBarra);
         const caminhoArquivo = semProtocolo.substring(primeiraBarra + 1);
         
-        // Codifica os caminhos e caracteres especiais (ex: espaços, acentos)
         const caminhoCodificado = encodeURIComponent(caminhoArquivo);
-        
         return `https://firebasestorage.googleapis.com/v1/b/${bucket}/o/${caminhoCodificado}?alt=media`;
       } catch (e) {
         console.error('Erro ao converter URL do Storage:', e);
@@ -217,7 +214,7 @@
     return stringUrl;
   }
 
-  // NOVO — Atualiza o preview e limpa o valor automaticamente caso o usuário cole gs://
+  // Monitora alterações nos inputs de imagem e recarrega o preview em tempo real
   function tratarInputImagem(inputElement, previewId) {
     if (!inputElement) return;
     let valor = inputElement.value;
@@ -238,7 +235,7 @@
   }
 
   // =======================
-  // Drawer
+  // Drawer Controls
   // =======================
   function abrirDrawer(titulo, html) {
     document.getElementById('drawerTitle').textContent = titulo;
@@ -251,9 +248,10 @@
   }
 
   // =======================
-  // Carregamento central
+  // Carregamento de Dados Remotos
   // =======================
   async function carregarTudo() {
+    if (btnRefreshEl) btnRefreshEl.disabled = true;
     try {
       const catSnap = await db.ref(window.getAbellaPath('categories')).once('value');
       categoriasCache = catSnap.val() || {};
@@ -270,6 +268,8 @@
     } catch (erro) {
       console.error(erro);
       setStatus('❌ Erro ao carregar Firebase', 'error');
+    } finally {
+      if (btnRefreshEl) btnRefreshEl.disabled = false;
     }
   }
 
@@ -289,36 +289,37 @@
   }
 
   // =======================
-  // Filtros (UI)
+  // Filtros Dinâmicos
   // =======================
   function popularFiltros() {
     const selCat = document.getElementById('filtroCategoria');
     const selSub = document.getElementById('filtroSubcategoria');
 
     const cats = Object.keys(categoriasCache);
-    selCat.innerHTML = `<option value="">Todas Categorias</option>`;
+    let catOptions = `<option value="">Todas Categorias</option>`;
     cats.forEach(c => {
-      selCat.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+      catOptions += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
     });
+    selCat.innerHTML = catOptions;
 
     const allSubs = new Set();
     Object.values(categoriasCache).forEach(cat => {
       Object.keys(cat?.subcategories || {}).forEach(s => allSubs.add(s));
     });
 
-    selSub.innerHTML = `<option value="">Todas Subcategorias</option>`;
+    let subOptions = `<option value="">Todas Subcategorias</option>`;
     [...allSubs].forEach(s => {
-      selSub.innerHTML += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+      subOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
     });
+    selSub.innerHTML = subOptions;
   }
 
   // =======================
-  // Render — Produtos
+  // Renderizadores de Listagem com Miniatura Integrada
   // =======================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
-    container.innerHTML = '';
-
+    
     const termos     = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo       = document.getElementById('filtroTipo').value;
     const filtroCat  = document.getElementById('filtroCategoria').value;
@@ -344,47 +345,59 @@
       return;
     }
 
+    let htmlBuffer = '';
     filtrados.forEach(produto => {
       const pausedTag = produto.paused
         ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>`
         : '';
 
       const id = escapeAttr(produto.id);
-      const urlExibicao = converterGsUrl(produto.image);
+      const urlMiniatura = converterGsUrl(produto.image);
 
-      container.innerHTML += `
+      htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
-          <div class="flex justify-between">
-            <div>
-              <div class="font-bold">
-                ${escapeHtml(produto.name || '')}
-                ${pausedTag}
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4 flex-1">
+              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                ${produto.image ? `
+                  <img 
+                    src="${escapeHtml(urlMiniatura)}" 
+                    class="w-full h-full object-cover" 
+                    onerror="this.parentNode.innerHTML='<span class=\"text-[10px] text-zinc-600\">Erro</span>'"
+                  />
+                ` : `<span class="text-[10px] text-zinc-600">Sem Foto</span>`}
               </div>
-              <div class="text-xs text-zinc-500">SKU: ${escapeHtml(produto.sku || '')}</div>
-              <div class="text-xs text-zinc-500">Categoria: ${escapeHtml(produto.category || '')}</div>
-              <div class="text-xs text-zinc-500">Subcategoria: ${escapeHtml(produto.subcategory || produto.subCategory || '')}</div>
-              <div class="text-xs text-zinc-500">Preço: ${escapeHtml(produto.price ?? 0)}</div>
-              <div class="text-xs text-zinc-500">Peso: ${escapeHtml(produto.weight ?? 0)}</div>
+              
+              <div>
+                <div class="font-bold">
+                  ${escapeHtml(produto.name || '')}
+                  ${pausedTag}
+                </div>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-zinc-500 mt-1">
+                  <div>SKU: <span class="text-zinc-300">${escapeHtml(produto.sku || '')}</span></div>
+                  <div>Preço: <span class="text-zinc-300">R$ ${escapeHtml(produto.price ?? 0)}</span></div>
+                  <div>Categoria: <span class="text-zinc-400">${escapeHtml(produto.category || '')}</span></div>
+                  <div>Subcategoria: <span class="text-zinc-400">${escapeHtml(produto.subcategory || produto.subCategory || '')}</span></div>
+                </div>
+              </div>
             </div>
-            <div class="flex gap-2 items-start">
-              <button onclick="editarProduto('${id}')"    title="Editar"     class="hover:opacity-90">✏</button>
-              <button onclick="duplicarProduto('${id}')"  title="Duplicar"   class="hover:opacity-90">📄</button>
-              <button onclick="pausarProduto('${id}')"    title="Pausar"     class="hover:opacity-90">⏸</button>
-              <button onclick="deletarProduto('${id}')"   title="Deletar"    class="hover:opacity-90">🗑</button>
+            
+            <div class="flex gap-2 items-center flex-shrink-0">
+              <button onclick="editarProduto('${id}')"    title="Editar"     class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
+              <button onclick="duplicarProduto('${id}')"  title="Duplicar"   class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">📄</button>
+              <button onclick="pausarProduto('${id}')"    title="Pausar"     class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">⏸</button>
+              <button onclick="deletarProduto('${id}')"   title="Deletar"    class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-red-400">🗑</button>
             </div>
           </div>
         </div>
       `;
     });
+    container.innerHTML = htmlBuffer;
   }
 
-  // =======================
-  // Render — Categorias
-  // =======================
   function renderCategorias() {
     const el = document.getElementById('tab-categorias');
-    el.innerHTML = '';
-
+    
     const termos    = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo      = document.getElementById('filtroTipo').value;
     const filtroCat = document.getElementById('filtroCategoria').value;
@@ -403,32 +416,37 @@
       return;
     }
 
+    let htmlBuffer = '';
     entries.forEach(([slug, cat]) => {
       const safeSlug = escapeAttr(slug);
-      el.innerHTML += `
+      const urlMiniatura = converterGsUrl(cat?.gridImage || cat?.heroImage);
+
+      htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
-          <div class="flex justify-between">
-            <div>
-              <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
-              <div class="text-xs text-zinc-500">${escapeHtml(slug)}</div>
-              <div class="text-xs text-zinc-500">Subs: ${Object.keys(cat?.subcategories || {}).length}</div>
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                ${urlMiniatura ? `
+                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="this.replaceWith('📁')"/>
+                ` : '📁'}
+              </div>
+              <div>
+                <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
+                <div class="text-xs text-zinc-500">Slug: ${escapeHtml(slug)}</div>
+                <div class="text-xs text-zinc-500">Subcategorias: ${Object.keys(cat?.subcategories || {}).length}</div>
+              </div>
             </div>
-            <div class="flex gap-2 items-start">
-              <button onclick="editarCategoria('${safeSlug}')" title="Editar" class="hover:opacity-90">✏</button>
-            </div>
+            <button onclick="editarCategoria('${safeSlug}')" title="Editar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
           </div>
         </div>
       `;
     });
+    el.innerHTML = htmlBuffer;
   }
 
-  // =======================
-  // Render — Subcategorias
-  // =======================
   function renderSubcategorias() {
     const el = document.getElementById('tab-subcategorias');
-    el.innerHTML = '';
-
+    
     const termos   = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo     = document.getElementById('filtroTipo').value;
     const filtroCat = document.getElementById('filtroCategoria').value;
@@ -456,24 +474,33 @@
       return;
     }
 
+    let htmlBuffer = '';
     filtradas.forEach(x => {
       const safeCat = escapeAttr(x.catSlug);
       const safeSub = escapeAttr(x.subSlug);
-      el.innerHTML += `
+      const urlMiniatura = converterGsUrl(x.subObj?.heroImage || x.subObj?.gridImage);
+
+      htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
-          <div class="flex justify-between">
-            <div>
-              <div class="font-bold">${escapeHtml(x.subObj?.name || x.subObj?.title || x.subSlug)}</div>
-              <div class="text-xs text-zinc-500">Categoria: ${escapeHtml(x.catSlug)}</div>
-              <div class="text-xs text-zinc-500">SubSlug: ${escapeHtml(x.subSlug)}</div>
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                ${urlMiniatura ? `
+                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="this.parentNode.innerHTML='📁'"/>
+                ` : '📁'}
+              </div>
+              <div>
+                <div class="font-bold">${escapeHtml(x.subObj?.name || x.subObj?.title || x.subSlug)}</div>
+                <div class="text-xs text-zinc-500">Categoria Pai: ${escapeHtml(x.catSlug)}</div>
+                <div class="text-xs text-zinc-500">Slug Interno: ${escapeHtml(x.subSlug)}</div>
+              </div>
             </div>
-            <div class="flex gap-2 items-start">
-              <button onclick="editarSubcategoria('${safeCat}', '${safeSub}')" title="Editar" class="hover:opacity-90">✏</button>
-            </div>
+            <button onclick="editarSubcategoria('${safeCat}', '${safeSub}')" title="Editar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
           </div>
         </div>
       `;
     });
+    el.innerHTML = htmlBuffer;
   }
 
   function renderCurrentTab() {
@@ -484,15 +511,15 @@
   }
 
   // =======================
-  // Drawer — Produtos
+  // Drawers de Edição
   // =======================
   function editarProduto(id) {
     const produto = produtosCache.find(p => p.id === id);
     if (!produto) return;
 
-    let htmlCategorias = '';
+    let categoriasHtml = '';
     Object.keys(categoriasCache).forEach(cat => {
-      htmlCategorias += `
+      categoriasHtml += `
         <option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>
           ${escapeHtml(cat)}
         </option>
@@ -502,11 +529,11 @@
     const urlPreview = converterGsUrl(produto.image);
 
     abrirDrawer('Editar Produto', `
-      <input id="editNome" class="input-dark" placeholder="Nome" value="${escapeHtml(produto.name || '')}">
-      <input id="editSku" class="input-dark" placeholder="SKU" value="${escapeHtml(produto.sku || '')}">
+      <input id="editNome"    class="input-dark" placeholder="Nome"   value="${escapeHtml(produto.name  || '')}">
+      <input id="editSku"     class="input-dark" placeholder="SKU"    value="${escapeHtml(produto.sku   || '')}">
 
       <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">
-        ${htmlCategorias}
+        ${categoriasHtml}
       </select>
 
       <select id="editSubcategoria" class="input-dark"></select>
@@ -526,8 +553,8 @@
         oninput="tratarInputImagem(this, 'previewProduto')"
       >
 
-      <input id="editPreco" class="input-dark" placeholder="Preço" value="${escapeHtml(produto.price ?? 0)}">
-      <input id="editPeso" class="input-dark" placeholder="Peso" value="${escapeHtml(produto.weight ?? 0)}">
+      <input id="editPreco" class="input-dark" placeholder="Preço"  value="${escapeHtml(produto.price  ?? 0)}">
+      <input id="editPeso"  class="input-dark" placeholder="Peso"   value="${escapeHtml(produto.weight ?? 0)}">
 
       <button
         onclick="salvarProduto('${escapeAttr(id)}')"
@@ -548,20 +575,22 @@
     const select    = document.getElementById('editSubcategoria');
     if (!select) return;
 
-    select.innerHTML = '<option value="">Nenhuma</option>';
+    let subOptions = '<option value="">Nenhuma</option>';
     const subs = categoriasCache[categoria]?.subcategories || {};
 
     Object.entries(subs).forEach(([slug, sub]) => {
-      select.innerHTML += `
+      subOptions += `
         <option value="${escapeHtml(slug)}" ${slug === subSelecionada ? 'selected' : ''}>
           ${escapeHtml(sub.name || slug)}
         </option>
       `;
     });
+    select.innerHTML = subOptions;
   }
 
   async function salvarProduto(id) {
     const urlLimpa = converterGsUrl(document.getElementById('editImagem').value);
+
     await db.ref(window.getAbellaPath(`products/${id}`)).update({
       name:       document.getElementById('editNome').value,
       sku:        document.getElementById('editSku').value,
@@ -616,40 +645,22 @@
     if (!cat) return;
 
     abrirDrawer('Editar Categoria', `
-      <input
-        id="editCatName"
-        class="input-dark"
-        placeholder="Nome"
-        value="${escapeHtml(cat.name || '')}"
-      >
-
+      <input id="editCatName" class="input-dark" placeholder="Nome" value="${escapeHtml(cat.name || '')}">
       <textarea id="editCatDescription" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
-
       <input id="editCatHero"  class="input-dark" placeholder="Hero Image URL ou gs://"  value="${escapeHtml(cat.heroImage  || '')}">
       <input id="editCatGrid"  class="input-dark" placeholder="Grid Image URL ou gs://"  value="${escapeHtml(cat.gridImage  || '')}">
-
-      <input
-        id="editCatOrder"
-        type="number"
-        class="input-dark"
-        placeholder="Ordem"
-        value="${escapeHtml(cat.order || 0)}"
-      >
+      <input id="editCatOrder" type="number" class="input-dark" placeholder="Ordem" value="${escapeHtml(cat.order || 0)}">
 
       <label class="flex gap-2 items-center text-sm mb-2">
         <input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}>
         Categoria Destaque Home
       </label>
-
       <label class="flex gap-2 items-center text-sm mb-4">
         <input id="editCatActive" type="checkbox" ${cat.active !== false ? 'checked' : ''}>
         Ativa
       </label>
 
-      <button
-        onclick="salvarCategoria('${escapeAttr(slug)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold"
-      >
+      <button onclick="salvarCategoria('${escapeAttr(slug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold">
         Salvar
       </button>
     `);
@@ -701,13 +712,9 @@
         value="${escapeHtml(sub.heroImage || '')}"
         oninput="tratarInputImagem(this, 'previewSubHero')"
       >
-      
-      <input      id="subGrid"        class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(sub.gridImage   || '')}">
+      <input id="subGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(sub.gridImage || '')}">
 
-      <button
-        onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-2 font-bold"
-      >
+      <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-2 font-bold">
         Salvar
       </button>
     `);
@@ -730,12 +737,13 @@
   }
 
   // =======================
-  // Wiring UI
+  // Amarrações da Interface (Listeners)
   // =======================
   function wireSearch() {
     const ids = ['buscaGlobal', 'filtroTipo', 'filtroCategoria', 'filtroSubcategoria'];
     ids.forEach(id => {
       const el = document.getElementById(id);
+      if (!el) return;
 
       if (id === 'buscaGlobal') {
         el.addEventListener('input', () => {
@@ -755,17 +763,19 @@
         btn.classList.add('active');
 
         ['produtos', 'categorias', 'subcategorias'].forEach(tab => {
-          document.getElementById('tab-' + tab).classList.add('hidden');
+          const tabEl = document.getElementById('tab-' + tab);
+          if (tabEl) tabEl.classList.add('hidden');
         });
 
-        document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+        const activeTabEl = document.getElementById('tab-' + btn.dataset.tab);
+        if (activeTabEl) activeTabEl.classList.remove('hidden');
         renderCurrentTab();
       });
     });
   }
 
   // =======================
-  // Boot
+  // Inicialização (Boot)
   // =======================
   (async function init() {
     let tentativas = 0;
@@ -782,16 +792,16 @@
       return;
     }
 
-    console.info('[EDITOR] Firebase conectado. DB ROOT:', window.ABELLA_DB_ROOT);
-
     wireTabs();
     wireSearch();
 
-    document.getElementById('btnRefresh').addEventListener('click', async () => {
-      setStatus('Carregando...', 'info');
-      await carregarTudo();
-      renderCurrentTab();
-    });
+    if (btnRefreshEl) {
+      btnRefreshEl.addEventListener('click', async () => {
+        setStatus('Carregando...', 'info');
+        await carregarTudo();
+        renderCurrentTab();
+      });
+    }
 
     setStatus('Carregando dados do Firebase...', 'info');
     await carregarTudo();
@@ -799,7 +809,9 @@
     setStatus('✅ Editor pronto.', 'ok');
   })();
 
-  // Handlers globais
+  // =======================
+  // Escopo de Atribuições Globais
+  // =======================
   window.editarProduto               = editarProduto;
   window.salvarProduto               = salvarProduto;
   window.duplicarProduto             = duplicarProduto;

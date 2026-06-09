@@ -442,8 +442,13 @@
               </div>
 
               <div class="flex gap-2">
-                onclick="editarSubcategoria('${x.catSlug}','${x.subSlug}')" disabled title="Edição não implementada">✏</button>
-              </div>
+    <button
+        onclick="editarSubcategoria('${x.catSlug}','${x.subSlug}')"
+        class="hover:opacity-90"
+    >
+        ✏
+    </button>
+</div>
             </div>
           </div>
         `;
@@ -460,57 +465,159 @@
     // =======================
     // Drawer - Produtos
     // =======================
-    function editarProduto(id) {
-      const produto = produtosCache.find(p => p.id === id);
-      if (!produto) return;
+   function editarProduto(id) {
 
-      let categoriasHtml = '';
-      Object.keys(categoriasCache).forEach(cat => {
+    const produto =
+        produtosCache.find(p => p.id === id);
+
+    if (!produto) return;
+
+    let categoriasHtml = '';
+
+    Object.keys(categoriasCache).forEach(cat => {
+
         categoriasHtml += `
-          <option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>
-            ${escapeHtml(cat)}
-          </option>
+            <option
+                value="${cat}"
+                ${produto.category === cat ? 'selected' : ''}
+            >
+                ${cat}
+            </option>
         `;
-      });
+    });
 
-      abrirDrawer('Editar Produto', `
-        <input id="editNome" class="input-dark" value="${escapeHtml(produto.name || '')}" />
-        <input id="editSku" class="input-dark" value="${escapeHtml(produto.sku || '')}" />
+    abrirDrawer('Editar Produto', `
+
+        <input
+            id="editNome"
+            class="input-dark"
+            value="${produto.name || ''}"
+        >
+
+        <input
+            id="editSku"
+            class="input-dark"
+            value="${produto.sku || ''}"
+        >
+
         <select
-id="editSubcategoria"
-class="input-dark">
-</select>
-
-<img
-id="previewProduto"
-src="${produto.image || ''}"
-class="w-full h-40 object-cover rounded-xl border border-zinc-800">
-          ${categoriasHtml}
+            id="editCategoria"
+            class="input-dark"
+            onchange="carregarSubcategoriasProduto()"
+        >
+            ${categoriasHtml}
         </select>
-        <input id="editPreco" class="input-dark" value="${escapeHtml(produto.price ?? 0)}" />
-        <input id="editPeso" class="input-dark" value="${escapeHtml(produto.weight ?? 0)}" />
-        <input id="editImagem" class="input-dark" value="${escapeHtml(produto.image || '')}" />
+
+        <select
+            id="editSubcategoria"
+            class="input-dark"
+        >
+        </select>
+
+        <img
+            id="previewProduto"
+            src="${produto.image || ''}"
+            class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2"
+        >
+
+        <input
+            id="editImagem"
+            class="input-dark"
+            value="${produto.image || ''}"
+            oninput="
+                document.getElementById('previewProduto').src=this.value
+            "
+        >
+
+        <input
+            id="editPreco"
+            class="input-dark"
+            value="${produto.price ?? 0}"
+        >
+
+        <input
+            id="editPeso"
+            class="input-dark"
+            value="${produto.weight ?? 0}"
+        >
 
         <button
-          onclick="salvarProduto('${escapeHtml(id)}')"
-          class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-1"
-          type="button"
+            onclick="salvarProduto('${id}')"
+            class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2"
         >
-          Salvar
+            Salvar
         </button>
-      `);
-    }
+
+    `);
+
+    carregarSubcategoriasProduto(
+        produto.category,
+        produto.subcategory || produto.subCategory
+    );
+}
+
+    function carregarSubcategoriasProduto(
+    categoriaSelecionada,
+    subSelecionada = ''
+){
+
+    const categoria =
+        categoriaSelecionada ||
+        document.getElementById('editCategoria').value;
+
+    const select =
+        document.getElementById('editSubcategoria');
+
+    if(!select) return;
+
+    select.innerHTML =
+        '<option value="">Nenhuma</option>';
+
+    const subs =
+        categoriasCache[categoria]
+        ?.subcategories || {};
+
+    Object.entries(subs).forEach(([slug,sub])=>{
+
+        select.innerHTML += `
+            <option
+                value="${slug}"
+                ${slug === subSelecionada ? 'selected' : ''}
+            >
+                ${sub.name || slug}
+            </option>
+        `;
+    });
+}
 
     async function salvarProduto(id) {
-      await db.ref(`abella/products/${id}`).update({
-        name: document.getElementById('editNome').value,
-        sku: document.getElementById('editSku').value,
-        category: document.getElementById('editCategoria').value,
-        price: parseFloat(document.getElementById('editPreco').value) || 0,
-        weight: parseFloat(document.getElementById('editPeso').value) || 0,
-        image: document.getElementById('editImagem').value,
-        updatedAt: Date.now()
-      });
+     await db.ref(`abella/products/${id}`).update({
+
+    name:
+        document.getElementById('editNome').value,
+
+    sku:
+        document.getElementById('editSku').value,
+
+    category:
+        document.getElementById('editCategoria').value,
+
+    subcategory:
+        document.getElementById('editSubcategoria').value,
+
+    price:
+        parseFloat(document.getElementById('editPreco').value) || 0,
+
+    weight:
+        parseFloat(document.getElementById('editPeso').value) || 0,
+
+    image:
+        document.getElementById('editImagem').value,
+
+    updatedAt:
+        Date.now()
+
+});
 
       fecharDrawer();
       await carregarTudo();

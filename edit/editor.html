@@ -298,13 +298,48 @@ console.log(
     async function carregarProdutos() {
       const snap = await db.ref(
     window.getAbellaPath(
-        'produtos'
+        'products'
     )
 ).once('value');
       produtosCache = [];
 
       snap.forEach(item => {
-        produtosCache.push({ id: item.key, ...item.val() });
+        produtosCache.push({ id: item.key, ...item.val() });async function salvarSubcategoria(
+    catSlug,
+    subSlug
+){
+
+    await db
+        .ref(
+            window.getAbellaPath(
+                `categories/${catSlug}/subcategories/${subSlug}`
+            )
+        )
+        .update({
+
+            name:
+                document.getElementById('subName').value,
+
+            description:
+                document.getElementById('subDescription').value,
+
+            heroImage:
+                document.getElementById('subHero').value,
+
+            gridImage:
+                document.getElementById('subGrid').value,
+
+            updatedAt:
+                Date.now()
+
+        });
+
+    fecharDrawer();
+
+    await carregarTudo();
+
+    renderCurrentTab();
+}
       });
     }
 
@@ -344,7 +379,7 @@ async function carregarTudo() {
     const prodSnap =
       await db.ref(
     window.getAbellaPath(
-        'produtos'
+        'products'
     )
 )
     .once('value');
@@ -726,7 +761,7 @@ async function carregarTudo() {
     async function salvarProduto(id) {
      await db.ref(
     window.getAbellaPath(
-        `produtos/${id}`
+        `products/${id}`
     )
 ).update({
 
@@ -775,7 +810,7 @@ async function carregarTudo() {
 
       await db.ref(
     window.getAbellaPath(
-        'produtos'
+        'products'
     )
 ).push(copia);
       await carregarTudo();
@@ -788,7 +823,7 @@ async function carregarTudo() {
 
       await db.ref(
     window.getAbellaPath(
-        `produtos/${id}`
+        `products/${id}`
     )
 ).update({
         paused: !produto.paused,
@@ -803,7 +838,7 @@ async function carregarTudo() {
       if (!confirm('Excluir produto?')) return;
       await db.ref(
     window.getAbellaPath(
-        `produtos/${id}`
+        `products/${id}`
     )
 ).remove();
       await carregarTudo();

@@ -442,7 +442,7 @@
               </div>
 
               <div class="flex gap-2">
-                <button class="opacity-50 cursor-not-allowed" disabled title="Edição não implementada">✏</button>
+                onclick="editarSubcategoria('${x.catSlug}','${x.subSlug}')" disabled title="Edição não implementada">✏</button>
               </div>
             </div>
           </div>
@@ -476,7 +476,15 @@
       abrirDrawer('Editar Produto', `
         <input id="editNome" class="input-dark" value="${escapeHtml(produto.name || '')}" />
         <input id="editSku" class="input-dark" value="${escapeHtml(produto.sku || '')}" />
-        <select id="editCategoria" class="input-dark">
+        <select
+id="editSubcategoria"
+class="input-dark">
+</select>
+
+<img
+id="previewProduto"
+src="${produto.image || ''}"
+class="w-full h-40 object-cover rounded-xl border border-zinc-800">
           ${categoriasHtml}
         </select>
         <input id="editPreco" class="input-dark" value="${escapeHtml(produto.price ?? 0)}" />
@@ -550,34 +558,152 @@
     // Drawer - Categorias
     // =======================
     function editarCategoria(slug) {
-      const cat = categoriasCache[slug];
-      if (!cat) return;
 
-      abrirDrawer('Editar Categoria', `
-        <div class="text-xs text-zinc-500 mb-2">Slug (chave): ${escapeHtml(slug)}</div>
-        <input id="editCatName" class="input-dark" value="${escapeHtml(cat.name || '')}" />
+    const cat = categoriasCache[slug];
+    if (!cat) return;
+
+    abrirDrawer('Editar Categoria', `
+
+        <input
+            id="editCatName"
+            class="input-dark"
+            placeholder="Nome"
+            value="${cat.name || ''}"
+        >
+
+        <textarea
+            id="editCatDescription"
+            class="input-dark"
+            placeholder="Descrição"
+        >${cat.description || ''}</textarea>
+
+        <input
+            id="editCatHero"
+            class="input-dark"
+            placeholder="Hero Image"
+            value="${cat.heroImage || ''}"
+        >
+
+        <input
+            id="editCatGrid"
+            class="input-dark"
+            placeholder="Grid Image"
+            value="${cat.gridImage || ''}"
+        >
+
+        <input
+            id="editCatOrder"
+            type="number"
+            class="input-dark"
+            placeholder="Ordem"
+            value="${cat.order || 0}"
+        >
+
+        <label class="flex gap-2 items-center text-sm">
+            <input
+                id="editCatFeatured"
+                type="checkbox"
+                ${cat.featured ? 'checked' : ''}
+            >
+            Categoria Destaque Home
+        </label>
+
+        <label class="flex gap-2 items-center text-sm">
+            <input
+                id="editCatActive"
+                type="checkbox"
+                ${cat.active !== false ? 'checked' : ''}
+            >
+            Ativa
+        </label>
 
         <button
-          onclick="salvarCategoria('${escapeHtml(slug)}')"
-          class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-1"
-          type="button"
+            onclick="salvarCategoria('${slug}')"
+            class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold"
         >
-          Salvar
+            Salvar
         </button>
-      `);
-    }
+    `);
+}
 
-    async function salvarCategoria(slug) {
-      await db.ref(`abella/categories/${slug}`).update({
-        name: document.getElementById('editCatName').value,
-        updatedAt: Date.now()
-      });
+   function editarSubcategoria(catSlug, subSlug){
 
-      fecharDrawer();
-      await carregarTudo();
-      renderCurrentTab();
-    }
+    const sub =
+        categoriasCache[catSlug]
+        ?.subcategories?.[subSlug];
 
+    if(!sub) return;
+
+    abrirDrawer("Editar Subcategoria",`
+
+        <input
+            id="subName"
+            class="input-dark"
+            value="${sub.name || ''}"
+        >
+
+        <textarea
+            id="subDescription"
+            class="input-dark"
+        >${sub.description || ''}</textarea>
+
+        <input
+            id="subHero"
+            class="input-dark"
+            value="${sub.heroImage || ''}"
+        >
+
+        <input
+            id="subGrid"
+            class="input-dark"
+            value="${sub.gridImage || ''}"
+        >
+
+        <button
+            onclick="salvarSubcategoria(
+                '${catSlug}',
+                '${subSlug}'
+            )"
+            class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full"
+        >
+            Salvar
+        </button>
+    `);
+}
+
+    async function salvarSubcategoria(
+    catSlug,
+    subSlug
+){
+
+    await db
+    .ref(
+      `abella/categories/${catSlug}/subcategories/${subSlug}`
+    )
+    .update({
+
+        name:
+            document.getElementById('subName').value,
+
+        description:
+            document.getElementById('subDescription').value,
+
+        heroImage:
+            document.getElementById('subHero').value,
+
+        gridImage:
+            document.getElementById('subGrid').value,
+
+        updatedAt:
+            Date.now()
+    });
+
+    fecharDrawer();
+
+    await carregarTudo();
+
+    renderCurrentTab();
+}
     // =======================
     // Wiring UI
     // =======================

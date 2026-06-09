@@ -53,7 +53,6 @@
 <body class="bg-black text-white">
   <div class="max-w-7xl mx-auto p-4">
 
-    <!-- Header -->
     <header class="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 mb-4">
       <div class="flex justify-between items-center">
         <div>
@@ -63,7 +62,7 @@
         <div class="flex gap-2">
           <button
             id="btnRefresh"
-            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold"
+            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold disabled:opacity-50"
             type="button"
           >
             Atualizar
@@ -72,7 +71,6 @@
       </div>
     </header>
 
-    <!-- Estatísticas -->
     <section class="grid grid-cols-4 gap-3 mb-5">
       <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
         <div class="text-zinc-500 text-[10px]">Produtos</div>
@@ -92,7 +90,6 @@
       </div>
     </section>
 
-    <!-- Busca Global -->
     <section class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-4">
       <div class="grid md:grid-cols-5 gap-3">
         <input
@@ -119,25 +116,21 @@
       </div>
     </section>
 
-    <!-- Tabs -->
     <section class="flex gap-2 mb-4">
       <button class="tab-btn active" data-tab="produtos" type="button">Produtos</button>
       <button class="tab-btn" data-tab="categorias" type="button">Categorias</button>
       <button class="tab-btn" data-tab="subcategorias" type="button">Subcategorias</button>
     </section>
 
-    <!-- Conteúdo por aba -->
     <section>
       <div id="tab-produtos"></div>
       <div id="tab-categorias" class="hidden"></div>
       <div id="tab-subcategorias" class="hidden"></div>
     </section>
 
-    <!-- Footer status -->
     <div id="status" class="text-xs text-zinc-500 mt-6"></div>
   </div>
 
-  <!-- Drawer -->
   <div
     id="drawer"
     class="fixed top-0 right-0 h-full w-[520px] bg-zinc-950 border-l border-zinc-800 hidden z-50 overflow-y-auto"
@@ -167,6 +160,7 @@
   // Estado / Cache
   // =======================
   const statusEl = document.getElementById('status');
+  const btnRefreshEl = document.getElementById('btnRefresh');
   let produtosCache = [];
   let categoriasCache = {};
   let db = null;
@@ -223,6 +217,7 @@
   // Carregamento central
   // =======================
   async function carregarTudo() {
+    if (btnRefreshEl) btnRefreshEl.disabled = true;
     try {
       const catSnap = await db.ref(window.getAbellaPath('categories')).once('value');
       categoriasCache = catSnap.val() || {};
@@ -239,6 +234,8 @@
     } catch (erro) {
       console.error(erro);
       setStatus('❌ Erro ao carregar Firebase', 'error');
+    } finally {
+      if (btnRefreshEl) btnRefreshEl.disabled = false;
     }
   }
 
@@ -265,20 +262,22 @@
     const selSub = document.getElementById('filtroSubcategoria');
 
     const cats = Object.keys(categoriasCache);
-    selCat.innerHTML = `<option value="">Todas Categorias</option>`;
+    let catOptions = `<option value="">Todas Categorias</option>`;
     cats.forEach(c => {
-      selCat.innerHTML += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
+      catOptions += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
     });
+    selCat.innerHTML = catOptions;
 
     const allSubs = new Set();
     Object.values(categoriasCache).forEach(cat => {
       Object.keys(cat?.subcategories || {}).forEach(s => allSubs.add(s));
     });
 
-    selSub.innerHTML = `<option value="">Todas Subcategorias</option>`;
+    let subOptions = `<option value="">Todas Subcategorias</option>`;
     [...allSubs].forEach(s => {
-      selSub.innerHTML += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
+      subOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
     });
+    selSub.innerHTML = subOptions;
   }
 
   // =======================
@@ -286,8 +285,7 @@
   // =======================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
-    container.innerHTML = '';
-
+    
     const termos     = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo       = document.getElementById('filtroTipo').value;
     const filtroCat  = document.getElementById('filtroCategoria').value;
@@ -313,6 +311,7 @@
       return;
     }
 
+    let htmlBuffer = '';
     filtrados.forEach(produto => {
       const pausedTag = produto.paused
         ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>`
@@ -320,7 +319,7 @@
 
       const id = escapeAttr(produto.id);
 
-      container.innerHTML += `
+      htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
           <div class="flex justify-between">
             <div>
@@ -344,6 +343,7 @@
         </div>
       `;
     });
+    container.innerHTML = htmlBuffer;
   }
 
   // =======================
@@ -351,8 +351,7 @@
   // =======================
   function renderCategorias() {
     const el = document.getElementById('tab-categorias');
-    el.innerHTML = '';
-
+    
     const termos    = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo      = document.getElementById('filtroTipo').value;
     const filtroCat = document.getElementById('filtroCategoria').value;
@@ -371,9 +370,10 @@
       return;
     }
 
+    let htmlBuffer = '';
     entries.forEach(([slug, cat]) => {
       const safeSlug = escapeAttr(slug);
-      el.innerHTML += `
+      htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
           <div class="flex justify-between">
             <div>
@@ -388,6 +388,7 @@
         </div>
       `;
     });
+    el.innerHTML = htmlBuffer;
   }
 
   // =======================
@@ -395,8 +396,7 @@
   // =======================
   function renderSubcategorias() {
     const el = document.getElementById('tab-subcategorias');
-    el.innerHTML = '';
-
+    
     const termos   = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const tipo     = document.getElementById('filtroTipo').value;
     const filtroCat = document.getElementById('filtroCategoria').value;
@@ -424,10 +424,11 @@
       return;
     }
 
+    let htmlBuffer = '';
     filtradas.forEach(x => {
       const safeCat = escapeAttr(x.catSlug);
       const safeSub = escapeAttr(x.subSlug);
-      el.innerHTML += `
+      htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
           <div class="flex justify-between">
             <div>
@@ -442,6 +443,7 @@
         </div>
       `;
     });
+    el.innerHTML = htmlBuffer;
   }
 
   function renderCurrentTab() {
@@ -514,16 +516,17 @@
     const select    = document.getElementById('editSubcategoria');
     if (!select) return;
 
-    select.innerHTML = '<option value="">Nenhuma</option>';
+    let subOptions = '<option value="">Nenhuma</option>';
     const subs = categoriasCache[categoria]?.subcategories || {};
 
     Object.entries(subs).forEach(([slug, sub]) => {
-      select.innerHTML += `
+      subOptions += `
         <option value="${escapeHtml(slug)}" ${slug === subSelecionada ? 'selected' : ''}>
           ${escapeHtml(sub.name || slug)}
         </option>
       `;
     });
+    select.innerHTML = subOptions;
   }
 
   async function salvarProduto(id) {
@@ -620,7 +623,6 @@
     `);
   }
 
-  // FIX #2 — Função salvarCategoria implementada (estava ausente)
   async function salvarCategoria(slug) {
     await db.ref(window.getAbellaPath(`categories/${slug}`)).update({
       name:        document.getElementById('editCatName').value,
@@ -659,7 +661,6 @@
     `);
   }
 
-  // FIX #1 e #4 — Declaração única e no lugar correto (removida a versão órfã dentro do forEach)
   async function salvarSubcategoria(catSlug, subSlug) {
     await db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
       name:        document.getElementById('subName').value,
@@ -680,8 +681,8 @@
     const ids = ['buscaGlobal', 'filtroTipo', 'filtroCategoria', 'filtroSubcategoria'];
     ids.forEach(id => {
       const el = document.getElementById(id);
+      if (!el) return;
 
-      // FIX — Debounce na busca de texto para não re-renderizar a cada tecla
       if (id === 'buscaGlobal') {
         el.addEventListener('input', () => {
           clearTimeout(buscaDebounceTimer);
@@ -700,10 +701,12 @@
         btn.classList.add('active');
 
         ['produtos', 'categorias', 'subcategorias'].forEach(tab => {
-          document.getElementById('tab-' + tab).classList.add('hidden');
+          const tabEl = document.getElementById('tab-' + tab);
+          if (tabEl) tabEl.classList.add('hidden');
         });
 
-        document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+        const activeTabEl = document.getElementById('tab-' + btn.dataset.tab);
+        if (activeTabEl) activeTabEl.classList.remove('hidden');
         renderCurrentTab();
       });
     });
@@ -713,7 +716,6 @@
   // Boot — FIX #3: resolve o DB de forma segura antes de tudo
   // =======================
   (async function init() {
-    // Tenta resolver o DB; aguarda até 3s se necessário
     let tentativas = 0;
     while (!db && tentativas < 30) {
       db = resolverDB();
@@ -734,11 +736,13 @@
     wireTabs();
     wireSearch();
 
-    document.getElementById('btnRefresh').addEventListener('click', async () => {
-      setStatus('Carregando...', 'info');
-      await carregarTudo();
-      renderCurrentTab();
-    });
+    if (btnRefreshEl) {
+      btnRefreshEl.addEventListener('click', async () => {
+        setStatus('Carregando...', 'info');
+        await carregarTudo();
+        renderCurrentTab();
+      });
+    }
 
     setStatus('Carregando dados do Firebase...', 'info');
     await carregarTudo();

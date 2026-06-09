@@ -163,23 +163,52 @@
         },
         async salvar(id, payload) {
             if (id) {
-                await firebase.database().ref(`abella/products/${id}`).update(payload);
+               const basePath = window.getAbellaPath
+    ? window.getAbellaPath('products')
+    : 'abella/products';
+
+await firebase.database()
+    .ref(`${basePath}/${id}`)
+    .update(payload);
             } else {
-                await firebase.database().ref('abella/products').push(payload);
+                const basePath = window.getAbellaPath
+    ? window.getAbellaPath('products')
+    : 'abella/products';
+
+await firebase.database()
+    .ref(basePath)
+    .push(payload);
             }
             return true;
         },
         async deletar(id) {
-            await firebase.database().ref(`abella/products/${id}`).remove();
+            const basePath = window.getAbellaPath
+    ? window.getAbellaPath('products')
+    : 'abella/products';
+
+await firebase.database()
+    .ref(`${basePath}/${id}`)
+    .remove();
             return true;
         }
     };
     
     window.categoriaServiceBridge = window.categoriaService || {
-        async listarTodas() {
-            const snap = await firebase.database().ref('abella/categories').once('value');
-            return snap.val() || {};
-        }
+      async listarTodas() {
+    const path = window.getAbellaPath
+        ? window.getAbellaPath('categories')
+        : 'abella/categories';
+
+    const path = window.getAbellaPath
+    ? window.getAbellaPath('products')
+    : 'abella/products';
+
+const snap = await firebase.database()
+    .ref(path)
+    .once('value');
+
+    return snap.val() || {};
+}
     };
     </script>
 
@@ -277,30 +306,59 @@
             }
         }
 
-        function sincronizarFiltroSubcategorias() {
-            const catKey = DOM.filtroCategoria.value;
-            DOM.filtroSubcategoria.innerHTML = '<option value="">Todas as Subcategorias</option>';
-            
-            if(catKey && listaCategoriasCache[catKey] && listaCategoriasCache[catKey].subcategories) {
-                const subs = listaCategoriasCache[catKey].subcategories;
-                Object.keys(subs).forEach(subKey => {
-                    DOM.filtroSubcategoria.innerHTML += `<option value="${subKey}">${(subs[subKey].name || subKey).toUpperCase()}</option>`;
-                });
-            }
-        }
+       function sincronizarFiltroSubcategorias() {
 
-        function sincronizarSubcategoriasForm() {
-            const catKey = DOM.prodCategory.value;
-            DOM.prodSubcategory.innerHTML = '<option value="">Nenhuma</option>';
-            
-            if(catKey && listaCategoriasCache[catKey] && listaCategoriasCache[catKey].subcategories) {
-                const subs = listaCategoriasCache[catKey].subcategories;
-                Object.keys(subs).forEach(subKey => {
-                    DOM.prodSubcategory.innerHTML += `<option value="${subKey}">${subs[subKey].name || subKey}</option>`;
-                });
-            }
-        }
+    const catKey = DOM.filtroCategoria.value;
 
+    DOM.filtroSubcategoria.innerHTML =
+        '<option value="">Todas as Subcategorias</option>';
+
+    const subs =
+        listaCategoriasCache[catKey]?.subcategories ||
+        listaCategoriasCache[catKey]?.subcategorias ||
+        {};
+
+    Object.keys(subs).forEach(subKey => {
+
+        const nome =
+            subs[subKey]?.name ||
+            subs[subKey]?.nome ||
+            subKey;
+
+        DOM.filtroSubcategoria.innerHTML += `
+            <option value="${subKey}">
+                ${nome.toUpperCase()}
+            </option>
+        `;
+    });
+}
+
+function sincronizarSubcategoriasForm() {
+
+    const catKey = DOM.prodCategory.value;
+
+    DOM.prodSubcategory.innerHTML =
+        '<option value="">Nenhuma</option>';
+
+    const subs =
+        listaCategoriasCache[catKey]?.subcategories ||
+        listaCategoriasCache[catKey]?.subcategorias ||
+        {};
+
+    Object.keys(subs).forEach(subKey => {
+
+        const nome =
+            subs[subKey]?.name ||
+            subs[subKey]?.nome ||
+            subKey;
+
+        DOM.prodSubcategory.innerHTML += `
+            <option value="${subKey}">
+                ${nome}
+            </option>
+        `;
+    });
+}
         function resetarPaginaESincronizar() {
             paginaAtual = 1;
             renderizarPaginaFiltrada();
@@ -311,7 +369,12 @@
             DOM.loading.classList.remove('hidden');
 
             try {
-                totalValoresFiltrados = await window.produtoServiceBridge.listarTodos();
+                totalValoresFiltrados =
+    await window.produtoServiceBridge.listarTodos();
+
+totalValoresFiltrados.sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '')
+);
                 renderizarPaginaFiltrada();
             } catch(e) {
                 console.error(e);
@@ -445,17 +508,25 @@
                     finalImgUrl = `gs://${metadataSnap.metadata.bucket}/${metadataSnap.metadata.fullPath}`;
                 }
 
-                const payload = {
-                    sku: DOM.prodSku.value.trim(),
-                    name: DOM.prodName.value.trim(),
-                    category: DOM.prodCategory.value,
-                    subcategory: DOM.prodSubcategory.value,
-                    price: parseFloat(DOM.prodPrice.value) || 0,
-                    weight: parseFloat(DOM.prodWeight.value) || 0,
-                    image: finalImgUrl,
-                    active: DOM.prodActive.checked,
-                    lastUpdate: Date.now()
-                };
+               const agora = Date.now();
+
+const produtoAtual = totalValoresFiltrados.find(
+    p => p.id === DOM.prodId.value
+);
+
+const payload = {
+    sku: DOM.prodSku.value.trim(),
+    name: DOM.prodName.value.trim(),
+    category: DOM.prodCategory.value,
+    subcategory: DOM.prodSubcategory.value,
+    price: parseFloat(DOM.prodPrice.value) || 0,
+    weight: parseFloat(DOM.prodWeight.value) || 0,
+    image: finalImgUrl,
+    active: DOM.prodActive.checked,
+
+    createdAt: produtoAtual?.createdAt || agora,
+    updatedAt: agora
+};
 
                 // Corrigido chamada do método unificado para o serviceBridge
                 await window.produtoServiceBridge.salvar(DOM.prodId.value, payload);

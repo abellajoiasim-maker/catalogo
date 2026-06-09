@@ -62,7 +62,7 @@
         <div class="flex gap-2">
           <button
             id="btnRefresh"
-            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold disabled:opacity-50"
+            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold"
             type="button"
           >
             Atualizar
@@ -111,6 +111,9 @@
           <option value="">Todas Subcategorias</option>
         </select>
       </div>
+      <div class="text-xs text-zinc-500 mt-2">
+        ℹ️ Dica: a busca filtra a aba atual conforme os filtros acima.
+      </div>
     </section>
 
     <section class="flex gap-2 mb-4">
@@ -157,7 +160,6 @@
   // Estado / Cache
   // =======================
   const statusEl = document.getElementById('status');
-  const btnRefreshEl = document.getElementById('btnRefresh');
   let produtosCache = [];
   let categoriasCache = {};
   let db = null;
@@ -187,7 +189,6 @@
       .replaceAll("'", '&#039;');
   }
 
-  // Permite strings seguras para chamadas de funções inline
   function escapeAttr(str) {
     return String(str ?? '').replaceAll("'", "\\'").replaceAll('"', '&quot;');
   }
@@ -214,7 +215,7 @@
     return stringUrl;
   }
 
-  // Monitora alterações nos inputs de imagem e recarrega o preview em tempo real
+  // Monitora alterações nos inputs de imagem e atualiza o preview em tempo real
   function tratarInputImagem(inputElement, previewId) {
     if (!inputElement) return;
     let valor = inputElement.value;
@@ -243,15 +244,16 @@
     document.getElementById('drawer').classList.remove('hidden');
   }
 
+  // Limpa o conteúdo ao fechar para evitar acúmulo de IDs de preview antigos
   function fecharDrawer() {
     document.getElementById('drawer').classList.add('hidden');
+    document.getElementById('drawerContent').innerHTML = '';
   }
 
   // =======================
-  // Carregamento de Dados Remotos
+  // Carregamento Centralizado
   // =======================
   async function carregarTudo() {
-    if (btnRefreshEl) btnRefreshEl.disabled = true;
     try {
       const catSnap = await db.ref(window.getAbellaPath('categories')).once('value');
       categoriasCache = catSnap.val() || {};
@@ -268,8 +270,6 @@
     } catch (erro) {
       console.error(erro);
       setStatus('❌ Erro ao carregar Firebase', 'error');
-    } finally {
-      if (btnRefreshEl) btnRefreshEl.disabled = false;
     }
   }
 
@@ -315,7 +315,7 @@
   }
 
   // =======================
-  // Renderizadores de Listagem com Miniatura Integrada
+  // Renderizadores de Listagem com Buffer de Strings (Sem Travar o Navegador)
   // =======================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
@@ -347,10 +347,7 @@
 
     let htmlBuffer = '';
     filtrados.forEach(produto => {
-      const pausedTag = produto.paused
-        ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>`
-        : '';
-
+      const pausedTag = produto.paused ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>` : '';
       const id = escapeAttr(produto.id);
       const urlMiniatura = converterGsUrl(produto.image);
 
@@ -360,19 +357,11 @@
             <div class="flex items-center gap-4 flex-1">
               <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
                 ${produto.image ? `
-                  <img 
-                    src="${escapeHtml(urlMiniatura)}" 
-                    class="w-full h-full object-cover" 
-                    onerror="this.parentNode.innerHTML='<span class=\"text-[10px] text-zinc-600\">Erro</span>'"
-                  />
+                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="this.parentNode.innerHTML='<span class=\"text-[10px] text-zinc-600\">Erro</span>'"/>
                 ` : `<span class="text-[10px] text-zinc-600">Sem Foto</span>`}
               </div>
-              
               <div>
-                <div class="font-bold">
-                  ${escapeHtml(produto.name || '')}
-                  ${pausedTag}
-                </div>
+                <div class="font-bold">${escapeHtml(produto.name || '')}${pausedTag}</div>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-zinc-500 mt-1">
                   <div>SKU: <span class="text-zinc-300">${escapeHtml(produto.sku || '')}</span></div>
                   <div>Preço: <span class="text-zinc-300">R$ ${escapeHtml(produto.price ?? 0)}</span></div>
@@ -381,12 +370,11 @@
                 </div>
               </div>
             </div>
-            
             <div class="flex gap-2 items-center flex-shrink-0">
-              <button onclick="editarProduto('${id}')"    title="Editar"     class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
-              <button onclick="duplicarProduto('${id}')"  title="Duplicar"   class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">📄</button>
-              <button onclick="pausarProduto('${id}')"    title="Pausar"     class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">⏸</button>
-              <button onclick="deletarProduto('${id}')"   title="Deletar"    class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-red-400">🗑</button>
+              <button onclick="editarProduto('${id}')" title="Editar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
+              <button onclick="duplicarProduto('${id}')" title="Duplicar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">📄</button>
+              <button onclick="pausarProduto('${id}')" title="Pausar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">⏸</button>
+              <button onclick="deletarProduto('${id}')" title="Deletar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-red-400">🗑</button>
             </div>
           </div>
         </div>
@@ -427,7 +415,7 @@
             <div class="flex items-center gap-4">
               <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
                 ${urlMiniatura ? `
-                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="this.replaceWith('📁')"/>
+                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover" onerror="this.parentNode.innerHTML='📁'"/>
                 ` : '📁'}
               </div>
               <div>
@@ -478,7 +466,8 @@
     filtradas.forEach(x => {
       const safeCat = escapeAttr(x.catSlug);
       const safeSub = escapeAttr(x.subSlug);
-      const urlMiniatura = converterGsUrl(x.subObj?.heroImage || x.subObj?.gridImage);
+      // Puxa a foto prioritária cadastrada para a subcategoria
+      const urlMiniatura = converterGsUrl(x.subObj?.gridImage || x.subObj?.heroImage);
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -511,7 +500,7 @@
   }
 
   // =======================
-  // Drawers de Edição
+  // Drawers de Edição com Preview Ativo
   // =======================
   function editarProduto(id) {
     const produto = produtosCache.find(p => p.id === id);
@@ -519,55 +508,27 @@
 
     let categoriasHtml = '';
     Object.keys(categoriasCache).forEach(cat => {
-      categoriasHtml += `
-        <option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>
-          ${escapeHtml(cat)}
-        </option>
-      `;
+      categoriasHtml += `<option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
     });
 
     const urlPreview = converterGsUrl(produto.image);
 
     abrirDrawer('Editar Produto', `
-      <input id="editNome"    class="input-dark" placeholder="Nome"   value="${escapeHtml(produto.name  || '')}">
-      <input id="editSku"     class="input-dark" placeholder="SKU"    value="${escapeHtml(produto.sku   || '')}">
-
-      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">
-        ${categoriasHtml}
-      </select>
-
+      <input id="editNome" class="input-dark" placeholder="Nome" value="${escapeHtml(produto.name || '')}">
+      <input id="editSku" class="input-dark" placeholder="SKU" value="${escapeHtml(produto.sku || '')}">
+      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">${categoriasHtml}</select>
       <select id="editSubcategoria" class="input-dark"></select>
 
-      <img
-        id="previewProduto"
-        src="${escapeHtml(urlPreview)}"
-        class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2"
-        onerror="this.style.display='none'"
-      >
+      <img id="previewProduto" src="${escapeHtml(urlPreview)}" class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
+      <input id="editImagem" class="input-dark" placeholder="URL da imagem ou gs://" value="${escapeHtml(produto.image || '')}" oninput="tratarInputImagem(this, 'previewProduto')">
 
-      <input
-        id="editImagem"
-        class="input-dark"
-        placeholder="URL da imagem ou gs://"
-        value="${escapeHtml(produto.image || '')}"
-        oninput="tratarInputImagem(this, 'previewProduto')"
-      >
+      <input id="editPreco" class="input-dark" placeholder="Preço" value="${escapeHtml(produto.price ?? 0)}">
+      <input id="editPeso" class="input-dark" placeholder="Peso" value="${escapeHtml(produto.weight ?? 0)}">
 
-      <input id="editPreco" class="input-dark" placeholder="Preço"  value="${escapeHtml(produto.price  ?? 0)}">
-      <input id="editPeso"  class="input-dark" placeholder="Peso"   value="${escapeHtml(produto.weight ?? 0)}">
-
-      <button
-        onclick="salvarProduto('${escapeAttr(id)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2"
-      >
-        Salvar
-      </button>
+      <button onclick="salvarProduto('${escapeAttr(id)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2">Salvar</button>
     `);
 
-    carregarSubcategoriasProduto(
-      produto.category,
-      produto.subcategory || produto.subCategory
-    );
+    carregarSubcategoriasProduto(produto.category, produto.subcategory || produto.subCategory);
   }
 
   function carregarSubcategoriasProduto(categoriaSelecionada, subSelecionada = '') {
@@ -579,18 +540,13 @@
     const subs = categoriasCache[categoria]?.subcategories || {};
 
     Object.entries(subs).forEach(([slug, sub]) => {
-      subOptions += `
-        <option value="${escapeHtml(slug)}" ${slug === subSelecionada ? 'selected' : ''}>
-          ${escapeHtml(sub.name || slug)}
-        </option>
-      `;
+      subOptions += `<option value="${escapeHtml(slug)}" ${slug === subSelecionada ? 'selected' : ''}>${escapeHtml(sub.name || slug)}</option>`;
     });
     select.innerHTML = subOptions;
   }
 
   async function salvarProduto(id) {
     const urlLimpa = converterGsUrl(document.getElementById('editImagem').value);
-
     await db.ref(window.getAbellaPath(`products/${id}`)).update({
       name:       document.getElementById('editNome').value,
       sku:        document.getElementById('editSku').value,
@@ -637,9 +593,6 @@
     renderCurrentTab();
   }
 
-  // =======================
-  // Drawer — Categorias
-  // =======================
   function editarCategoria(slug) {
     const cat = categoriasCache[slug];
     if (!cat) return;
@@ -647,22 +600,14 @@
     abrirDrawer('Editar Categoria', `
       <input id="editCatName" class="input-dark" placeholder="Nome" value="${escapeHtml(cat.name || '')}">
       <textarea id="editCatDescription" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
-      <input id="editCatHero"  class="input-dark" placeholder="Hero Image URL ou gs://"  value="${escapeHtml(cat.heroImage  || '')}">
-      <input id="editCatGrid"  class="input-dark" placeholder="Grid Image URL ou gs://"  value="${escapeHtml(cat.gridImage  || '')}">
+      <input id="editCatHero" class="input-dark" placeholder="Hero Image URL ou gs://" value="${escapeHtml(cat.heroImage || '')}">
+      <input id="editCatGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(cat.gridImage || '')}">
       <input id="editCatOrder" type="number" class="input-dark" placeholder="Ordem" value="${escapeHtml(cat.order || 0)}">
 
-      <label class="flex gap-2 items-center text-sm mb-2">
-        <input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}>
-        Categoria Destaque Home
-      </label>
-      <label class="flex gap-2 items-center text-sm mb-4">
-        <input id="editCatActive" type="checkbox" ${cat.active !== false ? 'checked' : ''}>
-        Ativa
-      </label>
+      <label class="flex gap-2 items-center text-sm mb-2"><input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}> Categoria Destaque Home</label>
+      <label class="flex gap-2 items-center text-sm mb-4"><input id="editCatActive" type="checkbox" ${cat.active !== false ? 'checked' : ''}> Ativa</label>
 
-      <button onclick="salvarCategoria('${escapeAttr(slug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold">
-        Salvar
-      </button>
+      <button onclick="salvarCategoria('${escapeAttr(slug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold">Salvar</button>
     `);
   }
 
@@ -685,38 +630,27 @@
     renderCurrentTab();
   }
 
-  // =======================
-  // Drawer — Subcategorias
-  // =======================
   function editarSubcategoria(catSlug, subSlug) {
     const sub = categoriasCache[catSlug]?.subcategories?.[subSlug];
     if (!sub) return;
 
+    // Converte os links gs:// para exibição imediata no preview do editor
+    const urlPreviewGrid = converterGsUrl(sub.gridImage);
     const urlPreviewHero = converterGsUrl(sub.heroImage);
 
     abrirDrawer('Editar Subcategoria', `
       <input id="subName" class="input-dark" placeholder="Nome" value="${escapeHtml(sub.name || '')}">
       <textarea id="subDescription" class="input-dark" placeholder="Descrição">${escapeHtml(sub.description || '')}</textarea>
       
-      <img
-        id="previewSubHero"
-        src="${escapeHtml(urlPreviewHero)}"
-        class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2"
-        onerror="this.style.display='none'"
-      >
+      <div class="text-xs text-zinc-400 mb-1">Preview Grid Image:</div>
+      <img id="previewSubGrid" src="${escapeHtml(urlPreviewGrid)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
+      <input id="subGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(sub.gridImage || '')}" oninput="tratarInputImagem(this, 'previewSubGrid')">
 
-      <input      
-        id="subHero"        
-        class="input-dark" 
-        placeholder="Hero Image URL ou gs://" 
-        value="${escapeHtml(sub.heroImage || '')}"
-        oninput="tratarInputImagem(this, 'previewSubHero')"
-      >
-      <input id="subGrid" class="input-dark" placeholder="Grid Image URL ou gs://" value="${escapeHtml(sub.gridImage || '')}">
+      <div class="text-xs text-zinc-400 mb-1 mt-2">Preview Hero Image:</div>
+      <img id="previewSubHero" src="${escapeHtml(urlPreviewHero)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
+      <input id="subHero" class="input-dark" placeholder="Hero Image URL ou gs://" value="${escapeHtml(sub.heroImage || '')}" oninput="tratarInputImagem(this, 'previewSubHero')">
 
-      <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-2 font-bold">
-        Salvar
-      </button>
+      <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-4 font-bold">Salvar</button>
     `);
   }
 
@@ -737,7 +671,7 @@
   }
 
   // =======================
-  // Amarrações da Interface (Listeners)
+  // Wiring UI (Listeners)
   // =======================
   function wireSearch() {
     const ids = ['buscaGlobal', 'filtroTipo', 'filtroCategoria', 'filtroSubcategoria'];
@@ -775,11 +709,11 @@
   }
 
   // =======================
-  // Inicialização (Boot)
+  // Boot
   // =======================
   (async function init() {
-    let tentativas = 0;
-    while (!db && tentativas < 30) {
+    let tentatives = 0;
+    while (!db && tentatives < 30) {
       db = resolverDB();
       if (!db) {
         await new Promise(r => setTimeout(r, 100));
@@ -795,8 +729,9 @@
     wireTabs();
     wireSearch();
 
-    if (btnRefreshEl) {
-      btnRefreshEl.addEventListener('click', async () => {
+    const refreshBtn = document.getElementById('btnRefresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
         setStatus('Carregando...', 'info');
         await carregarTudo();
         renderCurrentTab();

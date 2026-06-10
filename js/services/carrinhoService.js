@@ -1,19 +1,6 @@
 // ======================================================================
 // js/services/carrinhoService.js
 // Abella Joias • CarrinhoService Premium v5.0 IQ200
-// TOTALMENTE AJUSTADO PARA O NÓ "abella"
-// ======================================================================
-
-const CarrinhoService = {
-
-    STORAGE_KEY: 'abella_carrinho',
-
-    // ==========================================================
-    // HELPERS
-    // ================// ======================================================================
-// js/services/carrinhoService.js
-// Abella Joias • CarrinhoService Premium v5.0 IQ200
-// TOTALMENTE AJUSTADO PARA O NÓ "abella"
 // ======================================================================
 
 const CarrinhoService = {
@@ -27,18 +14,13 @@ const CarrinhoService = {
     _safeParse(json){
 
         try{
-
             return JSON.parse(json);
-
         }catch(e){
-
             console.error(
                 '[Carrinho] Erro parse JSON:',
                 e
             );
-
             return [];
-
         }
 
     },

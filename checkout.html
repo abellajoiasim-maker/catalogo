@@ -984,16 +984,29 @@ async function finalizarPedido(){
                 Date.now()
         };
 
-        const ref =
-            await db
-                .ref(
-                    window.getAbellaPath(
-                        'orders'
-                    )
-                )
-                .push(payload);
+        const resultado =
+            await PedidoService.create(
+                payload
+            );
+
+        if (
+            !resultado ||
+            resultado.success === false
+        ) {
+
+            throw new Error(
+                resultado?.error ||
+                'Falha ao criar pedido.'
+            );
+
+        }
 
         carrinhoService.limpar();
+
+        const numeroPedido =
+            resultado.numeroPedido ||
+            resultado.pedido?.numeroPedido ||
+            resultado.id;
 
         const mensagem =
 `Olá! Meu pedido foi realizado com sucesso.
@@ -1005,7 +1018,7 @@ Local de Entrega: ${payload.entrega.nomeLocal}
 Total: ${money.formatar(payload.total)}
 Pagamento: ${payload.formaPagamento}
 
-Pedido: ${ref.key}`;
+Pedido: ${numeroPedido}`;
 
         window.location.href =
             `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(mensagem)}`;
@@ -1018,6 +1031,7 @@ Pedido: ${ref.key}`;
         );
 
         alert(
+            e?.message ||
             'Houve um erro técnico ao registrar seu pedido.'
         );
 
@@ -1026,7 +1040,6 @@ Pedido: ${ref.key}`;
         btn.innerText =
             'Finalizar Pedido';
     }
-}
-    </script>
+}    </script>
 </body>
 </html>

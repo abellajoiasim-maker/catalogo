@@ -349,7 +349,13 @@ parseFloat(
 
                         <div class="flex items-center bg-black rounded-xl border border-zinc-800 p-1 flex-shrink-0 gap-1">
                             <button onclick="alterarQtd('${limpoId}', -1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Diminuir">-</button>
-                            <span class="w-10 text-center font-bold text-sm text-white">${item.quantidade}</span>
+                           <input
+    type="number"
+    min="1"
+    value="${item.quantidade}"
+    onchange="alterarQtdInput('${limpoId}', this.value)"
+    class="w-14 h-9 bg-black text-center text-white font-bold rounded-lg border border-zinc-700"
+/>
                             <button onclick="alterarQtd('${limpoId}', 1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Aumentar">+</button>
                         </div>
 
@@ -386,6 +392,39 @@ parseFloat(
     if (typeof atualizarMiniCarrinho === 'function') {
         atualizarMiniCarrinho();
     }
+
+           function alterarQtdInput(id, valor) {
+
+    const itens =
+        carrinhoService.obterItens();
+
+    const index =
+        itens.findIndex(
+            i => String(i.id) === String(id)
+        );
+
+    if (index === -1) return;
+
+    const quantidade =
+        Math.max(
+            1,
+            parseInt(valor, 10) || 1
+        );
+
+    carrinhoService.atualizarQuantidade(
+        index,
+        quantidade
+    );
+
+    renderizarCarrinho();
+
+    if (
+        typeof atualizarMiniCarrinho ===
+        'function'
+    ) {
+        atualizarMiniCarrinho();
+    }
+} 
 }
 
         function limparCarrinhoCompleto() {

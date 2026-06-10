@@ -10,6 +10,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="js/services/carrinhoService.js"></script>
+    <script src="js/services/pedidoService.js"></script>
+    <script src="js/firebase/firebase-config.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
@@ -431,7 +434,6 @@
         </div>
     </div>
 
-    <script src="js/firebase/firebase-config.js"></script>
 
     <script>
         const db = firebase.database();
@@ -452,19 +454,39 @@
             }
         };
 
-        const carrinhoService = {
-            obterItens(){
-                try{
-                    // Alinhamento com a chave unificada do ecossistema Abella Joias
-                    return JSON.parse(localStorage.getItem('abella_carrinho') || '[]');
-                }catch(e){
-                    return [];
-                }
-            },
-            limpar(){
-                localStorage.removeItem('abella_carrinho');
-            }
-        };
+        // =====================================================
+// SERVICES CHECK
+// =====================================================
+
+function obterCarrinhoService(){
+
+    if(window.CarrinhoService){
+        return window.CarrinhoService;
+    }
+
+    if(window.carrinhoService){
+        return window.carrinhoService;
+    }
+
+    console.error(
+        '[Checkout] CarrinhoService não encontrado.'
+    );
+
+    return null;
+}
+
+function obterPedidoService(){
+
+    if(window.PedidoService){
+        return window.PedidoService;
+    }
+
+    console.error(
+        '[Checkout] PedidoService não encontrado.'
+    );
+
+    return null;
+}
 
         function resolverImagemFirebase(url) {
             try {
@@ -485,23 +507,66 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
+       document.addEventListener(
+    'DOMContentLoaded',
+    async () => {
+
+        try{
+
             await carregarConfiguracoes();
-            
-            itensCarrinho = carrinhoService.obterItens();
-            if (!Array.isArray(itensCarrinho)) {
+
+            const carrinho =
+                obterCarrinhoService();
+
+            if(!carrinho){
+
+                alert(
+                    'Erro: Serviço de carrinho ausente no sistema.'
+                );
+
+                return;
+            }
+
+            itensCarrinho =
+                carrinho.obterItens();
+
+            if(
+                !Array.isArray(
+                    itensCarrinho
+                )
+            ){
                 itensCarrinho = [];
             }
 
-            if (itensCarrinho.length === 0) {
-                alert('Seu carrinho está vazio.');
-                window.location.href = 'index.html';
+            if(
+                itensCarrinho.length === 0
+            ){
+
+                alert(
+                    'Seu carrinho está vazio.'
+                );
+
+                window.location.href =
+                    'index.html';
+
                 return;
             }
 
             renderizarItens();
+
             atualizarResumo();
-        });
+
+        }catch(error){
+
+            console.error(
+                '[Checkout Init]',
+                error
+            );
+
+        }
+
+    }
+);
 
         async function carregarConfiguracoes(){
             try{
@@ -577,7 +642,15 @@ CONFIG.pedidoMinimo = parseFloat(
 
                 container.innerHTML += `
                     <div class="flex items-center gap-4 border border-white/5 rounded-2xl p-3 bg-zinc-900/40">
-                        <img src="${imagem}" class="w-16 h-16 rounded-xl object-cover bg-black border border-zinc-800" alt="${nomeLimpo}" onerror="this.src='https://via.placeholder.com/100/111111/caa85c?text=Joia'">
+                        <img
+    src="${imagem}"
+    class="w-16 h-16 rounded-xl object-cover bg-black border border-zinc-800"
+    alt="${nomeLimpo}"
+    onerror="
+        this.onerror=null;
+        this.src='https://via.placeholder.com/100/111111/caa85c?text=Joia';
+    "
+>
                         <div class="flex-1 min-w-0">
                             <h3 class="font-bold text-sm truncate text-white">${nomeLimpo}</h3>
                             <p class="text-zinc-500 text-xs mt-1">${qtd}x • ${money.formatar(preco)}</p>
@@ -968,11 +1041,15 @@ async function finalizarPedido(){
 
             totalPecas:
                 t.qtd,
+             
+            frete:
+                t.frete,
 
             pesoTotal:
                 parseFloat(
                     t.peso.toFixed(2)
                 ),
+
 
             status: 'Novo',
 
@@ -983,11 +1060,23 @@ async function finalizarPedido(){
             timestamp:
                 Date.now()
         };
+        
+        const pedidoService =
+    obterPedidoService();
+
+if(!pedidoService){
+
+    throw new Error(
+
+        'PedidoService não carregado.'
+    );
+
+}
 
         const resultado =
-            await PedidoService.create(
-                payload
-            );
+    await pedidoService.create(
+        payload
+    );
 
         if (
             !resultado ||
@@ -1001,7 +1090,12 @@ async function finalizarPedido(){
 
         }
 
-        carrinhoService.limpar();
+        const carrinho =
+    obterCarrinhoService();
+
+if(carrinho){
+    carrinho.limpar();
+}
 
         const numeroPedido =
             resultado.numeroPedido ||
@@ -1040,6 +1134,27 @@ Pedido: ${numeroPedido}`;
         btn.innerText =
             'Finalizar Pedido';
     }
-}    </script>
+}
+
+// =====================================================
+// DEBUG
+// =====================================================
+
+console.log(
+    '[Checkout]',
+    {
+        CarrinhoService:
+            !!window.CarrinhoService,
+
+        carrinhoService:
+            !!window.carrinhoService,
+
+        PedidoService:
+            !!window.PedidoService
+    }
+);
+    
+
+</script>
 </body>
 </html>

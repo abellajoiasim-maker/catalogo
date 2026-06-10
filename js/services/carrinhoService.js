@@ -382,29 +382,32 @@ const CarrinhoService = {
 
     },
 
-    adicionarItem(produto){
+adicionarItem(
+    produto,
+    quantidade = 1
+){
 
-        if(!produto){
+    if(!produto){
 
-            console.error(
-                '[Carrinho] Produto vazio.'
-            );
-
-            return false;
-
-        }
-
-        return this.adicionar(
-
-            produto,
-
-            produto.quantidade || 1,
-
-            produto.variacao || null
-
+        console.error(
+            '[Carrinho] Produto vazio.'
         );
 
-    },
+        return false;
+
+    }
+
+    return this.adicionar(
+
+        produto,
+
+        quantidade,
+
+        produto.variacao || null
+
+    );
+
+}
 
     // ==========================================================
     // REMOVE

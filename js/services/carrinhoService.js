@@ -849,18 +849,14 @@ console.log(
             let itens =
                 this.getItens();
 
-            quantidade =
-                Math.min(
-
-                    999,
-
-                    Math.max(
-                        1,
-                        parseInt(quantidade) || 1
-                    )
-
-                );
-
+           quantidade =
+    Math.max(
+        1,
+        parseInt(
+            quantidade,
+            10
+        ) || 1
+    );
             // ======================================================
             // SKU
             // ======================================================
@@ -1177,16 +1173,13 @@ console.log(
         }
 
         itens[index].quantidade =
-            Math.min(
-
-                999,
-
-                Math.max(
-                    1,
-                    parseInt(quantidade) || 1
-                )
-
-            );
+    Math.max(
+        1,
+        parseInt(
+            quantidade,
+            10
+        ) || 1
+    );
 
         itens[index].updatedAt =
             Date.now();

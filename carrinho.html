@@ -370,30 +370,45 @@ parseFloat(
             atualizarTotaisResumo(itens);
         }
 
-        function alterarQtd(id, delta) {
+function alterarQtd(id, delta) {
+
     const itens = carrinhoService.obterItens();
 
-    const index = itens.findIndex(i => String(i.id) === String(id));
+    const index = itens.findIndex(
+        i => String(i.id) === String(id)
+    );
 
-    if (index === -1) return;
+    if(index === -1) return;
 
     const item = itens[index];
 
-    const novaQtd = (parseInt(item.quantidade) || 0) + delta;
+    const novaQtd =
+        (parseInt(item.quantidade) || 0) + delta;
 
-    if (novaQtd <= 0) {
+    if(novaQtd <= 0){
         carrinhoService.removerItem(index);
-    } else {
-        carrinhoService.atualizarQuantidade(index, novaQtd);
+    }else{
+        carrinhoService.atualizarQuantidade(
+            index,
+            novaQtd
+        );
     }
 
     renderizarCarrinho();
 
-    if (typeof atualizarMiniCarrinho === 'function') {
+    if(typeof atualizarMiniCarrinho === 'function'){
         atualizarMiniCarrinho();
     }
+}
 
-           function alterarQtdInput(id, valor) {
+
+// ADICIONE AQUI
+function alterarQtdInput(id, valor){
+
+    console.log(
+        '[INPUT DIGITADO]',
+        valor
+    );
 
     const itens =
         carrinhoService.obterItens();
@@ -403,28 +418,32 @@ parseFloat(
             i => String(i.id) === String(id)
         );
 
-    if (index === -1) return;
+    if(index === -1){
+        return;
+    }
 
     const quantidade =
         Math.max(
             1,
-            parseInt(valor, 10) || 1
+            parseInt(valor,10) || 1
         );
+
+    console.log(
+        '[QUANTIDADE SALVA]',
+        quantidade
+    );
 
     carrinhoService.atualizarQuantidade(
         index,
         quantidade
     );
 
-    renderizarCarrinho();
+    console.log(
+        '[ITEM APÓS SALVAR]',
+        carrinhoService.obterItens()[index]
+    );
 
-    if (
-        typeof atualizarMiniCarrinho ===
-        'function'
-    ) {
-        atualizarMiniCarrinho();
-    }
-} 
+    renderizarCarrinho();
 }
 
         function limparCarrinhoCompleto() {

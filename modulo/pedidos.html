@@ -239,7 +239,9 @@
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="text-xs text-white font-bold uppercase truncate max-w-[240px] block tracking-wide">${p.cliente || p.nome || 'Cliente não identificado'}</span>
                                 <span class="text-[9px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${statusColor}">${p.status || 'Novo'}</span>
-                                <span class="text-[9px] font-mono text-zinc-500">ID: ${id}</span>
+                                <span class="text-[9px] font-mono text-[#caa85c] font-bold">
+                                    Nº ${p.idPedido || id.substring(id.length - 6)}
+                                      </span>
                             </div>
                             <p class="text-[11px] text-zinc-400 font-mono truncate">
                                 ⚡ Contato: ${p.whats || p.whatsapp || p.contato || 'Sem Contato'} | 
@@ -408,47 +410,54 @@
             }
         }
 
-        async function salvarAlteracoesPedido() {
-            var id = document.getElementById('editPedidoId').value;
-            var p = _PEDIDOS_CACHE[id];
-            var listaItens = p.itens || p.produtos || [];
-            if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
+async function salvarAlteracoesPedido() {
+    var id = document.getElementById('editPedidoId').value;
+    var p = _PEDIDOS_CACHE[id];
+    if (!p) return;
 
-            var novoTotal = 0;
-            var novasPecas = 0;
-            listaItens.forEach(function(item, index) {
-                var inputQtd = document.getElementById('editItemQtd_' + index);
-                if (inputQtd) item.quantidade = parseInt(inputQtd.value) || 1;
-                var pr = parseFloat(item.price || item.precoFinal || item.preco || 0);
-                novoTotal += (pr * item.quantidade);
-                novasPecas += item.quantidade;
-            });
+    var listaItens = p.itens || p.produtos || [];
+    if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
 
-            var dadosAtualizados = {
-                cliente: document.getElementById('editPedidoCliente').value.trim(),
-                nome: document.getElementById('editPedidoCliente').value.trim(),
-                whats: document.getElementById('editPedidoContato').value.trim(),
-                contato: document.getElementById('editPedidoContato').value.trim(),
-                entrega: document.getElementById('editPedidoEntrega').value.trim(),
-                cidade: document.getElementById('editPedidoCidade').value.trim(),
-                itens: listaItens,
-                produtos: listaItens,
-                total: novoTotal,
-                valorTotal: novoTotal,
-                totalPecas: novasPecas
-            };
+    var novoTotal = 0;
+    var novasPecas = 0;
+    listaItens.forEach(function(item, index) {
+        var inputQtd = document.getElementById('editItemQtd_' + index);
+        if (inputQtd) item.quantidade = parseInt(inputQtd.value) || 1;
+        var pr = parseFloat(item.price || item.precoFinal || item.preco || 0);
+        novoTotal += (pr * item.quantidade);
+        novasPecas += item.quantidade;
+    });
 
-            try {
-                if (!window.db) throw new Error("Instância do Realtime Database não encontrada.");
-                await window.db.ref('abella/orders/' + id).update(dadosAtualizados);
-                fecharModalEditarPedido();
-                alert("✅ Ordem de compra sincronizada com sucesso!");
-                await carregarPainelPedidos();
-            } catch(e) {
-                console.error(e);
-                alert("Erro crítico ao salvar atualizações no banco remoto.");
-            }
-        }
+    // Criamos o objeto de atualização garantindo a persistência do ID sequencial
+    var dadosAtualizados = {
+        idPedido: p.idPedido || ('PED-' + id.slice(-6)), // Preserva o ID ou gera um fallback
+        cliente: document.getElementById('editPedidoCliente').value.trim(),
+        nome: document.getElementById('editPedidoCliente').value.trim(),
+        whats: document.getElementById('editPedidoContato').value.trim(),
+        contato: document.getElementById('editPedidoContato').value.trim(),
+        entrega: document.getElementById('editPedidoEntrega').value.trim(),
+        cidade: document.getElementById('editPedidoCidade').value.trim(),
+        itens: listaItens,
+        produtos: listaItens,
+        total: novoTotal,
+        valorTotal: novoTotal,
+        totalPecas: novasPecas
+    };
+
+    try {
+        if (!window.db) throw new Error("Instância do Realtime Database não encontrada.");
+        
+        // Usando o caminho absoluto conforme sua arquitetura
+        await window.db.ref('abella/orders/' + id).update(dadosAtualizados);
+        
+        fecharModalEditarPedido();
+        alert("✅ Ordem de compra sincronizada com sucesso!");
+        await carregarPainelPedidos();
+    } catch(e) {
+        console.error(e);
+        alert("Erro crítico ao salvar atualizações no banco remoto.");
+    }
+}
 
         async function excluirPedidoCompleto() {
             var id = document.getElementById('editPedidoId').value;
@@ -488,74 +497,84 @@
         }
 
         // MOTOR DE EXPEDIÇÃO TÉRMICA LEGADO EM JS-PDF CORRIGIDO E PROTEGIDO CONTRA TRANSBORDAMENTO
-        async function gerarRomaneioPDF(id) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ unit: 'mm', format: [80, 180] }); 
-            
-            const p = _PEDIDOS_CACHE[id];
-            if (!p) {
-                alert("Erro: Pedido não carregado no cache operacional local.");
-                return;
-            }
+async function gerarRomaneioPDF(id) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 180] }); 
+    
+    const p = _PEDIDOS_CACHE[id];
+    if (!p) {
+        alert("Erro: Pedido não carregado no cache operacional local.");
+        return;
+    }
 
-            try {
-                doc.setFont("courier", "bold");
-                doc.setFontSize(10);
-                doc.text("ABELLA JOIAS - BRUTO", 40, 10, { align: "center" });
-                doc.setFontSize(8);
-                doc.text("GUIA DE EXPEDICAO / ROMANEIO", 40, 14, { align: "center" });
-                doc.text("----------------------------------------", 40, 18, { align: "center" });
-                
-                doc.setFont("courier", "normal");
-                doc.text(`CLIENTE: ${String(p.cliente || p.nome || 'N/I').toUpperCase().substring(0, 22)}`, 5, 24);
-                doc.text(`WHATSAPP: ${p.whats || p.whatsapp || p.contato || 'N/I'}`, 5, 28);
-                doc.text(`DESTINO: ${String(p.cidade || 'LIMEIRA').toUpperCase().substring(0, 22)}`, 5, 32);
-                doc.text(`PAGAMENTO: ${String(p.formaPagamento || 'N/A').toUpperCase().substring(0, 20)}`, 5, 36);
-                doc.text("----------------------------------------", 40, 42, { align: "center" });
-                
-                doc.setFont("courier", "bold");
-                doc.text("ITENS DO PEDIDO:", 5, 48);
-                
-                let y = 54;
-                doc.setFont("courier", "normal");
-                
-                var itensLista = p.itens || p.produtos || [];
-                if (typeof itensLista === 'object' && !Array.isArray(itensLista)) {
-                    itensLista = Object.values(itensLista);
-                }
+    try {
+        doc.setFont("courier", "bold");
+        doc.setFontSize(10);
+        doc.text("ABELLA JOIAS - BRUTO", 40, 10, { align: "center" });
+        
+        // --- AJUSTE: Exibição do ID do Pedido ---
+        doc.setFontSize(9);
+        doc.text(`PEDIDO: ${p.idPedido || 'N/A'}`, 40, 14, { align: "center" });
+        // ----------------------------------------
 
-                itensLista.forEach(item => {
-                    if (y > 160) { 
-                        doc.addPage(); 
-                        y = 15; 
-                    }
-                    const nomeItem = String(item.nome || item.name || 'PECAS').toUpperCase().substring(0, 16);
-                    const qtd = item.quantidade || 1;
-                    const precoCalculo = parseFloat(item.price || item.precoFinal || item.preco || 0);
-                    const totalLinha = formatarMoeda(precoCalculo * qtd);
-                    
-                    doc.text(`${qtd}x ${nomeItem} ${totalLinha}`, 5, y);
-                    y += 5.5;
-                });
-                
-                if (y > 150) {
-                    doc.addPage();
-                    y = 15;
-                }
-
-                doc.text("----------------------------------------", 40, y + 2, { align: "center" });
-                doc.setFont("courier", "bold");
-                doc.text(`TOTAL PECAS : ${p.totalPecas || 0} pçs`, 5, y + 8);
-                doc.text(`MASSA BRUTA : ${parseFloat(p.pesoTotal || 0).toFixed(2)}g`, 5, y + 12);
-                doc.text(`VALOR FINAL : ${formatarMoeda(p.total || p.valorTotal || 0)}`, 5, y + 16);
-                
-                doc.autoPrint();
-                window.open(doc.output('bloburl'), '_blank');
-            } catch(pdfError) {
-                console.error("Falha ao processar PDF físico:", pdfError);
-                alert("Falha no motor gráfico jsPDF ao compilar bobina de 80mm.");
-            }
+        doc.setFontSize(8);
+        doc.text("GUIA DE EXPEDICAO / ROMANEIO", 40, 18, { align: "center" });
+        doc.text("----------------------------------------", 40, 22, { align: "center" });
+        
+        // Ajustado o Y inicial para compensar a nova linha do ID
+        let y = 28; 
+        
+        doc.setFont("courier", "normal");
+        doc.text(`CLIENTE: ${String(p.cliente || p.nome || 'N/I').toUpperCase().substring(0, 22)}`, 5, y);
+        doc.text(`WHATSAPP: ${p.whats || p.whatsapp || p.contato || 'N/I'}`, 5, y + 4);
+        doc.text(`DESTINO: ${String(p.cidade || 'LIMEIRA').toUpperCase().substring(0, 22)}`, 5, y + 8);
+        doc.text(`PAGAMENTO: ${String(p.formaPagamento || 'N/A').toUpperCase().substring(0, 20)}`, 5, y + 12);
+        
+        doc.text("----------------------------------------", 40, y + 18, { align: "center" });
+        
+        doc.setFont("courier", "bold");
+        doc.text("ITENS DO PEDIDO:", 5, y + 24);
+        
+        y += 30; // Início da lista de itens
+        doc.setFont("courier", "normal");
+        
+        var itensLista = p.itens || p.produtos || [];
+        if (typeof itensLista === 'object' && !Array.isArray(itensLista)) {
+            itensLista = Object.values(itensLista);
         }
+
+        itensLista.forEach(item => {
+            if (y > 160) { 
+                doc.addPage(); 
+                y = 15; 
+            }
+            const nomeItem = String(item.nome || item.name || 'PECAS').toUpperCase().substring(0, 16);
+            const qtd = item.quantidade || 1;
+            const precoCalculo = parseFloat(item.price || item.precoFinal || item.preco || 0);
+            const totalLinha = formatarMoeda(precoCalculo * qtd);
+            
+            doc.text(`${qtd}x ${nomeItem} ${totalLinha}`, 5, y);
+            y += 5.5;
+        });
+        
+        if (y > 150) {
+            doc.addPage();
+            y = 15;
+        }
+
+        doc.text("----------------------------------------", 40, y + 2, { align: "center" });
+        doc.setFont("courier", "bold");
+        doc.text(`TOTAL PECAS : ${p.totalPecas || 0} pçs`, 5, y + 8);
+        doc.text(`MASSA BRUTA : ${parseFloat(p.pesoTotal || 0).toFixed(2)}g`, 5, y + 12);
+        doc.text(`VALOR FINAL : ${formatarMoeda(p.total || p.valorTotal || 0)}`, 5, y + 16);
+        
+        doc.autoPrint();
+        window.open(doc.output('bloburl'), '_blank');
+    } catch(pdfError) {
+        console.error("Falha ao processar PDF físico:", pdfError);
+        alert("Falha no motor gráfico jsPDF ao compilar bobina de 80mm.");
+    }
+}
     </script>
 </body>
 </html>

@@ -542,90 +542,98 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // 2. FILTRAGEM E MONTAGEM DO GRID DE CATEGORIAS
-                let listaCategorias = [];
+// 2. FILTRAGEM E MONTAGEM DO GRID DE CATEGORIAS
+let listaCategorias = [];
 
-                if (snapCategories.exists() && snapCategories.val()) {
-                    // Cenário Ideal: Carrega o nó estruturado de categorias criadas
-                    const dadosCat = snapCategories.val();
-                    listaCategorias = Array.isArray(dadosCat) ? dadosCat : Object.values(dadosCat);
-                } else {
-                    // Fallback Técnico: Se o nó categories estiver vazio, reconstrói via produtos
-                    const snapProdutos =
-    await db.ref('abella/products')
-    .once('value');
-                    if (snapProdutos.exists()) {
-                        const prods = Object.values(snapProdutos.val());
-                        const categoriasUnicas = [...new Set(prods.map(p => p.categoria || p.category).filter(Boolean))];
-                        listaCategorias = categoriasUnicas.map(cat => ({
-                            nome: cat,
-                            imagem: prods.find(p => (p.categoria || p.category) === cat)?.image || ''
-                        }));
-                    }
-                }
+if (snapCategories.exists() && snapCategories.val()) {
+    // Cenário Ideal: Carrega o nó estruturado de categorias criadas
+    const dadosCat = snapCategories.val();
+    
+    // Convertemos em Array preservando a estrutura correta
+    if (Array.isArray(dadosCat)) {
+        listaCategorias = dadosCat;
+    } else {
+        listaCategorias = Object.entries(dadosCat).map(([key, val]) => ({
+            slug: key,
+            ...val
+        }));
+    }
+} else {
+    // Fallback Técnico: Se o nó categories estiver vazio, reconstrói via produtos
+    const snapProdutos = await db.ref('abella/products').once('value');
+    if (snapProdutos.exists()) {
+        const prods = Object.values(snapProdutos.val());
+        const categoriasUnicas = [...new Set(prods.map(p => p.categoria || p.category).filter(Boolean))];
+        listaCategorias = categoriasUnicas.map(cat => ({
+            nome: cat,
+            imagem: prods.find(p => (p.categoria || p.category) === cat)?.image || ''
+        }));
+    }
+}
 
-                // Oculta os esqueletos pisantes da tela (Skeletons)
-                if (loading) loading.classList.add('hidden');
+// Oculta os esqueletos pisantes da tela (Skeletons)
+if (loading) loading.classList.add('hidden');
 
-                if (!listaCategorias || listaCategorias.length === 0) {
-                    if (noResult) noResult.classList.remove('hidden');
-                    return;
-                }
+if (!listaCategorias || listaCategorias.length === 0) {
+    if (noResult) noResult.classList.remove('hidden');
+    return;
+}
 
-                // Injeção Atômica por DocumentFragment (Zero atrasos de renderização no DOM)
-                const fragmento = document.createDocumentFragment();
+// Injeção Atômica por DocumentFragment (Zero atrasos de renderização no DOM)
+const fragmento = document.createDocumentFragment();
 
-               listaCategorias.forEach(cat => {
+listaCategorias.forEach(cat => {
+    const nomeCat = cat.nome || cat.name || 'Joia';
 
-    const nomeCat =
-        cat.nome ||
-        cat.name ||
-        'Joia';
+    const slugCat = cat.slug || cat.categorySlug || nomeCat
+        .toLowerCase()
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g,'-');
 
-    const slugCat =
-        cat.slug ||
-        cat.categorySlug ||
-        nomeCat
-            .toLowerCase()
-            .trim()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/\s+/g,'-');
+    // --- CORREÇÃO DA IMAGEM AQUI ---
+    // Resgata o link salvo pelo editor (testando ambos os canais pt/en e tratando URLs gs:// ou Drive)
+    let linkBanco = cat.imagem || cat.image || '';
+    
+    if (linkBanco && typeof resolverImagemFirebase !== 'undefined') {
+        linkBanco = resolverImagemFirebase(linkBanco);
+    }
 
-    const imgCat =
-        obterImagemCategoriaGrid(
-            slugCat
-        );
+    // Se houver imagem válida no banco, usa ela. Senão, recorre ao método antigo de fallback.
+    const imgCat = linkBanco ? linkBanco : (typeof obterImagemCategoriaGrid !== 'undefined' ? obterImagemCategoriaGrid(slugCat) : 'images/fallback.jpg');
+    // ---------------------------------
 
-                    const div = document.createElement('div');
-                    div.className = "cat-card aspect-[3/4] relative group rounded-2xl overflow-hidden shadow-md";
-                    div.setAttribute('role', 'listitem');
-                    div.onclick = () => {
-    window.location.href = `subcategorias.html?categoria=${encodeURIComponent(slugCat)}`;
-};
+    const div = document.createElement('div');
+    div.className = "cat-card aspect-[3/4] relative group rounded-2xl overflow-hidden shadow-md";
+    div.setAttribute('role', 'listitem');
+    div.onclick = () => {
+        window.location.href = `produtos.html?categoria=${encodeURIComponent(slugCat)}`;
+    };
 
-                    div.innerHTML = `
-                        <img
-    src="${imgCat}"
-    alt="${nomeCat}"
-    loading="lazy"
-    onerror="this.src='images/fallback.jpg'"
-    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
->
-                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
-                            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Coleção Premium</p>
-                            <h3 class="serif text-white text-base md:text-lg font-bold tracking-wide uppercase mt-1 leading-tight">${nomeCat}</h3>
-                            <div class="mt-3 pt-3 border-t border-white/10 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <span class="text-[10px] uppercase font-bold text-[#caa85c] tracking-wider">Ver Produtos</span>
-                                <div class="arrow-btn text-xs bg-[#caa85c] text-black rounded-lg w-6 h-6 flex items-center justify-center font-bold">→</div>
-                            </div>
-                        </div>
-                    `;
-                    fragmento.appendChild(div);
-                });
+    div.innerHTML = `
+        <img
+            src="${imgCat}"
+            alt="${nomeCat}"
+            loading="lazy"
+            onerror="this.src='images/fallback.jpg'"
+            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        >
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
+            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Coleção Premium</p>
+            <h3 class="serif text-white text-base md:text-lg font-bold tracking-wide uppercase mt-1 leading-tight">${nomeCat}</h3>
+            <div class="mt-3 pt-3 border-t border-white/10 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span class="text-[10px] uppercase font-bold text-[#caa85c] tracking-wider">Ver Produtos</span>
+                <div class="arrow-btn text-xs bg-[#caa85c] text-black rounded-lg w-6 h-6 flex items-center justify-center font-bold">→</div>
+            </div>
+        </div>
+    `;
+    fragmento.appendChild(div);
+});
 
-                // Limpa e desenha o grid com performance máxima instantânea
-                grid.innerHTML = '';
-                grid.appendChild(fragmento);
+// Limpa e desenha o grid com performance máxima instantânea
+grid.innerHTML = '';
+grid.appendChild(fragmento);
 
                 // 3. ENGENHARIA DE BUSCA LOCAL EM TEMPO REAL (Sem requisições extras)
                 const inputBusca = document.getElementById('busca');

@@ -434,7 +434,7 @@
     <script src="js/firebase/firebase-config.js"></script>
 
     <script>
-        const db = firebase.database();
+        const db = finaliza();
 
         const CONFIG = {
     descontoPix: 5,
@@ -889,121 +889,53 @@ async function finalizarPedido(){
             return;
         }
 
-        const payload = {
+// Gerar um ID de pedido mais amigável e sequencial baseado no timestamp
+const idSequencial = 'PED-' + Date.now().toString().slice(-6);
 
-            cliente: {
+const payload = {
+    idPedido: idSequencial, // ID para exibição no painel
+    cliente: {
+        nome: document.getElementById('cli-nome').value.trim(),
+        whatsapp: document.getElementById('cli-whats').value.trim(),
+        cidade: document.getElementById('cli-cidade').value.trim()
+    },
+    entrega: {
+        nomeLocal: document.getElementById('ent-local').value.trim(),
+        rua: document.getElementById('ent-rua').value.trim(),
+        numero: document.getElementById('ent-numero').value.trim(),
+        bairro: document.getElementById('ent-bairro').value.trim(),
+        cidade: document.getElementById('ent-cidade').value.trim()
+    },
+    observacoes: document.getElementById('obs-pedido').value.trim(),
+    formaPagamento: t.pagamento,
+    itens: itensCarrinho,
+    subtotal: t.subtotal,
+    desconto: t.desconto,
+    frete: t.frete,
+    total: t.total,
+    totalPecas: t.qtd,
+    // Garantia de que o peso seja um número válido
+    pesoTotal: Number(t.peso.toFixed(2)) || 0, 
+    status: 'Novo',
+    data: new Date().toLocaleString('pt-BR'),
+    timestamp: Date.now()
+};
 
-                nome:
-                    document
-                        .getElementById('cli-nome')
-                        .value
-                        .trim(),
+// Ao salvar no Firebase, usamos o ID sequencial como chave ou apenas empurramos
+const ref = await db.ref(window.getAbellaPath('orders')).push(payload);
 
-                whatsapp:
-                    document
-                        .getElementById('cli-whats')
-                        .value
-                        .trim(),
+carrinhoService.limpar();
 
-                cidade:
-                    document
-                        .getElementById('cli-cidade')
-                        .value
-                        .trim()
-            },
+// Ajuste na mensagem do WhatsApp para incluir o ID do pedido
+const mensagem = `Olá! Meu pedido foi realizado com sucesso.
 
-            entrega: {
-
-                nomeLocal:
-                    document
-                        .getElementById('ent-local')
-                        .value
-                        .trim(),
-
-                rua:
-                    document
-                        .getElementById('ent-rua')
-                        .value
-                        .trim(),
-
-                numero:
-                    document
-                        .getElementById('ent-numero')
-                        .value
-                        .trim(),
-
-                bairro:
-                    document
-                        .getElementById('ent-bairro')
-                        .value
-                        .trim(),
-
-                cidade:
-                    document
-                        .getElementById('ent-cidade')
-                        .value
-                        .trim()
-            },
-
-            observacoes:
-                document
-                    .getElementById('obs-pedido')
-                    .value
-                    .trim(),
-
-            formaPagamento:
-                t.pagamento,
-
-            itens:
-                itensCarrinho,
-
-            subtotal:
-                t.subtotal,
-
-            desconto:
-                t.desconto,
-
-            total:
-                t.total,
-
-            totalPecas:
-                t.qtd,
-
-            pesoTotal:
-                parseFloat(
-                    t.peso.toFixed(2)
-                ),
-
-            status: 'Novo',
-
-            data:
-                new Date()
-                    .toLocaleString('pt-BR'),
-
-            timestamp:
-                Date.now()
-        };
-
-        const ref =
-            await db
-                .ref(
-                    window.getAbellaPath(
-                        'orders'
-                    )
-                )
-                .push(payload);
-
-        carrinhoService.limpar();
-
-        const mensagem =
-`Olá! Meu pedido foi realizado com sucesso.
-
+Nº do Pedido: ${idSequencial}
 Cliente: ${payload.cliente.nome}
 Cidade: ${payload.cliente.cidade}
 Local de Entrega: ${payload.entrega.nomeLocal}
 
 Total: ${money.formatar(payload.total)}
-Pagamento: ${payload.formaPagamento}
+Pagamento: ${payload.formaPagamento}`;
 
 Pedido: ${ref.key}`;
 

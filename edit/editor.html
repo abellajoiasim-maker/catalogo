@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Super Editor V8 • Abella Joias</title>
+  <title>Super Editor V9 • Sincronizado</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -56,16 +56,16 @@
     <header class="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 mb-4">
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V7</h1>
-          <p class="text-xs text-zinc-500">Sincronização Forçada com o Canal de Vendas Abella</p>
+          <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V9</h1>
+          <p class="text-xs text-zinc-500">Sincronização Forçada de Dados (Duplo Canal)</p>
         </div>
         <div class="flex gap-2">
           <button
             id="btnRefresh"
-            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold animate-pulse"
+            class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold"
             type="button"
           >
-            Forçar Atualização na Vitrine
+            Sincronizar Vitrine
           </button>
         </div>
       </div>
@@ -96,7 +96,7 @@
           id="buscaGlobal"
           type="text"
           class="w-full md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
-          placeholder="Buscar SKU, Nome..."
+          placeholder="Buscar SKU, Nome, Categoria..."
         />
         <select id="filtroTipo" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm">
           <option value="todos">Todos</option>
@@ -120,9 +120,9 @@
     </section>
 
     <section>
-      <div id="tab-produtos"></div>
-      <div id="tab-categorias" class="hidden"></div>
-      <div id="tab-subcategorias" class="hidden"></div>
+      <div id="tab-produtos" class="grid grid-cols-1 gap-3"></div>
+      <div id="tab-categorias" class="hidden grid grid-cols-1 gap-3"></div>
+      <div id="tab-subcategorias" class="hidden grid grid-cols-1 gap-3"></div>
     </section>
 
     <div id="status" class="text-xs text-zinc-500 mt-6"></div>
@@ -130,12 +130,12 @@
 
   <div
     id="drawer"
-    class="fixed top-0 right-0 h-full w-[520px] bg-zinc-950 border-l border-zinc-800 hidden z-50 overflow-y-auto"
+    class="fixed top-0 right-0 h-full w-[520px] bg-zinc-950 border-l border-zinc-800 hidden z-50 overflow-y-auto shadow-2xl"
   >
     <div class="p-5">
       <div class="flex justify-between mb-5">
-        <h2 id="drawerTitle" class="text-lg font-bold">Editor Pro</h2>
-        <button type="button" onclick="fecharDrawer()" class="text-xl leading-none hover:text-red-400">✕</button>
+        <h2 id="drawerTitle" class="text-lg font-bold text-[#caa85c]">Editor Avançado</h2>
+        <button type="button" onclick="fecharDrawer()" class="text-xl hover:text-red-400">✕</button>
       </div>
       <div id="drawerContent"></div>
     </div>
@@ -155,8 +155,7 @@
     db: null,
     produtos: [],
     categorias: {},
-    buscaDebounceTimer: null,
-    filtros: { busca: '', tipo: 'todos', categoria: '', subcategoria: '' }
+    buscaDebounceTimer: null
   };
 
   const CONFIG = {
@@ -165,22 +164,13 @@
     firebaseRetryDelay: 100
   };
 
-  // ==========================================================
-  // NORMALIZADOR COMPATÍVEL COM O SEU CANAL DE VENDAS
-  // ==========================================================
+  // Mapeador Inteligente de Compatibilidade de Chaves
   const DataService = {
-    getSubcategory(obj) {
-      return obj?.subCategory ?? obj?.subcategory ?? '';
-    },
-    getImage(obj) {
-      return obj?.imagem ?? obj?.image ?? obj?.img ?? '';
-    },
-    getPrice(obj) {
-      return Number(obj?.preco ?? obj?.price ?? 0);
-    },
-    getWeight(obj) {
-      return Number(obj?.peso ?? obj?.weight ?? 0);
-    }
+    getSubcategory(obj) { return obj?.subcategory ?? obj?.subCategory ?? ''; },
+    getImage(obj) { return obj?.imagem ?? obj?.image ?? obj?.img ?? ''; },
+    getPrice(obj) { return Number(obj?.preco ?? obj?.price ?? 0); },
+    getWeight(obj) { return Number(obj?.peso ?? obj?.weight ?? 0); },
+    getDesc(obj) { return obj?.description ?? obj?.descricao ?? ''; }
   };
 
   function setStatus(msg, type = 'info') {
@@ -230,7 +220,6 @@
     if (preview) {
       preview.src = valor;
       preview.style.opacity = '1';
-      preview.style.display = valor ? 'block' : 'none';
     }
   }
 
@@ -265,9 +254,9 @@
 
       popularFiltros();
       renderAll();
-      setStatus('✅ Sincronizado dinamicamente com o canal de vendas', 'ok');
+      setStatus('✅ Catálogo perfeitamente sincronizado com as páginas de venda', 'ok');
     } catch(err) {
-      setStatus('❌ Falha na conexão com o Firebase', 'error');
+      setStatus('❌ Erro de conexão com o banco de dados Firebase', 'error');
     }
   }
 
@@ -296,11 +285,15 @@
     selSub.innerHTML = subOptions;
   }
 
+  function getActiveTab() {
+    return document.querySelector('.tab-btn.active')?.dataset?.tab || 'produtos';
+  }
+
   function renderCurrentTab() {
-    const tabAtiva = document.querySelector('.tab-btn.active')?.dataset?.tab || 'produtos';
-    if (tabAtiva === 'produtos') renderProdutos();
-    else if (tabAtiva === 'categorias') renderCategorias();
-    else if (tabAtiva === 'subcategorias') renderSubcategorias();
+    const t = getActiveTab();
+    if (t === 'produtos') renderProdutos();
+    else if (t === 'categorias') renderCategorias();
+    else if (t === 'subcategorias') renderSubcategorias();
   }
 
   function renderAll() {
@@ -308,51 +301,79 @@
     renderCurrentTab();
   }
 
+  // ==========================================================
+  // GRID DE PRODUTOS COMPLETO COM TODAS AS INFORMAÇÕES VISÍVEIS
+  // ==========================================================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
     if (!container) return;
+
     const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
     const filtroCat = document.getElementById('filtroCategoria').value;
     const filtroSub = document.getElementById('filtroSubcategoria').value;
 
     const filtrados = STATE.produtos.filter(p => {
-      const texto = (p.name || '').toLowerCase() + ' ' + (p.sku || '').toLowerCase() + ' ' + (p.category || '').toLowerCase();
+      const texto = (p.name || '').toLowerCase() + ' ' + (p.sku || '').toLowerCase() + ' ' + (p.category || '').toLowerCase() + ' ' + (DataService.getSubcategory(p)).toLowerCase();
       return (termos === '' || texto.includes(termos)) && (!filtroCat || p.category === filtroCat) && (!filtroSub || DataService.getSubcategory(p) === filtroSub);
     });
 
     if (filtrados.length === 0) {
-      container.innerHTML = `<div class="text-sm text-zinc-500 p-4">Nenhum produto encontrado.</div>`;
+      container.innerHTML = `<div class="text-sm text-zinc-500 p-4">Nenhum produto correspondente.</div>`;
       return;
     }
 
     let html = '';
     filtrados.forEach(p => {
-      const pausedTag = p.paused ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>` : '';
-      const urlImg = converterGsUrl(DataService.getImage(p));
+      const isPaused = p.paused;
+      const cardBg = isPaused ? 'bg-zinc-950 opacity-60 border-red-900/40' : 'bg-zinc-950 border-zinc-900';
+      const statusTag = isPaused ? `<span class="bg-red-950 text-red-400 border border-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">PAUSADO</span>` : `<span class="bg-green-950 text-green-400 border border-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold">ATIVO</span>`;
+      const imgUrl = converterGsUrl(DataService.getImage(p));
+
       html += `
-        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex items-center gap-4 flex-1">
-              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative">
+        <div class="border rounded-2xl p-5 mb-1 transition-all hover:border-zinc-800 ${cardBg}">
+          <div class="flex flex-col lg:flex-row gap-5 items-start lg:items-center justify-between">
+            
+            <div class="flex items-center gap-4 w-full lg:w-auto">
+              <div class="w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center relative">
                 <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-[10px] text-zinc-600">Sem Foto</div>
-                ${DataService.getImage(p) ? `<img src="${escapeHtml(urlImg)}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>` : ''}
+                ${DataService.getImage(p) ? `<img src="${escapeHtml(imgUrl)}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>` : ''}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  ${statusTag}
+                  <span class="text-xs font-mono text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">${escapeHtml(p.sku || 'SEM SKU')}</span>
+                </div>
+                <h3 class="font-bold text-base text-white truncate">${escapeHtml(p.name || 'Sem nome definido')}</h3>
+                <p class="text-xs text-zinc-500 line-clamp-1 mt-0.5">${escapeHtml(DataService.getDesc(p) || 'Sem descrição cadastrada.')}</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full lg:flex-1 max-w-3xl bg-zinc-900/40 p-3 rounded-xl border border-zinc-900">
+              <div>
+                <span class="text-[10px] text-zinc-500 block uppercase font-bold tracking-wider">Preço</span>
+                <span class="text-sm font-semibold text-[#caa85c]">R$ ${DataService.getPrice(p).toFixed(2)}</span>
               </div>
               <div>
-                <div class="font-bold">${escapeHtml(p.name || '')}${pausedTag}</div>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-zinc-500 mt-1">
-                  <div>SKU: <span class="text-zinc-300">${escapeHtml(p.sku || '')}</span></div>
-                  <div>Preço: <span class="text-zinc-300">R$ ${escapeHtml(DataService.getPrice(p))}</span></div>
-                  <div>Categoria: <span class="text-zinc-400">${escapeHtml(p.category || '')}</span></div>
-                  <div>Subcategoria: <span class="text-zinc-400">${escapeHtml(DataService.getSubcategory(p))}</span></div>
-                </div>
+                <span class="text-[10px] text-zinc-500 block uppercase font-bold tracking-wider">Peso</span>
+                <span class="text-sm font-semibold text-zinc-300">${DataService.getWeight(p)}g</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-zinc-500 block uppercase font-bold tracking-wider">Categoria</span>
+                <span class="text-xs font-semibold text-zinc-400 truncate block">${escapeHtml(p.category || '—')}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-zinc-500 block uppercase font-bold tracking-wider">Subcategoria</span>
+                <span class="text-xs font-semibold text-zinc-400 truncate block">${escapeHtml(DataService.getSubcategory(p) || '—')}</span>
               </div>
             </div>
-            <div class="flex gap-2 flex-shrink-0">
-              <button onclick="editarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800">✏️</button>
-              <button onclick="duplicarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800">📄</button>
-              <button onclick="pausarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800">⏸️</button>
-              <button onclick="deletarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-red-400 hover:bg-zinc-900">🗑️</button>
+
+            <div class="flex gap-2 w-full lg:w-auto justify-end border-t border-zinc-900 lg:border-none pt-3 lg:pt-0">
+              <button onclick="editarProduto('${escapeAttr(p.id)}')" title="Editar Completo" class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors">✏️ Editar</button>
+              <button onclick="duplicarProduto('${escapeAttr(p.id)}')" title="Duplicar Item" class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors">📄</button>
+              <button onclick="pausarProduto('${escapeAttr(p.id)}')" title="Alternar Pausa" class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors">⏸️</button>
+              <button onclick="deletarProduto('${escapeAttr(p.id)}')" title="Excluir Item" class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:border-red-950 text-red-400 transition-colors">🗑️</button>
             </div>
+
           </div>
         </div>`;
     });
@@ -365,11 +386,11 @@
     let html = '';
     Object.entries(STATE.categorias).forEach(([slug, cat]) => {
       html += `
-        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
           <div class="flex items-center justify-between gap-4">
             <div>
-              <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
-              <div class="text-xs text-zinc-500">Caminho/Slug: ${escapeHtml(slug)}</div>
+              <div class="font-bold text-white">${escapeHtml(cat?.name || slug)}</div>
+              <div class="text-xs text-zinc-500">Slug: ${escapeHtml(slug)}</div>
             </div>
             <button onclick="editarCategoria('${escapeAttr(slug)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800">✏️</button>
           </div>
@@ -386,7 +407,7 @@
       Object.entries(cat?.subcategories || {}).forEach(([subSlug, subObj]) => {
         const imgGrid = subObj.grid || subObj.gridImage || subObj.imagem || '';
         html += `
-          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded overflow-hidden relative flex items-center justify-center">
@@ -394,7 +415,7 @@
                    ${imgGrid ? `<img src="${escapeHtml(converterGsUrl(imgGrid))}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>` : ''}
                 </div>
                 <div>
-                  <div class="font-bold">${escapeHtml(subObj?.name || subObj?.title || subSlug)}</div>
+                  <div class="font-bold text-white">${escapeHtml(subObj?.name || subObj?.title || subSlug)}</div>
                   <div class="text-xs text-zinc-500">Pai: ${escapeHtml(catSlug)} | Slug Interno: ${escapeHtml(subSlug)}</div>
                 </div>
               </div>
@@ -406,6 +427,9 @@
     el.innerHTML = html;
   }
 
+  // ==========================================================
+  // DRAWER DE EDIÇÃO DE PRODUTO COMPLETO E SEGURO
+  // ==========================================================
   function editarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
     if (!p) return;
@@ -415,31 +439,39 @@
 
     abrirDrawer('Editar Produto', `
       <label class="text-xs text-zinc-400 block mb-1">Nome do Item</label>
-      <input id="editNome" class="input-dark" value="${escapeHtml(p.name || '')}">
+      <input id="editNome" class="input-dark" value="${escapeHtml(p.name || '')}" placeholder="Ex: Brinco Argola Ouro">
       
-      <label class="text-xs text-zinc-400 block mb-1">SKU</label>
-      <input id="editSku" class="input-dark" value="${escapeHtml(p.sku || '')}">
+      <label class="text-xs text-zinc-400 block mb-1">SKU do Produto</label>
+      <input id="editSku" class="input-dark" value="${escapeHtml(p.sku || '')}" placeholder="Ex: BR-01">
+
+      <label class="text-xs text-zinc-400 block mb-1">Descrição Comercial</label>
+      <textarea id="editDescricao" class="input-dark h-20" placeholder="Descrição completa do produto...">${escapeHtml(DataService.getDesc(p))}</textarea>
       
-      <label class="text-xs text-zinc-400 block mb-1">Categoria Pai</label>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-zinc-400 block mb-1">Preço (R$)</label>
+          <input id="editPreco" type="number" step="0.01" class="input-dark" value="${DataService.getPrice(p)}">
+        </div>
+        <div>
+          <label class="text-xs text-zinc-400 block mb-1">Peso (Gramas)</label>
+          <input id="editPeso" type="number" step="0.01" class="input-dark" value="${DataService.getWeight(p)}">
+        </div>
+      </div>
+
+      <label class="text-xs text-zinc-400 block mb-1">Categoria Principal</label>
       <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">${catsHtml}</select>
       
       <label class="text-xs text-zinc-400 block mb-1">Subcategoria Vinculada</label>
       <select id="editSubcategoria" class="input-dark"></select>
       
-      <label class="text-xs text-zinc-400 block mb-1">Preview da Imagem do Item</label>
+      <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Upload / gs:// / Drive)</label>
       <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
-         <div class="absolute text-xs text-zinc-600">Sem Foto ou Link Quebrado</div>
+         <div class="absolute text-xs text-zinc-600">Preview Indisponível</div>
          <img id="previewProduto" src="${escapeHtml(converterGsUrl(DataService.getImage(p)))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
       </div>
-      <input id="editImagem" class="input-dark" placeholder="URL da Imagem (imagem / image)" value="${escapeHtml(DataService.getImage(p))}" oninput="tratarInputImagem(this, 'previewProduto')">
+      <input id="editImagem" class="input-dark" placeholder="URL da foto" value="${escapeHtml(DataService.getImage(p))}" oninput="tratarInputImagem(this, 'previewProduto')">
       
-      <label class="text-xs text-zinc-400 block mb-1">Preço de Venda (R$)</label>
-      <input id="editPreco" class="input-dark" value="${escapeHtml(DataService.getPrice(p))}">
-      
-      <label class="text-xs text-zinc-400 block mb-1">Peso (Gramas)</label>
-      <input id="editPeso" class="input-dark" value="${escapeHtml(DataService.getWeight(p))}">
-      
-      <button onclick="salvarProduto('${escapeAttr(id)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2 hover:bg-opacity-90">Salvar Alterações Sincronizadas</button>
+      <button onclick="salvarProduto('${escapeAttr(id)}')" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90 transition-all">Salvar Alterações em Espelho</button>
     `);
     carregarSubcategoriasProduto(p.category, DataService.getSubcategory(p));
   }
@@ -455,7 +487,8 @@
   }
 
   // ==========================================================
-  // GRAVAÇÃO EM ESPELHO (ESCREVE EM INGLÊS E PORTUGUÊS AO MESMO TEMPO)
+  // SALVAMENTO EM DUPLO CANAL (CORREÇÃO CRÍTICA V7)
+  // Grava propriedades em Inglês E Português para refletir na vitrine
   // ==========================================================
   async function salvarProduto(id) {
     try {
@@ -469,7 +502,7 @@
         sku: document.getElementById('editSku').value,
         category: document.getElementById('editCategoria').value,
         
-        // CORREÇÃO CRÍTICA: Preenche as duas chaves para as páginas lerem sem conflito
+        // Espelhamento Absoluto para não quebrar nenhuma página de vendas
         subcategory: subcat,
         subCategory: subcat,
         price: preco,
@@ -478,11 +511,13 @@
         peso: peso,
         image: img,
         imagem: img,
+        description: document.getElementById('editDescricao').value,
+        descricao: document.getElementById('editDescricao').value,
         updatedAt: Date.now()
       });
       fecharDrawer();
       await carregarTudo();
-    } catch (e) { setStatus('❌ Erro ao salvar dados no Firebase', 'error'); }
+    } catch (e) { setStatus('❌ Erro gravíssimo ao salvar dados no Firebase', 'error'); }
   }
 
   function editarSubcategoria(catSlug, subSlug) {
@@ -497,21 +532,21 @@
       <input id="subName" class="input-dark" value="${escapeHtml(sub.name || sub.title || '')}">
       
       <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
-      <textarea id="subDesc" class="input-dark">${escapeHtml(sub.description || '')}</textarea>
+      <textarea id="subDesc" class="input-dark h-20">${escapeHtml(sub.description || '')}</textarea>
       
       <div class="mb-4 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem do Grid (Miniatura da Listagem)</label>
+        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem do Grid (Listagem)</label>
         <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
-           <div class="absolute text-[10px] text-zinc-600">Sem Foto do Grid</div>
+           <div class="absolute text-[10px] text-zinc-600">Sem Imagem Cadastrada</div>
            <img id="previewGrid" src="${escapeHtml(converterGsUrl(imgGrid))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
         </div>
         <input id="subGrid" class="input-dark" value="${escapeHtml(imgGrid)}" oninput="tratarInputImagem(this, 'previewGrid')">
       </div>
 
       <div class="mb-4 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem Hero (Banner de Capa Superior)</label>
+        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem Hero (Capa Superior)</label>
         <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
-           <div class="absolute text-[10px] text-zinc-600">Sem Foto do Hero</div>
+           <div class="absolute text-[10px] text-zinc-600">Sem Imagem Cadastrada</div>
            <img id="previewHero" src="${escapeHtml(converterGsUrl(imgHero))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
         </div>
         <input id="subHero" class="input-dark" value="${escapeHtml(imgHero)}" oninput="tratarInputImagem(this, 'previewHero')">
@@ -529,8 +564,6 @@
       await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
         name: document.getElementById('subName').value,
         description: document.getElementById('subDesc').value,
-        
-        // GARANTIA TOTAL: Preenche tudo para os layouts antigos e novos funcionarem
         imagem: gridVal,
         grid: gridVal,
         gridImage: gridVal,
@@ -568,7 +601,7 @@
   async function duplicarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
     if (!p) return;
-    const copia = { ...p, sku: (p.sku || '') + '-COPY', createdAt: Date.now() };
+    const copia = { ...p, sku: (p.sku || '') + '-COPY', createdAt: Date.now(), updatedAt: Date.now() };
     delete copia.id;
     await STATE.db.ref(window.getAbellaPath('products')).push(copia);
     await carregarTudo();
@@ -577,12 +610,12 @@
   async function pausarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
     if (!p) return;
-    await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({ paused: !p.paused });
+    await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({ paused: !p.paused, updatedAt: Date.now() });
     await carregarTudo();
   }
 
   async function deletarProduto(id) {
-    if (confirm('Excluir permanentemente do catálogo Abella?')) {
+    if (confirm('Deseja realmente excluir permanentemente este item da sua base?')) {
       await STATE.db.ref(window.getAbellaPath(`products/${id}`)).remove();
       await carregarTudo();
     }
@@ -616,7 +649,7 @@
       STATE.db = resolverDB();
       if(!STATE.db) { await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay)); t++; }
     }
-    if (!STATE.db) return setStatus('❌ Falha Crítica do Firebase SDK', 'error');
+    if (!STATE.db) return setStatus('❌ Falha de carregamento do Firebase SDK', 'error');
 
     wireTabs();
     wireSearch();

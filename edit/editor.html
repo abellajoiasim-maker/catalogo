@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Super Editor V7</title>
+  <title>Super Editor V7 • Abella Joias</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -56,8 +56,8 @@
     <header class="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 mb-4">
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V6</h1>
-          <p class="text-xs text-zinc-500">Centro Operacional Abella</p>
+          <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V7</h1>
+          <p class="text-xs text-zinc-500">Centro Operacional Sincronizado Abella</p>
         </div>
         <div class="flex gap-2">
           <button
@@ -65,7 +65,7 @@
             class="px-4 py-2 bg-[#caa85c] text-black rounded-lg text-xs font-bold"
             type="button"
           >
-            Atualizar
+            Atualizar e Sincronizar
           </button>
         </div>
       </div>
@@ -96,7 +96,7 @@
           id="buscaGlobal"
           type="text"
           class="w-full md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm"
-          placeholder="Buscar SKU, Nome, Categoria ou Subcategoria..."
+          placeholder="Buscar SKU, Nome, Categoria..."
         />
         <select id="filtroTipo" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm">
           <option value="todos">Todos</option>
@@ -110,9 +110,6 @@
         <select id="filtroSubcategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm">
           <option value="">Todas Subcategorias</option>
         </select>
-      </div>
-      <div class="text-xs text-zinc-500 mt-2">
-        ℹ️ Dica: a busca filtra a aba atual conforme os filtros acima.
       </div>
     </section>
 
@@ -145,9 +142,6 @@
   </div>
 
   <script>
-  // =======================
-  // FIX #3 — Aguarda Firebase SDK estar pronto antes de qualquer acesso
-  // =======================
   function resolverDB() {
     if (window.db) return window.db;
     if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {
@@ -156,115 +150,61 @@
     return null;
   }
 
-  // =======================
-  // Estado / Cache
-  // =======================
   const statusEl = document.getElementById('status');
   const STATE = {
     db: null,
     produtos: [],
     categorias: {},
     buscaDebounceTimer: null,
-    filtros: {
-      busca: '',
-      tipo: 'todos',
-      categoria: '',
-      subcategoria: ''
-    }
+    filtros: { busca: '', tipo: 'todos', categoria: '', subcategoria: '' }
   };
 
   const CONFIG = {
     accentColor: '#caa85c',
     drawerWidth: 520,
-    debounceBusca: 250,
+    debounceBusca: 200,
     firebaseRetries: 30,
     firebaseRetryDelay: 100
   };
 
   // ==========================================================
-  // UNIFICAÇÃO DOS HELPERS & DATA ACCESSORS (Unificado Módulo Antigo + Compat V6)
+  // NORMALIZADOR DE DADOS (Lê de forma resiliente qualquer variação)
   // ==========================================================
   const DataService = {
     getSubcategory(obj) {
-      return obj?.subcategory ?? obj?.subCategory ?? '';
-    },
-    getHeroImage(obj) {
-      return obj?.hero ?? obj?.heroImage ?? '';
-    },
-    getGridImage(obj) {
-      return obj?.grid ?? obj?.gridImage ?? '';
+      return obj?.subCategory ?? obj?.subcategory ?? '';
     },
     getImage(obj) {
-      return obj?.image ?? obj?.img ?? '';
+      return obj?.imagem ?? obj?.image ?? obj?.img ?? '';
     },
     getPrice(obj) {
-      return Number(obj?.price ?? obj?.preco ?? 0);
+      return Number(obj?.preco ?? obj?.price ?? 0);
     },
     getWeight(obj) {
-      return Number(obj?.weight ?? obj?.peso ?? 0);
+      return Number(obj?.peso ?? obj?.weight ?? 0);
     }
   };
 
-  // Mantendo objeto global Compat apontando para a nova estrutura para garantir retrocompatibilidade total
-  const Compat = DataService;
-
-  // =======================
-  // Firebase Persistência
-  // =======================
   const FirebaseService = {
     async carregarCategorias(){
       const snap = await STATE.db.ref(window.getAbellaPath('categories')).once('value');
       return snap.val() || {};
     },
-
     async carregarProdutos(){
       const snap = await STATE.db.ref(window.getAbellaPath('products')).once('value');
       const dados = snap.val() || {};
-      return Object.entries(dados).map(([id, produto]) => ({ id, ...produto }));
-    },
-
-    async atualizarProduto(id, dados){
-      return STATE.db.ref(window.getAbellaPath(`products/${id}`)).update(dados);
-    },
-
-    async criarProduto(dados){
-      return STATE.db.ref(window.getAbellaPath('products')).push(dados);
-    },
-
-    async removerProduto(id){
-      return STATE.db.ref(window.getAbellaPath(`products/${id}`)).remove();
-    },
-
-    async atualizarCategoria(slug, dados){
-      return STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update(dados);
-    },
-
-    async atualizarSubcategoria(categoria, subcategoria, dados){
-      return STATE.db.ref(window.getAbellaPath(`categories/${categoria}/subcategories/${subcategoria}`)).update(dados);
+      return Object.entries(dados).map(([id, p]) => ({ id, ...p }));
     }
   };   
 
-  // =======================
-  // Status helper
-  // =======================
   function setStatus(msg, type = 'info') {
-    const color =
-      type === 'error' ? 'text-red-400' :
-      type === 'ok'    ? 'text-green-400' : 'text-zinc-500';
+    const color = type === 'error' ? 'text-red-400' : type === 'ok' ? 'text-green-400' : 'text-zinc-500';
     statusEl.className = `text-xs mt-6 ${color}`;
     statusEl.textContent = msg;
   }
 
-  // =======================
-  // Util
-  // =======================
   function escapeHtml(str) {
-    return String(str ?? '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
+    return String(str ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
   }
 
   function escapeAttr(str) {
@@ -272,43 +212,27 @@
   }
 
   function getActiveTab() {
-    const active = document.querySelector('.tab-btn.active');
-    return active?.dataset?.tab || 'produtos';
+    return document.querySelector('.tab-btn.active')?.dataset?.tab || 'produtos';
   }
 
   function converterGsUrl(url) {
     let stringUrl = String(url ?? '').trim();
     if (!stringUrl) return '';
-
     if (stringUrl.includes('drive.google.com')) {
       try {
         let idArquivo = '';
-        if (stringUrl.includes('/d/')) {
-          idArquivo = stringUrl.split('/d/')[1].split('/')[0];
-        } else if (stringUrl.includes('id=')) {
-          idArquivo = stringUrl.split('id=')[1].split('&')[0];
-        }
-        if (idArquivo) {
-          return `https://drive.google.com/uc?export=view&id=${idArquivo}`;
-        }
-      } catch (err) {
-        console.error('Erro ao converter link do Google Drive:', err);
-      }
+        if (stringUrl.includes('/d/')) idArquivo = stringUrl.split('/d/')[1].split('/')[0];
+        else if (stringUrl.includes('id=')) idArquivo = stringUrl.split('id=')[1].split('&')[0];
+        if (idArquivo) return `https://drive.google.com/uc?export=view&id=${idArquivo}`;
+      } catch (e) {}
     }
-
     if (stringUrl.startsWith('gs://')) {
       try {
         const semProtocolo = stringUrl.replace('gs://', '');
-        const primeiraBarra = semProtocolo.indexOf('/');
-        if (primeiraBarra === -1) return stringUrl;
-
-        const bucket = semProtocolo.substring(0, primeiraBarra);
-        const caminhoArquivo = semProtocolo.substring(primeiraBarra + 1);
-        const caminhoCodificado = encodeURIComponent(caminhoArquivo);
-        return `https://firebasestorage.googleapis.com/v1/b/${bucket}/o/${caminhoCodificado}?alt=media`;
-      } catch (e) {
-        console.error('Erro ao converter URL gs://:', e);
-      }
+        const idx = semProtocolo.indexOf('/');
+        if (idx === -1) return stringUrl;
+        return `https://firebasestorage.googleapis.com/v1/b/${semProtocolo.substring(0, idx)}/o/${encodeURIComponent(semProtocolo.substring(idx + 1))}?alt=media`;
+      } catch (e) {}
     }
     return stringUrl;
   }
@@ -335,9 +259,6 @@
     }
   }
 
-  // =======================
-  // Drawer Controls
-  // =======================
   function abrirDrawer(titulo, html) {
     document.getElementById('drawerTitle').textContent = titulo;
     document.getElementById('drawerContent').innerHTML = html;
@@ -349,9 +270,6 @@
     document.getElementById('drawerContent').innerHTML = '';
   }
 
-  // =======================
-  // Carregamento central
-  // =======================
   async function carregarTudo(){
     try {
       [STATE.categorias, STATE.produtos] = await Promise.all([
@@ -360,57 +278,37 @@
       ]);
       popularFiltros();
       renderAll();
-      setStatus('✅ Dados carregados', 'ok');
+      setStatus('✅ Sincronizado com o Canal de Vendas', 'ok');
     } catch(err) {
-      console.error(err);
-      setStatus('❌ Falha ao carregar', 'error');
+      setStatus('❌ Falha na sincronização', 'error');
     }
   }
 
-  // =======================
-  // Estatísticas
-  // =======================
   function atualizarEstatisticas() {
     document.getElementById('statProdutos').innerText = STATE.produtos.length;
     document.getElementById('statCategorias').innerText = Object.keys(STATE.categorias).length;
-
     let totalSubs = 0;
-    Object.values(STATE.categorias).forEach(cat => {
-      totalSubs += Object.keys(cat?.subcategories || {}).length;
-    });
+    Object.values(STATE.categorias).forEach(cat => totalSubs += Object.keys(cat?.subcategories || {}).length);
     document.getElementById('statSubs').innerText = totalSubs;
     document.getElementById('statPausados').innerText = STATE.produtos.filter(p => p.paused).length;
   }
 
-  // =======================
-  // Filtros (UI)
-  // =======================
   function popularFiltros() {
     const selCat = document.getElementById('filtroCategoria');
     const selSub = document.getElementById('filtroSubcategoria');
     if (!selCat || !selSub) return;
 
-    const cats = Object.keys(STATE.categorias);
     let catOptions = `<option value="">Todas Categorias</option>`;
-    cats.forEach(c => {
-      catOptions += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
-    });
+    Object.keys(STATE.categorias).forEach(c => catOptions += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`);
     selCat.innerHTML = catOptions;
 
     const allSubs = new Set();
-    Object.values(STATE.categorias).forEach(cat => {
-      Object.keys(cat?.subcategories || {}).forEach(s => allSubs.add(s));
-    });
+    Object.values(STATE.categorias).forEach(cat => Object.keys(cat?.subcategories || {}).forEach(s => allSubs.add(s)));
     let subOptions = `<option value="">Todas Subcategorias</option>`;
-    [...allSubs].forEach(s => {
-      subOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`;
-    });
+    [...allSubs].forEach(s => subOptions += `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`);
     selSub.innerHTML = subOptions;
   }
 
-  // ==========================================================
-  // OTIMIZAÇÃO DE RENDERS INTELIGENTES (Apenas a tab visível)
-  // ==========================================================
   function renderCurrentTab() {
     const tabAtiva = getActiveTab();
     if (tabAtiva === 'produtos') renderProdutos();
@@ -423,476 +321,242 @@
     renderCurrentTab();
   }
 
-  // =======================
-  // Render — Produtos
-  // =======================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
     if (!container) return;
-    
-    const termos     = (document.getElementById('buscaGlobal').value || '').toLowerCase();
-    const filtroCat  = document.getElementById('filtroCategoria').value;
-    const filtroSub  = document.getElementById('filtroSubcategoria').value;
+    const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
+    const filtroCat = document.getElementById('filtroCategoria').value;
+    const filtroSub = document.getElementById('filtroSubcategoria').value;
 
     const filtrados = STATE.produtos.filter(p => {
-      const texto = (p.name || '').toLowerCase() + ' ' +
-                    (p.sku || '').toLowerCase() + ' ' +
-                    (p.category || '').toLowerCase() + ' ' +
-                    (DataService.getSubcategory(p) || '').toLowerCase();
-
-      return (
-        (termos === '' || texto.includes(termos)) &&
-        (!filtroCat || p.category === filtroCat) &&
-        (!filtroSub || DataService.getSubcategory(p) === filtroSub)
-      );
+      const texto = (p.name || '').toLowerCase() + ' ' + (p.sku || '').toLowerCase() + ' ' + (p.category || '').toLowerCase();
+      return (termos === '' || texto.includes(termos)) && (!filtroCat || p.category === filtroCat) && (!filtroSub || DataService.getSubcategory(p) === filtroSub);
     });
 
     if (filtrados.length === 0) {
-      container.innerHTML = `<div class="text-sm text-zinc-500">Nenhum produto encontrado.</div>`;
+      container.innerHTML = `<div class="text-sm text-zinc-500">Nenhum produto cadastrado.</div>`;
       return;
     }
 
-    let htmlBuffer = '';
-    filtrados.forEach(produto => {
-      const pausedTag = produto.paused ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>` : '';
-      const id = escapeAttr(produto.id);
-      const urlMiniatura = converterGsUrl(DataService.getImage(produto));
-
-      htmlBuffer += `
+    let html = '';
+    filtrados.forEach(p => {
+      const pausedTag = p.paused ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>` : '';
+      html += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-4 flex-1">
               <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative">
-                <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-[10px] text-zinc-600 ${DataService.getImage(produto) ? 'hidden' : ''}">Sem Foto</div>
-                ${DataService.getImage(produto) ? `
-                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>
-                ` : ''}
+                <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-[10px] text-zinc-600">Sem Foto</div>
+                ${DataService.getImage(p) ? `<img src="${escapeHtml(converterGsUrl(DataService.getImage(p)))}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>` : ''}
               </div>
               <div>
-                <div class="font-bold">${escapeHtml(produto.name || '')}${pausedTag}</div>
+                <div class="font-bold">${escapeHtml(p.name || '')}${pausedTag}</div>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-zinc-500 mt-1">
-                  <div>SKU: <span class="text-zinc-300">${escapeHtml(produto.sku || '')}</span></div>
-                  <div>Preço: <span class="text-zinc-300">R$ ${escapeHtml(DataService.getPrice(produto))}</span></div>
-                  <div>Categoria: <span class="text-zinc-400">${escapeHtml(produto.category || '')}</span></div>
-                  <div>Subcategoria: <span class="text-zinc-400">${escapeHtml(DataService.getSubcategory(produto))}</span></div>
+                  <div>SKU: <span class="text-zinc-300">${escapeHtml(p.sku || '')}</span></div>
+                  <div>Preço: <span class="text-zinc-300">R$ ${escapeHtml(DataService.getPrice(p))}</span></div>
+                  <div>Cat: <span class="text-zinc-400">${escapeHtml(p.category || '')}</span></div>
+                  <div>Sub: <span class="text-zinc-400">${escapeHtml(DataService.getSubcategory(p))}</span></div>
                 </div>
               </div>
             </div>
-            <div class="flex gap-2 items-center flex-shrink-0">
-              <button onclick="editarProduto('${id}')" title="Editar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
-              <button onclick="duplicarProduto('${id}')" title="Duplicar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">📄</button>
-              <button onclick="pausarProduto('${id}')" title="Pausar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">⏸</button>
-              <button onclick="deletarProduto('${id}')" title="Deletar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-red-400">🗑</button>
+            <div class="flex gap-2 flex-shrink-0">
+              <button onclick="editarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
+              <button onclick="duplicarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg">📄</button>
+              <button onclick="pausarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg">⏸</button>
+              <button onclick="deletarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-red-400">🗑</button>
             </div>
           </div>
-        </div>
-      `;
+        </div>`;
     });
-    container.innerHTML = htmlBuffer;
+    container.innerHTML = html;
   }
 
-  // =======================
-  // Render — Categorias
-  // =======================
   function renderCategorias() {
     const el = document.getElementById('tab-categorias');
     if (!el) return;
-
-    const termos    = (document.getElementById('buscaGlobal').value || '').toLowerCase();
-    const tipo      = document.getElementById('filtroTipo').value;
-    const filtroCat = document.getElementById('filtroCategoria').value;
-
-    const entries = Object.entries(STATE.categorias).filter(([slug, cat]) => {
-      const texto = ((cat?.name || slug) + ' ' + slug).toLowerCase();
-      return (
-        (tipo === 'todos' || tipo === 'categoria') &&
-        (!filtroCat || slug === filtroCat) &&
-        (termos === '' || texto.includes(termos))
-      );
-    });
-
-    if (entries.length === 0) {
-      el.innerHTML = `<div class="text-sm text-zinc-500">Nenhuma categoria encontrada.</div>`;
-      return;
-    }
-
-    let htmlBuffer = '';
-    entries.forEach(([slug, cat]) => {
-      const safeSlug = escapeAttr(slug);
-      const urlMiniatura = converterGsUrl(DataService.getGridImage(cat) || DataService.getHeroImage(cat));
-
-      htmlBuffer += `
+    let html = '';
+    Object.entries(STATE.categorias).forEach(([slug, cat]) => {
+      html += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
           <div class="flex items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative">
-                <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-xl z-0">📁</div>
-                ${urlMiniatura ? `
-                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>
-                ` : ''}
-              </div>
-              <div>
-                <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
-                <div class="text-xs text-zinc-500">Slug: ${escapeHtml(slug)}</div>
-                <div class="text-xs text-zinc-500">Subcategorias: ${Object.keys(cat?.subcategories || {}).length}</div>
-              </div>
+            <div>
+              <div class="font-bold">${escapeHtml(cat?.name || slug)}</div>
+              <div class="text-xs text-zinc-500">Slug: ${escapeHtml(slug)}</div>
             </div>
-            <button onclick="editarCategoria('${safeSlug}')" title="Editar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
+            <button onclick="editarCategoria('${escapeAttr(slug)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
           </div>
-        </div>
-      `;
+        </div>`;
     });
-    el.innerHTML = htmlBuffer;
+    el.innerHTML = html;
   }
 
-  // =======================
-  // Render — Subcategorias
-  // =======================
   function renderSubcategorias() {
     const el = document.getElementById('tab-subcategorias');
     if (!el) return;
-
-    const termos   = (document.getElementById('buscaGlobal').value || '').toLowerCase();
-    const tipo     = document.getElementById('filtroTipo').value;
-    const filtroCat = document.getElementById('filtroCategoria').value;
-    const filtroSub = document.getElementById('filtroSubcategoria').value;
-
-    const subs = [];
+    let html = '';
     Object.entries(STATE.categorias).forEach(([catSlug, cat]) => {
       Object.entries(cat?.subcategories || {}).forEach(([subSlug, subObj]) => {
-        subs.push({ catSlug, subSlug, subObj });
+        html += `
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <div class="font-bold">${escapeHtml(subObj?.name || subSlug)}</div>
+                <div class="text-xs text-zinc-500">Pai: ${escapeHtml(catSlug)} | Slug: ${escapeHtml(subSlug)}</div>
+              </div>
+              <button onclick="editarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
+            </div>
+          </div>`;
       });
     });
-
-    const filtradas = subs.filter(x => {
-      const texto = ((x.subObj?.name || x.subObj?.title || '') + ' ' + x.subSlug + ' ' + x.catSlug).toLowerCase();
-      return (
-        (tipo === 'todos' || tipo === 'subcategoria') &&
-        (!filtroCat || x.catSlug === filtroCat) &&
-        (!filtroSub || x.subSlug === filtroSub) &&
-        (termos === '' || texto.includes(termos))
-      );
-    });
-
-    if (filtradas.length === 0) {
-      el.innerHTML = `<div class="text-sm text-zinc-500">Nenhuma subcategoria encontrada.</div>`;
-      return;
-    }
-
-    let htmlBuffer = '';
-    filtradas.forEach(x => {
-      const safeCat = escapeAttr(x.catSlug);
-      const safeSub = escapeAttr(x.subSlug);
-      const urlMiniatura = converterGsUrl(DataService.getGridImage(x.subObj) || DataService.getHeroImage(x.subObj));
-
-      htmlBuffer += `
-        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
-          <div class="flex items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-              <div class="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center relative">
-                <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-xl z-0">📁</div>
-                ${urlMiniatura ? `
-                  <img src="${escapeHtml(urlMiniatura)}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>
-                ` : ''}
-              </div>
-              <div>
-                <div class="font-bold">${escapeHtml(x.subObj?.name || x.subObj?.title || x.subSlug)}</div>
-                <div class="text-xs text-zinc-500">Categoria Pai: ${escapeHtml(x.catSlug)}</div>
-                <div class="text-xs text-zinc-500">Slug Interno: ${escapeHtml(x.subSlug)}</div>
-              </div>
-            </div>
-            <button onclick="editarSubcategoria('${safeCat}', '${safeSub}')" title="Editar" class="hover:opacity-90 bg-zinc-900 border border-zinc-800 p-2 rounded-lg">✏</button>
-          </div>
-        </div>
-      `;
-    });
-    el.innerHTML = htmlBuffer;
+    el.innerHTML = html;
   }
 
-  // =======================
-  // Drawer — Produtos
-  // =======================
   function editarProduto(id) {
-    const produto = STATE.produtos.find(p => p.id === id);
-    if (!produto) return;
+    const p = STATE.produtos.find(prod => prod.id === id);
+    if (!p) return;
 
-    let categoriasHtml = '';
-    Object.keys(STATE.categorias).forEach(cat => {
-      categoriasHtml += `
-        <option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>
-          ${escapeHtml(cat)}
-        </option>
-      `;
-    });
-
-    const urlPreview = converterGsUrl(DataService.getImage(produto));
+    let catsHtml = '';
+    Object.keys(STATE.categorias).forEach(cat => catsHtml += `<option value="${escapeHtml(cat)}" ${p.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`);
 
     abrirDrawer('Editar Produto', `
-      <input id="editNome"    class="input-dark" placeholder="Nome"   value="${escapeHtml(produto.name  || '')}">
-      <input id="editSku"     class="input-dark" placeholder="SKU"    value="${escapeHtml(produto.sku   || '')}">
-
-      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">
-        ${categoriasHtml}
-      </select>
-
+      <input id="editNome" class="input-dark" placeholder="Nome" value="${escapeHtml(p.name || '')}">
+      <input id="editSku" class="input-dark" placeholder="SKU" value="${escapeHtml(p.sku || '')}">
+      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">${catsHtml}</select>
       <select id="editSubcategoria" class="input-dark"></select>
-
-      <div class="text-xs text-zinc-400 mb-1">Preview do Produto:</div>
-      <img
-        id="previewProduto"
-        src="${escapeHtml(urlPreview)}"
-        class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2"
-        onerror="this.style.display='none'"
-      >
-
-      <input
-        id="editImagem"
-        class="input-dark"
-        placeholder="URL da imagem, gs:// ou Google Drive"
-        value="${escapeHtml(produto.image || '')}"
-        oninput="tratarInputImagem(this, 'previewProduto')"
-      >
-
-      <input id="editPreco" class="input-dark" placeholder="Preço"  value="${escapeHtml(DataService.getPrice(produto))}">
-      <input id="editPeso"  class="input-dark" placeholder="Peso"   value="${escapeHtml(DataService.getWeight(produto))}">
-
-      <button
-        onclick="salvarProduto('${escapeAttr(id)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2"
-      >
-        Salvar
-      </button>
+      
+      <img id="previewProduto" src="${escapeHtml(converterGsUrl(DataService.getImage(p)))}" class="w-full h-40 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
+      <input id="editImagem" class="input-dark" placeholder="URL da imagem (imagem)" value="${escapeHtml(DataService.getImage(p))}" oninput="tratarInputImagem(this, 'previewProduto')">
+      
+      <input id="editPreco" class="input-dark" placeholder="Preço (preco)" value="${escapeHtml(DataService.getPrice(p))}">
+      <input id="editPeso" class="input-dark" placeholder="Peso (peso)" value="${escapeHtml(DataService.getWeight(p))}">
+      <button onclick="salvarProduto('${escapeAttr(id)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-lg w-full font-bold mt-2">Salvar Alterações</button>
     `);
-
-    carregarSubcategoriasProduto(produto.category, DataService.getSubcategory(produto));
+    carregarSubcategoriasProduto(p.category, DataService.getSubcategory(p));
   }
 
-  function carregarSubcategoriasProduto(categoriaSelecionada, subSelecionada = '') {
-    const categoria = categoriaSelecionada || document.getElementById('editCategoria')?.value;
-    const select    = document.getElementById('editSubcategoria');
+  function carregarSubcategoriasProduto(catSel, subSel = '') {
+    const cat = catSel || document.getElementById('editCategoria')?.value;
+    const select = document.getElementById('editSubcategoria');
     if (!select) return;
-
     select.innerHTML = '<option value="">Nenhuma</option>';
-    const subs = STATE.categorias[categoria]?.subcategories || {};
-
-    Object.entries(subs).forEach(([slug, sub]) => {
-      select.innerHTML += `
-        <option value="${escapeHtml(slug)}" ${slug === subSelecionada ? 'selected' : ''}>
-          ${escapeHtml(sub.name || slug)}
-        </option>
-      `;
+    Object.entries(STATE.categorias[cat]?.subcategories || {}).forEach(([slug, sub]) => {
+      select.innerHTML += `<option value="${escapeHtml(slug)}" ${slug === subSel ? 'selected' : ''}>${escapeHtml(sub.name || slug)}</option>`;
     });
   }
 
+  // ==========================================================
+  // GRAVAÇÃO ALINHADA (Garante salvar nos dois padrões simultaneamente)
+  // ==========================================================
   async function salvarProduto(id) {
     try {
+      const img = document.getElementById('editImagem').value;
+      const preco = parseFloat(document.getElementById('editPreco').value) || 0;
+      const peso = parseFloat(document.getElementById('editPeso').value) || 0;
+      const subcat = document.getElementById('editSubcategoria').value;
+
       await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({
-        name:        document.getElementById('editNome').value,
-        sku:         document.getElementById('editSku').value,
-        category:    document.getElementById('editCategoria').value,
-        subcategory: document.getElementById('editSubcategoria').value,
-        price:       parseFloat(document.getElementById('editPreco').value) || 0,
-        weight:      parseFloat(document.getElementById('editPeso').value) || 0,
-        image:       document.getElementById('editImagem').value,
-        updatedAt:   Date.now()
+        name: document.getElementById('editNome').value,
+        sku: document.getElementById('editSku').value,
+        category: document.getElementById('editCategoria').value,
+        
+        // CORREÇÃO CRÍTICA DE ALINHAMENTO: Grava nos dois formatos (inglês e português) para não quebrar a vitrine
+        subcategory: subcat,
+        subCategory: subcat,
+        price: preco,
+        preco: preco,
+        weight: peso,
+        peso: peso,
+        image: img,
+        imagem: img,
+        updatedAt: Date.now()
       });
       fecharDrawer();
       await carregarTudo();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Erro ao salvar produto', 'error');
-    }
+    } catch (e) { setStatus('❌ Erro ao salvar', 'error'); }
   }
 
   async function duplicarProduto(id) {
-    const produto = STATE.produtos.find(p => p.id === id);
-    if (!produto) return;
-
-    const copia = { ...produto, sku: (produto.sku || '') + '-COPY', createdAt: Date.now(), updatedAt: Date.now() };
+    const p = STATE.produtos.find(prod => prod.id === id);
+    if (!p) return;
+    const copia = { ...p, sku: (p.sku || '') + '-COPY', createdAt: Date.now() };
     delete copia.id;
-
-    try {
-      await STATE.db.ref(window.getAbellaPath('products')).push(copia);
-      await carregarTudo();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Erro ao duplicar produto', 'error');
-    }
+    await STATE.db.ref(window.getAbellaPath('products')).push(copia);
+    await carregarTudo();
   }
 
   async function pausarProduto(id) {
-    const produto = STATE.produtos.find(p => p.id === id);
-    if (!produto) return;
-
-    try {
-      await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({
-        paused: !produto.paused,
-        updatedAt: Date.now()
-      });
-      await carregarTudo();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Erro ao alternar status do produto', 'error');
-    }
+    const p = STATE.produtos.find(prod => prod.id === id);
+    if (!p) return;
+    await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({ paused: !p.paused });
+    await carregarTudo();
   }
 
   async function deletarProduto(id) {
-    if (!confirm('Excluir produto permanentemente?')) return;
-    try {
+    if (confirm('Excluir permanentemente?')) {
       await STATE.db.ref(window.getAbellaPath(`products/${id}`)).remove();
       await carregarTudo();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Erro ao remover produto', 'error');
     }
   }
 
-  // =======================
-  // Drawer — Categorias
-  // =======================
   function editarCategoria(slug) {
     const cat = STATE.categorias[slug];
     if (!cat) return;
-
     abrirDrawer('Editar Categoria', `
-      <input
-        id="editCatName"
-        class="input-dark"
-        placeholder="Nome"
-        value="${escapeHtml(cat.name || '')}"
-      >
-
-      <textarea id="editCatDescription" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
-
-      <input id="editCatHero"  class="input-dark" placeholder="Hero Image URL, gs:// ou Drive"  value="${escapeHtml(DataService.getHeroImage(cat))}">
-      <input id="editCatGrid"  class="input-dark" placeholder="Grid Image URL, gs:// ou Drive"  value="${escapeHtml(DataService.getGridImage(cat))}">
-
-      <input
-        id="editCatOrder"
-        type="number"
-        class="input-dark"
-        placeholder="Ordem"
-        value="${escapeHtml(cat.order || 0)}"
-      >
-
-      <label class="flex gap-2 items-center text-sm mb-2">
-        <input id="editCatFeatured" type="checkbox" ${cat.featured ? 'checked' : ''}>
-        Categoria Destaque Home
-      </label>
-
-      <label class="flex gap-2 items-center text-sm mb-4">
-        <input id="editCatActive" type="checkbox" ${cat.active !== false ? 'checked' : ''}>
-        Ativa
-      </label>
-
-      <button
-        onclick="salvarCategoria('${escapeAttr(slug)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-3 font-bold"
-      >
-        Salvar
-      </button>
+      <input id="editCatName" class="input-dark" placeholder="Nome" value="${escapeHtml(cat.name || '')}">
+      <textarea id="editCatDesc" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
+      <button onclick="salvarCategoria('${escapeAttr(slug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full font-bold">Salvar</button>
     `);
   }
 
   async function salvarCategoria(slug) {
-    const imgValueHero = document.getElementById('editCatHero').value;
-    const imgValueGrid = document.getElementById('editCatGrid').value;
-    
-    try {
-      await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({
-        name:        document.getElementById('editCatName').value,
-        description: document.getElementById('editCatDescription').value,
-        hero:        imgValueHero,
-        heroImage:   imgValueHero,
-        grid:        imgValueGrid,
-        gridImage:   imgValueGrid,
-        order:       parseInt(document.getElementById('editCatOrder').value) || 0,
-        featured:    document.getElementById('editCatFeatured').checked,
-        active:      document.getElementById('editCatActive').checked,
-        updatedAt:   Date.now()
-      });
-      fecharDrawer();
-      await carregarTudo();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Erro ao salvar categoria', 'error');
-    }
+    await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({
+      name: document.getElementById('editCatName').value,
+      description: document.getElementById('editCatDesc').value,
+      updatedAt: Date.now()
+    });
+    fecharDrawer();
+    await carregarTudo();
   }
 
-  // =======================
-  // Drawer — Subcategorias
-  // =======================
   function editarSubcategoria(catSlug, subSlug) {
     const sub = STATE.categorias[catSlug]?.subcategories?.[subSlug];
     if (!sub) return;
-
-    const linkGridOriginal = DataService.getGridImage(sub);
-    const linkHeroOriginal = DataService.getHeroImage(sub);
-    const urlPreviewGrid = converterGsUrl(linkGridOriginal);
-    const urlPreviewHero = converterGsUrl(linkHeroOriginal);
+    const imgOrig = sub.imagem || sub.grid || sub.gridImage || '';
 
     abrirDrawer('Editar Subcategoria', `
-      <input      id="subName"        class="input-dark" placeholder="Nome"       value="${escapeHtml(sub.name || sub.title || '')}">
-      <textarea   id="subDescription" class="input-dark" placeholder="Descrição">${escapeHtml(sub.description || '')}</textarea>
-      
-      <div class="text-xs text-zinc-400 mb-1">Preview Grid Image:</div>
-      <img id="previewSubGrid" src="${escapeHtml(urlPreviewGrid)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input      id="subGrid"        class="input-dark" placeholder="Grid Image URL, gs:// ou Drive" value="${escapeHtml(linkGridOriginal)}" oninput="tratarInputImagem(this, 'previewSubGrid')">
-
-      <div class="text-xs text-zinc-400 mb-1 mt-2">Preview Hero Image:</div>
-      <img id="previewSubHero" src="${escapeHtml(urlPreviewHero)}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
-      <input      id="subHero"        class="input-dark" placeholder="Hero Image URL, gs:// ou Drive" value="${escapeHtml(linkHeroOriginal)}" oninput="tratarInputImagem(this, 'previewSubHero')">
-
-      <button
-        onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')"
-        class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full mt-4 font-bold"
-      >
-        Salvar
-      </button>
+      <input id="subName" class="input-dark" placeholder="Nome" value="${escapeHtml(sub.name || sub.title || '')}">
+      <textarea id="subDesc" class="input-dark" placeholder="Descrição">${escapeHtml(sub.description || '')}</textarea>
+      <img id="previewSub" src="${escapeHtml(converterGsUrl(imgOrig))}" class="w-full h-32 object-cover rounded-xl border border-zinc-800 mb-2" onerror="this.style.display='none'">
+      <input id="subImg" class="input-dark" placeholder="URL da Imagem" value="${escapeHtml(imgOrig)}" oninput="tratarInputImagem(this, 'previewSub')">
+      <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full font-bold mt-2">Salvar</button>
     `);
   }
 
   async function salvarSubcategoria(catSlug, subSlug) {
-    const imgValueGrid = document.getElementById('subGrid').value;
-    const imgValueHero = document.getElementById('subHero').value;
-
-    try {
-      // CORREÇÃO DA SINTAXE CRÍTICA: Adicionados parênteses na execução do window.getAbellaPath
-      await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
-        name:        document.getElementById('subName').value,
-        description: document.getElementById('subDescription').value,
-        grid:        imgValueGrid,
-        gridImage:   imgValueGrid,
-        hero:        imgValueHero,
-        heroImage:   imgValueHero,
-        updatedAt:   Date.now()
-      });
-      fecharDrawer();
-      await carregarTudo();
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Erro ao salvar subcategoria', 'error');
-    }
+    const img = document.getElementById('subImg').value;
+    await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
+      name: document.getElementById('subName').value,
+      description: document.getElementById('subDesc').value,
+      
+      // CORREÇÃO CRÍTICA DE IMAGEM: Salva em todas as chaves mapeadas no index e subcategorias
+      imagem: img,
+      grid: img,
+      gridImage: img,
+      hero: img,
+      heroImage: img,
+      updatedAt: Date.now()
+    });
+    fecharDrawer();
+    await carregarTudo();
   }
 
-  // =======================
-  // Wiring UI
-  // =======================
   function wireSearch() {
-    const ids = ['buscaGlobal', 'filtroTipo', 'filtroCategoria', 'filtroSubcategoria'];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-
-      if (id === 'buscaGlobal') {
-        el.addEventListener('input', () => {
-          clearTimeout(STATE.buscaDebounceTimer);
-          STATE.buscaDebounceTimer = setTimeout(renderCurrentTab, CONFIG.debounceBusca);
-        });
-      } else {
-        // Correção de desempenho: Dropdowns agora atualizam apenas a aba ativa atual
-        el.addEventListener('change', () => renderCurrentTab());
-      }
+    document.getElementById('buscaGlobal').addEventListener('input', () => {
+      clearTimeout(STATE.buscaDebounceTimer);
+      STATE.buscaDebounceTimer = setTimeout(renderCurrentTab, CONFIG.debounceBusca);
+    });
+    ['filtroTipo', 'filtroCategoria', 'filtroSubcategoria'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => renderCurrentTab());
     });
   }
 
@@ -901,67 +565,34 @@
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-
-        ['produtos', 'categorias', 'subcategorias'].forEach(tab => {
-          const tabEl = document.getElementById('tab-' + tab);
-          if (tabEl) tabEl.classList.add('hidden');
-        });
-
-        const activeTabEl = document.getElementById('tab-' + btn.dataset.tab);
-        if (activeTabEl) activeTabEl.classList.remove('hidden');
+        ['produtos', 'categorias', 'subcategorias'].forEach(t => document.getElementById('tab-' + t)?.classList.add('hidden'));
+        document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
         renderCurrentTab();
       });
     });
   }
 
-  // =======================
-  // Boot
-  // =======================
   (async function init() {
-    let tentativas = 0;
-
-    while(!STATE.db && tentativas < CONFIG.firebaseRetries){
+    let t = 0;
+    while(!STATE.db && t < CONFIG.firebaseRetries){
       STATE.db = resolverDB();
-      if(!STATE.db){
-        await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay));
-        tentativas++;
-      }
+      if(!STATE.db) { await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay)); t++; }
     }
-
-    if (!STATE.db) {
-      setStatus('❌ Firebase não carregado.', 'error');
-      return;
-    }
-
-    console.info('[EDITOR] Firebase conectado. DB ROOT:', window.ABELLA_DB_ROOT);
+    if (!STATE.db) return setStatus('❌ Erro Firebase SDK', 'error');
 
     wireTabs();
     wireSearch();
-
-    document.getElementById('btnRefresh').addEventListener('click', async () => {
-      setStatus('Carregando...', 'info');
-      await carregarTudo();
-    });
-
-    setStatus('Carregando dados do Firebase...', 'info');
+    document.getElementById('btnRefresh').addEventListener('click', () => carregarTudo());
     await carregarTudo();
-    setStatus('✅ Editor pronto.', 'ok');
   })();
 
-  // Expor handlers globais para manter escopo window funcional
-  window.editarProduto                = editarProduto;
-  window.salvarProduto                = salvarProduto;
-  window.duplicarProduto              = duplicarProduto;
-  window.pausarProduto                = pausarProduto;
-  window.deletarProduto               = deletarProduto;
-  window.editarCategoria              = editarCategoria;
-  window.salvarCategoria              = salvarCategoria;
-  window.editarSubcategoria           = editarSubcategoria;
-  window.salvarSubcategoria           = salvarSubcategoria;
+  window.editarProduto = editarProduto; window.salvarProduto = salvarProduto;
+  window.duplicarProduto = duplicarProduto; window.pausarProduto = pausarProduto;
+  window.deletarProduto = deletarProduto; window.editarCategoria = editarCategoria;
+  window.salvarCategoria = salvarCategoria; window.editarSubcategoria = editarSubcategoria;
+  window.salvarSubcategoria = salvarSubcategoria; window.fecharDrawer = fecharDrawer;
+  window.tratarInputImagem = tratarInputImagem; window.handleImageError = handleImageError;
   window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
-  window.fecharDrawer                 = fecharDrawer;
-  window.tratarInputImagem            = tratarInputImagem;
-  window.handleImageError             = handleImageError;
   </script>
 </body>
 </html>

@@ -529,18 +529,32 @@ parseFloat(
         }
 
         function prosseguirParaCheckout() {
-            try {
-                if (typeof carrinhoService === 'undefined' || !carrinhoService.obterItens || carrinhoService.obterItens().length === 0) {
-                    alert('Seu carrinho está vazio.');
-                    return;
-                }
-                window.location.assign('checkout.html');
-            } catch (error) {
-                console.error('Erro ao direcionar para checkout:', error);
-                alert('Erro ao abrir a tela de checkout.');
-            }
+    try {
+        // 1. Validação física do serviço de carrinho
+        if (typeof carrinhoService === 'undefined' || !carrinhoService.obterItens) {
+            alert('Erro Crítico: O serviço de carrinho não foi carregado corretamente.');
+            return;
         }
 
+        const itens = carrinhoService.obterItens() || [];
+
+        // 2. Impede o avanço com o carrinho vazio
+        if (itens.length === 0) {
+            alert('Seu carrinho está vazio. Adicione produtos antes de prosseguir.');
+            return;
+        }
+
+        console.info('[Navegação] Carrinho validado com sucesso. Itens:', itens.length);
+
+        // 3. Redirecionamento Seguro e Direto
+        // Mudamos de assign() para href para garantir consistência de rotas no ecossistema Abella
+        window.location.href = 'checkout.html';
+
+    } catch (error) {
+        console.error('Erro na transição para o checkout:', error);
+        alert('Não foi possível abrir a tela de finalização. Tente novamente.');
+    }
+}
         document.addEventListener('DOMContentLoaded', inicializarPagina);
         window.alterarQtd = alterarQtd;
         window.limparCarrinhoCompleto = limparCarrinhoCompleto;

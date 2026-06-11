@@ -198,6 +198,115 @@ const CONFIG = {
 
 };
 
+ const FirebaseService = {
+
+    async carregarCategorias(){
+
+        const snap =
+            await STATE.db
+                .ref(
+                    window.getAbellaPath(
+                        'categories'
+                    )
+                )
+                .once('value');
+
+        return snap.val() || {};
+
+    },
+
+    async carregarProdutos(){
+
+        const produtos =
+    await FirebaseService
+        .carregarProdutos();
+
+        return snap.val() || {};
+
+    },
+
+    async atualizarProduto(
+
+        id,
+        dados
+
+    ){
+
+        return STATE.db
+            .ref(
+                window.getAbellaPath(
+                    `products/${id}`
+                )
+            )
+            .update(dados);
+
+    },
+
+    async criarProduto(
+
+        dados
+
+    ){
+
+        return STATE.db
+            .ref(
+                window.getAbellaPath(
+                    'products'
+                )
+            )
+            .push(dados);
+
+    },
+
+    async removerProduto(id){
+
+        return STATE.db
+            .ref(
+                window.getAbellaPath(
+                    `products/${id}`
+                )
+            )
+            .remove();
+
+    },
+
+    async atualizarCategoria(
+
+        slug,
+        dados
+
+    ){
+
+        return STATE.db
+            .ref(
+                window.getAbellaPath(
+                    `categories/${slug}`
+                )
+            )
+            .update(dados);
+
+    },
+
+    async atualizarSubcategoria(
+
+        categoria,
+        subcategoria,
+        dados
+
+    ){
+
+        return STATE.db
+            .ref(
+                window.getAbellaPath(
+                    `categories/${categoria}/subcategories/${subcategoria}`
+                )
+            )
+            .update(dados);
+
+    }
+
+};   
+
 function getSubcategory(obj){
 
     return (
@@ -363,6 +472,54 @@ function getWeight(obj){
     }
   }
 
+    // ==========================================================
+// COMPATIBILIDADE V6
+// ==========================================================
+
+const Compat = {
+
+  getSubcategory(obj){
+
+    return (
+      obj?.subcategory ??
+      obj?.subCategory ??
+      ''
+    );
+
+  },
+
+  getHero(obj){
+
+    return (
+      obj?.hero ??
+      obj?.heroImage ??
+      ''
+    );
+
+  },
+
+  getGrid(obj){
+
+    return (
+      obj?.grid ??
+      obj?.gridImage ??
+      ''
+    );
+
+  },
+
+  getImage(obj){
+
+    return (
+      obj?.image ??
+      obj?.img ??
+      ''
+    );
+
+  }
+
+};
+
   // =======================
   // Drawer
   // =======================
@@ -381,26 +538,39 @@ function getWeight(obj){
   // =======================
   // Carregamento central
   // =======================
-  async function carregarTudo() {
-    try {
-      const catSnap = await STATE.db.ref(window.getAbellaPath('categories')).once('value');
-      STATE.categorias =
-    catSnap.val() || {};
+ async function carregarTudo(){
 
-      const prodSnap = await db.ref(window.getAbellaPath('products')).once('value');
-      produtosCache = [];
-      prodSnap.forEach(item => {
-        STATE.produtos.push({ id: item.key, ...item.val() });
-      });
+    try{
 
-      popularFiltros();
-      atualizarEstatisticas();
-      setStatus('✅ Dados carregados com sucesso.', 'ok');
-    } catch (erro) {
-      console.error(erro);
-      setStatus('❌ Erro ao carregar Firebase', 'error');
+        STATE.categorias =
+            await FirebaseService
+                .carregarCategorias();
+
+        STATE.produtos =
+            await FirebaseService
+                .carregarProdutos();
+
+        popularFiltros();
+
+        atualizarEstatisticas();
+
+        setStatus(
+            '✅ Dados carregados com sucesso.',
+            'ok'
+        );
+
+    }catch(erro){
+
+        console.error(erro);
+
+        setStatus(
+            '❌ Erro ao carregar Firebase',
+            'error'
+        );
+
     }
-  }
+
+}
 
   // =======================
   // Estatísticas
@@ -466,7 +636,7 @@ function getWeight(obj){
         (termos === '' || texto.includes(termos)) &&
         (tipo === 'todos' || tipo === 'produto') &&
         (!filtroCat || p.category === filtroCat) &&
-        (!filtroSub || (p.subcategory || p.subCategory || '') === filtroSub)
+        (!filtroSub || Compat.getSubcategory(p)
       );
     });
 
@@ -479,9 +649,10 @@ function getWeight(obj){
     filtrados.forEach(produto => {
       const pausedTag = produto.paused ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>` : '';
       const id = escapeAttr(produto.id);
-      const urlMiniatura = converterGsUrl(
-    produto.image || ''
-);
+      const urlMiniatura =
+    converterGsUrl(
+        Compat.getImage(produto)
+    );
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -499,7 +670,9 @@ function getWeight(obj){
                   <div>SKU: <span class="text-zinc-300">${escapeHtml(produto.sku || '')}</span></div>
                   <div>Preço: <span class="text-zinc-300">R$ ${escapeHtml(produto.price ?? 0)}</span></div>
                   <div>Categoria: <span class="text-zinc-400">${escapeHtml(produto.category || '')}</span></div>
-                  <div>Subcategoria: <span class="text-zinc-400">${escapeHtml(produto.subcategory || produto.subCategory || '')}</span></div>
+                  <div>Subcategoria: <span class="text-zinc-400">${escapeHtml(
+   Compat.getSubcategory(produto)
+)}</span></div>
                 </div>
               </div>
             </div>
@@ -545,8 +718,11 @@ function getWeight(obj){
     let htmlBuffer = '';
     entries.forEach(([slug, cat]) => {
       const safeSlug = escapeAttr(slug);
-      const urlMiniatura = converterGsUrl(getGridImage(cat) ||
-getHeroImage(cat));
+      const urlMiniatura =
+    converterGsUrl(
+        Compat.getGrid(cat) ||
+        Compat.getHero(cat)
+    );
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -597,7 +773,8 @@ getHeroImage(cat));
       return (
         (tipo === 'todos' || tipo === 'subcategoria') &&
         (!filtroCat || x.catSlug === filtroCat) &&
-        (!filtroSub || x.subSlug === filtroSub) &&
+        (!filtroSub || Compat.getSubcategory(p) === filtroSub
+)
         (termos === '' || texto.includes(termos))
       );
     });
@@ -611,8 +788,11 @@ getHeroImage(cat));
     filtradas.forEach(x => {
       const safeCat = escapeAttr(x.catSlug);
       const safeSub = escapeAttr(x.subSlug);
-      const urlMiniatura = converterGsUrl(getGridImage(x.subObj) ||
-getHeroImage(x.subObj));
+      const urlMiniatura =
+    converterGsUrl(
+        Compat.getGrid(x.subObj) ||
+        Compat.getHero(x.subObj)
+    );
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -649,11 +829,16 @@ getHeroImage(x.subObj));
   // Drawer — Produtos
   // =======================
   function editarProduto(id) {
-    const produto = produtosCache.find(p => p.id === id);
+   const produto =
+    STATE.produtos.find(
+        p => p.id === id
+    );
     if (!produto) return;
 
     let categoriasHtml = '';
-    Object.keys(categoriasCache).forEach(cat => {
+    Object.keys(
+    STATE.categorias
+).forEach(cat => {
       categoriasHtml += `
         <option value="${escapeHtml(cat)}" ${produto.category === cat ? 'selected' : ''}>
           ${escapeHtml(cat)}
@@ -661,7 +846,10 @@ getHeroImage(x.subObj));
       `;
     });
 
-    const urlPreview = converterGsUrl(produto.image);
+    const urlPreview =
+    converterGsUrl(
+        Compat.getImage(produto)
+    );
 
     abrirDrawer('Editar Produto', `
       <input id="editNome"    class="input-dark" placeholder="Nome"   value="${escapeHtml(produto.name  || '')}">
@@ -702,7 +890,7 @@ getHeroImage(x.subObj));
 
     carregarSubcategoriasProduto(
       produto.category,
-      produto.subcategory || produto.subCategory
+      Compat.getSubcategory(produto)
     );
   }
 
@@ -712,7 +900,10 @@ getHeroImage(x.subObj));
     if (!select) return;
 
     select.innerHTML = '<option value="">Nenhuma</option>';
-    const subs = categoriasCache[categoria]?.subcategories || {};
+    const subs =
+    STATE.categorias[
+        categoria
+    ]?.subcategories || {};
 
     Object.entries(subs).forEach(([slug, sub]) => {
       select.innerHTML += `
@@ -787,8 +978,8 @@ getHeroImage(x.subObj));
 
       <textarea id="editCatDescription" class="input-dark" placeholder="Descrição">${escapeHtml(cat.description || '')}</textarea>
 
-      <input id="editCatHero"  class="input-dark" placeholder="Hero Image URL, gs:// ou Drive"  value="${escapeHtml(cat.hero || cat.heroImage  || '')}">
-      <input id="editCatGrid"  class="input-dark" placeholder="Grid Image URL, gs:// ou Drive"  value="${escapeHtml(cat.grid || cat.gridImage  || '')}">
+      <input id="editCatHero"  class="input-dark" placeholder="Hero Image URL, gs:// ou Drive"  value="${escapeHtml(Compat.getHero(cat))}">
+      <input id="editCatGrid"  class="input-dark" placeholder="Grid Image URL, gs:// ou Drive"  value="${escapeHtml(Compat.getGrid(cat))}">
 
       <input
         id="editCatOrder"
@@ -846,8 +1037,10 @@ getHeroImage(x.subObj));
     const sub = categoriasCache[catSlug]?.subcategories?.[subSlug];
     if (!sub) return;
 
-    const linkGridOriginal = sub.grid || sub.gridImage || '';
-    const linkHeroOriginal = sub.hero || sub.heroImage || '';
+    const linkGridOriginal =
+    Compat.getGrid(sub);
+    const linkHeroOriginal =
+    Compat.getHero(sub);
 
     const urlPreviewGrid = converterGsUrl(linkGridOriginal);
     const urlPreviewHero = converterGsUrl(linkHeroOriginal);
@@ -969,7 +1162,7 @@ while(
 
 }
 
-    if (!db) {
+    if (!STATE.db) {
       setStatus('❌ Firebase não carregado.', 'error');
       return;
     }

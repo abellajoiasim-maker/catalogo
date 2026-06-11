@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Super Editor V5</title>
+  <title>Super Editor V6</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -160,10 +160,113 @@
   // Estado / Cache
   // =======================
   const statusEl = document.getElementById('status');
-  let produtosCache = [];
-  let categoriasCache = {};
-  let db = null;
-  let buscaDebounceTimer = null;
+  const STATE = {
+
+    db: null,
+
+    produtos: [],
+
+    categorias: {},
+
+    buscaDebounceTimer: null,
+
+    filtros: {
+
+        busca: '',
+
+        tipo: 'todos',
+
+        categoria: '',
+
+        subcategoria: ''
+
+    }
+
+};
+
+const CONFIG = {
+
+    accentColor: '#caa85c',
+
+    drawerWidth: 520,
+
+    debounceBusca: 250,
+
+    firebaseRetries: 30,
+
+    firebaseRetryDelay: 100
+
+};
+
+function getSubcategory(obj){
+
+    return (
+
+        obj?.subcategory ||
+
+        obj?.subCategory ||
+
+        ''
+
+    );
+
+}
+
+function getHeroImage(obj){
+
+    return (
+
+        obj?.hero ||
+
+        obj?.heroImage ||
+
+        ''
+
+    );
+
+}
+
+function getGridImage(obj){
+
+    return (
+
+        obj?.grid ||
+
+        obj?.gridImage ||
+
+        ''
+
+    );
+
+}
+
+function getPrice(obj){
+
+    return Number(
+
+        obj?.price ??
+
+        obj?.preco ??
+
+        0
+
+    );
+
+}
+
+function getWeight(obj){
+
+    return Number(
+
+        obj?.weight ??
+
+        obj?.peso ??
+
+        0
+
+    );
+
+}
 
   // =======================
   // Status helper
@@ -280,13 +383,14 @@
   // =======================
   async function carregarTudo() {
     try {
-      const catSnap = await db.ref(window.getAbellaPath('categories')).once('value');
-      categoriasCache = catSnap.val() || {};
+      const catSnap = await STATE.db.ref(window.getAbellaPath('categories')).once('value');
+      STATE.categorias =
+    catSnap.val() || {};
 
       const prodSnap = await db.ref(window.getAbellaPath('products')).once('value');
       produtosCache = [];
       prodSnap.forEach(item => {
-        produtosCache.push({ id: item.key, ...item.val() });
+        STATE.produtos.push({ id: item.key, ...item.val() });
       });
 
       popularFiltros();
@@ -302,15 +406,15 @@
   // Estatísticas
   // =======================
   function atualizarEstatisticas() {
-    document.getElementById('statProdutos').innerText = produtosCache.length;
-    document.getElementById('statCategorias').innerText = Object.keys(categoriasCache).length;
+    document.getElementById('statProdutos').innerText = STATE.produtos.length;
+    document.getElementById('statCategorias').innerText =Object.keys(STATE.categorias).length;
 
     let totalSubs = 0;
     Object.values(categoriasCache).forEach(cat => {
       totalSubs += Object.keys(cat?.subcategories || {}).length;
     });
     document.getElementById('statSubs').innerText = totalSubs;
-    document.getElementById('statPausados').innerText = produtosCache.filter(p => p.paused).length;
+    document.getElementById('statPausados').innerText = STATE.produtos.filter(p => p.paused).length;
   }
 
   // =======================
@@ -320,7 +424,7 @@
     const selCat = document.getElementById('filtroCategoria');
     const selSub = document.getElementById('filtroSubcategoria');
 
-    const cats = Object.keys(categoriasCache);
+    const cats = Object.keys(STATE.categorias);
     let catOptions = `<option value="">Todas Categorias</option>`;
     cats.forEach(c => {
       catOptions += `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`;
@@ -328,7 +432,7 @@
     selCat.innerHTML = catOptions;
 
     const allSubs = new Set();
-    Object.values(categoriasCache).forEach(cat => {
+    Object.values(STATE.categorias).forEach(cat => {
       Object.keys(cat?.subcategories || {}).forEach(s => allSubs.add(s));
     });
 
@@ -350,12 +454,13 @@
     const filtroCat  = document.getElementById('filtroCategoria').value;
     const filtroSub  = document.getElementById('filtroSubcategoria').value;
 
-    const filtrados = produtosCache.filter(p => {
+    const filtrados =
+    STATE.produtos.filter(...)(p => {
       const texto =
         (p.name || '').toLowerCase() + ' ' +
         (p.sku  || '').toLowerCase() + ' ' +
         (p.category || '').toLowerCase() + ' ' +
-        (p.subcategory || p.subCategory || '').toLowerCase();
+        (getSubcategory(p) || '').toLowerCase();
 
       return (
         (termos === '' || texto.includes(termos)) &&
@@ -374,7 +479,9 @@
     filtrados.forEach(produto => {
       const pausedTag = produto.paused ? `<span class="text-xs text-red-400 font-bold ml-2">(Pausado)</span>` : '';
       const id = escapeAttr(produto.id);
-      const urlMiniatura = converterGsUrl(produto.image);
+      const urlMiniatura = converterGsUrl(
+    produto.image || ''
+);
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -419,7 +526,9 @@
     const tipo      = document.getElementById('filtroTipo').value;
     const filtroCat = document.getElementById('filtroCategoria').value;
 
-    const entries = Object.entries(categoriasCache).filter(([slug, cat]) => {
+    const entries = Object.entries(
+    STATE.categorias
+).filter(([slug, cat]) => {
       const texto = ((cat?.name || slug) + ' ' + slug).toLowerCase();
       return (
         (tipo === 'todos' || tipo === 'categoria') &&
@@ -436,7 +545,8 @@
     let htmlBuffer = '';
     entries.forEach(([slug, cat]) => {
       const safeSlug = escapeAttr(slug);
-      const urlMiniatura = converterGsUrl(cat?.grid || cat?.gridImage || cat?.hero || cat?.heroImage);
+      const urlMiniatura = converterGsUrl(getGridImage(cat) ||
+getHeroImage(cat));
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -474,7 +584,9 @@
     const filtroSub = document.getElementById('filtroSubcategoria').value;
 
     const subs = [];
-    Object.entries(categoriasCache).forEach(([catSlug, cat]) => {
+    Object.entries(
+    STATE.categorias
+).forEach(([catSlug, cat]) => {
       Object.entries(cat?.subcategories || {}).forEach(([subSlug, subObj]) => {
         subs.push({ catSlug, subSlug, subObj });
       });
@@ -499,7 +611,8 @@
     filtradas.forEach(x => {
       const safeCat = escapeAttr(x.catSlug);
       const safeSub = escapeAttr(x.subSlug);
-      const urlMiniatura = converterGsUrl(x.subObj?.grid || x.subObj?.gridImage || x.subObj?.hero || x.subObj?.heroImage);
+      const urlMiniatura = converterGsUrl(getGridImage(x.subObj) ||
+getHeroImage(x.subObj));
 
       htmlBuffer += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-2">
@@ -822,14 +935,39 @@
   // Boot
   // =======================
   (async function init() {
-    let tentatives = 0;
-    while (!db && tentatives < 30) {
-      db = resolverDB();
-      if (!db) {
-        await new Promise(r => setTimeout(r, 100));
+let tentativas = 0;
+
+while(
+
+    !STATE.db &&
+
+    tentativas <
+    CONFIG.firebaseRetries
+
+){
+
+    STATE.db =
+        resolverDB();
+
+    if(!STATE.db){
+
+        await new Promise(
+
+            r => setTimeout(
+
+                r,
+
+                CONFIG.firebaseRetryDelay
+
+            )
+
+        );
+
         tentativas++;
-      }
+
     }
+
+}
 
     if (!db) {
       setStatus('❌ Firebase não carregado.', 'error');

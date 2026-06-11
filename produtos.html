@@ -737,77 +737,82 @@ document.getElementById(
             });
         }
 
-        function abrirModalProduto(indexFiltrado){
-            const prod = produtosFiltrados[indexFiltrado];
-            if(!prod) return;
+       function adicionarAoCarrinho() {
+    if(!produtoAtual) return;
 
-            produtoAtual = prod;
-            const precoExibir = parseFloat(prod.precoFinal || prod.price || prod.preco || 0);
-            const valorPix = precoExibir * (1 - (descontoPixGlobal / 100));
+    const qtdElement = document.getElementById('qtdPadrao');
+    const quantidade = parseInt(qtdElement.value) || 1;
 
-            document.getElementById('modalNome').innerText = prod.name || prod.nome || 'Sem Nome';
-            document.getElementById('modalImagem').src = resolverImagemFirebase(prod.image || prod.imagem || 'https://via.placeholder.com/600');
-            document.getElementById('modalPreco').innerText = typeof money !== 'undefined' ? money.formatar(precoExibir) : 'R$ ' + precoExibir.toFixed(2);
-            document.getElementById('modalPix').innerText = typeof money !== 'undefined' ? money.formatar(valorPix) : 'R$ ' + valorPix.toFixed(2);
-            document.getElementById('modalSku').innerText = prod.sku || 'N/A';
-            const peso =
-    prod.peso ||
-    prod.weight;
+    if(quantidade < 1) {
+        alert('Por favor, defina uma quantidade válida.');
+        return;
+    }
 
-document.getElementById('modalPeso').innerText =
-    peso
-        ? `${peso}g`
-        : 'N/A';
-            document.getElementById('modalDescricao').innerText = prod.description || prod.descricao || 'Nenhum detalhe adicional fornecido para este modelo exclusivo.';
-            document.getElementById('qtdPadrao').value = 1;
+    try {
+        if(typeof carrinhoService !== 'undefined') {
+            // Garantimos que o peso seja um número válido, nunca NaN ou undefined
+            const pesoConvertido = parseFloat(produtoAtual.peso || produtoAtual.weight || 0);
+            
+            carrinhoService.adicionarItem({
+                id: produtoAtual.id,
+                sku: produtoAtual.sku || '',
+                nome: produtoAtual.name || produtoAtual.nome || 'Sem Nome',
+                image: produtoAtual.image || produtoAtual.imagem || '',
+                preco: parseFloat(produtoAtual.precoFinal || produtoAtual.price || produtoAtual.preco || 0),
+                peso: pesoConvertido
+            }, quantidade);
 
-            const containerVariacoes = document.getElementById('variacoesContainer');
-            containerVariacoes.innerHTML = '';
-
-            document.getElementById('modalProduto').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+            atualizarMiniCarrinho();
+            fecharModalProduto();
+        } else {
+            alert('Erro: Serviço de carrinho ausente no sistema.');
         }
-
+    } catch(e) {
+        console.error('Erro ao adicionar ao carrinho:', e);
+        alert('Não foi possível incluir o produto no carrinho.');
+    }
+}
         function fecharModalProduto(){
             document.getElementById('modalProduto').classList.add('hidden');
             document.body.style.overflow = '';
             produtoAtual = null;
         }
 
-        function adicionarAoCarrinho(){
-            if(!produtoAtual) return;
+       function adicionarAoCarrinho() {
+    if(!produtoAtual) return;
 
-            const qtdElement = document.getElementById('qtdPadrao');
-            const quantidade = parseInt(qtdElement.value) || 1;
+    const qtdElement = document.getElementById('qtdPadrao');
+    const quantidade = parseInt(qtdElement.value) || 1;
 
-            if(quantidade < 1) {
-                alert('Por favor, defina uma quantidade válida.');
-                return;
-            }
+    if(quantidade < 1) {
+        alert('Por favor, defina uma quantidade válida.');
+        return;
+    }
 
-            try{
-                if(typeof carrinhoService !== 'undefined') {
-                    carrinhoService.adicionarItem({
-                        id: produtoAtual.id,
-                        sku: produtoAtual.sku || '',
-                        nome: produtoAtual.name || produtoAtual.nome || 'Sem Nome',
-                        image: produtoAtual.image || produtoAtual.imagem || '',
-                        preco: parseFloat(produtoAtual.precoFinal || produtoAtual.price || produtoAtual.preco || 0),
-                        peso: parseFloat(produtoAtual.peso || produtoAtual.weight || 0)
-                    }, quantidade);
+    try {
+        if(typeof carrinhoService !== 'undefined') {
+            // Garantimos que o peso seja um número válido, nunca NaN ou undefined
+            const pesoConvertido = parseFloat(produtoAtual.peso || produtoAtual.weight || 0);
+            
+            carrinhoService.adicionarItem({
+                id: produtoAtual.id,
+                sku: produtoAtual.sku || '',
+                nome: produtoAtual.name || produtoAtual.nome || 'Sem Nome',
+                image: produtoAtual.image || produtoAtual.imagem || '',
+                preco: parseFloat(produtoAtual.precoFinal || produtoAtual.price || produtoAtual.preco || 0),
+                peso: pesoConvertido
+            }, quantidade);
 
-                    atualizarMiniCarrinho();
-                    fecharModalProduto();
-                
-                } else {
-                    alert('Erro: Serviço de carrinho ausente no sistema.');
-                }
-            } catch(e) {
-                console.error('Erro ao adicionar ao carrinho:', e);
-                alert('Não foi possível incluir o produto no carrinho.');
-            }
+            atualizarMiniCarrinho();
+            fecharModalProduto();
+        } else {
+            alert('Erro: Serviço de carrinho ausente no sistema.');
         }
-
+    } catch(e) {
+        console.error('Erro ao adicionar ao carrinho:', e);
+        alert('Não foi possível incluir o produto no carrinho.');
+    }
+}
         function voltarPagina(){
             if(document.referrer && document.referrer.includes(window.location.hostname)){
                 window.history.back();

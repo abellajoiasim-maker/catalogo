@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Super Editor V10 • Gestão Completa</title>
+  <title>Super Editor V7 • Gestão Avançada</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -56,8 +56,8 @@
     <header class="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 mb-4">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V10</h1>
-          <p class="text-xs text-zinc-500">Controle Total • Criação, Edição e Sincronização em Espelho</p>
+          <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V7</h1>
+          <p class="text-xs text-zinc-500">Controle Total • Criação, Edição e Imagens Sincronizadas em Espelho</p>
         </div>
         <div class="flex flex-wrap gap-2 w-full sm:w-auto">
           <button id="btnCriarNovo" onclick="abrirCriacaoPorAba()" class="px-4 py-2 bg-[#caa85c] text-black rounded-xl text-xs font-bold hover:bg-opacity-90 transition-all">
@@ -187,10 +187,10 @@
 
   function gerarSlug(texto) {
     return texto.toString().toLowerCase().trim()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/[^a-z0-9 -]/g, '') // Remove caracteres inválidos
-      .replace(/\s+/g, '-') // Substitui espaços por hífen
-      .replace(/-+/g, '-'); // Remove múltiplos hifens
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9 -]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
   }
 
   function converterGsUrl(url) {
@@ -322,7 +322,7 @@
   }
 
   // ==========================================================
-  // RENDERIZADORES DAS LISTAGENS (GRID EXPOSTO)
+  // RENDERIZADORES DAS LISTAGENS
   // ==========================================================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
@@ -403,12 +403,19 @@
     if (!el) return;
     let html = '';
     Object.entries(STATE.categorias).forEach(([slug, cat]) => {
+      const catImg = cat.imagem || cat.image || '';
       html += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
           <div class="flex items-center justify-between gap-4">
-            <div>
-              <div class="font-bold text-white">${escapeHtml(cat?.name || slug)}</div>
-              <div class="text-xs text-zinc-500">Slug da Categoria: ${escapeHtml(slug)}</div>
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded overflow-hidden relative flex items-center justify-center">
+                 <div class="fallback-container absolute inset-0 flex items-center justify-center bg-zinc-900 text-[10px] text-zinc-600">📁</div>
+                 ${catImg ? `<img src="${escapeHtml(converterGsUrl(catImg))}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>` : ''}
+              </div>
+              <div>
+                <div class="font-bold text-white">${escapeHtml(cat?.name || slug)}</div>
+                <div class="text-xs text-zinc-500">Slug da Categoria: ${escapeHtml(slug)}</div>
+              </div>
             </div>
             <div class="flex gap-2">
               <button onclick="editarCategoria('${escapeAttr(slug)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800">✏️ Editar</button>
@@ -452,12 +459,11 @@
   }
 
   // ==========================================================
-  // BLOCO DE CRIAÇÃO (NOVAS FUNÇÕES REQUISITADAS)
+  // BLOCO DE CRIAÇÃO E PROCESSAMENTO
   // ==========================================================
   function criarProdutoForm() {
     let catsHtml = '<option value="">Selecione uma categoria...</option>';
     Object.keys(STATE.categorias).forEach(cat => catsHtml += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`);
-    
     const skuSugerido = 'AB-' + Date.now().toString().substring(8);
 
     abrirDrawer('Cadastrar Novo Produto', `
@@ -545,7 +551,7 @@
         updatedAt: Date.now()
       };
 
-      await STATE.db.ref(window.getAbellaPath('products')).push(novoProduto);
+      await STATE.db.ref(window.getAbellaPath('products')).push(novoProducto);
       fecharDrawer();
       await carregarTudo();
     } catch (e) { setStatus('❌ Erro ao criar novo produto', 'error'); }
@@ -556,9 +562,16 @@
       <label class="text-xs text-zinc-400 block mb-1">Nome da Categoria</label>
       <input id="newCatName" class="input-dark" placeholder="Ex: Brincos, Anéis, Correntes">
       
-      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
-      <textarea id="newCatDesc" class="input-dark h-24" placeholder="Breve descrição da categoria..."></textarea>
+      <label class="text-xs text-zinc-400 block mb-1">Descrição Comercial</label>
+      <textarea id="newCatDesc" class="input-dark h-20" placeholder="Breve descrição da categoria..."></textarea>
       
+      <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Ícone / Capa)</label>
+      <div class="w-full h-32 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
+         <div class="absolute text-xs text-zinc-600">Preview da Imagem</div>
+         <img id="previewCatNovo" src="" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
+      </div>
+      <input id="newCatImagem" class="input-dark" placeholder="URL da imagem ou link gs://" oninput="tratarInputImagem(this, 'previewCatNovo')">
+
       <p class="text-[10px] text-zinc-500 mb-4">Nota: O identificador de rota (slug) será gerado automaticamente a partir do nome informado.</p>
       <button onclick="salvarNovaCategoria()" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold">Criar Categoria</button>
     `);
@@ -570,11 +583,15 @@
       if(!nome) return alert('O nome da categoria é obrigatório!');
       
       const slug = gerarSlug(nome);
-      if(STATE.categorias[slug]) return alert('Já existe uma categoria cadastrada com um nome idêntico ou slug conflitante!');
+      if(STATE.categorias[slug]) return alert('Já existe uma categoria cadastrada com um nome idêntico!');
+
+      const imgVal = document.getElementById('newCatImagem').value.trim();
 
       await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).set({
         name: nome,
         description: document.getElementById('newCatDesc').value,
+        imagem: imgVal,
+        image: imgVal,
         createdAt: Date.now(),
         updatedAt: Date.now()
       });
@@ -795,23 +812,40 @@
   function editarCategoria(slug) {
     const cat = STATE.categorias[slug];
     if (!cat) return;
+    const catImg = cat.imagem || cat.image || '';
+
     abrirDrawer('Editar Categoria', `
       <label class="text-xs text-zinc-400 block mb-1">Nome da Categoria</label>
       <input id="editCatName" class="input-dark" value="${escapeHtml(cat.name || '')}">
+      
       <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
-      <textarea id="editCatDesc" class="input-dark">${escapeHtml(cat.description || '')}</textarea>
-      <button onclick="salvarCategoria('${escapeAttr(slug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full font-bold">Salvar</button>
+      <textarea id="editCatDesc" class="input-dark h-20">${escapeHtml(cat.description || '')}</textarea>
+
+      <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Espelhamento Duplo)</label>
+      <div class="w-full h-32 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
+         <div class="absolute text-xs text-zinc-600">Sem Imagem Definida</div>
+         <img id="previewCatEdicao" src="${escapeHtml(converterGsUrl(catImg))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
+      </div>
+      <input id="editCatImagem" class="input-dark" value="${escapeHtml(catImg)}" oninput="tratarInputImagem(this, 'previewCatEdicao')">
+
+      <button onclick="salvarCategoria('${escapeAttr(slug)}')" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90">Salvar Alterações</button>
     `);
   }
 
   async function salvarCategoria(slug) {
-    await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({
-      name: document.getElementById('editCatName').value,
-      description: document.getElementById('editCatDesc').value,
-      updatedAt: Date.now()
-    });
-    fecharDrawer();
-    await carregarTudo();
+    try {
+      const imgVal = document.getElementById('editCatImagem').value.trim();
+
+      await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({
+        name: document.getElementById('editCatName').value,
+        description: document.getElementById('editCatDesc').value,
+        imagem: imgVal,
+        image: imgVal, // Gravação em duplo canal (PT/EN) para manter compatibilidade na árvore do index
+        updatedAt: Date.now()
+      });
+      fecharDrawer();
+      await carregarTudo();
+    } catch(e) { setStatus('❌ Erro ao atualizar categoria', 'error'); }
   }
 
   async function duplicarProduto(id) {
@@ -832,7 +866,7 @@
 
   async function deletarProduto(id) {
     if (confirm('Deseja realmente excluir permanentemente este item da sua base?')) {
-      await STATE.db.ref(window.getAbellaPath(`products/${id}`)).remove();
+      await STATE.db.ref(window.getAbellaPath('products')).child(id).remove();
       await carregarTudo();
     }
   }
@@ -866,8 +900,12 @@
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        ['produtos', 'categorias', 'subcategorias'].forEach(t => document.getElementById('tab-' + t)?.classList.add('hidden'));
-        document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
+        ['produtos', 'categories', 'subcategorias'].forEach(t => {
+          const el = document.getElementById('tab-' + (t === 'categories' ? 'categorias' : t));
+          if(el) el.classList.add('hidden');
+        });
+        const targetEl = document.getElementById('tab-' + btn.dataset.tab);
+        if(targetEl) targetEl.classList.remove('hidden');
         renderCurrentTab();
       });
     });

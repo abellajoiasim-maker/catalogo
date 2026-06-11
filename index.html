@@ -580,6 +580,7 @@ if (!listaCategorias || listaCategorias.length === 0) {
 }
 
 // Injeção Atômica por DocumentFragment (Zero atrasos de renderização no DOM)
+// Injeção Atômica por DocumentFragment (Zero atrasos de renderização no DOM)
 const fragmento = document.createDocumentFragment();
 
 listaCategorias.forEach(cat => {
@@ -592,7 +593,6 @@ listaCategorias.forEach(cat => {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g,'-');
 
-    // --- CORREÇÃO DA IMAGEM AQUI ---
     // Resgata o link salvo pelo editor (testando ambos os canais pt/en e tratando URLs gs:// ou Drive)
     let linkBanco = cat.imagem || cat.image || '';
     
@@ -602,14 +602,16 @@ listaCategorias.forEach(cat => {
 
     // Se houver imagem válida no banco, usa ela. Senão, recorre ao método antigo de fallback.
     const imgCat = linkBanco ? linkBanco : (typeof obterImagemCategoriaGrid !== 'undefined' ? obterImagemCategoriaGrid(slugCat) : 'images/fallback.jpg');
-    // ---------------------------------
 
     const div = document.createElement('div');
     div.className = "cat-card aspect-[3/4] relative group rounded-2xl overflow-hidden shadow-md";
     div.setAttribute('role', 'listitem');
+    
+    // --- AJUSTE DE ROTA AQUI: Enviando para subcategorias.html em vez de produtos.html ---
     div.onclick = () => {
-        window.location.href = `produtos.html?categoria=${encodeURIComponent(slugCat)}`;
+        window.location.href = `subcategorias.html?categoria=${encodeURIComponent(slugCat)}`;
     };
+    // -------------------------------------------------------------------------------------
 
     div.innerHTML = `
         <img
@@ -623,7 +625,7 @@ listaCategorias.forEach(cat => {
             <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Coleção Premium</p>
             <h3 class="serif text-white text-base md:text-lg font-bold tracking-wide uppercase mt-1 leading-tight">${nomeCat}</h3>
             <div class="mt-3 pt-3 border-t border-white/10 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <span class="text-[10px] uppercase font-bold text-[#caa85c] tracking-wider">Ver Produtos</span>
+                <span class="text-[10px] uppercase font-bold text-[#caa85c] tracking-wider">Ver Subcategorias</span>
                 <div class="arrow-btn text-xs bg-[#caa85c] text-black rounded-lg w-6 h-6 flex items-center justify-center font-bold">→</div>
             </div>
         </div>

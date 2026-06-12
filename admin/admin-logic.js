@@ -497,6 +497,7 @@ window.carregarBlocoProdutos = function(forcarLimpezaDOM) {
                     <p class="text-[10px] text-zinc-400 font-mono">
                         Peso: ${peso}g
                     </p>
+                
 
                     <p class="text-xs text-[#caa85c] font-bold font-mono">
                         ${window.formatarMoedaReal(preco)}
@@ -622,16 +623,50 @@ window.fecharModalProduto = function() {
     // ==========================================================
 window.editarProdutoItem = function(id) {
 
-    var produtos =
-        window.todosProdutosLocal || {};
+    var produtos = window.todosProdutosLocal || {};
 
-    var prod = produtos[id];
+    var prod = null;
+    var chaveReal = id;
+
+    if (produtos[id]) {
+
+        prod = produtos[id];
+
+    } else {
+
+        Object.keys(produtos).some(function(key) {
+
+            var item = produtos[key];
+
+            if (!item) return false;
+
+            if (
+                item.id === id ||
+                item.sku === id
+            ) {
+
+                prod = item;
+                chaveReal = key;
+
+                return true;
+            }
+
+            return false;
+
+        });
+
+    }
 
     if (!prod) {
 
         console.warn(
-            "Produto inexistente:",
+            "❌ Produto não encontrado:",
             id
+        );
+
+        console.log(
+            "Produtos carregados:",
+            produtos
         );
 
         alert(
@@ -645,7 +680,9 @@ window.editarProdutoItem = function(id) {
         typeof window.abrirModalProduto ===
         'function'
     ) {
+
         window.abrirModalProduto();
+
     }
 
     var titulo =
@@ -654,8 +691,10 @@ window.editarProdutoItem = function(id) {
         );
 
     if (titulo) {
+
         titulo.innerText =
             'Editar Produto';
+
     }
 
     function preencher(idCampo, valor) {
@@ -673,7 +712,10 @@ window.editarProdutoItem = function(id) {
 
     }
 
-    preencher('prodId', id);
+    preencher(
+        'prodId',
+        chaveReal
+    );
 
     preencher(
         'prodNome',
@@ -721,6 +763,7 @@ window.editarProdutoItem = function(id) {
         'prodPrecoPromocional',
         prod.precoPromo ??
         prod.promotionalPrice ??
+        prod.precoPromocional ??
         ''
     );
 
@@ -764,7 +807,8 @@ window.editarProdutoItem = function(id) {
             '';
 
         var imagemTratada =
-            window.resolverUrlImagem
+            typeof window.resolverUrlImagem ===
+            'function'
                 ? window.resolverUrlImagem(
                     imagemOriginal
                   )
@@ -783,180 +827,187 @@ window.editarProdutoItem = function(id) {
                     'https://via.placeholder.com/400x400?text=Sem+Imagem';
 
             };
+
     }
 
-    window.produtoEditandoAtual = id;
+    window.produtoEditandoAtual =
+        chaveReal;
 
     console.log(
-        '📝 Produto carregado:',
+        '📝 Produto carregado para edição:',
         {
-            id: id,
+            chaveFirebase: chaveReal,
             nome:
                 prod.name ||
                 prod.nome,
             sku:
-                prod.sku
+                prod.sku,
+            categoria:
+                prod.category,
+            subcategoria:
+                prod.subcategory
         }
     );
+
 };
 
     // ==========================================================
     // SALVAR
     // ==========================================================
-window.salvarProdutoFirebase = function() {
+window.salvarProdutoFirebase = async function() {
 
-    var id =
-        document.getElementById('prodId')?.value?.trim() || '';
+    try {
 
-    var nome =
-        document.getElementById('prodNome')?.value?.trim() || '';
+        if (!window.db) {
+            alert("Firebase indisponível.");
+            return;
+        }
 
-    if (!nome) {
-        alert('⚠️ Informe o nome do produto.');
-        return;
+        function valor(id) {
+
+            var el = document.getElementById(id);
+
+            return el
+                ? String(el.value || '').trim()
+                : '';
+
+        }
+
+        var id = valor('prodId');
+
+        var dados = {
+
+            name: valor('prodNome'),
+            sku: valor('prodSku'),
+
+            category:
+                valor('prodCategoria'),
+
+            subcategory:
+                valor('prodSubcategoria'),
+
+            weight:
+                parseFloat(
+                    valor('prodPeso')
+                ) || 0,
+
+            peso:
+                parseFloat(
+                    valor('prodPeso')
+                ) || 0,
+
+            price:
+                parseFloat(
+                    valor('prodPreco')
+                ) || 0,
+
+            precoFinal:
+                parseFloat(
+                    valor('prodPreco')
+                ) || 0,
+
+            precoPromo:
+                parseFloat(
+                    valor('prodPrecoPromocional')
+                ) || 0,
+
+            galvanica:
+                valor('prodGalvanica'),
+
+            stock:
+                parseInt(
+                    valor('prodEstoque')
+                ) || 0,
+
+            description:
+                valor('prodDescricao'),
+
+            image:
+                valor('prodUrlImagem'),
+
+            updatedAt:
+                Date.now()
+
+        };
+
+        if (!dados.name) {
+
+            alert(
+                "Informe o nome do produto."
+            );
+
+            return;
+        }
+
+        if (id) {
+
+            await window.db
+                .ref(
+                    'abella/products/' + id
+                )
+                .update(dados);
+
+            console.log(
+                "✅ Produto atualizado:",
+                id
+            );
+
+        } else {
+
+            dados.paused = false;
+
+            dados.createdAt =
+                Date.now();
+
+            var novoRef =
+                window.db
+                    .ref(
+                        'abella/products'
+                    )
+                    .push();
+
+            await novoRef.set(dados);
+
+            console.log(
+                "✅ Produto criado:",
+                novoRef.key
+            );
+
+        }
+
+        if (
+            typeof window.fecharModalProduto ===
+            'function'
+        ) {
+            window.fecharModalProduto();
+        }
+
+        if (
+            typeof window.carregarBlocoProdutos ===
+            'function'
+        ) {
+            window.carregarBlocoProdutos(true);
+        }
+
+        alert(
+            "Produto salvo com sucesso."
+        );
+
+    } catch (erro) {
+
+        console.error(
+            "Erro ao salvar produto:",
+            erro
+        );
+
+        alert(
+            "Falha ao salvar produto:\n" +
+            erro.message
+        );
+
     }
 
-    var sku =
-        document.getElementById('prodSku')?.value?.trim() || '';
-
-    var categoria =
-        document.getElementById('prodCategoria')?.value?.trim() || '';
-
-    var subcategoria =
-        document.getElementById('prodSubcategoria')?.value?.trim() || '';
-
-    var peso =
-        document.getElementById('prodPeso')?.value?.trim() || '';
-
-    var preco =
-        parseFloat(
-            document.getElementById('prodPreco')?.value
-        ) || 0;
-
-    var precoPromo =
-        parseFloat(
-            document.getElementById('prodPrecoPromocional')?.value
-        ) || 0;
-
-    var estoque =
-        parseInt(
-            document.getElementById('prodEstoque')?.value
-        ) || 0;
-
-    var galvanica =
-        document.getElementById('prodGalvanica')?.value?.trim() || '';
-
-    var descricao =
-        document.getElementById('prodDescricao')?.value?.trim() || '';
-
-    var imagem =
-        document.getElementById('prodUrlImagem')?.value?.trim() || '';
-
-    var agora =
-        Date.now();
-
-    var payload = {
-
-        id: id || null,
-
-        name: nome,
-        nome: nome,
-
-        sku: sku,
-
-        category: categoria,
-        categoria: categoria,
-
-        subcategory: subcategoria,
-        subcategoria: subcategoria,
-
-        weight: peso,
-        peso: peso,
-
-        price: preco,
-        preco: preco,
-        precoFinal: preco,
-
-        precoPromo: precoPromo,
-
-        stock: estoque,
-        estoque: estoque,
-
-        galvanica: galvanica,
-
-        description: descricao,
-        descricao: descricao,
-
-        image: imagem,
-        imagem: imagem,
-
-        updatedAt: agora
-    };
-
-    var refProdutos =
-        window.db.ref('abella/products');
-
-    if (id) {
-
-        refProdutos
-            .child(id)
-            .update(payload)
-
-            .then(function() {
-
-                console.log(
-                    '✅ Produto atualizado:',
-                    id
-                );
-
-                finalizar();
-
-            })
-
-            .catch(function(err) {
-
-                console.error(err);
-
-                alert(
-                    'Erro ao atualizar produto.'
-                );
-
-            });
-
-    } else {
-
-        payload.createdAt = agora;
-        payload.paused = false;
-
-        var novoRef =
-            refProdutos.push();
-
-        payload.id = novoRef.key;
-
-        novoRef
-            .set(payload)
-
-            .then(function() {
-
-                console.log(
-                    '✅ Produto criado:',
-                    novoRef.key
-                );
-
-                finalizar();
-
-            })
-
-            .catch(function(err) {
-
-                console.error(err);
-
-                alert(
-                    'Erro ao criar produto.'
-                );
-
-            });
-    }
+};
 
     function finalizar() {
 

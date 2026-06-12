@@ -452,19 +452,34 @@
             }
         };
 
-        const carrinhoService = {
-            obterItens(){
-                try{
-                    // Alinhamento com a chave unificada do ecossistema Abella Joias
-                    return JSON.parse(localStorage.getItem('abella_carrinho') || '[]');
-                }catch(e){
-                    return [];
-                }
-            },
-            limpar(){
-                localStorage.removeItem('abella_carrinho');
-            }
-        };
+const carrinhoService = {
+
+    obterItens() {
+
+        try {
+
+            return JSON.parse(
+                localStorage.getItem('abella_carrinho') ||
+                localStorage.getItem('carrinho') ||
+                '[]'
+            );
+
+        } catch (e) {
+
+            return [];
+
+        }
+
+    },
+
+    limpar() {
+
+        localStorage.removeItem('abella_carrinho');
+        localStorage.removeItem('carrinho');
+
+    }
+
+};
 
         function resolverImagemFirebase(url) {
             try {
@@ -666,7 +681,7 @@ CONFIG.pedidoMinimo = parseFloat(
             const t = calcularTotais();
 
             document.getElementById('res-qtd').innerText = `${t.qtd} pçs`;
-            document.getElementById('res-peso').innerText = `${t.peso.toFixed(2)}g`;
+            document.getElementById('res-peso').innerText = formatarPeso(t.peso);
             document.getElementById('res-subtotal').innerText = money.formatar(t.subtotal);
             document.getElementById('res-total').innerText = money.formatar(t.total);
 
@@ -901,18 +916,18 @@ async function finalizarPedido() {
 // Ajuste na mensagem do WhatsApp para incluir o ID do pedido
 const mensagem = `Olá! Meu pedido foi realizado com sucesso.
 
-Nº do Pedido: ${idSequencial}
-Cliente: ${payload.cliente.nome}
-Cidade: ${payload.cliente.cidade}
-Local de Entrega: ${payload.entrega.nomeLocal}
+Nº do Pedido: ${idPedidoNovo}
+Cliente: ${novoPedido.cliente}
+Cidade: ${novoPedido.cidade}
+Local de Entrega: ${novoPedido.entrega.local}
 
-Total: ${money.formatar(payload.total)}
-Pagamento: ${payload.formaPagamento}`;
+Total: ${money.formatar(novoPedido.total)}
+Pagamento: ${t.pagamento}
 
-Pedido: ${ref.key}`;
+Obrigado por comprar na Abella Joias!`;
 
-        window.location.href =
-            `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(mensagem)}`;
+window.location.href =
+    `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(mensagem)}`;
 
     } catch (e) {
 

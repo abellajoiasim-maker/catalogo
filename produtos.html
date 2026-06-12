@@ -737,19 +737,10 @@ document.getElementById(
             });
         }
 
-       function adicionarAoCarrinho() {
-    if(!produtoAtual) return;
+// =====================================================
+// ABRIR MODAL PRODUTO
+// =====================================================
 
-    const qtdElement = document.getElementById('qtdPadrao');
-    const quantidade = parseInt(qtdElement.value) || 1;
-
-    if(quantidade < 1) {
-        alert('Por favor, defina uma quantidade válida.');
-        return;
-    }
-
-    try {
- 
 function abrirModalProduto(index) {
 
     const produto = produtosFiltrados[index];
@@ -840,34 +831,132 @@ function abrirModalProduto(index) {
         '✅ Modal aberto:',
         produto.name
     );
+}
 
-}        function fecharModalProduto(){
-            document.getElementById('modalProduto').classList.add('hidden');
-            document.body.style.overflow = '';
-            produtoAtual = null;
+
+// =====================================================
+// FECHAR MODAL
+// =====================================================
+
+function fecharModalProduto() {
+
+    const modal =
+        document.getElementById(
+            'modalProduto'
+        );
+
+    if (modal) {
+        modal.classList.add(
+            'hidden'
+        );
+    }
+
+    document.body.style.overflow =
+        '';
+
+    produtoAtual = null;
+}
+
+
+// =====================================================
+// ADICIONAR AO CARRINHO
+// =====================================================
+
+function adicionarAoCarrinho() {
+
+    if (!produtoAtual) return;
+
+    const qtdElement =
+        document.getElementById(
+            'qtdPadrao'
+        );
+
+    const quantidade =
+        parseInt(
+            qtdElement?.value || 1
+        );
+
+    if (quantidade < 1) {
+
+        alert(
+            'Por favor, defina uma quantidade válida.'
+        );
+
+        return;
+    }
+
+    try {
+
+        if (
+            typeof carrinhoService ===
+            'undefined'
+        ) {
+
+            alert(
+                'Erro: Serviço de carrinho ausente no sistema.'
+            );
+
+            return;
         }
 
-        if(typeof carrinhoService !== 'undefined') {
-            // Garantimos que o peso seja um número válido, nunca NaN ou undefined
-            const pesoConvertido = parseFloat(produtoAtual.peso || produtoAtual.weight || 0);
-            
-            carrinhoService.adicionarItem({
-                id: produtoAtual.id,
-                sku: produtoAtual.sku || '',
-                nome: produtoAtual.name || produtoAtual.nome || 'Sem Nome',
-                image: produtoAtual.image || produtoAtual.imagem || '',
-                preco: parseFloat(produtoAtual.precoFinal || produtoAtual.price || produtoAtual.preco || 0),
-                peso: pesoConvertido
-            }, quantidade);
+        const pesoConvertido =
+            parseFloat(
+                produtoAtual.peso ||
+                produtoAtual.weight ||
+                0
+            );
 
+        carrinhoService.adicionarItem(
+            {
+                id:
+                    produtoAtual.id,
+
+                sku:
+                    produtoAtual.sku || '',
+
+                nome:
+                    produtoAtual.name ||
+                    produtoAtual.nome ||
+                    'Sem Nome',
+
+                image:
+                    produtoAtual.image ||
+                    produtoAtual.imagem ||
+                    '',
+
+                preco:
+                    parseFloat(
+                        produtoAtual.precoFinal ||
+                        produtoAtual.price ||
+                        produtoAtual.preco ||
+                        0
+                    ),
+
+                peso:
+                    pesoConvertido
+            },
+            quantidade
+        );
+
+        if (
+            typeof atualizarMiniCarrinho ===
+            'function'
+        ) {
             atualizarMiniCarrinho();
-            fecharModalProduto();
-        } else {
-            alert('Erro: Serviço de carrinho ausente no sistema.');
         }
-    } catch(e) {
-        console.error('Erro ao adicionar ao carrinho:', e);
-        alert('Não foi possível incluir o produto no carrinho.');
+
+        fecharModalProduto();
+
+    } catch (e) {
+
+        console.error(
+            'Erro ao adicionar ao carrinho:',
+            e
+        );
+
+        alert(
+            'Não foi possível incluir o produto no carrinho.'
+        );
     }
 }
         function voltarPagina(){

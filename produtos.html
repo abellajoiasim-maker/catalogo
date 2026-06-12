@@ -749,47 +749,104 @@ document.getElementById(
     }
 
     try {
-        if(typeof carrinhoService !== 'undefined') {
-            // Garantimos que o peso seja um número válido, nunca NaN ou undefined
-            const pesoConvertido = parseFloat(produtoAtual.peso || produtoAtual.weight || 0);
-            
-            carrinhoService.adicionarItem({
-                id: produtoAtual.id,
-                sku: produtoAtual.sku || '',
-                nome: produtoAtual.name || produtoAtual.nome || 'Sem Nome',
-                image: produtoAtual.image || produtoAtual.imagem || '',
-                preco: parseFloat(produtoAtual.precoFinal || produtoAtual.price || produtoAtual.preco || 0),
-                peso: pesoConvertido
-            }, quantidade);
+ 
+function abrirModalProduto(index) {
 
-            atualizarMiniCarrinho();
-            fecharModalProduto();
-        } else {
-            alert('Erro: Serviço de carrinho ausente no sistema.');
-        }
-    } catch(e) {
-        console.error('Erro ao adicionar ao carrinho:', e);
-        alert('Não foi possível incluir o produto no carrinho.');
+    const produto = produtosFiltrados[index];
+
+    if (!produto) {
+        console.error(
+            'Produto não encontrado:',
+            index
+        );
+        return;
     }
-}
-        function fecharModalProduto(){
+
+    produtoAtual = produto;
+
+    const preco =
+        parseFloat(
+            produto.precoFinal ||
+            produto.price ||
+            produto.preco ||
+            0
+        );
+
+    const peso =
+        produto.peso ||
+        produto.weight ||
+        0;
+
+    const imagem =
+        resolverImagemFirebase(
+            produto.image ||
+            produto.imagem ||
+            ''
+        );
+
+    const modal =
+        document.getElementById(
+            'modalProduto'
+        );
+
+    if (!modal) {
+
+        console.error(
+            'ID modalProduto não encontrado'
+        );
+
+        return;
+    }
+
+    document.getElementById(
+        'modalNome'
+    ).innerText =
+        produto.name ||
+        produto.nome ||
+        'Produto';
+
+    document.getElementById(
+        'modalPreco'
+    ).innerText =
+        typeof money !== 'undefined'
+            ? money.formatar(preco)
+            : 'R$ ' + preco.toFixed(2);
+
+    document.getElementById(
+        'modalPeso'
+    ).innerText =
+        peso + ' g';
+
+    document.getElementById(
+        'modalDescricao'
+    ).innerText =
+        produto.description ||
+        produto.descricao ||
+        'Sem descrição disponível.';
+
+    document.getElementById(
+        'modalImagem'
+    ).src =
+        imagem;
+
+    modal.classList.remove(
+        'hidden'
+    );
+
+    document.body.style.overflow =
+        'hidden';
+
+    console.log(
+        '✅ Modal aberto:',
+        produto.name
+    );
+
+}        function fecharModalProduto(){
             document.getElementById('modalProduto').classList.add('hidden');
             document.body.style.overflow = '';
             produtoAtual = null;
         }
 
-       function adicionarAoCarrinho() {
-    if(!produtoAtual) return;
-
-    const qtdElement = document.getElementById('qtdPadrao');
-    const quantidade = parseInt(qtdElement.value) || 1;
-
-    if(quantidade < 1) {
-        alert('Por favor, defina uma quantidade válida.');
-        return;
-    }
-
-    try {
         if(typeof carrinhoService !== 'undefined') {
             // Garantimos que o peso seja um número válido, nunca NaN ou undefined
             const pesoConvertido = parseFloat(produtoAtual.peso || produtoAtual.weight || 0);

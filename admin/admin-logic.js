@@ -344,6 +344,8 @@ if (modulo === 'pedidos') {
                 });
             }
         };
+
+
         
         window.renderizarTabelaPedidosVisivel();
     }
@@ -542,11 +544,13 @@ window.carregarBlocoProdutos = function(forcarLimpezaDOM) {
 window.abrirModalProduto = function() {
 
     var modal =
-        document.getElementById('modalFormProduto');
+        document.getElementById(
+            'modalFormProduto'
+        );
 
     if (!modal) {
         console.warn(
-            "modalFormProduto não encontrado"
+            'Modal não encontrado.'
         );
         return;
     }
@@ -560,7 +564,7 @@ window.abrirModalProduto = function() {
 
     if (titulo) {
         titulo.innerText =
-            'Cadastrar Novo Produto';
+            'Cadastrar Produto';
     }
 
     var form =
@@ -574,21 +578,13 @@ window.abrirModalProduto = function() {
 
     [
         'prodId',
-        'prodNome',
-        'prodSku',
-        'prodCategoria',
-        'prodSubcategoria',
-        'prodPeso',
-        'prodPreco',
-        'prodPrecoPromocional',
-        'prodDescricao',
-        'prodEstoque',
-        'prodGalvanica',
         'prodUrlImagem'
     ].forEach(function(idCampo) {
 
         var campo =
-            document.getElementById(idCampo);
+            document.getElementById(
+                idCampo
+            );
 
         if (campo) {
             campo.value = '';
@@ -602,8 +598,10 @@ window.abrirModalProduto = function() {
         );
 
     if (preview) {
+
         preview.src =
             'https://via.placeholder.com/400x400?text=Produto';
+
     }
 };
 
@@ -624,110 +622,181 @@ window.fecharModalProduto = function() {
     // ==========================================================
 window.editarProdutoItem = function(id) {
 
-    var prod = (window.todosProdutosLocal || {})[id];
+    var produtos =
+        window.todosProdutosLocal || {};
+
+    var prod = produtos[id];
 
     if (!prod) {
-        alert("Produto não localizado.");
+
+        console.warn(
+            "Produto inexistente:",
+            id
+        );
+
+        alert(
+            "Produto não localizado."
+        );
+
         return;
     }
 
-    window.abrirModalProduto();
-
-    var titulo = document.getElementById('modalFormProdutoTitulo');
-    if (titulo) {
-        titulo.innerText = 'Editar Produto';
+    if (
+        typeof window.abrirModalProduto ===
+        'function'
+    ) {
+        window.abrirModalProduto();
     }
 
-    function preencher(campo, valor) {
-        var el = document.getElementById(campo);
-        if (el) {
-            el.value = valor ?? '';
-        }
+    var titulo =
+        document.getElementById(
+            'modalFormProdutoTitulo'
+        );
+
+    if (titulo) {
+        titulo.innerText =
+            'Editar Produto';
+    }
+
+    function preencher(idCampo, valor) {
+
+        var el =
+            document.getElementById(idCampo);
+
+        if (!el) return;
+
+        el.value =
+            valor !== undefined &&
+            valor !== null
+                ? valor
+                : '';
+
     }
 
     preencher('prodId', id);
 
-    preencher('prodNome',
+    preencher(
+        'prodNome',
         prod.name ||
-        prod.nome
+        prod.nome ||
+        ''
     );
 
-    preencher('prodSku',
-        prod.sku
+    preencher(
+        'prodSku',
+        prod.sku ||
+        ''
     );
 
-    preencher('prodCategoria',
+    preencher(
+        'prodCategoria',
         prod.category ||
-        prod.categoria
+        prod.categoria ||
+        ''
     );
 
-    preencher('prodSubcategoria',
+    preencher(
+        'prodSubcategoria',
         prod.subcategory ||
-        prod.subcategoria
+        prod.subcategoria ||
+        ''
     );
 
-    preencher('prodPeso',
-        prod.weight ||
-        prod.peso
+    preencher(
+        'prodPeso',
+        prod.weight ??
+        prod.peso ??
+        ''
     );
 
-    preencher('prodPreco',
+    preencher(
+        'prodPreco',
         prod.price ??
         prod.precoFinal ??
-        prod.preco
+        prod.preco ??
+        0
     );
 
-    preencher('prodPrecoPromocional',
+    preencher(
+        'prodPrecoPromocional',
         prod.precoPromo ??
         prod.promotionalPrice ??
         ''
     );
 
-    preencher('prodGalvanica',
-        prod.galvanica
+    preencher(
+        'prodGalvanica',
+        prod.galvanica ||
+        ''
     );
 
-    preencher('prodEstoque',
+    preencher(
+        'prodEstoque',
         prod.stock ??
         prod.estoque ??
         0
     );
 
-    preencher('prodDescricao',
+    preencher(
+        'prodDescricao',
         prod.description ||
-        prod.descricao
+        prod.descricao ||
+        ''
     );
 
-    preencher('prodUrlImagem',
+    preencher(
+        'prodUrlImagem',
         prod.image ||
-        prod.imagem
+        prod.imagem ||
+        ''
     );
 
     var imgPreview =
-        document.getElementById('previewProduto');
+        document.getElementById(
+            'previewProduto'
+        );
 
     if (imgPreview) {
 
-        var img =
+        var imagemOriginal =
             prod.image ||
             prod.imagem ||
             '';
 
+        var imagemTratada =
+            window.resolverUrlImagem
+                ? window.resolverUrlImagem(
+                    imagemOriginal
+                  )
+                : imagemOriginal;
+
         imgPreview.src =
-            window.resolverUrlImagem(img);
+            imagemTratada ||
+            'https://via.placeholder.com/400x400?text=Produto';
 
-        imgPreview.onerror = function() {
+        imgPreview.onerror =
+            function() {
 
-            this.src =
-                'https://via.placeholder.com/400x400?text=Sem+Imagem';
+                this.onerror = null;
 
-        };
+                this.src =
+                    'https://via.placeholder.com/400x400?text=Sem+Imagem';
+
+            };
     }
 
+    window.produtoEditandoAtual = id;
+
     console.log(
-        "📝 Produto carregado para edição:",
-        id,
-        prod
+        '📝 Produto carregado:',
+        {
+            id: id,
+            nome:
+                prod.name ||
+                prod.nome,
+            sku:
+                prod.sku
+        }
     );
 };
 
@@ -736,92 +805,180 @@ window.editarProdutoItem = function(id) {
     // ==========================================================
 window.salvarProdutoFirebase = function() {
 
-    if (!window.db) {
-        alert("Firebase indisponível.");
+    var id =
+        document.getElementById('prodId')?.value?.trim() || '';
+
+    var nome =
+        document.getElementById('prodNome')?.value?.trim() || '';
+
+    if (!nome) {
+        alert('⚠️ Informe o nome do produto.');
         return;
     }
 
-    var id = document.getElementById('prodId')?.value || '';
+    var sku =
+        document.getElementById('prodSku')?.value?.trim() || '';
 
-    var name = document.getElementById('prodNome')?.value.trim() || '';
-    var sku = document.getElementById('prodSku')?.value.trim() || '';
-    var category = document.getElementById('prodCategoria')?.value.trim() || '';
-    var weight = document.getElementById('prodPeso')?.value.trim() || '';
-    var image = document.getElementById('prodUrlImagem')?.value.trim() || '';
+    var categoria =
+        document.getElementById('prodCategoria')?.value?.trim() || '';
 
-    var price = parseFloat(
-        document.getElementById('prodPreco')?.value || 0
-    );
+    var subcategoria =
+        document.getElementById('prodSubcategoria')?.value?.trim() || '';
 
-    if (!name) {
-        alert("⚠️ Informe o nome do produto.");
-        return;
-    }
+    var peso =
+        document.getElementById('prodPeso')?.value?.trim() || '';
 
-    var dados = {
+    var preco =
+        parseFloat(
+            document.getElementById('prodPreco')?.value
+        ) || 0;
+
+    var precoPromo =
+        parseFloat(
+            document.getElementById('prodPrecoPromocional')?.value
+        ) || 0;
+
+    var estoque =
+        parseInt(
+            document.getElementById('prodEstoque')?.value
+        ) || 0;
+
+    var galvanica =
+        document.getElementById('prodGalvanica')?.value?.trim() || '';
+
+    var descricao =
+        document.getElementById('prodDescricao')?.value?.trim() || '';
+
+    var imagem =
+        document.getElementById('prodUrlImagem')?.value?.trim() || '';
+
+    var agora =
+        Date.now();
+
+    var payload = {
+
         id: id || null,
-        name: name,
+
+        name: nome,
+        nome: nome,
+
         sku: sku,
-        category: category,
-        weight: weight,
-        peso: weight,
-        image: image,
-        price: price,
-        precoFinal: price,
-        updatedAt: Date.now()
+
+        category: categoria,
+        categoria: categoria,
+
+        subcategory: subcategoria,
+        subcategoria: subcategoria,
+
+        weight: peso,
+        peso: peso,
+
+        price: preco,
+        preco: preco,
+        precoFinal: preco,
+
+        precoPromo: precoPromo,
+
+        stock: estoque,
+        estoque: estoque,
+
+        galvanica: galvanica,
+
+        description: descricao,
+        descricao: descricao,
+
+        image: imagem,
+        imagem: imagem,
+
+        updatedAt: agora
     };
 
-    var operacao;
+    var refProdutos =
+        window.db.ref('abella/products');
 
     if (id) {
 
-        operacao = window.db
-            .ref('abella/products/' + id)
-            .update(dados);
+        refProdutos
+            .child(id)
+            .update(payload)
+
+            .then(function() {
+
+                console.log(
+                    '✅ Produto atualizado:',
+                    id
+                );
+
+                finalizar();
+
+            })
+
+            .catch(function(err) {
+
+                console.error(err);
+
+                alert(
+                    'Erro ao atualizar produto.'
+                );
+
+            });
 
     } else {
 
-        dados.createdAt = Date.now();
-        dados.paused = false;
+        payload.createdAt = agora;
+        payload.paused = false;
 
-        operacao = window.db
-            .ref('abella/products')
-            .push(dados);
+        var novoRef =
+            refProdutos.push();
+
+        payload.id = novoRef.key;
+
+        novoRef
+            .set(payload)
+
+            .then(function() {
+
+                console.log(
+                    '✅ Produto criado:',
+                    novoRef.key
+                );
+
+                finalizar();
+
+            })
+
+            .catch(function(err) {
+
+                console.error(err);
+
+                alert(
+                    'Erro ao criar produto.'
+                );
+
+            });
     }
 
-    operacao
-        .then(function() {
+    function finalizar() {
 
+        if (
+            typeof window.fecharModalProduto ===
+            'function'
+        ) {
             window.fecharModalProduto();
+        }
 
-            if (typeof window.carregarBlocoProdutos === 'function') {
-                window.carregarBlocoProdutos(true);
-            }
+        if (
+            typeof window.carregarBlocoProdutos ===
+            'function'
+        ) {
+            window.carregarBlocoProdutos(true);
+        }
+    }
 
-            console.log(
-                "✅ Produto salvo:",
-                name
-            );
-
-        })
-        .catch(function(error) {
-
-            console.error(
-                "Erro ao salvar produto:",
-                error
-            );
-
-            alert(
-                "Erro ao salvar produto:\n" +
-                error.message
-            );
-        });
 };
 
-    // Alias compatível com HTML
-    window.salvarDadosProdutoDoForm =
-        window.salvarProdutoFirebase;
-
+window.salvarDadosProdutoDoForm =
+    window.salvarProdutoFirebase;
     // ==========================================================
     // PAUSAR / ATIVAR
     // ==========================================================

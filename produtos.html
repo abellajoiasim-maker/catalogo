@@ -746,10 +746,12 @@ function abrirModalProduto(index) {
     const produto = produtosFiltrados[index];
 
     if (!produto) {
+
         console.error(
             'Produto não encontrado:',
             index
         );
+
         return;
     }
 
@@ -789,37 +791,77 @@ function abrirModalProduto(index) {
         return;
     }
 
-   document.getElementById(
-    'modalNome'
-).innerText =
-    produto.name ||
-    produto.nome ||
-    'Produto';
+    document.getElementById(
+        'modalNome'
+    ).innerText =
+        produto.name ||
+        produto.nome ||
+        'Produto';
 
-document.getElementById(
-    'modalPreco'
-).innerText =
-    typeof money !== 'undefined'
-        ? money.formatar(preco)
-        : 'R$ ' + preco.toFixed(2);
+    document.getElementById(
+        'modalPreco'
+    ).innerText =
+        typeof money !== 'undefined'
+            ? money.formatar(preco)
+            : 'R$ ' + preco.toFixed(2);
 
-document.getElementById(
-    'modalPeso'
-).innerText =
-    peso + ' g';
+    document.getElementById(
+        'modalSku'
+    ).innerText =
+        produto.sku ||
+        '-';
 
-document.getElementById(
-    'modalDescricao'
-).innerText =
-    produto.description ||
-    produto.descricao ||
-    'Sem descrição disponível.';
+    document.getElementById(
+        'modalPeso'
+    ).innerText =
+        peso + ' g';
 
-document.getElementById(
-    'modalImagem'
-).src =
-    imagem;
+    document.getElementById(
+        'modalDescricao'
+    ).innerText =
+        produto.description ||
+        produto.descricao ||
+        'Sem descrição disponível.';
 
+    document.getElementById(
+        'modalImagem'
+    ).src =
+        imagem;
+
+    // PIX
+
+    const valorPix =
+        preco -
+        (preco * (descontoPixGlobal || 0) / 100);
+
+    const modalPix =
+        document.getElementById(
+            'modalPix'
+        );
+
+    if (modalPix) {
+
+        modalPix.innerText =
+            typeof money !== 'undefined'
+                ? money.formatar(valorPix)
+                : 'R$ ' + valorPix.toFixed(2);
+
+    }
+
+    modal.classList.remove(
+        'hidden'
+    );
+
+    document.body.style.overflow =
+        'hidden';
+
+    console.log(
+        '✅ Modal aberto:',
+        produto.name ||
+        produto.nome
+    );
+
+}
 
 // =====================================================
 // FECHAR MODAL

@@ -878,6 +878,7 @@ window.salvarProdutoFirebase = async function() {
         var dados = {
 
             name: valor('prodNome'),
+
             sku: valor('prodSku'),
 
             category:
@@ -1005,25 +1006,6 @@ window.salvarProdutoFirebase = async function() {
             erro.message
         );
 
-    }
-
-};
-
-    function finalizar() {
-
-        if (
-            typeof window.fecharModalProduto ===
-            'function'
-        ) {
-            window.fecharModalProduto();
-        }
-
-        if (
-            typeof window.carregarBlocoProdutos ===
-            'function'
-        ) {
-            window.carregarBlocoProdutos(true);
-        }
     }
 
 };

@@ -58,59 +58,45 @@ window.formatarMoedaReal = function(valor) {
 };
 
 // ==========================================================================
-// SINCRONIZADORES EM TEMPO REAL (REALTIME BACKGROUND SYNC)
+// ABELLA SERVICES BOOTSTRAP
 // ==========================================================================
-if (window.db) {
-    console.log("🔥 [Firebase Core] Conexão estabelecida e ativa no nó unificado /abella.");
 
-    // 1. Escuta contínua de Pedidos (Nó: abella/orders)
-    window.db.ref('abella/orders').on('value', function(snapshot) {
-        var dadosBrutos = snapshot.val() || {};
-        var pedidosFiltrados = {};
-        Object.keys(dadosBrutos).forEach(function(key) {
-            if (key !== 'products' && key !== 'settings' && key !== 'categories' && key !== 'galvanicas') {
-                pedidosFiltrados[key] = dadosBrutos[key];
-            }
-        });
-        window.todosPedidosLocal = pedidosFiltrados;
-        if (typeof window.renderizarTabelaPedidosVisivel === 'function') {
-            window.renderizarTabelaPedidosVisivel();
-        }
-    });
+async function sincronizarDadosGlobais() {
 
-    // 2. Escuta contínua de Produtos (Nó: abella/products)
-    window.db.ref('abella/products').on('value', function(snapshot) {
-        window.todosProdutosLocal = snapshot.val() || {};
-        if (typeof window.carregarBlocoProdutos === 'function') {
-            window.carregarBlocoProdutos(false);
-        }
-    });
+    try {
 
-    // 3. Escuta contínua de Categorias (Nó: abella/categories)
-    window.db.ref('abella/categories').on('value', function(snapshot) {
-        window.todasCategoriasLocal = snapshot.val() || {};
-        if (typeof window.carregarBlocoCategorias === 'function') {
-            window.carregarBlocoCategorias();
+        if (window.pedidoService) {
+            window.todosPedidosLocal =
+                await pedidoService.getAll();
         }
-    });
 
-    // 4. Escuta contínua de Galvânicas (Nó: abella/galvanicas)
-    window.db.ref('abella/galvanicas').on('value', function(snapshot) {
-        window.todasGalvanicasLocal = snapshot.val() || {};
-        if (typeof window.carregarBlocoGalvanicas === 'function') {
-            window.carregarBlocoGalvanicas();
+        if (window.produtoService) {
+            window.todosProdutosLocal =
+                await produtoService.getAll();
         }
-    });
 
-    // 5. Escuta contínua de Parâmetros / Configurações (Nó: abella/settings)
-    window.db.ref('abella/settings').on('value', function(snapshot) {
-        window.configuracoesGlobaisLocal = snapshot.val() || {};
-        if (typeof window.renderizarCamposConfiguracao === 'function') {
-            window.renderizarCamposConfiguracao();
+        if (window.categoriaService) {
+            window.todasCategoriasLocal =
+                await categoriaService.getAll();
         }
-    });
-} else {
-    console.error("❌ [Erro Fatal] O barramento do Firebase Realtime Database falhou na inicialização.");
+
+        if (window.galvanicaService) {
+            window.todasGalvanicasLocal =
+                await galvanicaService.getAll();
+        }
+
+        if (window.settingsService) {
+            window.configuracoesGlobaisLocal =
+                await settingsService.get();
+        }
+
+    } catch (erro) {
+
+        console.error(
+            '[sync global]',
+            erro
+        );
+    }
 }
 
 // ==========================================================================
@@ -178,16 +164,61 @@ window.orquestrarBindsSubmodulo = function(modulo) {
     // ----------------------------------------------------------------------
     // BINDS DO MÓDULO DE PEDIDOS
     // ----------------------------------------------------------------------
-    if (modulo === 'pedidos') {
-        
-        if (window.db) {
-            window.todosPedidosLocal = window.todosPedidosLocal || {};
-            
-            window.db.ref('abella/orders').on('value', function(snapshot) {
-                window.todosPedidosLocal = snapshot.val() || {};
-                console.log("📦 Dados recebidos do barramento /abella/orders:", window.todosPedidosLocal);
-                window.renderizarTabelaPedidosVisivel();
-            }, function(error) {
+if (modulo === 'pedidos') {
+
+    window.renderizarTabelaPedidosVisivel =
+        async function() {
+
+            const pedidos =
+                await pedidoService.getAll();
+
+            window.todosPedidosLocal =
+                pedidos;
+
+            const container =
+                document.getElementById(
+                    'listaPedidos'
+                );
+
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            const lista =
+                Object.entries(pedidos)
+                .reverse();
+
+            if (!lista.length) {
+
+                container.innerHTML =
+                    '<div class="text-center py-10">Nenhum pedido encontrado</div>';
+
+                return;
+            }
+
+            lista.forEach(
+                ([id, pedido]) => {
+
+                    const card =
+                        document.createElement(
+                            'div'
+                        );
+
+                    card.className =
+                        'bg-zinc-950 border border-zinc-900 rounded-xl p-4';
+
+                    card.innerHTML = `
+                        <h3>${pedido.nome || pedido.cliente || ''}</h3>
+                        <p>${id}</p>
+                    `;
+
+                    container.appendChild(card);
+                }
+            );
+        };
+
+    renderizarTabelaPedidosVisivel();
+}, function(error) {
                 console.error("Erro de permissão ou conexão na ramificação /abella/orders:", error);
             });
         }
@@ -320,121 +351,518 @@ window.orquestrarBindsSubmodulo = function(modulo) {
     // ----------------------------------------------------------------------
     // BINDS DO MÓDULO DE PRODUTOS
     // ----------------------------------------------------------------------
-    if (modulo === 'produtos') {
-        window.carregarBlocoProdutos = function(forcarLimpezaDOM) {
-            var grid = document.getElementById('grid-produtos');
-            if (!grid) return;
+if (modulo === 'produtos') {
 
-            if (forcarLimpezaDOM) grid.innerHTML = '';
-            
-            var chaves = Object.keys(window.todosProdutosLocal);
-            if (chaves.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-600 italic font-mono">Nenhum produto cadastrado na ramificação /products.</div>`;
-                return;
-            }
+    // ==========================================================
+    // RENDERIZAÇÃO DOS PRODUTOS
+    // ==========================================================
+window.carregarBlocoProdutos = function(forcarLimpezaDOM) {
 
-            grid.innerHTML = '';
-            chaves.forEach(function(key) {
-                var prod = window.todosProdutosLocal[key];
-                var imgTratada = window.resolverUrlImagem(prod.image || prod.imagem);
+    var grid = document.getElementById('grid-produtos');
+    if (!grid) return;
 
-                var div = document.createElement('div');
-                div.className = "bg-zinc-950 border border-zinc-900 rounded-xl p-4 space-y-3 hover:border-zinc-800 transition-all text-left relative";
-                div.innerHTML = `
-                    <div class="h-40 bg-black rounded-lg border border-zinc-900 overflow-hidden relative flex items-center justify-center">
-                        <img src="${imgTratada}" class="w-full h-full object-cover">
-                        ${prod.paused ? '<span class="absolute top-2 right-2 bg-red-950 text-red-400 border border-red-900 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase">Pausado</span>' : ''}
-                    </div>
-                    <div class="space-y-1">
-                        <h3 class="text-white text-xs font-bold truncate">${prod.name || 'Joia Sem Nome'}</h3>
-                        <p class="text-[10px] text-zinc-500 font-mono truncate">SKU: ${prod.sku || 'N/A'} | Cat: ${prod.category || 'Geral'}</p>
-                        <p class="text-[10px] text-zinc-400 font-mono">Peso: ${prod.weight || prod.peso || '0'}g</p>
-                        <p class="text-xs text-[#caa85c] font-bold font-mono">${window.formatarMoedaReal(prod.price || prod.precoFinal)}</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 pt-1 font-sans">
-                        <button onclick="window.editarProdutoItem('${key}')" class="bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800 text-[10px] font-bold uppercase py-1.5 rounded-lg text-center transition-all">Editar</button>
-                        <button onclick="window.alternarPausaProduto('${key}', ${prod.paused || false})" class="text-[10px] font-bold uppercase py-1.5 rounded-lg text-center border transition-all ${prod.paused ? 'bg-emerald-950/20 text-emerald-400 border-emerald-900' : 'bg-amber-950/20 text-amber-400 border-amber-900'}">
-                            ${prod.paused ? 'Ativar' : 'Pausar'}
-                        </button>
-                    </div>
-                `;
-                grid.appendChild(div);
-            });
-        };
+    if (forcarLimpezaDOM === true) {
+        grid.innerHTML = '';
+    }
 
-        window.abrirModalProduto = function() {
-            var modal = document.getElementById('modalFormProduto');
-            if (modal) {
-                modal.classList.remove('hidden');
-                document.getElementById('modalFormProdutoTitulo').innerText = 'Cadastrar Novo Item no Bruto';
-                document.getElementById('formProdutoReal').reset();
-                document.getElementById('prodId').value = '';
-            }
-        };
+    var produtos = window.todosProdutosLocal || {};
 
-        window.fecharModalProduto = function() {
-            var modal = document.getElementById('modalFormProduto');
-            if (modal) modal.classList.add('hidden');
-        };
+    if (Array.isArray(produtos)) {
+        produtos = produtos.reduce(function(acc, item, index) {
+            if (item) acc[index] = item;
+            return acc;
+        }, {});
+    }
 
-        window.editarProdutoItem = function(id) {
-            var prod = window.todosProdutosLocal[id];
-            if (!prod) return;
+    var listaProdutos = Object.entries(produtos)
+        .filter(function(entry) {
+            return entry[1];
+        })
+        .sort(function(a, b) {
 
-            window.abrirModalProduto();
-            document.getElementById('modalFormProdutoTitulo').innerText = 'Modificar Parâmetros do Item';
-            document.getElementById('prodId').value = id;
-            document.getElementById('prodNome').value = prod.name || '';
-            document.getElementById('prodSku').value = prod.sku || '';
-            document.getElementById('prodCategoria').value = prod.category || '';
-            document.getElementById('prodPeso').value = prod.weight || prod.peso || '';
-            document.getElementById('prodPreco').value = prod.price || prod.precoFinal || '';
-            document.getElementById('prodUrlImagem').value = prod.image || prod.imagem || '';
-        };
+            var nomeA =
+                (a[1].name || a[1].nome || '')
+                .toLowerCase();
 
-        window.salvarProdutoFirebase = function() {
-            var id = document.getElementById('prodId').value;
-            var name = document.getElementById('prodNome').value.trim();
-            var sku = document.getElementById('prodSku').value.trim();
-            var category = document.getElementById('prodCategoria').value.trim();
-            var weight = document.getElementById('prodPeso').value.trim();
-            var price = parseFloat(document.getElementById('prodPreco').value) || 0;
-            var image = document.getElementById('prodUrlImagem').value.trim();
+            var nomeB =
+                (b[1].name || b[1].nome || '')
+                .toLowerCase();
 
-            if (!name) { alert("⚠️ O nome é obrigatório!"); return; }
+            return nomeA.localeCompare(nomeB);
 
-            var dados = { 
-                name: name, 
-                sku: sku, 
-                category: category, 
-                weight: weight, 
-                peso: weight, 
-                price: price, 
-                precoFinal: price, 
-                image: image 
-            };
+        });
 
-            if (id) {
-                window.db.ref(`abella/products/${id}`).update(dados).then(function() { fecharLimpar(); });
-            } else {
-                dados.paused = false;
-                window.db.ref('abella/products').push(dados).then(function() { fecharLimpar(); });
-            }
+    if (!listaProdutos.length) {
 
-            function fecharLimpar() {
-                window.fecharModalProduto();
-                window.carregarBlocoProdutos(true);
-            }
-        };
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-12 text-zinc-600 italic font-mono">
+                Nenhum produto cadastrado em /abella/products.
+            </div>
+        `;
 
-        // ADICIONADO: Alias para o nome chamado pelo botão em modulo/produtos.html
-        // O botão chama window.salvarDadosProdutoDoForm() mas a função era salvarProdutoFirebase()
-        window.salvarDadosProdutoDoForm = window.salvarProdutoFirebase;
+        return;
+    }
 
-        window.alternarPausaProduto = function(id, statusAtual) {
-            window.db.ref(`abella/products/${id}`).update({ paused: !statusAtual });
+    var html = '';
+
+    listaProdutos.forEach(function(item) {
+
+        var key = item[0];
+        var prod = item[1];
+
+        var preco =
+            Number(
+                prod.price ??
+                prod.precoFinal ??
+                prod.preco ??
+                0
+            );
+
+        var peso =
+            prod.weight ??
+            prod.peso ??
+            0;
+
+        var imagem =
+            prod.image ||
+            prod.imagem ||
+            '';
+
+        var nome =
+            prod.name ||
+            prod.nome ||
+            'Produto sem nome';
+
+        var sku =
+            prod.sku ||
+            'N/A';
+
+        var categoria =
+            prod.category ||
+            prod.categoria ||
+            'Geral';
+
+        var subcategoria =
+            prod.subcategory ||
+            prod.subcategoria ||
+            '';
+
+        var pausado =
+            prod.paused === true;
+
+        var imgTratada =
+            window.resolverUrlImagem(imagem);
+
+        html += `
+            <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 space-y-3 hover:border-zinc-800 transition-all text-left relative">
+
+                <div class="h-40 bg-black rounded-lg border border-zinc-900 overflow-hidden relative flex items-center justify-center">
+
+                    <img
+                        src="${imgTratada}"
+                        loading="lazy"
+                        class="w-full h-full object-cover"
+                        onerror="this.src='https://via.placeholder.com/400x400?text=Sem+Imagem';"
+                    >
+
+                    ${
+                        pausado
+                        ? `
+                            <span class="absolute top-2 right-2 bg-red-950 text-red-400 border border-red-900 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase">
+                                Pausado
+                            </span>
+                        `
+                        : ''
+                    }
+
+                </div>
+
+                <div class="space-y-1">
+
+                    <h3 class="text-white text-xs font-bold truncate">
+                        ${nome}
+                    </h3>
+
+                    <p class="text-[10px] text-zinc-500 font-mono truncate">
+                        SKU: ${sku}
+                    </p>
+
+                    <p class="text-[10px] text-zinc-400 font-mono truncate">
+                        ${categoria}
+                        ${subcategoria ? ' / ' + subcategoria : ''}
+                    </p>
+
+                    <p class="text-[10px] text-zinc-400 font-mono">
+                        Peso: ${peso}g
+                    </p>
+
+                    <p class="text-xs text-[#caa85c] font-bold font-mono">
+                        ${window.formatarMoedaReal(preco)}
+                    </p>
+
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 pt-1">
+
+                    <button
+                        onclick="window.editarProdutoItem('${key}')"
+                        class="bg-zinc-900 text-gray-300 hover:text-white border border-zinc-800 text-[10px] font-bold uppercase py-1.5 rounded-lg text-center transition-all">
+                        Editar
+                    </button>
+
+                    <button
+                        onclick="window.alternarPausaProduto('${key}', ${pausado})"
+                        class="text-[10px] font-bold uppercase py-1.5 rounded-lg text-center border transition-all ${
+                            pausado
+                                ? 'bg-emerald-950/20 text-emerald-400 border-emerald-900'
+                                : 'bg-amber-950/20 text-amber-400 border-amber-900'
+                        }">
+
+                        ${pausado ? 'Ativar' : 'Pausar'}
+
+                    </button>
+
+                </div>
+
+            </div>
+        `;
+
+    });
+
+    grid.innerHTML = html;
+
+    console.log(
+        '📦 Produtos renderizados:',
+        listaProdutos.length
+    );
+};
+    // ==========================================================
+    // ABRIR MODAL
+    // ==========================================================
+window.abrirModalProduto = function() {
+
+    var modal =
+        document.getElementById('modalFormProduto');
+
+    if (!modal) {
+        console.warn(
+            "modalFormProduto não encontrado"
+        );
+        return;
+    }
+
+    modal.classList.remove('hidden');
+
+    var titulo =
+        document.getElementById(
+            'modalFormProdutoTitulo'
+        );
+
+    if (titulo) {
+        titulo.innerText =
+            'Cadastrar Novo Produto';
+    }
+
+    var form =
+        document.getElementById(
+            'formProdutoReal'
+        );
+
+    if (form) {
+        form.reset();
+    }
+
+    [
+        'prodId',
+        'prodNome',
+        'prodSku',
+        'prodCategoria',
+        'prodSubcategoria',
+        'prodPeso',
+        'prodPreco',
+        'prodPrecoPromocional',
+        'prodDescricao',
+        'prodEstoque',
+        'prodGalvanica',
+        'prodUrlImagem'
+    ].forEach(function(idCampo) {
+
+        var campo =
+            document.getElementById(idCampo);
+
+        if (campo) {
+            campo.value = '';
+        }
+
+    });
+
+    var preview =
+        document.getElementById(
+            'previewProduto'
+        );
+
+    if (preview) {
+        preview.src =
+            'https://via.placeholder.com/400x400?text=Produto';
+    }
+};
+
+window.fecharModalProduto = function() {
+
+    var modal =
+        document.getElementById(
+            'modalFormProduto'
+        );
+
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+};
+
+    // ==========================================================
+    // EDITAR
+    // ==========================================================
+window.editarProdutoItem = function(id) {
+
+    var prod = (window.todosProdutosLocal || {})[id];
+
+    if (!prod) {
+        alert("Produto não localizado.");
+        return;
+    }
+
+    window.abrirModalProduto();
+
+    var titulo = document.getElementById('modalFormProdutoTitulo');
+    if (titulo) {
+        titulo.innerText = 'Editar Produto';
+    }
+
+    function preencher(campo, valor) {
+        var el = document.getElementById(campo);
+        if (el) {
+            el.value = valor ?? '';
+        }
+    }
+
+    preencher('prodId', id);
+
+    preencher('prodNome',
+        prod.name ||
+        prod.nome
+    );
+
+    preencher('prodSku',
+        prod.sku
+    );
+
+    preencher('prodCategoria',
+        prod.category ||
+        prod.categoria
+    );
+
+    preencher('prodSubcategoria',
+        prod.subcategory ||
+        prod.subcategoria
+    );
+
+    preencher('prodPeso',
+        prod.weight ||
+        prod.peso
+    );
+
+    preencher('prodPreco',
+        prod.price ??
+        prod.precoFinal ??
+        prod.preco
+    );
+
+    preencher('prodPrecoPromocional',
+        prod.precoPromo ??
+        prod.promotionalPrice ??
+        ''
+    );
+
+    preencher('prodGalvanica',
+        prod.galvanica
+    );
+
+    preencher('prodEstoque',
+        prod.stock ??
+        prod.estoque ??
+        0
+    );
+
+    preencher('prodDescricao',
+        prod.description ||
+        prod.descricao
+    );
+
+    preencher('prodUrlImagem',
+        prod.image ||
+        prod.imagem
+    );
+
+    var imgPreview =
+        document.getElementById('previewProduto');
+
+    if (imgPreview) {
+
+        var img =
+            prod.image ||
+            prod.imagem ||
+            '';
+
+        imgPreview.src =
+            window.resolverUrlImagem(img);
+
+        imgPreview.onerror = function() {
+
+            this.src =
+                'https://via.placeholder.com/400x400?text=Sem+Imagem';
+
         };
     }
+
+    console.log(
+        "📝 Produto carregado para edição:",
+        id,
+        prod
+    );
+};
+
+    // ==========================================================
+    // SALVAR
+    // ==========================================================
+window.salvarProdutoFirebase = function() {
+
+    if (!window.db) {
+        alert("Firebase indisponível.");
+        return;
+    }
+
+    var id = document.getElementById('prodId')?.value || '';
+
+    var name = document.getElementById('prodNome')?.value.trim() || '';
+    var sku = document.getElementById('prodSku')?.value.trim() || '';
+    var category = document.getElementById('prodCategoria')?.value.trim() || '';
+    var weight = document.getElementById('prodPeso')?.value.trim() || '';
+    var image = document.getElementById('prodUrlImagem')?.value.trim() || '';
+
+    var price = parseFloat(
+        document.getElementById('prodPreco')?.value || 0
+    );
+
+    if (!name) {
+        alert("⚠️ Informe o nome do produto.");
+        return;
+    }
+
+    var dados = {
+        id: id || null,
+        name: name,
+        sku: sku,
+        category: category,
+        weight: weight,
+        peso: weight,
+        image: image,
+        price: price,
+        precoFinal: price,
+        updatedAt: Date.now()
+    };
+
+    var operacao;
+
+    if (id) {
+
+        operacao = window.db
+            .ref('abella/products/' + id)
+            .update(dados);
+
+    } else {
+
+        dados.createdAt = Date.now();
+        dados.paused = false;
+
+        operacao = window.db
+            .ref('abella/products')
+            .push(dados);
+    }
+
+    operacao
+        .then(function() {
+
+            window.fecharModalProduto();
+
+            if (typeof window.carregarBlocoProdutos === 'function') {
+                window.carregarBlocoProdutos(true);
+            }
+
+            console.log(
+                "✅ Produto salvo:",
+                name
+            );
+
+        })
+        .catch(function(error) {
+
+            console.error(
+                "Erro ao salvar produto:",
+                error
+            );
+
+            alert(
+                "Erro ao salvar produto:\n" +
+                error.message
+            );
+        });
+};
+
+    // Alias compatível com HTML
+    window.salvarDadosProdutoDoForm =
+        window.salvarProdutoFirebase;
+
+    // ==========================================================
+    // PAUSAR / ATIVAR
+    // ==========================================================
+window.alternarPausaProduto = function(id, statusAtual) {
+
+    if (!window.db) {
+        alert("Firebase indisponível.");
+        return;
+    }
+
+    var novoStatus = !statusAtual;
+
+    window.db
+        .ref('abella/products/' + id)
+        .update({
+            paused: novoStatus,
+            updatedAt: Date.now()
+        })
+        .then(function() {
+
+            console.log(
+                "✅ Status atualizado:",
+                id,
+                novoStatus
+            );
+
+        })
+        .catch(function(error) {
+
+            console.error(
+                "Erro ao alterar status:",
+                error
+            );
+
+            alert(
+                "Falha ao atualizar produto:\n" +
+                error.message
+            );
+
+        });
+};
 
     // ----------------------------------------------------------------------
     // BINDS DO MÓDULO DE CATEGORIAS / DESCONTOS

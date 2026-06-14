@@ -486,28 +486,32 @@ function formatarPeso(valor) {
 
 const carrinhoService = {
 
-    obterItens() {
+    obterItens(){
 
-        try {
+        try{
 
             return JSON.parse(
-                localStorage.getItem('abella_carrinho') ||
-                localStorage.getItem('carrinho') ||
+                localStorage.getItem('abella_carrinho')
+                ||
+                localStorage.getItem('carrinho')
+                ||
                 '[]'
             );
 
-        } catch (e) {
-
-            console.error(
-                'Erro ao ler carrinho:',
-                e
-            );
+        }catch(e){
 
             return [];
 
         }
-
     },
+
+    limpar(){
+
+        localStorage.removeItem('abella_carrinho');
+        localStorage.removeItem('carrinho');
+
+    }
+};
 
     limpar() {
 
@@ -1260,9 +1264,9 @@ Cidade: ${novoPedido.cidade}
 Local de Entrega: ${novoPedido.entrega.local}
 
 Total: ${money.formatar(novoPedido.total)}
-Pagamento: ${t.pagamento}
+Pagamento: ${t.pagamento}`;
 
-Obrigado por comprar na Abella Joias!`;
+Fico no aguardo do link para pagamento e prazo de entrega!`;
 
 window.location.href =
     `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(mensagem)}`;

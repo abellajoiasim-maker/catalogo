@@ -742,185 +742,169 @@ CONFIG.pedidoMinimo = parseFloat(
 
 function construirTextoRomaneio() {
 
-```
-const t = calcularTotais();
+    const t = calcularTotais();
 
-const subtotal =
-    Number(t.subtotal || 0);
+    const subtotal =
+        Number(t.subtotal || 0);
 
-const descontoPromocional =
-    Number(t.descontoPromocional || 0);
+    const descontoPromocional =
+        Number(t.descontoPromocional || 0);
 
-const descontoPix =
-    Number(t.desconto || 0);
+    const descontoPix =
+        Number(t.desconto || 0);
 
-const economiaTotal =
-    descontoPromocional +
-    descontoPix;
+    const economiaTotal =
+        descontoPromocional +
+        descontoPix;
 
-const nome =
-    document.getElementById('cli-nome')?.value ||
-    'Não informado';
+    const nome =
+        document.getElementById('cli-nome')?.value ||
+        'Não informado';
 
-const whats =
-    document.getElementById('cli-whats')?.value ||
-    'Não informado';
+    const whats =
+        document.getElementById('cli-whats')?.value ||
+        'Não informado';
 
-const cidadeCliente =
-    document.getElementById('cli-cidade')?.value ||
-    'Não informado';
+    const cidadeCliente =
+        document.getElementById('cli-cidade')?.value ||
+        'Não informado';
 
-const localEntrega =
-    document.getElementById('ent-local')?.value ||
-    '';
+    const localEntrega =
+        document.getElementById('ent-local')?.value ||
+        '';
 
-const rua =
-    document.getElementById('ent-rua')?.value ||
-    '';
+    const rua =
+        document.getElementById('ent-rua')?.value ||
+        '';
 
-const numero =
-    document.getElementById('ent-numero')?.value ||
-    '';
+    const numero =
+        document.getElementById('ent-numero')?.value ||
+        '';
 
-const bairro =
-    document.getElementById('ent-bairro')?.value ||
-    '';
+    const bairro =
+        document.getElementById('ent-bairro')?.value ||
+        '';
 
-const cidadeEntrega =
-    document.getElementById('ent-cidade')?.value ||
-    '';
+    const cidadeEntrega =
+        document.getElementById('ent-cidade')?.value ||
+        '';
 
-const obs =
-    document.getElementById('obs-pedido')?.value ||
-    'Sem observações';
+    const obs =
+        document.getElementById('obs-pedido')?.value ||
+        'Sem observações';
 
-const pagamento =
-    t.pagamento || 'PIX';
+    const pagamento =
+        t.pagamento || 'PIX';
 
-const subtotal =
-    Number(t.subtotal || 0);
+    let texto = '';
 
-const descontoPromocional =
-    Number(t.descontoPromocional || 0);
+    texto += 'ABELLA JOIAS\n';
+    texto += 'ROMANEIO PREMIUM\n';
+    texto += '====================================\n\n';
 
-const descontoPix =
-    Number(t.desconto || 0);
+    texto += `DATA: ${new Date().toLocaleString('pt-BR')}\n\n`;
 
-const economiaTotal =
-    descontoPromocional +
-    descontoPix;
+    texto += 'DADOS DO CLIENTE\n';
+    texto += '------------------------------------\n';
 
-let texto = '';
+    texto += `CLIENTE: ${nome}\n`;
+    texto += `WHATSAPP: ${whats}\n`;
+    texto += `CIDADE: ${cidadeCliente}\n\n`;
 
-texto += 'ABELLA JOIAS\n';
-texto += 'ROMANEIO PREMIUM\n';
-texto += '====================================\n\n';
+    texto += 'ENTREGA\n';
+    texto += '------------------------------------\n';
 
-texto += `DATA: ${new Date().toLocaleString('pt-BR')}\n\n`;
+    texto += `LOCAL: ${localEntrega}\n`;
+    texto += `ENDEREÇO: ${rua}, ${numero}\n`;
+    texto += `BAIRRO: ${bairro}\n`;
+    texto += `CIDADE: ${cidadeEntrega}\n\n`;
 
-texto += 'DADOS DO CLIENTE\n';
-texto += '------------------------------------\n';
+    texto += 'ITENS DO PEDIDO\n';
+    texto += '------------------------------------\n';
 
-texto += `CLIENTE: ${nome}\n`;
-texto += `WHATSAPP: ${whats}\n`;
-texto += `CIDADE: ${cidadeCliente}\n\n`;
+    itensCarrinho.forEach(item => {
 
-texto += 'ENTREGA\n';
-texto += '------------------------------------\n';
+        const qtd =
+            Number(
+                item.quantidade ||
+                item.qtd ||
+                1
+            );
 
-texto += `LOCAL: ${localEntrega}\n`;
-texto += `ENDEREÇO: ${rua}, ${numero}\n`;
-texto += `BAIRRO: ${bairro}\n`;
-texto += `CIDADE: ${cidadeEntrega}\n\n`;
+        const preco =
+            Number(
+                item.precoFinal ??
+                item.price ??
+                item.preco ??
+                item.precoUnitario ??
+                0
+            );
 
-texto += 'ITENS DO PEDIDO\n';
-texto += '------------------------------------\n';
+        const nomeItem =
+            item.name ||
+            item.nome ||
+            'Produto';
 
-itensCarrinho.forEach(item => {
+        texto +=
+            `${qtd}x ${nomeItem} - ${money.formatar(preco * qtd)}\n`;
 
-    const qtd =
-        Number(
-            item.quantidade ||
-            item.qtd ||
-            1
-        );
+    });
 
-    const preco =
-        Number(
-            item.precoFinal ??
-            item.price ??
-            item.preco ??
-            item.precoUnitario ??
-            0
-        );
+    texto += '\n';
 
-    const nomeItem =
-        item.name ||
-        item.nome ||
-        'Produto';
+    texto += 'RESUMO FINANCEIRO\n';
+    texto += '====================================\n';
 
-    texto +=
-        `${qtd}x ${nomeItem} - ${money.formatar(preco * qtd)}\n`;
-});
+    texto += `TOTAL DE PEÇAS: ${t.qtd}\n`;
+    texto += `PESO TOTAL: ${formatarPeso(t.peso)}\n`;
 
-texto += '\n';
+    texto += '------------------------------------\n';
 
-texto += 'RESUMO FINANCEIRO\n';
-texto += '====================================\n';
+    texto += `VALOR BRUTO DOS PRODUTOS: ${money.formatar(subtotal)}\n`;
 
-texto += `TOTAL DE PEÇAS: ${t.qtd}\n`;
-texto += `PESO TOTAL: ${formatarPeso(t.peso)}\n`;
+    if (descontoPromocional > 0) {
 
-texto += '------------------------------------\n';
+        texto +=
+            `DESCONTOS PROMOCIONAIS: -${money.formatar(descontoPromocional)}\n`;
 
-texto += `VALOR BRUTO DOS PRODUTOS: ${money.formatar(subtotal)}\n`;
+    }
 
-if (descontoPromocional > 0) {
+    if (descontoPix > 0) {
 
-    texto +=
-        `DESCONTOS PROMOCIONAIS: -${money.formatar(descontoPromocional)}\n`;
-}
+        texto +=
+            `DESCONTO PIX (${CONFIG.descontoPix || 0}%): -${money.formatar(descontoPix)}\n`;
 
-if (descontoPix > 0) {
+    }
 
-    texto +=
-        `DESCONTO PIX (${CONFIG.descontoPix || 0}%): -${money.formatar(descontoPix)}\n`;
-}
+    if (economiaTotal > 0) {
 
-if (economiaTotal > 0) {
+        texto +=
+            `ECONOMIA TOTAL OBTIDA: ${money.formatar(economiaTotal)}\n`;
+
+    }
+
+    texto += '------------------------------------\n';
 
     texto +=
-        `ECONOMIA TOTAL OBTIDA: ${money.formatar(economiaTotal)}\n`;
+        `VALOR FINAL DO PEDIDO: ${money.formatar(t.total)}\n`;
+
+    texto +=
+        `FORMA DE PAGAMENTO: ${pagamento}\n\n`;
+
+    texto += 'OBSERVAÇÕES\n';
+    texto += '====================================\n';
+
+    texto += `${obs}\n`;
+
+    texto += '\n====================================\n';
+    texto += 'ABELLA JOIAS PREMIUM\n';
+    texto += 'Catálogo Oficial de Revenda\n';
+    texto += `${new Date().toLocaleString('pt-BR')}\n`;
+
+    return texto;
 }
-
-texto += '------------------------------------\n';
-
-texto +=
-    `VALOR FINAL DO PEDIDO: ${money.formatar(t.total)}\n`;
-
-texto +=
-    `FORMA DE PAGAMENTO: ${pagamento}\n`;
-
-texto += '\n';
-
-texto += 'OBSERVAÇÕES\n';
-texto += '====================================\n';
-
-texto += `${obs}\n`;
-
-texto += '\n====================================\n';
-texto += 'ABELLA JOIAS PREMIUM\n';
-texto += 'Catálogo Oficial de Revenda\n';
-texto += `${new Date().toLocaleString('pt-BR')}\n`;
-
-return texto;
-```
-
-}
-
 function visualizarRomaneio() {
 
-```
 const t = calcularTotais();
 
 const cliente =
@@ -1074,7 +1058,6 @@ document.getElementById(
 document.getElementById(
     'modal-romaneio'
 ).classList.remove('hidden');
-```
 
 }
 

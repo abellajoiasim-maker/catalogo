@@ -431,10 +431,15 @@
         </div>
     </div>
 
-    <script src="js/firebase/firebase-config.js"></script>
+   <script src="js/firebase/firebase-config.js"></script>
 
-    <script>
-        const db = finaliza();
+<script src="js/utils/money.js"></script>
+<script src="js/utils/peso.js"></script>
+<script src="js/utils/storage.js"></script>
+<script src="js/services/carrinhoService.js"></script>
+
+<script>
+        const db = firebase.database();
 
         const CONFIG = {
     descontoPix: 5,
@@ -502,61 +507,62 @@ function formatarPeso(valor) {
             }
         }
 
-      document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener(
+    'DOMContentLoaded',
+    async () => {
 
-    await carregarConfiguracoes();
+        try {
 
-    if (
-        typeof carrinhoService === 'undefined'
-    ) {
+            await carregarConfiguracoes();
 
-        console.error(
-            '[CHECKOUT] carrinhoService não carregado.'
-        );
+            itensCarrinho =
+                carrinhoService.obterItens();
 
-        alert(
-            'Erro ao carregar o carrinho.'
-        );
+            if (
+                !Array.isArray(
+                    itensCarrinho
+                )
+            ) {
 
-        window.location.href =
-            'carrinho.html';
+                itensCarrinho = [];
 
-        return;
+            }
+
+            console.log(
+                '[CHECKOUT]',
+                itensCarrinho
+            );
+
+            if (
+                itensCarrinho.length === 0
+            ) {
+
+                alert(
+                    'Seu carrinho está vazio.'
+                );
+
+                window.location.href =
+                    'index.html';
+
+                return;
+
+            }
+
+            renderizarItens();
+
+            atualizarResumo();
+
+        } catch (erro) {
+
+            console.error(
+                '[CHECKOUT ERRO]',
+                erro
+            );
+
+        }
+
     }
-
-    itensCarrinho =
-        carrinhoService.obterItens() || [];
-
-    console.log(
-        '[CHECKOUT] itens carregados:',
-        itensCarrinho
-    );
-
-    if (
-        !Array.isArray(itensCarrinho)
-    ) {
-        itensCarrinho = [];
-    }
-
-    if (
-        itensCarrinho.length === 0
-    ) {
-
-        alert(
-            'Seu carrinho está vazio.'
-        );
-
-        window.location.href =
-            'carrinho.html';
-
-        return;
-    }
-
-    renderizarItens();
-
-    atualizarResumo();
-
-});
+);
 
         async function carregarConfiguracoes(){
             try{

@@ -125,35 +125,117 @@
                             <p class="text-[10px] text-zinc-500 mt-1 uppercase tracking-wide">Cole o link da imagem da sua logomarca para renderização nos catálogos e romaneios gerados.</p>
                         </div>
                     </div>
-                    <div class="glass rounded-2xl p-4 space-y-2">
-    <label for="cfg-bannerHeroUrl" class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold">URL do Banner Principal (Hero)</label>
-    <input type="text" id="cfg-bannerHeroUrl" placeholder="gs://... ou https://..." class="w-full h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm focus:outline-none focus:border-[#caa85c]">
-</div>
-<div class="bg-zinc-900 rounded-xl p-4">
-    <label class="block text-sm font-bold mb-2">
-        Banner Subcategorias
-    </label>
+<div class="glass rounded-2xl p-4 space-y-4">
 
-    <input
-        type="text"
-        id="bannerSubcategoria"
-        class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2"
-        placeholder="URL do banner"
-    >
-</div>
+    <!-- LOGO -->
+    <div>
+        <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">
+            Logo da Empresa (Formato 1:1)
+        </label>
 
-<div class="bg-zinc-900 rounded-xl p-4">
-    <label class="block text-sm font-bold mb-2">
-        Banner Produtos
-    </label>
+        <div class="flex items-center gap-4">
+            <div class="w-24 h-24 bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden flex items-center justify-center">
+                <img
+                    id="previewLogoQuadrada"
+                    src=""
+                    class="w-full h-full object-contain hidden"
+                >
+                <span id="previewLogoTexto" class="text-[10px] text-zinc-500">
+                    1:1
+                </span>
+            </div>
 
-    <input
-        type="text"
-        id="bannerProduto"
-        class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2"
-        placeholder="URL do banner"
-    >
-</div>
+            <input
+                type="text"
+                id="cfg-logoUrl"
+                class="flex-1 h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm"
+                placeholder="URL da logo"
+                oninput="
+                    document.getElementById('previewLogoQuadrada').src=this.value;
+                    document.getElementById('previewLogoQuadrada').classList.remove('hidden');
+                    document.getElementById('previewLogoTexto').classList.add('hidden');
+                "
+            >
+        </div>
+    </div>
+
+    <!-- HERO -->
+    <div>
+        <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">
+            Banner Principal (16:9)
+        </label>
+
+        <div class="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden mb-3">
+            <img
+                id="previewHero"
+                src=""
+                class="w-full h-full object-cover hidden"
+            >
+        </div>
+
+        <input
+            type="text"
+            id="cfg-bannerHeroUrl"
+            class="w-full h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm"
+            placeholder="gs://... ou https://..."
+            oninput="
+                document.getElementById('previewHero').src=this.value;
+                document.getElementById('previewHero').classList.remove('hidden');
+            "
+        >
+    </div>
+
+    <!-- SUBCATEGORIAS -->
+    <div>
+        <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">
+            Banner Subcategorias (16:9)
+        </label>
+
+        <div class="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden mb-3">
+            <img
+                id="previewSubcategoria"
+                src=""
+                class="w-full h-full object-cover hidden"
+            >
+        </div>
+
+        <input
+            type="text"
+            id="bannerSubcategoria"
+            class="w-full h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm"
+            placeholder="URL do banner"
+            oninput="
+                document.getElementById('previewSubcategoria').src=this.value;
+                document.getElementById('previewSubcategoria').classList.remove('hidden');
+            "
+        >
+    </div>
+
+    <!-- PRODUTOS -->
+    <div>
+        <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">
+            Banner Produtos (16:9)
+        </label>
+
+        <div class="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden mb-3">
+            <img
+                id="previewProduto"
+                src=""
+                class="w-full h-full object-cover hidden"
+            >
+        </div>
+
+        <input
+            type="text"
+            id="bannerProduto"
+            class="w-full h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm"
+            placeholder="URL do banner"
+            oninput="
+                document.getElementById('previewProduto').src=this.value;
+                document.getElementById('previewProduto').classList.remove('hidden');
+            "
+        >
+    </div>
 
                     <div class="md:col-span-2">
                         <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">WhatsApp Oficial de Vendas (Com DDD e sem símbolos) *</label>
@@ -342,8 +424,29 @@ document.getElementById('bannerSubcategoria').value =
 // Banner da página de produtos
 document.getElementById('bannerProduto').value =
     data.bannerProduto ??
-    data.banner_produto ??
-    '';
+    data.banner_produto ?? '';
+
+                if(data.logoUrl){
+    previewLogoQuadrada.src = data.logoUrl;
+    previewLogoQuadrada.classList.remove('hidden');
+    previewLogoTexto.classList.add('hidden');
+}
+
+if(data.bannerHeroUrl){
+    previewHero.src = data.bannerHeroUrl;
+    previewHero.classList.remove('hidden');
+}
+
+if(data.bannerSubcategoria){
+    previewSubcategoria.src = data.bannerSubcategoria;
+    previewSubcategoria.classList.remove('hidden');
+}
+
+if(data.bannerProduto){
+    previewProduto.src = data.bannerProduto;
+    previewProduto.classList.remove('hidden');
+}
+                
                 document.getElementById('cfg-pedidoMinimo').value = data.pedidoMinimo ?? 300;
                 document.getElementById('cfg-freteFixo').value = data.freteFixo ?? 15;
                 document.getElementById('cfg-freteGratisAlvo').value = data.freteGratisAlvo ?? 100;

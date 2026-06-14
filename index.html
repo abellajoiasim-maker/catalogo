@@ -442,64 +442,6 @@
     <script>
         const db = firebase.database();
         
-async function carregarBannerHome() {
-
-    try {
-
-        const snap =
-            await db.ref('abella/settings')
-            .once('value');
-
-        if(!snap.exists()) return;
-
-        const cfg =
-            snap.val() || {};
-
-        const hero =
-            document.getElementById(
-                'heroBannerImg'
-            );
-
-        if(
-            hero &&
-            cfg.heroBanner
-        ){
-
-            hero.src =
-                resolverImagemFirebase(
-                    cfg.heroBanner
-                );
-
-        }
-
-    } catch(e){
-
-        console.error(
-            'Erro banner home:',
-            e
-        );
-
-    }
-
-}
-
-        // Banner Principal Home
-
-if (
-    cfg.heroBanner &&
-    document.getElementById(
-        'heroBannerImg'
-    )
-) {
-
-    document.getElementById(
-        'heroBannerImg'
-    ).src =
-        resolverImagemFirebase(
-            cfg.heroBanner
-        );
-
-}
 
         // DISPARADOR E CONTROLADOR DA FILA DO GRID 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -507,8 +449,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const grid = document.getElementById('grid-categorias');
     const loading = document.getElementById('loading');
     const noResult = document.getElementById('no-result');
-
-    await carregarBannerHome();
 
     try {
                 // Sincroniza parâmetros operacionais e categorias em paralelo absoluto
@@ -534,6 +474,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                             };
                         }
                     }
+
+                    // Banner Principal (Hero)
+if (cfg.heroBannerUrl) {
+
+    const hero =
+        document.getElementById(
+            'heroBannerImg'
+        );
+
+    if (hero) {
+
+        hero.src =
+            typeof resolverImagemFirebase !== 'undefined'
+                ? resolverImagemFirebase(
+                    cfg.heroBannerUrl
+                )
+                : cfg.heroBannerUrl;
+
+    }
+
+}
 
                     // Textos dinâmicos estruturados
                     if (cfg.name) document.getElementById('nome').innerText = cfg.name;

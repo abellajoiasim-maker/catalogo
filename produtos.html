@@ -655,23 +655,33 @@ fallback.classList.add('hidden');
                 document.getElementById('totalProdutos').innerText = produtos.length;
                 produtosFiltrados = [...produtos];
 
-let heroUrl;
+const cfgSnap = await firebase
+    .database()
+    .ref(window.getAbellaPath('settings'))
+    .once('value');
 
-if(subcategoria){
+const cfg = cfgSnap.val() || {};
+
+let heroUrl = '';
+
+if (subcategoria) {
+
     heroUrl =
-    obterImagemSubcategoria(
-        subcategoria
-    );
-}else{
+        cfg.bannerSubcategoria ||
+        cfg.banner_subcategoria ||
+        '';
+
+} else {
+
     heroUrl =
-    obterImagemCategoria(
-        categoria
-    );
+        cfg.bannerHeroUrl ||
+        '';
 }
 
 document.getElementById(
     'heroImagem'
-).src = heroUrl;
+).src =
+    resolverImagemFirebase(heroUrl);
                 loading.classList.add('hidden');
                 renderizarProdutos();
             }catch(err){

@@ -903,18 +903,28 @@ function construirTextoRomaneio() {
 
     return texto;
 }
+    
 function visualizarRomaneio() {
 
-const t = calcularTotais();
+    const itensCarrinho =
+        carrinhoService.obterItens() || [];
 
-const cliente =
-    document.getElementById('cli-nome')?.value || 'N/I';
+    console.log(
+        '[ROMANEIO] Itens:',
+        itensCarrinho
+    );
 
-const whats =
-    document.getElementById('cli-whats')?.value || 'N/I';
+    const t =
+        calcularTotais();
 
-const cidade =
-    document.getElementById('cli-cidade')?.value || 'N/I';
+    const cliente =
+        document.getElementById('cli-nome')?.value || 'N/I';
+
+    const whats =
+        document.getElementById('cli-whats')?.value || 'N/I';
+
+    const cidade =
+        document.getElementById('cli-cidade')?.value || 'N/I';
 
 const pagamento =
     t.pagamento || 'PIX';
@@ -1000,35 +1010,56 @@ let html = `
 </div>
 `;
 
-itensCarrinho.forEach(item => {
-
-    const qtd =
-        Number(item.quantidade || item.qtd || 1);
-
-    const preco =
-        Number(
-            item.precoFinal ??
-            item.price ??
-            item.preco ??
-            0
-        );
+if (!itensCarrinho.length) {
 
     html += `
-    <div style="
-        display:flex;
-        justify-content:space-between;
-        margin-bottom:6px;
-    ">
-        <span>
-            ${qtd}x ${(item.name || item.nome || 'PEÇA')}
-        </span>
-
-        <span>
-            ${money.formatar(preco * qtd)}
-        </span>
-    </div>
+        <div style="
+            color:#dc2626;
+            padding:10px;
+            border:1px solid #dc2626;
+            margin-top:10px;
+        ">
+            Nenhum item encontrado no carrinho.
+        </div>
     `;
-});
+
+} else {
+
+    itensCarrinho.forEach(item => {
+
+        const qtd =
+            Number(
+                item.quantidade ||
+                item.qtd ||
+                1
+            );
+
+        const preco =
+            Number(
+                item.precoFinal ??
+                item.price ??
+                item.preco ??
+                0
+            );
+
+        html += `
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                margin-bottom:6px;
+            ">
+                <span>
+                    ${qtd}x ${item.name || item.nome || 'Produto'}
+                </span>
+
+                <span>
+                    ${money.formatar(preco * qtd)}
+                </span>
+            </div>
+        `;
+    });
+
+}
 
 html += `
 

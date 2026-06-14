@@ -447,31 +447,59 @@ async function carregarBannerHome() {
     try {
 
         const snap =
-            await db.ref('abella/categories')
+            await db.ref('abella/settings')
             .once('value');
 
         if(!snap.exists()) return;
 
-        const categorias =
-            Object.values(snap.val());
+        const cfg =
+            snap.val() || {};
 
-        if(!categorias.length) return;
+        const hero =
+            document.getElementById(
+                'heroBannerImg'
+            );
 
-        const primeira =
-            categorias[0];
+        if(
+            hero &&
+            cfg.heroBanner
+        ){
 
-        const slug =
-            primeira.slug;
+            hero.src =
+                resolverImagemFirebase(
+                    cfg.heroBanner
+                );
 
-        document
-            .getElementById('heroBannerImg')
-            .src =
-            obterImagemCategoria(slug);
+        }
 
     } catch(e){
-        console.error(e);
+
+        console.error(
+            'Erro banner home:',
+            e
+        );
+
     }
-    }
+
+}
+
+        // Banner Principal Home
+
+if (
+    cfg.heroBanner &&
+    document.getElementById(
+        'heroBannerImg'
+    )
+) {
+
+    document.getElementById(
+        'heroBannerImg'
+    ).src =
+        resolverImagemFirebase(
+            cfg.heroBanner
+        );
+
+}
 
         // DISPARADOR E CONTROLADOR DA FILA DO GRID 
 document.addEventListener('DOMContentLoaded', async () => {

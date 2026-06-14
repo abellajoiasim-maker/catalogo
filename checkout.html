@@ -740,448 +740,344 @@ CONFIG.pedidoMinimo = parseFloat(
             }
         }
 
-function construirTextoRomaneio(){
+function construirTextoRomaneio() {
 
-    const t =
-        calcularTotais();
+```
+const t = calcularTotais();
 
-    const nome =
-        document.getElementById('cli-nome').value ||
-        'Não informado';
+const subtotal =
+    Number(t.subtotal || 0);
 
-    const whats =
-        document.getElementById('cli-whats').value ||
-        'Não informado';
+const descontoPromocional =
+    Number(t.descontoPromocional || 0);
 
-    const cidadeCliente =
-        document.getElementById('cli-cidade').value ||
-        'Não informado';
+const descontoPix =
+    Number(t.desconto || 0);
 
-    const localEntrega =
-        document.getElementById('ent-local').value ||
-        '';
+const economiaTotal =
+    descontoPromocional +
+    descontoPix;
 
-    const rua =
-        document.getElementById('ent-rua').value ||
-        '';
+const nome =
+    document.getElementById('cli-nome')?.value ||
+    'Não informado';
 
-    const numero =
-        document.getElementById('ent-numero').value ||
-        '';
+const whats =
+    document.getElementById('cli-whats')?.value ||
+    'Não informado';
 
-    const bairro =
-        document.getElementById('ent-bairro').value ||
-        '';
+const cidadeCliente =
+    document.getElementById('cli-cidade')?.value ||
+    'Não informado';
 
-    const cidadeEntrega =
-        document.getElementById('ent-cidade').value ||
-        '';
+const localEntrega =
+    document.getElementById('ent-local')?.value ||
+    '';
 
-    const obs =
-        document.getElementById('obs-pedido').value ||
-        'Sem observações';
+const rua =
+    document.getElementById('ent-rua')?.value ||
+    '';
 
-    let texto = '';
+const numero =
+    document.getElementById('ent-numero')?.value ||
+    '';
 
-    texto += 'ABELLA JOIAS\n';
-    texto += 'ROMANEIO DE PEDIDO\n';
-    texto += '====================================\n\n';
+const bairro =
+    document.getElementById('ent-bairro')?.value ||
+    '';
 
-    texto += `CLIENTE: ${nome}\n`;
-    texto += `WHATSAPP: ${whats}\n`;
-    texto += `CIDADE DO CLIENTE: ${cidadeCliente}\n\n`;
+const cidadeEntrega =
+    document.getElementById('ent-cidade')?.value ||
+    '';
 
-    texto += 'LOCAL DE ENTREGA\n';
-    texto += '------------------------------------\n';
-    texto += `LOCAL: ${localEntrega}\n`;
-    texto += `ENDEREÇO: ${rua}, ${numero}\n`;
-    texto += `BAIRRO: ${bairro}\n`;
-    texto += `CIDADE: ${cidadeEntrega}\n\n`;
+const obs =
+    document.getElementById('obs-pedido')?.value ||
+    'Sem observações';
 
-    texto += 'ITENS DO PEDIDO\n';
-    texto += '------------------------------------\n';
+const pagamento =
+    t.pagamento || 'PIX';
 
-    itensCarrinho.forEach(item => {
+const subtotal =
+    Number(t.subtotal || 0);
 
-        const qtd =
-            parseInt(
-                item.quantidade ||
-                item.qtd ||
-                1
-            );
+const descontoPromocional =
+    Number(t.descontoPromocional || 0);
 
-        const preco =
-            parseFloat(
-                item.precoFinal ??
-                item.price ??
-                item.preco ??
-                item.precoUnitario ??
-                0
-            );
+const descontoPix =
+    Number(t.desconto || 0);
 
-        const nomeItem =
-            item.name ||
-            item.nome ||
-            'Produto';
+const economiaTotal =
+    descontoPromocional +
+    descontoPix;
 
-        texto +=
-            `${qtd}x ${nomeItem} - ${money.formatar(preco * qtd)}\n`;
-    });
+let texto = '';
 
-    texto += '------------------------------------\n';
+texto += 'ABELLA JOIAS\n';
+texto += 'ROMANEIO PREMIUM\n';
+texto += '====================================\n\n';
 
-    texto += `TOTAL PEÇAS: ${t.qtd}\n`;
-    texto += `PESO TOTAL: ${formatarPeso(t.peso)}\n`;
-    texto += `SUBTOTAL: ${money.formatar(t.subtotal)}\n`;
+texto += `DATA: ${new Date().toLocaleString('pt-BR')}\n\n`;
 
-    if (t.desconto > 0) {
+texto += 'DADOS DO CLIENTE\n';
+texto += '------------------------------------\n';
 
-        texto +=
-            `DESCONTO PIX (${CONFIG.descontoPix}%): ${money.formatar(t.desconto)}\n`;
-    }
+texto += `CLIENTE: ${nome}\n`;
+texto += `WHATSAPP: ${whats}\n`;
+texto += `CIDADE: ${cidadeCliente}\n\n`;
 
-    texto += `TOTAL GERAL: ${money.formatar(t.total)}\n`;
-    texto += `FORMA DE PAGAMENTO: ${t.pagamento}\n\n`;
+texto += 'ENTREGA\n';
+texto += '------------------------------------\n';
 
-    texto += 'OBSERVAÇÕES\n';
-    texto += '------------------------------------\n';
-    texto += `${obs}\n`;
+texto += `LOCAL: ${localEntrega}\n`;
+texto += `ENDEREÇO: ${rua}, ${numero}\n`;
+texto += `BAIRRO: ${bairro}\n`;
+texto += `CIDADE: ${cidadeEntrega}\n\n`;
 
-    return texto;
-}
-       function visualizarRomaneio(){
+texto += 'ITENS DO PEDIDO\n';
+texto += '------------------------------------\n';
 
-    const t = calcularTotais();
+itensCarrinho.forEach(item => {
 
-    const cliente =
-        document.getElementById('cli-nome').value || 'N/I';
-
-    const whats =
-        document.getElementById('cli-whats').value || 'N/I';
-
-    const cidade =
-        document.getElementById('cli-cidade').value || 'N/I';
-
-    const pagamento =
-        document.querySelector(
-            'input[name="formaPagamento"]:checked'
-        )?.value || 'PIX';
-
-    let html = `
-
-    <div class="bg-white text-black rounded-xl p-6 font-mono text-sm">
-
-        <div class="text-center">
-
-            <div style="font-weight:bold">
-                ABELLA JOIAS - BRUTO
-            </div>
-
-            <div>
-                PEDIDO: PREVIEW
-            </div>
-
-            <div>
-                GUIA DE EXPEDIÇÃO / ROMANEIO
-            </div>
-
-            <hr>
-
-        </div>
-
-        <div style="margin-top:12px">
-
-            <div>
-                CLIENTE:
-                ${cliente.toUpperCase()}
-            </div>
-
-            <div>
-                WHATSAPP:
-                ${whats}
-            </div>
-
-            <div>
-                DESTINO:
-                ${cidade.toUpperCase()}
-            </div>
-
-            <div>
-                PAGAMENTO:
-                ${pagamento.toUpperCase()}
-            </div>
-
-        </div>
-
-        <hr style="margin:12px 0">
-
-        <div style="font-weight:bold">
-            ITENS DO PEDIDO
-        </div>
-
-    `;
-
-    itensCarrinho.forEach(item => {
-
-        const qtd =
+    const qtd =
+        Number(
             item.quantidade ||
             item.qtd ||
-            1;
+            1
+        );
 
-        const preco =
-            parseFloat(
-                item.precoFinal ??
-                item.price ??
-                item.preco ??
-                0
-            );
+    const preco =
+        Number(
+            item.precoFinal ??
+            item.price ??
+            item.preco ??
+            item.precoUnitario ??
+            0
+        );
 
-        html += `
-            <div style="
-                display:flex;
-                justify-content:space-between;
-                margin-top:6px;
-            ">
-                <span>
-                    ${qtd}x
-                    ${(item.name || item.nome || 'PEÇA')
-                        .toUpperCase()}
-                </span>
+    const nomeItem =
+        item.name ||
+        item.nome ||
+        'Produto';
 
-                <span>
-                    ${money.formatar(
-                        preco * qtd
-                    )}
-                </span>
-            </div>
-        `;
-    });
+    texto +=
+        `${qtd}x ${nomeItem} - ${money.formatar(preco * qtd)}\n`;
+});
+
+texto += '\n';
+
+texto += 'RESUMO FINANCEIRO\n';
+texto += '====================================\n';
+
+texto += `TOTAL DE PEÇAS: ${t.qtd}\n`;
+texto += `PESO TOTAL: ${formatarPeso(t.peso)}\n`;
+
+texto += '------------------------------------\n';
+
+texto += `VALOR BRUTO DOS PRODUTOS: ${money.formatar(subtotal)}\n`;
+
+if (descontoPromocional > 0) {
+
+    texto +=
+        `DESCONTOS PROMOCIONAIS: -${money.formatar(descontoPromocional)}\n`;
+}
+
+if (descontoPix > 0) {
+
+    texto +=
+        `DESCONTO PIX (${CONFIG.descontoPix || 0}%): -${money.formatar(descontoPix)}\n`;
+}
+
+if (economiaTotal > 0) {
+
+    texto +=
+        `ECONOMIA TOTAL OBTIDA: ${money.formatar(economiaTotal)}\n`;
+}
+
+texto += '------------------------------------\n';
+
+texto +=
+    `VALOR FINAL DO PEDIDO: ${money.formatar(t.total)}\n`;
+
+texto +=
+    `FORMA DE PAGAMENTO: ${pagamento}\n`;
+
+texto += '\n';
+
+texto += 'OBSERVAÇÕES\n';
+texto += '====================================\n';
+
+texto += `${obs}\n`;
+
+texto += '\n====================================\n';
+texto += 'ABELLA JOIAS PREMIUM\n';
+texto += 'Catálogo Oficial de Revenda\n';
+texto += `${new Date().toLocaleString('pt-BR')}\n`;
+
+return texto;
+```
+
+}
+
+function visualizarRomaneio() {
+
+```
+const t = calcularTotais();
+
+const cliente =
+    document.getElementById('cli-nome')?.value || 'N/I';
+
+const whats =
+    document.getElementById('cli-whats')?.value || 'N/I';
+
+const cidade =
+    document.getElementById('cli-cidade')?.value || 'N/I';
+
+const pagamento =
+    t.pagamento || 'PIX';
+
+const subtotal =
+    Number(t.subtotal || 0);
+
+const descontoPromocional =
+    Number(t.descontoPromocional || 0);
+
+const descontoPix =
+    Number(t.desconto || 0);
+
+const economiaTotal =
+    descontoPromocional +
+    descontoPix;
+
+let html = `
+
+<div style="text-align:center;margin-bottom:25px">
+
+    <img
+        src="${logoUrl}"
+        style="
+            width:100px;
+            height:100px;
+            object-fit:contain;
+            margin:auto;
+            margin-bottom:10px;
+        "
+    >
+
+    <div style="
+        font-size:22px;
+        font-weight:700;
+        letter-spacing:1px;
+    ">
+        ABELLA JOIAS
+    </div>
+
+    <div style="margin-top:5px">
+        ROMANEIO PREMIUM
+    </div>
+
+    <div style="margin-top:5px">
+        ${new Date().toLocaleString('pt-BR')}
+    </div>
+
+</div>
+
+<div>
+
+    <div><b>CLIENTE:</b> ${cliente}</div>
+    <div><b>WHATSAPP:</b> ${whats}</div>
+    <div><b>CIDADE:</b> ${cidade}</div>
+    <div><b>PAGAMENTO:</b> ${pagamento}</div>
+
+</div>
+
+<hr style="margin:15px 0">
+
+<div style="font-weight:bold;margin-bottom:10px">
+    ITENS DO PEDIDO
+</div>
+`;
+
+itensCarrinho.forEach(item => {
+
+    const qtd =
+        Number(item.quantidade || item.qtd || 1);
+
+    const preco =
+        Number(
+            item.precoFinal ??
+            item.price ??
+            item.preco ??
+            0
+        );
 
     html += `
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        margin-bottom:6px;
+    ">
+        <span>
+            ${qtd}x ${(item.name || item.nome || 'PEÇA')}
+        </span>
 
-        <hr style="margin:12px 0">
-
-        <div>
-            TOTAL PEÇAS:
-            ${t.qtd}
-        </div>
-
-        <div>
-            MASSA BRUTA:
-            ${formatarPeso(t.peso)}
-        </div>
-
-        <div style="
-            font-weight:bold;
-            margin-top:8px;
-        ">
-            VALOR FINAL:
-            ${money.formatar(t.total)}
-        </div>
-
+        <span>
+            ${money.formatar(preco * qtd)}
+        </span>
     </div>
     `;
+});
 
-    document.getElementById(
-        'conteudo-romaneio'
-    ).innerHTML = html;
+html += `
 
-    document.getElementById(
-        'modal-romaneio'
-    ).classList.remove('hidden');
+<hr style="margin:15px 0">
+
+<div><b>Total de Peças:</b> ${t.qtd}</div>
+<div><b>Peso Total:</b> ${formatarPeso(t.peso)}</div>
+
+<hr style="margin:15px 0">
+
+<div><b>Valor Bruto:</b> ${money.formatar(subtotal)}</div>
+
+${descontoPromocional > 0 ? `
+    <div style="color:#059669">
+        <b>Desconto Promocional:</b>
+        -${money.formatar(descontoPromocional)}
+    </div>
+` : ''}
+
+${descontoPix > 0 ? `
+    <div style="color:#059669">
+        <b>Desconto PIX:</b>
+        -${money.formatar(descontoPix)}
+    </div>
+` : ''}
+
+<div style="color:#059669">
+    <b>Economia Total:</b>
+    ${money.formatar(economiaTotal)}
+</div>
+
+<div style="
+    font-size:18px;
+    font-weight:700;
+    margin-top:12px;
+">
+    VALOR FINAL:
+    ${money.formatar(t.total)}
+</div>
+`;
+
+document.getElementById(
+    'conteudo-romaneio'
+).innerHTML = html;
+
+document.getElementById(
+    'modal-romaneio'
+).classList.remove('hidden');
+```
+
 }
 
-        function fecharModal(){
-            document.getElementById('modal-romaneio').classList.add('hidden');
-        }
-
-       function gerarPDF(imprimir = false){
-
-    const { jsPDF } = window.jspdf;
-
-    const doc =
-        new jsPDF({
-            unit:'mm',
-            format:[80,180]
-        });
-
-    const t =
-        calcularTotais();
-
-    doc.setFont(
-        'courier',
-        'bold'
-    );
-
-    doc.setFontSize(10);
-
-    doc.text(
-        'ABELLA JOIAS - BRUTO',
-        40,
-        10,
-        { align:'center' }
-    );
-
-    doc.setFontSize(9);
-
-    doc.text(
-        'PEDIDO: PREVIEW',
-        40,
-        14,
-        { align:'center' }
-    );
-
-    doc.setFontSize(8);
-
-    doc.text(
-        'GUIA DE EXPEDICAO / ROMANEIO',
-        40,
-        18,
-        { align:'center' }
-    );
-
-    doc.text(
-        '----------------------------------------',
-        40,
-        22,
-        { align:'center' }
-    );
-
-    let y = 28;
-
-    doc.setFont(
-        'courier',
-        'normal'
-    );
-
-    doc.text(
-        `CLIENTE: ${
-            document
-                .getElementById('cli-nome')
-                .value
-                .toUpperCase()
-                .substring(0,22)
-        }`,
-        5,
-        y
-    );
-
-    doc.text(
-        `WHATSAPP: ${
-            document.getElementById('cli-whats').value
-        }`,
-        5,
-        y + 4
-    );
-
-    doc.text(
-        `DESTINO: ${
-            document
-                .getElementById('cli-cidade')
-                .value
-                .toUpperCase()
-                .substring(0,22)
-        }`,
-        5,
-        y + 8
-    );
-
-    doc.text(
-        `PAGAMENTO: ${
-            t.pagamento.toUpperCase()
-        }`,
-        5,
-        y + 12
-    );
-
-    doc.text(
-        '----------------------------------------',
-        40,
-        y + 18,
-        { align:'center' }
-    );
-
-    y += 30;
-
-    itensCarrinho.forEach(item => {
-
-        const qtd =
-            item.quantidade ||
-            item.qtd ||
-            1;
-
-        const preco =
-            parseFloat(
-                item.precoFinal ??
-                item.price ??
-                item.preco ??
-                0
-            );
-
-        const nome =
-            (
-                item.name ||
-                item.nome ||
-                'PEÇA'
-            )
-            .toUpperCase()
-            .substring(0,16);
-
-        doc.text(
-            `${qtd}x ${nome} ${money.formatar(preco * qtd)}`,
-            5,
-            y
-        );
-
-        y += 5.5;
-    });
-
-    doc.text(
-        '----------------------------------------',
-        40,
-        y + 2,
-        { align:'center' }
-    );
-
-    doc.setFont(
-        'courier',
-        'bold'
-    );
-
-    doc.text(
-        `TOTAL PECAS : ${t.qtd}`,
-        5,
-        y + 8
-    );
-
-    doc.text(
-        `MASSA BRUTA : ${formatarPeso(t.peso)}`,
-        5,
-        y + 12
-    );
-
-    doc.text(
-        `VALOR FINAL : ${money.formatar(t.total)}`,
-        5,
-        y + 16
-    );
-
-    if(imprimir){
-
-        doc.autoPrint();
-
-        window.open(
-            doc.output('bloburl'),
-            '_blank'
-        );
-
-    }else{
-
-        doc.save(
-            `romaneio_abella_${Date.now()}.pdf`
-        );
-    }
-}
 async function finalizarPedido() {
 
     const btn =

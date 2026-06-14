@@ -1240,8 +1240,8 @@ async function finalizarPedido() {
             calcularTotais();
 
         if (
-            t.subtotal <
-            CONFIG.pedidoMinimo
+            Number(t.subtotal || 0) <
+            Number(CONFIG.pedidoMinimo || 0)
         ) {
 
             alert(
@@ -1268,6 +1268,36 @@ async function finalizarPedido() {
 
         const idPedidoNovo =
             `PED-${sufixo}`;
+
+        const itensCarrinho =
+            carrinhoService.obterItens() || [];
+
+        const totalPecas =
+            Number(
+                t.quantidade ??
+                t.totalPecas ??
+                itensCarrinho.reduce(
+                    (acc, item) =>
+                        acc +
+                        Number(
+                            item.quantidade || 0
+                        ),
+                    0
+                )
+            );
+
+        const pesoTotal =
+            Number(
+                t.peso ??
+                t.pesoTotal ??
+                0
+            );
+
+        const totalPedido =
+            Number(
+                t.total ??
+                0
+            );
 
         const novoPedido = {
 
@@ -1343,25 +1373,36 @@ async function finalizarPedido() {
             },
 
             itens:
-                carrinhoService.obterItens(),
+                itensCarrinho,
 
             produtos:
-                carrinhoService.obterItens(),
+                itensCarrinho,
 
             total:
-                t.total,
+                totalPedido,
 
             valorTotal:
-                t.total,
+                totalPedido,
+
+            subtotal:
+                Number(
+                    t.subtotal || 0
+                ),
+
+            frete:
+                Number(
+                    t.frete || 0
+                ),
 
             totalPecas:
-                t.quantidade,
+                totalPecas,
 
             pesoTotal:
-                t.peso,
+                pesoTotal,
 
             formaPagamento:
-                t.pagamento || 'A definir',
+                t.pagamento ||
+                'A definir',
 
             data:
                 new Date()
@@ -1371,6 +1412,11 @@ async function finalizarPedido() {
                 'pendente'
 
         };
+
+        console.log(
+            '[CHECKOUT] Pedido:',
+            novoPedido
+        );
 
         await firebase
             .database()
@@ -1397,6 +1443,7 @@ Local de Entrega: ${novoPedido.entrega.local}
 Total: ${money.formatar(
     novoPedido.total
 )}
+
 Pagamento: ${
     novoPedido.formaPagamento
 }

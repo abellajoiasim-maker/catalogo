@@ -60,36 +60,35 @@ const CarrinhoService = {
         return this.getItens();
     },
 
-    salvarTodos(itens = []) {
+salvarTodos(itens = []) {
 
-        try {
+    try {
 
-            const json =
-                JSON.stringify(itens);
+        const json =
+            JSON.stringify(itens);
 
-            // NOVO PADRÃO
-            localStorage.setItem(
-                this.STORAGE_KEY,
-                json
-            );
+        localStorage.setItem(
+            'abella_carrinho',
+            json
+        );
 
-            // LEGACY
-            localStorage.setItem(
-                this.LEGACY_KEY,
-                json
-            );
+        localStorage.setItem(
+            'carrinho',
+            json
+        );
 
-            this.notificarMudanca();
+        this.notificarMudanca();
 
-        } catch (e) {
+    } catch (e) {
 
-            console.error(
-                '[Carrinho] Erro ao salvar:',
-                e
-            );
+        console.error(
+            '[Carrinho] Erro ao salvar:',
+            e
+        );
 
-        }
-    },
+    }
+
+},
 
     // =====================================================
     // ADICIONAR
@@ -273,22 +272,19 @@ const CarrinhoService = {
     // LIMPAR
     // =====================================================
 
-    limpar() {
+   limpar() {
 
-        localStorage.removeItem(
-            this.STORAGE_KEY
-        );
+    localStorage.removeItem(
+        'abella_carrinho'
+    );
 
-        localStorage.removeItem(
-            this.LEGACY_KEY
-        );
+    localStorage.removeItem(
+        'carrinho'
+    );
 
-        this.notificarMudanca();
-    },
+    this.notificarMudanca();
 
-    limparCarrinho() {
-        this.limpar();
-    },
+},
 
     // =====================================================
     // RESUMO

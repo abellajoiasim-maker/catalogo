@@ -1183,80 +1183,210 @@ function construirTextoRomaneio(){
     }
 }
 async function finalizarPedido() {
-    const btn = document.getElementById('btnFinalizar');
-    const campos = ['cli-nome', 'cli-whats', 'cli-cidade', 'ent-local', 'ent-rua', 'ent-numero', 'ent-bairro', 'ent-cidade'];
 
-    // 1. Validação de campos
+    const btn =
+        document.getElementById(
+            'btnFinalizar'
+        );
+
+    const campos = [
+        'cli-nome',
+        'cli-whats',
+        'cli-cidade',
+        'ent-local',
+        'ent-rua',
+        'ent-numero',
+        'ent-bairro',
+        'ent-cidade'
+    ];
+
     for (const id of campos) {
-        const el = document.getElementById(id);
-        if (!el || !el.value.trim()) {
+
+        const el =
+            document.getElementById(id);
+
+        if (
+            !el ||
+            !el.value.trim()
+        ) {
+
             el?.focus();
-            alert('Por favor, preencha todos os campos obrigatórios.');
+
+            alert(
+                'Por favor, preencha todos os campos obrigatórios.'
+            );
+
             return;
+
         }
+
     }
 
     try {
-        if (typeof window.getAbellaPath !== 'function') return;
 
-        btn.disabled = true;
-        btn.innerText = 'FINALIZANDO...';
-
-        const t = calcularTotais();
-        if (t.subtotal < CONFIG.pedidoMinimo) {
-            alert(`Pedido mínimo de ${money.formatar(CONFIG.pedidoMinimo)} não atingido.`);
-            btn.disabled = false;
-            btn.innerText = 'Finalizar Pedido';
+        if (
+            typeof window.getAbellaPath !==
+            'function'
+        ) {
             return;
         }
 
-        // 2. Geração do ID Sequencial (PED-XXXXXX)
-        const timestamp = Date.now();
-        const sufixo = String(timestamp).slice(-6);
-        const idPedidoNovo = `PED-${sufixo}`;
+        btn.disabled = true;
 
-        // 3. Montagem do Objeto (Payload)
+        btn.innerText =
+            'FINALIZANDO...';
+
+        const t =
+            calcularTotais();
+
+        if (
+            t.subtotal <
+            CONFIG.pedidoMinimo
+        ) {
+
+            alert(
+                `Pedido mínimo de ${money.formatar(
+                    CONFIG.pedidoMinimo
+                )} não atingido.`
+            );
+
+            btn.disabled = false;
+
+            btn.innerText =
+                'Finalizar Pedido';
+
+            return;
+
+        }
+
+        const timestamp =
+            Date.now();
+
+        const sufixo =
+            String(timestamp)
+            .slice(-6);
+
+        const idPedidoNovo =
+            `PED-${sufixo}`;
+
         const novoPedido = {
-            idPedido: idPedidoNovo, // ID Sequencial
-            cliente: document.getElementById('cli-nome').value.trim(),
-            whats: document.getElementById('cli-whats').value.trim(),
-            cidade: document.getElementById('cli-cidade').value.trim(),
+
+            idPedido:
+                idPedidoNovo,
+
+            cliente:
+                document
+                .getElementById(
+                    'cli-nome'
+                )
+                .value
+                .trim(),
+
+            whats:
+                document
+                .getElementById(
+                    'cli-whats'
+                )
+                .value
+                .trim(),
+
+            cidade:
+                document
+                .getElementById(
+                    'cli-cidade'
+                )
+                .value
+                .trim(),
+
             entrega: {
-                local: document.getElementById('ent-local').value.trim(),
-                rua: document.getElementById('ent-rua').value.trim(),
-                numero: document.getElementById('ent-numero').value.trim(),
-                bairro: document.getElementById('ent-bairro').value.trim(),
-                cidade: document.getElementById('ent-cidade').value.trim()
+
+                local:
+                    document
+                    .getElementById(
+                        'ent-local'
+                    )
+                    .value
+                    .trim(),
+
+                rua:
+                    document
+                    .getElementById(
+                        'ent-rua'
+                    )
+                    .value
+                    .trim(),
+
+                numero:
+                    document
+                    .getElementById(
+                        'ent-numero'
+                    )
+                    .value
+                    .trim(),
+
+                bairro:
+                    document
+                    .getElementById(
+                        'ent-bairro'
+                    )
+                    .value
+                    .trim(),
+
+                cidade:
+                    document
+                    .getElementById(
+                        'ent-cidade'
+                    )
+                    .value
+                    .trim()
+
             },
-            itens: carrinhoService.obterItens(),
-            produtos: carrinhoService.obterItens(),
-            total: t.total,
-            valorTotal: t.total,
-            totalPecas: t.quantidade,
-            pesoTotal: t.peso,
-            data: new Date().toISOString(),
-            status: 'pendente'
+
+            itens:
+                carrinhoService.obterItens(),
+
+            produtos:
+                carrinhoService.obterItens(),
+
+            total:
+                t.total,
+
+            valorTotal:
+                t.total,
+
+            totalPecas:
+                t.quantidade,
+
+            pesoTotal:
+                t.peso,
+
+            formaPagamento:
+                t.pagamento || 'A definir',
+
+            data:
+                new Date()
+                .toISOString(),
+
+            status:
+                'pendente'
+
         };
 
-        // 4. Salvar no Firebase
-        // Usamos o 'idPedidoNovo' como chave para facilitar a busca no admin
-        await firebase.database().ref(window.getAbellaPath('orders') + '/' + idPedidoNovo).set(novoPedido);
+        await firebase
+            .database()
+            .ref(
+                window.getAbellaPath(
+                    'orders'
+                ) +
+                '/' +
+                idPedidoNovo
+            )
+            .set(
+                novoPedido
+            );
 
-        // 5. Sucesso
-        carrinhoService.limpar();
-        alert(`✅ Pedido realizado com sucesso!\nID: ${idPedidoNovo}`);
-        window.location.href = 'index.html'; // Ou página de confirmação
-
-    } catch (error) {
-        console.error('Erro ao finalizar:', error);
-        alert('Erro ao processar pedido. Tente novamente.');
-        btn.disabled = false;
-        btn.innerText = 'Finalizar Pedido';
-    }
-}
-
-// Mensagem WhatsApp
-const mensagem = `Olá! Meu pedido foi realizado com sucesso.
+        const mensagem =
+`Olá! Meu pedido foi realizado com sucesso.
 
 Nº do Pedido: ${idPedidoNovo}
 
@@ -1264,15 +1394,19 @@ Cliente: ${novoPedido.cliente}
 Cidade: ${novoPedido.cidade}
 Local de Entrega: ${novoPedido.entrega.local}
 
-Total: ${money.formatar(novoPedido.total)}
-Pagamento: ${t.pagamento}
+Total: ${money.formatar(
+    novoPedido.total
+)}
+Pagamento: ${
+    novoPedido.formaPagamento
+}
 
 Fico no aguardo do link para pagamento e prazo de entrega!`;
 
-carrinhoService.limpar();
+        carrinhoService.limpar();
 
-window.location.href =
-`https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(mensagem)}`;
+        window.location.href =
+            `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(mensagem)}`;
 
     } catch (e) {
 
@@ -1289,7 +1423,9 @@ window.location.href =
 
         btn.innerText =
             'Finalizar Pedido';
+
     }
+
 }
     </script>
 </body>

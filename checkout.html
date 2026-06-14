@@ -936,9 +936,8 @@ const logoUrl =
     document.getElementById('abellaLogoImg')?.src ||
     '';
 
-   let itensCarrinho =
-    window.itensCarrinho ||
-    [];
+const itensCarrinho =
+    carrinhoService.obterItens() || [];
 
 if (
     !Array.isArray(
@@ -1104,51 +1103,286 @@ function fecharModal() {
 /* ===========================
    GERAR PDF
 =========================== */
-function gerarPDF(
-    imprimir = false
-) {
+function gerarPDF(imprimir = false){
 
-    const texto =
-        construirTextoRomaneio();
+```
+const { jsPDF } = window.jspdf;
 
-    const { jsPDF } =
-        window.jspdf;
+const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+});
 
-    const doc =
-        new jsPDF();
+const t = calcularTotais();
 
-    const linhas =
-        doc.splitTextToSize(
-            texto,
-            180
+const itens =
+    carrinhoService.obterItens() || [];
+
+let y = 15;
+
+doc.setFont('helvetica','bold');
+doc.setFontSize(20);
+
+doc.text(
+    'ABELLA JOIAS',
+    105,
+    y,
+    { align:'center' }
+);
+
+y += 8;
+
+doc.setFontSize(11);
+
+doc.text(
+    'ROMANEIO DE PEDIDO',
+    105,
+    y,
+    { align:'center' }
+);
+
+y += 10;
+
+doc.setDrawColor(180);
+
+doc.line(
+    10,
+    y,
+    200,
+    y
+);
+
+y += 10;
+
+doc.setFontSize(10);
+
+doc.setFont(
+    'helvetica',
+    'normal'
+);
+
+doc.text(
+    `Cliente: ${document.getElementById('cli-nome')?.value || ''}`,
+    10,
+    y
+);
+
+doc.text(
+    `WhatsApp: ${document.getElementById('cli-whats')?.value || ''}`,
+    110,
+    y
+);
+
+y += 6;
+
+doc.text(
+    `Cidade: ${document.getElementById('cli-cidade')?.value || ''}`,
+    10,
+    y
+);
+
+doc.text(
+    `Pagamento: ${t.pagamento || 'PIX'}`,
+    110,
+    y
+);
+
+y += 10;
+
+doc.setFont(
+    'helvetica',
+    'bold'
+);
+
+doc.rect(10,y,190,8);
+
+doc.text('QTD',15,y+5);
+doc.text('PRODUTO',35,y+5);
+doc.text('UNIT.',150,y+5);
+doc.text('TOTAL',180,y+5);
+
+y += 10;
+
+doc.setFont(
+    'helvetica',
+    'normal'
+);
+
+itens.forEach(item=>{
+
+    const qtd =
+        Number(
+            item.quantidade ||
+            item.qtd ||
+            1
         );
 
-    doc.setFontSize(10);
+    const preco =
+        Number(
+            item.precoFinal ??
+            item.price ??
+            item.preco ??
+            0
+        );
+
+    const nome =
+        (
+            item.name ||
+            item.nome ||
+            'Produto'
+        ).substring(0,60);
 
     doc.text(
-        linhas,
-        10,
-        10
+        String(qtd),
+        15,
+        y
     );
 
-    if (imprimir) {
+    doc.text(
+        nome,
+        35,
+        y
+    );
 
-        doc.autoPrint();
+    doc.text(
+        money.formatar(preco),
+        150,
+        y,
+        { align:'right' }
+    );
 
-        window.open(
-            doc.output(
-                'bloburl'
-            ),
-            '_blank'
-        );
+    doc.text(
+        money.formatar(preco*qtd),
+        195,
+        y,
+        { align:'right' }
+    );
 
-    } else {
+    y += 6;
 
-        doc.save(
-            `romaneio_${Date.now()}.pdf`
-        );
+    if(y > 250){
+
+        doc.addPage();
+
+        y = 20;
 
     }
+
+});
+
+y += 8;
+
+doc.line(
+    10,
+    y,
+    200,
+    y
+);
+
+y += 10;
+
+const subtotal =
+    Number(t.subtotal || 0);
+
+const descontoPromo =
+    Number(t.descontoPromocional || 0);
+
+const descontoPix =
+    Number(t.desconto || 0);
+
+const economia =
+    descontoPromo +
+    descontoPix;
+
+doc.setFont(
+    'helvetica',
+    'bold'
+);
+
+doc.text(
+    'RESUMO FINANCEIRO',
+    10,
+    y
+);
+
+y += 8;
+
+doc.setFont(
+    'helvetica',
+    'normal'
+);
+
+doc.text(
+    `Valor Bruto: ${money.formatar(subtotal)}`,
+    10,
+    y
+);
+
+y += 6;
+
+if(descontoPromo > 0){
+
+    doc.text(
+        `Desconto Promocional: -${money.formatar(descontoPromo)}`,
+        10,
+        y
+    );
+
+    y += 6;
+
+}
+
+if(descontoPix > 0){
+
+    doc.text(
+        `Desconto PIX: -${money.formatar(descontoPix)}`,
+        10,
+        y
+    );
+
+    y += 6;
+
+}
+
+doc.text(
+    `Economia Total: ${money.formatar(economia)}`,
+    10,
+    y
+);
+
+y += 8;
+
+doc.setFont(
+    'helvetica',
+    'bold'
+);
+
+doc.setFontSize(14);
+
+doc.text(
+    `VALOR FINAL: ${money.formatar(t.total)}`,
+    10,
+    y
+);
+
+if(imprimir){
+
+    doc.autoPrint();
+
+    window.open(
+        doc.output('bloburl'),
+        '_blank'
+    );
+
+}else{
+
+    doc.save(
+        `pedido_abella_${Date.now()}.pdf`
+    );
+
+}
+```
 
 }
 

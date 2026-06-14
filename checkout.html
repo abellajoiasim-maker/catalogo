@@ -459,33 +459,31 @@
 };
 
 // COLOQUE AQUI
-function formatarPeso(valor){
+function formatarPeso(valor) {
 
     valor = Number(valor || 0);
 
-    if(valor >= 1000){
-
-        return new Intl.NumberFormat(
-            'pt-BR',
-            {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }
-        ).format(valor / 1000) + ' kg';
-    }
-
-    return new Intl.NumberFormat(
+    const formatter = new Intl.NumberFormat(
         'pt-BR',
         {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }
-    ).format(valor) + ' g';
+    );
+
+    if (valor >= 1000) {
+
+        return formatter.format(
+            valor / 1000
+        ) + ' kg';
+
+    }
+
+    return formatter.format(
+        valor
+    ) + ' g';
 }
 
-const carrinhoService = {
-    ...
-};
 const carrinhoService = {
 
     obterItens() {
@@ -500,6 +498,11 @@ const carrinhoService = {
 
         } catch (e) {
 
+            console.error(
+                'Erro ao ler carrinho:',
+                e
+            );
+
             return [];
 
         }
@@ -508,8 +511,13 @@ const carrinhoService = {
 
     limpar() {
 
-        localStorage.removeItem('abella_carrinho');
-        localStorage.removeItem('carrinho');
+        localStorage.removeItem(
+            'abella_carrinho'
+        );
+
+        localStorage.removeItem(
+            'carrinho'
+        );
 
     }
 

@@ -483,43 +483,6 @@ function formatarPeso(valor) {
         valor
     ) + ' g';
 }
-
-const carrinhoService = {
-
-    obterItens() {
-
-        try {
-
-            return JSON.parse(
-                localStorage.getItem('abella_carrinho')
-                ||
-                localStorage.getItem('carrinho')
-                ||
-                '[]'
-            );
-
-        } catch (e) {
-
-            return [];
-
-        }
-
-    },
-
-    limpar() {
-
-        localStorage.removeItem(
-            'abella_carrinho'
-        );
-
-        localStorage.removeItem(
-            'carrinho'
-        );
-
-    }
-
-};
-
         function resolverImagemFirebase(url) {
             try {
                 if (!url) return 'https://via.placeholder.com/100/111111/caa85c?text=Joia';
@@ -539,23 +502,61 @@ const carrinhoService = {
             }
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            await carregarConfiguracoes();
-            
-            itensCarrinho = carrinhoService.obterItens();
-            if (!Array.isArray(itensCarrinho)) {
-                itensCarrinho = [];
-            }
+      document.addEventListener('DOMContentLoaded', async () => {
 
-            if (itensCarrinho.length === 0) {
-                alert('Seu carrinho está vazio.');
-                window.location.href = 'index.html';
-                return;
-            }
+    await carregarConfiguracoes();
 
-            renderizarItens();
-            atualizarResumo();
-        });
+    if (
+        typeof carrinhoService === 'undefined'
+    ) {
+
+        console.error(
+            '[CHECKOUT] carrinhoService não carregado.'
+        );
+
+        alert(
+            'Erro ao carregar o carrinho.'
+        );
+
+        window.location.href =
+            'carrinho.html';
+
+        return;
+    }
+
+    itensCarrinho =
+        carrinhoService.obterItens() || [];
+
+    console.log(
+        '[CHECKOUT] itens carregados:',
+        itensCarrinho
+    );
+
+    if (
+        !Array.isArray(itensCarrinho)
+    ) {
+        itensCarrinho = [];
+    }
+
+    if (
+        itensCarrinho.length === 0
+    ) {
+
+        alert(
+            'Seu carrinho está vazio.'
+        );
+
+        window.location.href =
+            'carrinho.html';
+
+        return;
+    }
+
+    renderizarItens();
+
+    atualizarResumo();
+
+});
 
         async function carregarConfiguracoes(){
             try{
@@ -1262,8 +1263,10 @@ Pagamento: ${t.pagamento}
 
 Fico no aguardo do link para pagamento e prazo de entrega!`;
 
+carrinhoService.limpar();
+
 window.location.href =
-    `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(mensagem)}`;
+`https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(mensagem)}`;
 
     } catch (e) {
 

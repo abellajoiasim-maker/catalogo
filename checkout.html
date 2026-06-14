@@ -932,6 +932,26 @@ const economiaTotal =
     descontoPromocional +
     descontoPix;
 
+const logoUrl =
+    document.getElementById('abellaLogoImg')?.src ||
+    '';
+
+   let itensCarrinho =
+    window.itensCarrinho ||
+    [];
+
+if (
+    !Array.isArray(
+        itensCarrinho
+    )
+) {
+
+    itensCarrinho =
+        carrinhoService.obterItens() ||
+        [];
+
+}
+
 let html = `
 
 <div style="text-align:center;margin-bottom:25px">
@@ -1061,13 +1081,86 @@ document.getElementById(
 
 }
 
+/* ===========================
+   FECHAR MODAL ROMANEIO
+=========================== */
+function fecharModal() {
+
+    const modal =
+        document.getElementById(
+            'modal-romaneio'
+        );
+
+    if (modal) {
+
+        modal.classList.add(
+            'hidden'
+        );
+
+    }
+
+}
+
+/* ===========================
+   GERAR PDF
+=========================== */
+function gerarPDF(
+    imprimir = false
+) {
+
+    const texto =
+        construirTextoRomaneio();
+
+    const { jsPDF } =
+        window.jspdf;
+
+    const doc =
+        new jsPDF();
+
+    const linhas =
+        doc.splitTextToSize(
+            texto,
+            180
+        );
+
+    doc.setFontSize(10);
+
+    doc.text(
+        linhas,
+        10,
+        10
+    );
+
+    if (imprimir) {
+
+        doc.autoPrint();
+
+        window.open(
+            doc.output(
+                'bloburl'
+            ),
+            '_blank'
+        );
+
+    } else {
+
+        doc.save(
+            `romaneio_${Date.now()}.pdf`
+        );
+
+    }
+
+}
+
+/* ===========================
+   FINALIZAR PEDIDO
+=========================== */
 async function finalizarPedido() {
 
     const btn =
         document.getElementById(
             'btnFinalizar'
         );
-
     const campos = [
         'cli-nome',
         'cli-whats',

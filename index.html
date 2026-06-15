@@ -216,14 +216,24 @@
             padding: 1.25rem 1.5rem;
         }
 
-        @media (max-width: 640px) {
-            .hero-float { bottom: -1rem; left: 1rem; right: 1rem; padding: 1rem; }
-        }
+        @media (max-width:768px){
+
+    .hero-float{
+        position:relative;
+        bottom:auto;
+        left:auto;
+        right:auto;
+        margin-top:10px;
+        padding:1rem;
+    }
+
+}
 @media (max-width:768px){
 
 .stat-card{
 padding:.75rem !important;
 }
+
 
 .badge{
 font-size:.65rem;
@@ -624,16 +634,21 @@ if (snapCategories.exists() && snapCategories.val()) {
         listaCategorias = dadosCat;
     } else {
         listaCategorias = Object.entries(dadosCat).map(([key, val]) => ({
-            slug: key,
-            ...val
-        }));
+    slug: key,
+    ...val
+}));
     }
 } else {
     // Fallback Técnico: Se o nó categories estiver vazio, reconstrói via produtos
     const snapProdutos = await db.ref('abella/products').once('value');
     if (snapProdutos.exists()) {
         const prods = Object.values(snapProdutos.val());
-        const categoriasUnicas = [...new Set(prods.map(p => p.categoria || p.category).filter(Boolean))];
+        const categoriasUnicas = [
+    ...new Set(
+        prods.map(p => p.categoria || p.category)
+        .filter(Boolean)
+    )
+];
         listaCategorias = categoriasUnicas.map(cat => ({
             nome: cat,
             imagem: prods.find(p => (p.categoria || p.category) === cat)?.image || ''
@@ -674,7 +689,11 @@ listaCategorias.forEach(cat => {
     const imgCat = linkBanco ? linkBanco : (typeof obterImagemCategoriaGrid !== 'undefined' ? obterImagemCategoriaGrid(slugCat) : 'images/fallback.jpg');
 
     const div = document.createElement('div');
-    div.setAttribute('role', 'listitem');
+
+div.className =
+    "cat-card aspect-[3/4] relative group rounded-2xl overflow-hidden shadow-md";
+
+div.setAttribute('role', 'listitem');
     
     // --- AJUSTE DE ROTA AQUI: Enviando para subcategorias.html em vez de produtos.html ---
     div.onclick = () => {

@@ -511,21 +511,6 @@ document.addEventListener(
     'DOMContentLoaded',
     async () => {
 
-        console.log(
-            '[CHECKOUT] abella_carrinho:',
-            localStorage.getItem('abella_carrinho')
-        );
-
-        console.log(
-            '[CHECKOUT] carrinho:',
-            localStorage.getItem('carrinho')
-        );
-
-        console.log(
-            '[CHECKOUT] session:',
-            sessionStorage.getItem('abella_carrinho')
-        );
-
         try {
 
             itensCarrinho =
@@ -536,39 +521,8 @@ document.addEventListener(
                 itensCarrinho
             );
 
-        } catch(err){
-
-            console.error(err);
-
-            itensCarrinho = [];
-
-        }
-
-        if(!itensCarrinho.length){
-
-            alert(
-                'Checkout recebeu carrinho vazio.'
-            );
-
-            return;
-
-        }
-
-        renderizarItens();
-
-        atualizarResumo();
-
-        try{
-            await carregarConfiguracoes();
-            atualizarResumo();
-        }catch(e){
-            console.warn(e);
-        }
-    }
-);
-
             if (
-                itensCarrinho.length === 0
+                !itensCarrinho.length
             ) {
 
                 alert(
@@ -583,6 +537,10 @@ document.addEventListener(
             }
 
             renderizarItens();
+
+            atualizarResumo();
+
+            await carregarConfiguracoes();
 
             atualizarResumo();
 
@@ -944,14 +902,6 @@ function visualizarRomaneio() {
     const t =
         calcularTotais();
 
-    const itensCarrinho =
-        carrinhoService.obterItens() || [];
-
-    console.log(
-        '[ROMANEIO]',
-        itensCarrinho
-    );
-
     const cliente =
         document.getElementById(
             'cli-nome'
@@ -971,13 +921,19 @@ function visualizarRomaneio() {
         t.pagamento || 'PIX';
 
     const subtotal =
-        Number(t.subtotal || 0);
+        Number(
+            t.subtotal || 0
+        );
 
     const descontoPromocional =
-        Number(t.descontoPromocional || 0);
+        Number(
+            t.descontoPromocional || 0
+        );
 
     const descontoPix =
-        Number(t.desconto || 0);
+        Number(
+            t.desconto || 0
+        );
 
     const economiaTotal =
         descontoPromocional +
@@ -987,6 +943,14 @@ function visualizarRomaneio() {
         document.getElementById(
             'abellaLogoImg'
         )?.src || '';
+
+    const itensCarrinho =
+        carrinhoService.obterItens() || [];
+
+    console.log(
+        '[ROMANEIO]',
+        itensCarrinho
+    );
 
     let html = `
 

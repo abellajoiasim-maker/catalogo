@@ -6,7 +6,7 @@
 
 const HeaderComponent = {
 
-```
+
 initialized: false,
 
 _listener: null,
@@ -303,7 +303,7 @@ destroy() {
     this.initialized =
         false;
 }
-```
+
 
 };
 
@@ -323,7 +323,7 @@ document.readyState ===
 'loading'
 ) {
 
-```
+
 document.addEventListener(
     'DOMContentLoaded',
     () => {
@@ -331,13 +331,14 @@ document.addEventListener(
         HeaderComponent.init();
     }
 );
-```
+
 
 } else {
 
-```
+
 HeaderComponent.init();
-```
+
+    
 
 }
 

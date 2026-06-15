@@ -511,53 +511,59 @@ document.addEventListener(
     'DOMContentLoaded',
     async () => {
 
-        // ══════════════════════════════════════════════════
-        // PASSO 1 — Lê o carrinho PRIMEIRO (síncrono, seguro)
-        // localStorage nunca falha por rede. Deve vir antes
-        // de qualquer await para garantir que o carrinho
-        // esteja disponível independente do Firebase.
-        // ══════════════════════════════════════════════════
+        console.log(
+            '[CHECKOUT] abella_carrinho:',
+            localStorage.getItem('abella_carrinho')
+        );
+
+        console.log(
+            '[CHECKOUT] carrinho:',
+            localStorage.getItem('carrinho')
+        );
+
+        console.log(
+            '[CHECKOUT] session:',
+            sessionStorage.getItem('abella_carrinho')
+        );
+
         try {
-            itensCarrinho = carrinhoService.obterItens();
-            if (!Array.isArray(itensCarrinho)) {
-                itensCarrinho = [];
-            }
-        } catch (errCarrinho) {
-            console.error('[CHECKOUT] Falha ao ler carrinho:', errCarrinho);
+
+            itensCarrinho =
+                carrinhoService.obterItens() || [];
+
+            console.log(
+                '[CHECKOUT] itens encontrados:',
+                itensCarrinho
+            );
+
+        } catch(err){
+
+            console.error(err);
+
             itensCarrinho = [];
+
         }
 
-        console.log('[CHECKOUT] Itens carregados do localStorage:', itensCarrinho);
+        if(!itensCarrinho.length){
 
-        // ══════════════════════════════════════════════════
-        // PASSO 2 — Valida carrinho ANTES do await Firebase
-        // Se estiver vazio, interrompe aqui sem depender da rede
-        // ══════════════════════════════════════════════════
-        if (itensCarrinho.length === 0) {
-            alert('Seu carrinho está vazio. Adicione produtos antes de prosseguir.');
-            window.location.href = 'index.html';
+            alert(
+                'Checkout recebeu carrinho vazio.'
+            );
+
             return;
+
         }
 
-        // ══════════════════════════════════════════════════
-        // PASSO 3 — Renderiza imediatamente com dados locais
-        // O usuário já vê os produtos enquanto o Firebase carrega
-        // ══════════════════════════════════════════════════
         renderizarItens();
+
         atualizarResumo();
 
-        // ══════════════════════════════════════════════════
-        // PASSO 4 — Carrega configurações do Firebase (async)
-        // Falha silenciosa: se Firebase offline, mantém CONFIG padrão
-        // e re-renderiza o resumo com os valores atualizados
-        // ══════════════════════════════════════════════════
-        try {
+        try{
             await carregarConfiguracoes();
-            atualizarResumo(); // re-renderiza com desconto PIX / frete do Firebase
-        } catch (errConfig) {
-            console.warn('[CHECKOUT] Configurações do Firebase indisponíveis. Usando padrão.', errConfig);
+            atualizarResumo();
+        }catch(e){
+            console.warn(e);
         }
-
     }
 );
 

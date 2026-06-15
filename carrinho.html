@@ -373,10 +373,34 @@ parseFloat(
                             <button onclick="alterarQtd('${limpoId}', 1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Aumentar">+</button>
                         </div>
 
-                        <div class="text-center sm:text-right flex-shrink-0 min-w-[100px]">
-                            <p class="text-xs text-zinc-500 uppercase tracking-wider">Subtotal</p>
-                            <p class="font-black text-[#caa85c] mt-1 text-base">${txtSubtotal}</p>
-                        </div>
+                        <div class="text-center sm:text-right flex-shrink-0 min-w-[120px]">
+
+    <p class="text-xs text-zinc-500 uppercase tracking-wider">
+        Subtotal
+    </p>
+
+    <p class="font-black text-[#caa85c] mt-1 text-base">
+        ${txtSubtotal}
+    </p>
+
+    <button
+    onclick="removerItemCarrinho('${limpoId}')"
+    class="
+        mt-3
+        w-9
+        h-9
+        rounded-xl
+        border
+        border-[#caa85c]
+        text-[#caa85c]
+        hover:bg-[#caa85c]
+        hover:text-black
+        transition
+    "
+>
+    🗑
+</button>
+</div>
                     </div>
                 `;
             });
@@ -411,6 +435,41 @@ function alterarQtd(id, delta) {
     renderizarCarrinho();
 
     if(typeof atualizarMiniCarrinho === 'function'){
+        atualizarMiniCarrinho();
+    }
+}
+
+        function removerItemCarrinho(id) {
+
+    if (
+        !confirm(
+            'Deseja remover este item do carrinho?'
+        )
+    ) {
+        return;
+    }
+
+    const itens =
+        carrinhoService.obterItens() || [];
+
+    const index =
+        itens.findIndex(
+            item =>
+                String(item.id) === String(id)
+        );
+
+    if (index === -1) {
+        return;
+    }
+
+    carrinhoService.removerItem(index);
+
+    renderizarCarrinho();
+
+    if (
+        typeof atualizarMiniCarrinho ===
+        'function'
+    ) {
         atualizarMiniCarrinho();
     }
 }
@@ -563,9 +622,10 @@ parseFloat(
     }
 }
         document.addEventListener('DOMContentLoaded', inicializarPagina);
-        window.alterarQtd = alterarQtd;
-        window.limparCarrinhoCompleto = limparCarrinhoCompleto;
-        window.prosseguirParaCheckout = prosseguirParaCheckout;
+       window.alterarQtd = alterarQtd;
+       window.removerItemCarrinho = removerItemCarrinho;
+       window.limparCarrinhoCompleto = limparCarrinhoCompleto;
+       window.prosseguirParaCheckout = prosseguirParaCheckout;
     </script>
 </body>
 </html>

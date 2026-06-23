@@ -322,10 +322,20 @@ async function carregarLogoHeader(){
                 const fallback = document.getElementById('headerLogoFallback');
                 const urlDefinitivaStorage = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
                 
+                // 1. Estado Visual Imediato: Renderiza a imagem direto na tela para evitar telas brancas ou saltos
+                if (logoImg) {
+                    logoImg.src = urlDefinitivaStorage;
+                    logoImg.classList.remove('hidden');
+                    logoImg.style.display = 'block';
+                }
+                if (fallback) {
+                    fallback.classList.add('hidden');
+                }
+
                 let logo = '';
                 let config = {};
 
-                // Se o Firebase estiver ativo, busca as configurações atuais
+                // Se o Firebase estiver ativo, busca as configurações atuais em background
                 if(typeof window.getAbellaPath === 'function') {
                     const snap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
                     config = snap.val() || {};
@@ -341,10 +351,10 @@ async function carregarLogoHeader(){
                     }
                 }
 
-                // Define a prioridade da URL: se não veio nada válido do banco, usa o link direto estável
-                let logoFinal = (logo && logo !== 'logo') ? logo : urlDefinitivaStorage;
+                // 2. Proteção Dinâmica: Mantém o link do storage fixo caso o banco de dados retorne nulo ou sem links novos
+                let logoFinal = (logo && logo.trim() !== '' && logo !== 'logo' && logo !== 'undefined') ? logo : urlDefinitivaStorage;
 
-                // Resolve o caminho final caso existam conversores de link de imagem no projeto
+                // Resolve o caminho final caso existam conversores de imagem ativos no projeto
                 let logoResolvida = '';
                 if(logoFinal) {
                     if(typeof obterLogo === 'function') {
@@ -356,37 +366,27 @@ async function carregarLogoHeader(){
                     }
                 }
 
-                // Controle visual estrito: Se há uma logo válida, renderiza. Caso contrário, mantém o grid "A" ligado.
+                // 3. Aplicação do resultado: Garante a persistência da imagem na tela de forma permanente
                 if(logoResolvida && logoResolvida !== 'logo' && logoResolvida.trim() !== '') {
                     if (logoImg) {
                         logoImg.src = logoResolvida;
                         logoImg.classList.remove('hidden');
+                        logoImg.style.display = 'block';
                     }
                     if (fallback) {
                         fallback.classList.add('hidden');
                     }
-                } else {
-                    if (logoImg) {
-                        logoImg.classList.add('hidden');
-                    }
-                    if (fallback) {
-                        fallback.classList.remove('hidden');
-                    }
                 }
             }catch(e){
                 console.error('Erro logo header:', e);
-                // Proteção contra falhas severas de rede: mantém o grid dourado "A" na tela
-                const logoImg = document.getElementById('headerLogo');
-                const fallback = document.getElementById('headerLogoFallback');
-                if (logoImg) logoImg.classList.add('hidden');
-                if (fallback) fallback.classList.remove('hidden');
+                // Em caso de falha de conexão severa do Firebase, o script preserva o estado inicial e não oculta a imagem à toa
             }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
             try{
                 await carregarLogoHeader();
-                // Verifica se a função existe antes de chamar, evitando travar o carregamento das páginas carrinho e check-out
+                // Verifica se as funções existem antes de executar para não interromper outros fluxos na página
                 if(typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
                 if(typeof carregarProdutos === 'function') await carregarProdutos();
                 if(typeof iniciarBusca === 'function') iniciarBusca();
@@ -394,7 +394,6 @@ async function carregarLogoHeader(){
                 console.error('Erro init:', e);
             }
         });
-
         function atualizarMiniCarrinho(){
             try{
                 if(typeof carrinhoService !== 'undefined' && typeof money !== 'undefined') {

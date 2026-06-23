@@ -546,201 +546,222 @@
             }
         }
 
-        function visualizarRomaneio() {
-            const t = calcularTotais();
-            const cliente = document.getElementById('cli-nome')?.value || 'Não informado';
-            const whats = document.getElementById('cli-whats')?.value || 'Não informado';
-            const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
-            const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
+function visualizarRomaneio() {
+    const t = calcularTotais();
+    const cliente = document.getElementById('cli-nome')?.value || 'Não informado';
+    const whats = document.getElementById('cli-whats')?.value || 'Não informado';
+    const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
+    const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
 
-            let html = `
-                <div style="text-align:center; margin-bottom:20px; font-family:sans-serif;">
-                    <h2 style="color:#caa85c; margin:0; font-size:24px; letter-spacing:2px;">ABELLA JOIAS</h2>
-                    <p style="margin:5px 0; color:#a1a1aa; font-size:12px; tracking:1px;">ROMANEIO PREMIUM</p>
-                    <p style="margin:5px 0; color:#71717a; font-size:11px;">${new Date().toLocaleString('pt-BR')}</p>
-                </div>
-                <div style="margin-bottom:20px; border:1px solid #27272a; padding:15px; border-radius:12px; background:#09090b;">
-                    <div style="margin-bottom:4px;"><b>CLIENTE:</b> ${cliente}</div>
-                    <div style="margin-bottom:4px;"><b>WHATSAPP:</b> ${whats}</div>
-                    <div style="margin-bottom:4px;"><b>CIDADE:</b> ${cidade}</div>
-                    <div><b>PAGAMENTO:</b> ${t.pagamento}</div>
-                </div>
-                <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px;">
-                    <thead>
-                        <tr style="border-b: 1px solid #27272a; text-align:left; color:#caa85c;">
-                            <th style="padding:8px 0;">PRODUTO</th>
-                            <th style="padding:8px 0; text-align:center; width:60px;">QTD</th>
-                            <th style="padding:8px 0; text-align:right; width:100px;">TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+    let html = `
+        <div style="text-align:center; margin-bottom:20px; font-family:sans-serif;">
+            <h2 style="color:#caa85c; margin:0; font-size:24px; letter-spacing:2px;">ABELLA JOIAS</h2>
+            <p style="margin:5px 0; color:#a1a1aa; font-size:12px; tracking:1px;">ROMANEIO PREMIUM</p>
+            <p style="margin:5px 0; color:#71717a; font-size:11px;">${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+        <div style="margin-bottom:20px; border:1px solid #27272a; padding:15px; border-radius:12px; background:#09090b;">
+            <div style="margin-bottom:4px;"><b>CLIENTE:</b> ${cliente}</div>
+            <div style="margin-bottom:4px;"><b>WHATSAPP:</b> ${whats}</div>
+            <div style="margin-bottom:4px;"><b>CIDADE:</b> ${cidade}</div>
+            <div><b>PAGAMENTO:</b> ${t.pagamento}</div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px;">
+            <thead>
+                <tr style="border-bottom: 1px solid #27272a; text-align:left; color:#caa85c;">
+                    <th style="padding:8px 0; width:80px;">SKU</th>
+                    <th style="padding:8px 0;">PRODUTO</th>
+                    <th style="padding:8px 0; text-align:center; width:50px;">QTD</th>
+                    <th style="padding:8px 0; text-align:right; width:80px;">VALOR UNIT.</th>
+                    <th style="padding:8px 0; text-align:right; width:80px;">PESO UNIT.</th>
+                    <th style="padding:8px 0; text-align:right; width:90px;">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
-            if (!itensCarrinho.length) {
-                html += `<tr><td colspan="3" style="padding:15px; text-align:center; color:#ef4444;">Nenhum item no carrinho.</td></tr>`;
-            } else {
-                itensCarrinho.forEach(item => {
-                    const qtd = parseInt(item.quantidade || item.qtd || 1, 10);
-                    const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? 0);
-                    html += `
-                        <tr style="border-bottom:1px solid #18181b;">
-                            <td style="padding:8px 0; color:#e4e4e7;">${item.name || item.nome || 'Produto'}</td>
-                            <td style="padding:8px 0; text-align:center; color:#e4e4e7;">${qtd}</td>
-                            <td style="padding:8px 0; text-align:right; color:#caa85c; font-weight:bold;">${money.formatar(preco * qtd)}</td>
-                        </tr>
-                    `;
-                });
-            }
-
+    if (!itensCarrinho.length) {
+        html += `<tr><td colspan="6" style="padding:15px; text-align:center; color:#ef4444;">Nenhum item no carrinho.</td></tr>`;
+    } else {
+        itensCarrinho.forEach(item => {
+            const sku = item.sku || 'N/I';
+            const qtd = parseInt(item.quantidade || item.qtd || 1, 10);
+            const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? 0);
+            const pesoUn = parseFloat(item.peso || item.pesoUnitario || 0);
+            
             html += `
-                    </tbody>
-                </table>
-                <div style="border-top:1px dashed #27272a; pt:15px; text-align:right; font-size:13px; line-height:1.6;">
-                    <div><span style="color:#71717a">Bruto:</span> <b>${money.formatar(t.subtotal)}</b></div>
-                    ${t.desconto > 0 ? `<div><span style="color:#34d399">Desconto PIX (${CONFIG.descontoPix}%):</span> <b style="color:#34d399">-${money.formatar(t.desconto)}</b></div>` : ''}
-                    ${t.frete > 0 ? `<div><span style="color:#71717a">Frete:</span> <b>${money.formatar(t.frete)}</b></div>` : '<div><span style="color:#34d399">Frete:</span> <b>Grátis</b></div>'}
-                    <div style="font-size:18px; margin-top:10px; color:#fff;"><span style="color:#caa85c">VALOR FINAL:</span> <b style="color:#caa85c">${money.formatar(t.total)}</b></div>
-                </div>
-                <div style="margin-top:20px; font-size:11px; color:#71717a; border-top:1px solid #18181b; padding-top:10px;">
-                    <b>Obs:</b> ${obs}
-                </div>
+                <tr style="border-bottom:1px solid #18181b;">
+                    <td style="padding:8px 0; color:#a1a1aa; font-family:monospace;">${sku}</td>
+                    <td style="padding:8px 0; color:#e4e4e7;">${item.name || item.nome || 'Produto'}</td>
+                    <td style="padding:8px 0; text-align:center; color:#e4e4e7;">${qtd}</td>
+                    <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${money.formatar(preco)}</td>
+                    <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${typeof formatarPeso === 'function' ? formatarPeso(pesoUn) : pesoUn.toFixed(2) + ' g'}</td>
+                    <td style="padding:8px 0; text-align:right; color:#caa85c; font-weight:bold;">${money.formatar(preco * qtd)}</td>
+                </tr>
             `;
+        });
+    }
 
-            const cr = document.getElementById('conteudo-romaneio');
-            if(cr) cr.innerHTML = html;
-            document.getElementById('modal-romaneio')?.classList.remove('hidden');
-        }
+    html += `
+            </tbody>
+        </table>
+        <div style="border-top:1px dashed #27272a; padding-top:15px; text-align:right; font-size:13px; line-height:1.6;">
+            <div><span style="color:#71717a">Bruto:</span> <b>${money.formatar(t.subtotal)}</b></div>
+            ${t.desconto > 0 ? `<div><span style="color:#34d399">Desconto PIX (${CONFIG.descontoPix}%):</span> <b style="color:#34d399">-${money.formatar(t.desconto)}</b></div>` : ''}
+            ${t.frete > 0 ? `<div><span style="color:#71717a">Frete:</span> <b>${money.formatar(t.frete)}</b></div>` : '<div><span style="color:#34d399">Frete:</span> <b>Grátis</b></div>'}
+            <div style="font-size:18px; margin-top:10px; color:#fff;"><span style="color:#caa85c">VALOR FINAL:</span> <b style="color:#caa85c">${money.formatar(t.total)}</b></div>
+        </div>
+        <div style="margin-top:20px; font-size:11px; color:#71717a; border-top:1px solid #18181b; padding-top:10px;">
+            <b>Obs:</b> ${obs}
+        </div>
+    `;
 
-        function fecharModal() {
-            document.getElementById('modal-romaneio')?.classList.add('hidden');
-        }
+    const cr = document.getElementById('conteudo-romaneio');
+    if(cr) cr.innerHTML = html;
+    document.getElementById('modal-romaneio')?.classList.remove('hidden');
+}
 
-        function gerarPDF(autoPrint = false) {
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-                
-                const t = calcularTotais();
-                const cliente = document.getElementById('cli-nome')?.value || 'Não informado';
-                const whats = document.getElementById('cli-whats')?.value || 'Não informado';
-                const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
-                const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
+function fecharModal() {
+    document.getElementById('modal-romaneio')?.classList.add('hidden');
+}
 
-                // Cabeçalho Premium Alinhado
-                doc.setFont('Helvetica', 'bold');
-                doc.setFontSize(22);
-                doc.setTextColor(186, 154, 91); // #ba9a5b Gold
-                doc.text('ABELLA JOIAS', 105, 20, { align: 'center' });
-                
-                doc.setFont('Helvetica', 'normal');
-                doc.setFontSize(10);
-                doc.setTextColor(100, 100, 100);
-                doc.text('ROMANEIO DE PEDIDO PREMIUM', 105, 26, { align: 'center' });
-                doc.text(new Date().toLocaleString('pt-BR'), 105, 31, { align: 'center' });
+function gerarPDF(autoPrint = false) {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        
+        const t = calcularTotais();
+        const cliente = document.getElementById('cli-nome')?.value || 'Não informado';
+        const whats = document.getElementById('cli-whats')?.value || 'Não informado';
+        const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
+        const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
 
-                // Caixa de Informações do Cliente
-                doc.setDrawColor(220, 220, 220);
-                doc.setFillColor(248, 248, 248);
-                doc.roundedRect(14, 38, 182, 28, 3, 3, 'FD');
-                
-                doc.setFont('Helvetica', 'bold');
-                doc.setFontSize(10);
-                doc.setTextColor(50, 50, 50);
-                doc.text('DADOS DO CLIENTE & ENTREGA', 18, 44);
-                
-                doc.setFont('Helvetica', 'normal');
-                doc.text(`Cliente: ${cliente}`, 18, 51);
-                doc.text(`WhatsApp: ${whats}`, 18, 56);
-                doc.text(`Cidade: ${cidade}`, 18, 61);
-                doc.text(`Pagamento: ${t.pagamento}`, 120, 51);
-                doc.text(`Total Peças: ${t.qtd} pçs`, 120, 56);
-                doc.text(`Peso Total: ${formatarPeso(t.peso)}`, 120, 61);
+        // Cabeçalho Premium Alinhado
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(186, 154, 91); // #ba9a5b Gold
+        doc.text('ABELLA JOIAS', 105, 20, { align: 'center' });
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('ROMANEIO DE PEDIDO PREMIUM', 105, 26, { align: 'center' });
+        doc.text(new Date().toLocaleString('pt-BR'), 105, 31, { align: 'center' });
 
-                // Cabeçalho da Tabela de Itens (Colunas Perfeitamente Alinhadas)
-                let y = 76;
-                doc.setFont('Helvetica', 'bold');
-                doc.setFillColor(235, 230, 220);
-                doc.rect(14, y, 182, 7, 'F');
-                doc.setTextColor(60, 60, 60);
-                doc.text('PRODUTO', 16, y + 5);
-                doc.text('QTD', 145, y + 5, { align: 'center' });
-                doc.text('TOTAL', 194, y + 5, { align: 'right' });
-                
-                y += 7;
-                doc.setFont('Helvetica', 'normal');
-                doc.setTextColor(80, 80, 80);
+        // Caixa de Informações do Cliente
+        doc.setDrawColor(220, 220, 220);
+        doc.setFillColor(248, 248, 248);
+        doc.roundedRect(14, 38, 182, 28, 3, 3, 'FD');
+        
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(50, 50, 50);
+        doc.text('DADOS DO CLIENTE & ENTREGA', 18, 44);
+        
+        doc.setFont('Helvetica', 'normal');
+        doc.text(`Cliente: ${cliente}`, 18, 51);
+        doc.text(`WhatsApp: ${whats}`, 18, 56);
+        doc.text(`Cidade: ${cidade}`, 18, 61);
+        doc.text(`Pagamento: ${t.pagamento}`, 120, 51);
+        doc.text(`Total Peças: ${t.qtd} pçs`, 120, 56);
+        doc.text(`Peso Total: ${formatarPeso(t.peso)}`, 120, 61);
 
-                // Listagem de Itens com Controle de Página Dinâmico
-                itensCarrinho.forEach((item, idx) => {
-                    if (y > 260) { 
-                        doc.addPage();
-                        y = 20; 
-                    }
-                    
-                    const itemQtd = parseInt(item.quantidade || item.qtd || 1, 10);
-                    const itemPreco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? 0);
-                    const itemTotal = itemPreco * itemQtd;
-                    const nameStr = String(item.name || item.nome || 'Produto');
-                    
-                    // Trunca nomes gigantescos para não quebrar a linha da tabela
-                    const nomeCortado = nameStr.length > 55 ? nameStr.substring(0, 52) + '...' : nameStr;
+        // Cabeçalho da Tabela de Itens (Colunas Redefinidas e Alinhadas)
+        let y = 76;
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setFillColor(235, 230, 220);
+        doc.rect(14, y, 182, 7, 'F');
+        doc.setTextColor(60, 60, 60);
+        
+        // Definição das posições X das colunas para encaixe perfeito
+        doc.text('SKU', 16, y + 5);
+        doc.text('PRODUTO', 42, y + 5);
+        doc.text('QTD', 118, y + 5, { align: 'center' });
+        doc.text('VALOR UNIT.', 143, y + 5, { align: 'right' });
+        doc.text('PESO UNIT.', 168, y + 5, { align: 'right' });
+        doc.text('TOTAL', 194, y + 5, { align: 'right' });
+        
+        y += 7;
+        doc.setFont('Helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
 
-                    doc.text(nomeCortado, 16, y + 5);
-                    doc.text(String(itemQtd), 145, y + 5, { align: 'center' });
-                    doc.text(money.formatar(itemTotal), 194, y + 5, { align: 'right' });
-                    
-                    doc.setDrawColor(240, 240, 240);
-                    doc.line(14, y + 7, 194, y + 7);
-                    y += 8;
-                });
-
-                if (y > 230) { doc.addPage(); y = 20; }
-
-                // Bloco de Fechamento Financeiro Alinhado à Direita
-                y += 5;
-                doc.setFont('Helvetica', 'normal');
-                doc.text(`Valor Bruto:`, 140, y);
-                doc.text(money.formatar(t.subtotal), 194, y, { align: 'right' });
-                y += 6;
-
-                if (t.desconto > 0) {
-                    doc.setTextColor(46, 125, 50);
-                    doc.text(`Desconto PIX (${CONFIG.descontoPix}%):`, 140, y);
-                    doc.text(`-${money.formatar(t.desconto)}`, 194, y, { align: 'right' });
-                    doc.setTextColor(80, 80, 80);
-                    y += 6;
-                }
-
-                doc.text(`Frete:`, 140, y);
-                doc.text(t.frete > 0 ? money.formatar(t.frete) : 'Grátis', 194, y, { align: 'right' });
-                y += 8;
-
-                doc.setFont('Helvetica', 'bold');
-                doc.setFontSize(13);
-                doc.setTextColor(186, 154, 91);
-                doc.text(`VALOR FINAL:`, 140, y);
-                doc.text(money.formatar(t.total), 194, y, { align: 'right' });
-
-                // Caixa de Observações
-                y += 12;
-                doc.setFont('Helvetica', 'normal');
-                doc.setFontSize(9);
-                doc.setTextColor(120, 120, 120);
-                doc.text('Observações:', 14, y);
-                doc.text(obs, 14, y + 5, { maxWidth: 180 });
-
-                if (autoPrint) {
-                    doc.autoPrint();
-                    window.open(doc.output('bloburl'), '_blank');
-                } else {
-                    doc.save(`romaneio-${cliente.toLowerCase().replace(/\s+/g, '-')}.pdf`);
-                }
-            } catch (err) {
-                console.error('Erro ao gerar romaneio em PDF:', err);
-                alert('Erro ao processar o PDF do Romaneio.');
+        // Listagem de Itens com Controle de Página Dinâmico
+        itensCarrinho.forEach((item, idx) => {
+            if (y > 260) { 
+                doc.addPage();
+                y = 20; 
             }
+            
+            const skuStr = String(item.sku || 'N/I');
+            const itemQtd = parseInt(item.quantidade || item.qtd || 1, 10);
+            const itemPreco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? 0);
+            const itemPeso = parseFloat(item.peso || item.pesoUnitario || 0);
+            const itemTotal = itemPreco * itemQtd;
+            const nameStr = String(item.name || item.nome || 'Produto');
+            
+            // Trunca nomes grandes para não sobrepor a coluna QTD
+            const nomeCortado = nameStr.length > 38 ? nameStr.substring(0, 35) + '...' : nameStr;
+            const pesoFormatado = typeof formatarPeso === 'function' ? formatarPeso(itemPeso) : itemPeso.toFixed(2) + ' g';
+
+            doc.text(skuStr, 16, y + 5);
+            doc.text(nomeCortado, 42, y + 5);
+            doc.text(String(itemQtd), 118, y + 5, { align: 'center' });
+            doc.text(money.formatar(itemPreco), 143, y + 5, { align: 'right' });
+            doc.text(pesoFormatado, 168, y + 5, { align: 'right' });
+            doc.text(money.formatar(itemTotal), 194, y + 5, { align: 'right' });
+            
+            doc.setDrawColor(240, 240, 240);
+            doc.line(14, y + 7, 194, y + 7);
+            y += 8;
+        });
+
+        if (y > 230) { doc.addPage(); y = 20; }
+
+        // Bloco de Fechamento Financeiro Alinhado à Direita
+        y += 5;
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Valor Bruto:`, 140, y);
+        doc.text(money.formatar(t.subtotal), 194, y, { align: 'right' });
+        y += 6;
+
+        if (t.desconto > 0) {
+            doc.setTextColor(46, 125, 50);
+            doc.text(`Desconto PIX (${CONFIG.descontoPix}%):`, 140, y);
+            doc.text(`-${money.formatar(t.desconto)}`, 194, y, { align: 'right' });
+            doc.setTextColor(80, 80, 80);
+            y += 6;
         }
 
+        doc.text(`Frete:`, 140, y);
+        doc.text(t.frete > 0 ? money.formatar(t.frete) : 'Grátis', 194, y, { align: 'right' });
+        y += 8;
+
+        doc.setFont('Helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(186, 154, 91);
+        doc.text(`VALOR FINAL:`, 140, y);
+        doc.text(money.formatar(t.total), 194, y, { align: 'right' });
+
+        // Caixa de Observações
+        y += 12;
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 120);
+        doc.text('Observações:', 14, y);
+        doc.text(obs, 14, y + 5, { maxWidth: 180 });
+
+        if (autoPrint) {
+            doc.autoPrint();
+            window.open(doc.output('bloburl'), '_blank');
+        } else {
+            doc.save(`romaneio-${cliente.toLowerCase().replace(/\s+/g, '-')}.pdf`);
+        }
+    } catch (err) {
+        console.error('Erro ao gerar romaneio em PDF:', err);
+        alert('Erro ao processar o PDF do Romaneio.');
+    }
+}
         function finalizarPedido(){
             const t = calcularTotais();
             const nome = document.getElementById('cli-nome')?.value.trim();

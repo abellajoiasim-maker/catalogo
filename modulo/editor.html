@@ -890,11 +890,25 @@
 
   (async function init() {
     let t = 0;
+    // Aguarda o Firebase DB estar disponível
     while(!STATE.db && t < CONFIG.firebaseRetries){
       STATE.db = resolverDB();
       if(!STATE.db) { await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay)); t++; }
     }
     if (!STATE.db) return setStatus('❌ Falha de carregamento do Firebase SDK', 'error');
+
+    // Aguarda a função getAbellaPath estar disponível no escopo global
+    let tPath = 0;
+    while(typeof window.getAbellaPath !== 'function' && tPath < CONFIG.firebaseRetries){
+      await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay));
+      tPath++;
+    }
+
+    // Se mesmo assim não carregar, cria um fallback temporário para não travar a UI
+    if (typeof window.getAbellaPath !== 'function') {
+      console.warn('Aviso: window.getAbellaPath não foi encontrada. Usando caminhos padrão.');
+      window.getAbellaPath = function(p) { return p; }; 
+    }
 
     wireTabs();
     wireSearch();

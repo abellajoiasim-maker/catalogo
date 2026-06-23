@@ -335,13 +335,25 @@
         let produtoAtual = null;
         let descontoPixGlobal = 5; 
 
-        async function carregarLogoHeader(){
+async function carregarLogoHeader(){
             try{
                 if(typeof window.getAbellaPath !== 'function') return;
                 const snap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
                 const config = snap.val() || {};
                 const logo = config.logo || config.logoUrl || '';
                 
+                // Aplica os dados institucionais dinâmicos da marca
+                if(config.name) {
+                    document.getElementById('tituloPagina').innerText = config.name;
+                    // Atualiza o text fallback da logo com a primeira letra do nome real da loja
+                    const fallback = document.getElementById('headerLogoFallback');
+                    if(fallback) fallback.innerText = config.name.charAt(0).toUpperCase();
+                }
+                if(config.slogan) {
+                    const sloganTxt = document.querySelector('.tracking-\\[0\\.25em\\].text-zinc-500');
+                    if(sloganTxt) sloganTxt.innerText = config.slogan;
+                }
+
                 if(config.pix) {
                     descontoPixGlobal = parseFloat(config.pix) || 0;
                     document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
@@ -355,9 +367,13 @@
                 const logoImg = document.getElementById('headerLogo');
                 const fallback = document.getElementById('headerLogoFallback');
                 
-                logoImg.src = typeof obterLogo === 'function' ? obterLogo() : logo;
-                logoImg.classList.remove('hidden');
-                fallback.classList.add('hidden');
+                // Força a resolução da URL da imagem vinda do Firebase ou Storage local
+                logoImg.src = typeof obterLogo === 'function' ? obterLogo() : (typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logo) : logo);
+                
+                logoImg.onload = () => {
+                    logoImg.classList.remove('hidden');
+                    if(fallback) fallback.classList.add('hidden');
+                };
             }catch(e){
                 console.error('Erro logo header:', e);
             }

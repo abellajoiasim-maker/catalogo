@@ -110,26 +110,32 @@
             
             <div class="flex items-center gap-3 min-w-0">
                 <!-- Conteiner da Logo com Bordas Arredondadas (rounded-2xl) conforme o Print -->
-<div class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl p-0.5 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
-    <!-- A logo chama a função de erro nativa caso o link quebre -->
-    <img id="headerLogo" src="" onerror="this.classList.add('hidden'); document.getElementById('headerLogoFallback').classList.remove('hidden');" alt="Abella Joias" class="w-full h-full object-cover rounded-2xl hidden">
-    
-    <!-- O Grid Dourado com a letra A padrão -->
-    <div id="headerLogoFallback" class="absolute inset-0 bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center text-black font-black text-xl rounded-2xl">
-        A
-    </div>
-</div>
+                <div class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl p-0.5 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
+                    <!-- Começa visível (sem a classe hidden) apontando direto para a URL estável do seu Storage -->
+                    <img id="headerLogo" 
+                         src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media" 
+                         onerror="this.classList.add('hidden'); document.getElementById('headerLogoFallback').classList.remove('hidden');" 
+                         alt="Abella Joias" 
+                         class="w-full h-full object-cover rounded-2xl block">
+                    
+                    <!-- O Grid Dourado com a letra A padrão inicia estritamente oculto (hidden), agindo apenas como segurança de rede -->
+                    <div id="headerLogoFallback" class="hidden absolute inset-0 bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center text-black font-black text-xl rounded-2xl">
+                        A
+                    </div>
+                </div>
 
                 <div class="min-w-0 flex flex-col justify-center">
                     <h1 class="font-serif text-[#caa85c] text-sm md:text-xl font-bold uppercase tracking-[0.18em] leading-tight whitespace-nowrap">
                         Abella Joias
                     </h1>
-                    <p id="categoriaAtual" class="text-zinc-400 text-[9px] md:text-[11px] uppercase tracking-[0.12em] font-bold leading-tight mt-0.5 whitespace-nowrap truncate">
+                    <!-- Slogan Protegido: Alterado o ID para "sloganFixo" para blindar o texto contra as alterações dinâmicas do JS -->
+                    <p id="sloganFixo" class="text-zinc-400 text-[9px] md:text-[11px] uppercase tracking-[0.12em] font-bold leading-tight mt-0.5 whitespace-nowrap">
                         Atacado de Joias no Bruto
                     </p>
-                    <p id="slogan" class="text-zinc-500 text-[7px] md:text-[9px] uppercase tracking-[0.12em] font-medium leading-tight mt-0.5 hidden">
-                        Atacado de Joias no Bruto
-                    </p>
+                    
+                    <!-- Elemento técnico oculto mantendo o ID original para o script trabalhar em background sem quebrar o seu visual -->
+                    <span id="categoriaAtual" class="hidden"></span>
+                    <span id="slogan" class="hidden"></span>
                 </div>
             </div>
 
@@ -411,7 +417,7 @@ async function carregarLogoHeader(){
                 .replace(/\s+/g, '-');
         }
 
-        async function carregarProdutos(){
+       async function carregarProdutos(){
             try{
                 const loading = document.getElementById('loading');
                 if (loading) loading.innerHTML = 'Carregando produtos premium...';
@@ -420,23 +426,19 @@ async function carregarLogoHeader(){
                 const categoria = normalizarTexto(params.get('categoria') || params.get('cat'));
                 const subcategoria = normalizarTexto(decodeURIComponent(params.get('subcategoria') || params.get('sub') || ''));
                 
-                // Define o rótulo do filtro
-                let nomeFiltro = '';
+                // Define o nome correto do filtro atual
+                let nomeFiltro = 'Todos os Produtos';
                 if(subcategoria) {
                     nomeFiltro = params.get('subcategoria') || params.get('sub');
                 } else if(categoria) {
                     nomeFiltro = params.get('categoria') || params.get('cat');
                 }
                 
-                // Altera a tag oculta para fins de lógica do sistema
-                const elCategoria = document.getElementById('categoriaAtual');
-                if (elCategoria) {
-                    elCategoria.innerText = nomeFiltro ? nomeFiltro : 'Atacado de Joias no Bruto';
-                }
-
-                // Altera APENAS o título do Banner/Hero da listagem lá embaixo
+                // Altera APENAS o título dinâmico da seção de produtos (abaixo do cabeçalho)
                 const elHero = document.getElementById('heroTitulo');
-                if (elHero && nomeFiltro) elHero.innerText = nomeFiltro;
+                if (elHero) {
+                    elHero.innerText = nomeFiltro;
+                }
 
                 if(typeof produtoService === 'undefined' || typeof produtoService.listarTodos !== 'function') {
                     throw new Error('Serviço de produto indisponível.');

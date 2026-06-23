@@ -108,41 +108,32 @@
     <div class="max-w-7xl mx-auto px-4 md:px-6">
         <div class="h-20 flex items-center justify-between gap-3">
             
-            <!-- Lado Esquerdo: Identidade Visual Fixa -->
             <div class="flex items-center gap-3 min-w-0">
-                <!-- Conteiner da Logo com Bordas Arredondadas -->
-                <div class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl p-1 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
-                    <img id="headerLogo" src="" onerror="this.classList.add('hidden'); document.getElementById('headerLogoFallback').classList.remove('hidden');" alt="Abella Joias" class="w-full h-full object-contain">
-                    <div id="headerLogoFallback" class="hidden absolute inset-0 bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center text-black font-black text-xl">
-                        A
-                    </div>
+                <div class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-zinc-950 rounded-2xl p-0.5 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
+                    <img id="headerLogo" src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media" onerror="this.src='https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';" alt="Abella Joias" class="w-full h-full object-cover rounded-2xl">
                 </div>
 
-                <!-- Textos Institucionais Fixos e sem quebra (Responsivo) -->
                 <div class="min-w-0 flex flex-col justify-center">
                     <h1 class="font-serif text-[#caa85c] text-sm md:text-xl font-bold uppercase tracking-[0.18em] leading-tight whitespace-nowrap">
                         Abella Joias
                     </h1>
-                    <p class="text-zinc-500 text-[8px] md:text-[10px] uppercase tracking-[0.12em] font-medium leading-tight mt-0.5 max-w-[160px] md:max-w-none break-words md:whitespace-nowrap">
+                    <p id="categoriaAtual" class="text-zinc-400 text-[9px] md:text-[11px] uppercase tracking-[0.12em] font-bold leading-tight mt-0.5 whitespace-nowrap truncate">
                         Atacado de Joias no Bruto
                     </p>
-                    <!-- Elemento Opcional Dinâmico: Oculto no check-out/carrinho se preferir, ou usado para indicar a página -->
-                    <span id="categoriaAtual" class="hidden text-[8px] md:text-[10px] text-zinc-400 uppercase tracking-[0.15em] mt-0.5 font-bold truncate"></span>
+                    <p id="slogan" class="text-zinc-500 text-[7px] md:text-[9px] uppercase tracking-[0.12em] font-medium leading-tight mt-0.5 hidden">
+                        Atacado de Joias no Bruto
+                    </p>
                 </div>
             </div>
 
-            <!-- Lado Direito: Ações em Formato de Botões Arredondados (Grid/Flex Compacto) -->
             <div class="flex items-center gap-2 shrink-0">
                 
-                <!-- Botão Voltar (Fundo Escuro) -->
                 <button onclick="voltarPagina()" class="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-[#caa85c]/40 text-white flex items-center justify-center transition-all duration-200" aria-label="Voltar">
                     <span class="text-base font-bold select-none">←</span>
                 </button>
 
-                <!-- Botão Carrinho (Fundo Dourado Sólido com Contador Discreto no Topo) -->
                 <a href="carrinho.html" class="relative w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-[#caa85c] hover:bg-[#b5944a] text-black flex items-center justify-center transition-all duration-200">
                     <span class="text-lg">🛒</span>
-                    <!-- Contador flutuante minimalista (se mantiver o padrão de pecinhas) -->
                     <span id="cart-count" class="absolute -top-1.5 -right-1.5 bg-white text-black font-mono font-black text-[9px] px-1.5 py-0.5 rounded-full border border-black min-w-[18px] text-center">0</span>
                 </a>
 
@@ -314,6 +305,17 @@
 
 async function carregarLogoHeader(){
             try{
+                const logoImg = document.getElementById('headerLogo');
+                const fallback = document.getElementById('headerLogoFallback');
+                const urlDefinitivaStorage = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
+                
+                // Renderização imediata para evitar delay visual na troca de páginas
+                if (logoImg) {
+                    logoImg.src = urlDefinitivaStorage;
+                    logoImg.classList.remove('hidden');
+                    if (fallback) fallback.classList.add('hidden');
+                }
+
                 if(typeof window.getAbellaPath !== 'function') return;
                 const snap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
                 const config = snap.val() || {};
@@ -321,30 +323,27 @@ async function carregarLogoHeader(){
                 
                 if(config.pix) {
                     descontoPixGlobal = parseFloat(config.pix) || 0;
-                    document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
-                    document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
+                    if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
+                    if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
                 }
                 if(config.parcelas) {
-                    document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
+                    if (document.getElementById('parcelasBadgeValue')) document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
                 }
 
-                const logoImg = document.getElementById('headerLogo');
-                const fallback = document.getElementById('headerLogoFallback');
-                
-                // Validação estrita de imagem para não quebrar em caminhos nulos ou strings vazias
-                let logoResolvida = '';
-                if(typeof obterLogo === 'function') {
-                    logoResolvida = obterLogo();
-                } else if(typeof resolverImagemFirebase === 'function' && logo) {
-                    logoResolvida = resolverImagemFirebase(logo);
-                } else {
-                    logoResolvida = logo;
-                }
+                // Sincronização secundária caso haja uma nova logo customizada no painel admin
+                if(logo && logoImg) {
+                    let logoResolvida = '';
+                    if(typeof obterLogo === 'function') {
+                        logoResolvida = obterLogo();
+                    } else if(typeof resolverImagemFirebase === 'function') {
+                        logoResolvida = resolverImagemFirebase(logo);
+                    } else {
+                        logoResolvida = logo;
+                    }
 
-                if(logoResolvida) {
-                    logoImg.src = logoResolvida;
-                    logoImg.classList.remove('hidden');
-                    fallback.classList.add('hidden');
+                    if(logoResolvida) {
+                        logoImg.src = logoResolvida;
+                    }
                 }
             }catch(e){
                 console.error('Erro logo header:', e);
@@ -366,8 +365,8 @@ async function carregarLogoHeader(){
             try{
                 if(typeof carrinhoService !== 'undefined' && typeof money !== 'undefined') {
                     const resumo = carrinhoService.obterResumo();
-                    document.getElementById('cart-count').innerText = resumo.totalPecas || 0;
-                    document.getElementById('cart-total').innerText = money.formatar(resumo.subtotal || 0);
+                    if (document.getElementById('cart-count')) document.getElementById('cart-count').innerText = resumo.totalPecas || 0;
+                    if (document.getElementById('cart-total')) document.getElementById('cart-total').innerText = money.formatar(resumo.subtotal || 0);
                 }
             }catch(e){
                 console.error('Erro mini carrinho:', e);
@@ -387,32 +386,31 @@ async function carregarLogoHeader(){
         async function carregarProdutos(){
             try{
                 const loading = document.getElementById('loading');
-                loading.innerHTML = 'Carregando produtos premium...';
+                if (loading) loading.innerHTML = 'Carregando produtos premium...';
                 const params = new URLSearchParams(window.location.search);
                 
                 const categoria = normalizarTexto(params.get('categoria') || params.get('cat'));
                 const subcategoria = normalizarTexto(decodeURIComponent(params.get('subcategoria') || params.get('sub') || ''));
                 
                 // Define o rótulo do filtro sem sobrescrever os elementos raiz da marca
-                let nomeFiltro = 'Todos os Produtos';
+                let nomeFiltro = '';
                 if(subcategoria) {
                     nomeFiltro = params.get('subcategoria') || params.get('sub');
                 } else if(categoria) {
                     nomeFiltro = params.get('categoria') || params.get('cat');
                 }
                 
-                // Altera apenas o subtítulo e o topo do Hero. O h1 principal mantém-se estático.
+                // Altera apenas o subtítulo intermediário e o topo do Hero. O h1 principal mantém-se estático.
                 const elCategoria = document.getElementById('categoriaAtual');
                 if (elCategoria) {
-                    elCategoria.innerText = nomeFiltro;
+                    elCategoria.innerText = nomeFiltro ? nomeFiltro : 'Atacado de Joias no Bruto';
                 } else {
-                    // Fallback de segurança caso o elemento ainda não tenha sido renomeado no HTML
                     const elTitulo = document.getElementById('tituloPagina');
-                    if (elTitulo) elTitulo.innerText = nomeFiltro;
+                    if (elTitulo && nomeFiltro) elTitulo.innerText = nomeFiltro;
                 }
 
                 const elHero = document.getElementById('heroTitulo');
-                if (elHero) elHero.innerText = nomeFiltro;
+                if (elHero && nomeFiltro) elHero.innerText = nomeFiltro;
 
                 if(typeof produtoService === 'undefined' || typeof produtoService.listarTodos !== 'function') {
                     throw new Error('Serviço de produto indisponível.');
@@ -433,7 +431,7 @@ async function carregarLogoHeader(){
                     return (subProduto === subcategoria || subProduto.includes(subcategoria) || subcategoria.includes(subProduto));
                 });
 
-                document.getElementById('totalProdutos').innerText = produtos.length;
+                if (document.getElementById('totalProdutos')) document.getElementById('totalProdutos').innerText = produtos.length;
                 produtosFiltrados = [...produtos];
                 
                 const cfgSnap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
@@ -446,13 +444,14 @@ async function carregarLogoHeader(){
                 }
                 
                 if(typeof resolverImagemFirebase === 'function' && heroUrl) {
-                    document.getElementById('heroImagem').src = resolverImagemFirebase(heroUrl);
+                    const elHeroImg = document.getElementById('heroImagem');
+                    if (elHeroImg) elHeroImg.src = resolverImagemFirebase(heroUrl);
                 }
-                loading.classList.add('hidden');
+                if (loading) loading.classList.add('hidden');
                 renderizarProdutos();
             }catch(err){
                 console.error('Erro carregar produtos:', err);
-                document.getElementById('loading').innerHTML = 'Erro ao carregar produtos do catálogo.';
+                if (document.getElementById('loading')) document.getElementById('loading').innerHTML = 'Erro ao carregar produtos do catálogo.';
             }
         }
 

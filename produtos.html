@@ -109,9 +109,16 @@
         <div class="h-20 flex items-center justify-between gap-3">
             
             <div class="flex items-center gap-3 min-w-0">
-                <div class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-zinc-950 rounded-2xl p-0.5 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
-                    <img id="headerLogo" src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media" onerror="this.src='https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';" alt="Abella Joias" class="w-full h-full object-cover rounded-2xl">
-                </div>
+                <!-- Conteiner da Logo com Bordas Arredondadas (rounded-2xl) conforme o Print -->
+<div class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl p-0.5 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
+    <!-- A logo chama a função de erro nativa caso o link quebre -->
+    <img id="headerLogo" src="" onerror="this.classList.add('hidden'); document.getElementById('headerLogoFallback').classList.remove('hidden');" alt="Abella Joias" class="w-full h-full object-cover rounded-2xl hidden">
+    
+    <!-- O Grid Dourado com a letra A padrão -->
+    <div id="headerLogoFallback" class="absolute inset-0 bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center text-black font-black text-xl rounded-2xl">
+        A
+    </div>
+</div>
 
                 <div class="min-w-0 flex flex-col justify-center">
                     <h1 class="font-serif text-[#caa85c] text-sm md:text-xl font-bold uppercase tracking-[0.18em] leading-tight whitespace-nowrap">
@@ -309,53 +316,74 @@ async function carregarLogoHeader(){
                 const fallback = document.getElementById('headerLogoFallback');
                 const urlDefinitivaStorage = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
                 
-                // Renderização imediata para evitar delay visual na troca de páginas
-                if (logoImg) {
-                    logoImg.src = urlDefinitivaStorage;
-                    logoImg.classList.remove('hidden');
-                    if (fallback) fallback.classList.add('hidden');
+                let logo = '';
+                let config = {};
+
+                // Se o Firebase estiver ativo, busca as configurações atuais
+                if(typeof window.getAbellaPath === 'function') {
+                    const snap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
+                    config = snap.val() || {};
+                    logo = config.logo || config.logoUrl || '';
+                    
+                    if(config.pix) {
+                        descontoPixGlobal = parseFloat(config.pix) || 0;
+                        if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
+                        if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
+                    }
+                    if(config.parcelas) {
+                        if (document.getElementById('parcelasBadgeValue')) document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
+                    }
                 }
 
-                if(typeof window.getAbellaPath !== 'function') return;
-                const snap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
-                const config = snap.val() || {};
-                const logo = config.logo || config.logoUrl || '';
-                
-                if(config.pix) {
-                    descontoPixGlobal = parseFloat(config.pix) || 0;
-                    if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
-                    if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
-                }
-                if(config.parcelas) {
-                    if (document.getElementById('parcelasBadgeValue')) document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
-                }
+                // Define a prioridade da URL: se não veio nada válido do banco, usa o link direto estável
+                let logoFinal = (logo && logo !== 'logo') ? logo : urlDefinitivaStorage;
 
-                // Sincronização secundária caso haja uma nova logo customizada no painel admin
-                if(logo && logoImg) {
-                    let logoResolvida = '';
+                // Resolve o caminho final caso existam conversores de link de imagem no projeto
+                let logoResolvida = '';
+                if(logoFinal) {
                     if(typeof obterLogo === 'function') {
                         logoResolvida = obterLogo();
-                    } else if(typeof resolverImagemFirebase === 'function') {
-                        logoResolvida = resolverImagemFirebase(logo);
+                    } else if(typeof resolverImagemFirebase === 'function' && logoFinal !== urlDefinitivaStorage) {
+                        logoResolvida = resolverImagemFirebase(logoFinal);
                     } else {
-                        logoResolvida = logo;
+                        logoResolvida = logoFinal;
                     }
+                }
 
-                    if(logoResolvida) {
+                // Controle visual estrito: Se há uma logo válida, renderiza. Caso contrário, mantém o grid "A" ligado.
+                if(logoResolvida && logoResolvida !== 'logo' && logoResolvida.trim() !== '') {
+                    if (logoImg) {
                         logoImg.src = logoResolvida;
+                        logoImg.classList.remove('hidden');
+                    }
+                    if (fallback) {
+                        fallback.classList.add('hidden');
+                    }
+                } else {
+                    if (logoImg) {
+                        logoImg.classList.add('hidden');
+                    }
+                    if (fallback) {
+                        fallback.classList.remove('hidden');
                     }
                 }
             }catch(e){
                 console.error('Erro logo header:', e);
+                // Proteção contra falhas severas de rede: mantém o grid dourado "A" na tela
+                const logoImg = document.getElementById('headerLogo');
+                const fallback = document.getElementById('headerLogoFallback');
+                if (logoImg) logoImg.classList.add('hidden');
+                if (fallback) fallback.classList.remove('hidden');
             }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
             try{
                 await carregarLogoHeader();
-                atualizarMiniCarrinho();
-                await carregarProdutos();
-                iniciarBusca();
+                // Verifica se a função existe antes de chamar, evitando travar o carregamento das páginas carrinho e check-out
+                if(typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
+                if(typeof carregarProdutos === 'function') await carregarProdutos();
+                if(typeof iniciarBusca === 'function') iniciarBusca();
             }catch(e){
                 console.error('Erro init:', e);
             }

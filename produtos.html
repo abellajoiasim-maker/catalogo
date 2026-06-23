@@ -330,30 +330,32 @@
     <script src="js/utils/image-helper.js"></script>
 
     <script>
-        let produtos = [];
+let produtos = [];
         let produtosFiltrados = [];
         let produtoAtual = null;
         let descontoPixGlobal = 5; 
 
-async function carregarLogoHeader(){
-            try{
+        async function carregarDadosEmpresaELogo(){
+            try {
                 if(typeof window.getAbellaPath !== 'function') return;
                 const snap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
                 const config = snap.val() || {};
-                const logo = config.logo || config.logoUrl || '';
                 
-                // Aplica os dados institucionais dinâmicos da marca
+                // 1. Injeta o Nome da Empresa no Header e no Fallback
                 if(config.name) {
-                    document.getElementById('tituloPagina').innerText = config.name;
-                    // Atualiza o text fallback da logo com a primeira letra do nome real da loja
+                    const nomeLoja = config.name;
+                    // Altera o fallback de texto para a inicial da loja
                     const fallback = document.getElementById('headerLogoFallback');
-                    if(fallback) fallback.innerText = config.name.charAt(0).toUpperCase();
+                    if(fallback) fallback.innerText = nomeLoja.charAt(0).toUpperCase();
                 }
+
+                // 2. Injeta o Slogan Dinâmico (Procura pelo parágrafo correto no Header)
                 if(config.slogan) {
-                    const sloganTxt = document.querySelector('.tracking-\\[0\\.25em\\].text-zinc-500');
+                    const sloganTxt = document.querySelector('header .text-\\[9px\\]');
                     if(sloganTxt) sloganTxt.innerText = config.slogan;
                 }
 
+                // 3. Configura os badges de desconto e parcelas
                 if(config.pix) {
                     descontoPixGlobal = parseFloat(config.pix) || 0;
                     document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
@@ -363,41 +365,53 @@ async function carregarLogoHeader(){
                     document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
                 }
 
-                if(!logo) return;
-                const logoImg = document.getElementById('headerLogo');
-                const fallback = document.getElementById('headerLogoFallback');
-                
-                // Força a resolução da URL da imagem vinda do Firebase ou Storage local
-                logoImg.src = typeof obterLogo === 'function' ? obterLogo() : (typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logo) : logo);
-                
-                logoImg.onload = () => {
-                    logoImg.classList.remove('hidden');
-                    if(fallback) fallback.classList.add('hidden');
-                };
-            }catch(e){
-                console.error('Erro logo header:', e);
+                // 4. Renderiza a Logo Corretamente
+                const logo = config.logo || config.logoUrl || '';
+                if(logo) {
+                    const logoImg = document.getElementById('headerLogo');
+                    const fallback = document.getElementById('headerLogoFallback');
+                    
+                    // Verifica se a função global obterLogo() existe, senão resolve o path do Firebase
+                    let urlLogo Final = typeof obterLogo === 'function' ? obterLogo() : '';
+                    if(!urlLogoFinal && typeof resolverImagemFirebase !== 'undefined') {
+                        urlLogoFinal = resolverImagemFirebase(logo);
+                    } else if(!urlLogoFinal) {
+                        urlLogoFinal = logo;
+                    }
+
+                    if(logoImg && urlLogoFinal) {
+                        logoImg.src = urlLogoFinal;
+                        logoImg.onload = () => {
+                            logoImg.classList.remove('hidden');
+                            if(fallback) fallback.classList.add('hidden');
+                        };
+                    }
+                }
+            } catch(e) {
+                console.error('Erro ao carregar dados institucionais:', e);
             }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            try{
-                await carregarLogoHeader();
+            try {
+                // Carrega primeiro as configurações da empresa e mantém fixo
+                await carregarDadosEmpresaELogo();
                 atualizarMiniCarrinho();
                 await carregarProdutos();
                 iniciarBusca();
-            }catch(e){
+            } catch(e) {
                 console.error('Erro init:', e);
             }
         });
 
         function atualizarMiniCarrinho(){
-            try{
+            try {
                 if(typeof carrinhoService !== 'undefined' && typeof money !== 'undefined') {
                     const resumo = carrinhoService.obterResumo();
                     document.getElementById('cart-count').innerText = resumo.totalPecas || 0;
                     document.getElementById('cart-total').innerText = money.formatar(resumo.subtotal || 0);
                 }
-            }catch(e){
+            } catch(e) {
                 console.error('Erro mini carrinho:', e);
             }
         }
@@ -413,7 +427,7 @@ async function carregarLogoHeader(){
         }
 
         async function carregarProdutos(){
-            try{
+            try {
                 const loading = document.getElementById('loading');
                 loading.innerHTML = 'Carregando produtos premium...';
 
@@ -421,6 +435,7 @@ async function carregarLogoHeader(){
                 const categoria = normalizarTexto(params.get('categoria') || params.get('cat'));
                 const subcategoria = normalizarTexto(decodeURIComponent(params.get('subcategoria') || params.get('sub') || ''));
 
+                // Define o título da página interna de produtos (Mantendo o Nome da Loja intacto no Header)
                 let tituloFormatado = 'Produtos';
                 if(subcategoria) tituloFormatado = params.get('subcategoria') || params.get('sub');
                 else if(categoria) tituloFormatado = params.get('categoria') || params.get('cat');
@@ -459,7 +474,7 @@ async function carregarLogoHeader(){
                 document.getElementById('heroImagem').src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(heroUrl) : heroUrl || 'https://via.placeholder.com/1200';
                 loading.classList.add('hidden');
                 renderizarProdutos();
-            }catch(err){
+            } catch(err) {
                 console.error('Erro carregar produtos:', err);
                 document.getElementById('loading').innerHTML = 'Erro ao carregar produtos do catálogo.';
             }
@@ -542,7 +557,6 @@ async function carregarLogoHeader(){
             document.getElementById('modalDescricao').innerText = produto.description || produto.descricao || 'Sem descrição disponível.';
             document.getElementById('modalImagem').src = imagem;
 
-            // Reset do input de quantidade padrão
             const qtdInput = document.getElementById('qtdPadrao');
             if (qtdInput) qtdInput.value = 1;
 

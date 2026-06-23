@@ -116,13 +116,13 @@
         }
         @media(max-width:640px){
             .back-button {
-                width: 100%;
+                width: auto;
                 justify-content: center;
-                height: 56px;
+                height: 42px;
                 font-size: 11px;
             }
             .back-button span:last-child {
-                display: inline;
+                display: none;
             }
         }
     </style>
@@ -131,19 +131,26 @@
 
     <header class="sticky top-0 z-50 border-b border-zinc-900 glass">
         <div class="max-w-7xl mx-auto px-4 md:px-6">
-            <div class="h-20 flex items-center justify-between">
-                <div class="flex items-center gap-4 w-full sm:w-auto">
-                    <button onclick="window.history.back()" class="back-button">
-                        <span class="back-button-icon">←</span>
-                        <span>Voltar</span>
-                    </button>
+            <div class="flex flex-col sm:flex-row items-center justify-between py-4 sm:h-20 gap-4">
+                <div class="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto text-center sm:text-left">
+                    <div class="flex items-center justify-between w-full sm:w-auto gap-4">
+                        <button onclick="window.history.back()" class="back-button">
+                            <span class="back-button-icon">←</span>
+                            <span>Voltar</span>
+                        </button>
 
-                    <div id="abellaLogoContainer" class="w-11 h-11 md:w-12 md:h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center border border-[#caa85c]/20 shadow-lg shadow-[#caa85c]/10 shrink-0">
+                        <div id="abellaLogoContainer" class="w-11 h-11 md:w-12 md:h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center border border-[#caa85c]/20 shadow-lg shadow-[#caa85c]/10 shrink-0 sm:hidden">
+                            <span id="abellaLogoFallback" class="text-black font-black text-xl serif">A</span>
+                            <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
+                        </div>
+                    </div>
+
+                    <div id="abellaLogoContainer" class="w-11 h-11 md:w-12 md:h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center border border-[#caa85c]/20 shadow-lg shadow-[#caa85c]/10 shrink-0 hidden sm:flex">
                         <span id="abellaLogoFallback" class="text-black font-black text-xl serif">A</span>
                         <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
                     </div>
 
-                    <h1 class="serif gold text-lg md:text-xl uppercase tracking-[0.2em] truncate">
+                    <h1 class="serif gold text-lg md:text-xl uppercase tracking-[0.2em] truncate w-full text-center sm:text-left mt-2 sm:mt-0">
                         Seu Carrinho
                     </h1>
                 </div>
@@ -167,7 +174,7 @@
             </a>
         </div>
 
-        <div id="carrinho-conteudo" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-8">
+        <div id="carrinho-conteudo" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
             
             <div class="lg:col-span-2 space-y-4">
                 <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
@@ -175,10 +182,10 @@
                     <button onclick="limparCarrinhoCompleto()" class="text-xs text-rose-400 hover:underline">Limpar tudo</button>
                 </div>
                 
-                <div id="lista-produtos-carrinho" class="space-y-4"></div>
+                <div id="lista-produtos-carrinho" class="space-y-4 w-full"></div>
             </div>
 
-            <div class="space-y-6">
+            <div class="space-y-6 w-full">
                 <div class="bg-card rounded-[1.6rem] md:rounded-[2rem] p-5 md:p-6 lg:sticky lg:top-28 space-y-5">
                     <h2 class="serif text-xl gold uppercase tracking-wider">Resumo do Pedido</h2>
                     
@@ -264,7 +271,6 @@
                     return;
                 }
 
-                // Carrega todas as regras institucionais e comerciais em um único snap dinâmico
                 const snap = await db.ref(window.getAbellaPath('settings')).once('value');
                 if (snap.exists()) {
                     configGlobal = snap.val() || {};
@@ -279,19 +285,20 @@
 
         function processarLogo(logoPath) {
             if (!logoPath) return;
-            const img = document.getElementById('abellaLogoImg');
-            const fallback = document.getElementById('abellaLogoFallback');
-            if (!img) return;
-
-            img.src = resolverImagemFirebase(logoPath);
-            img.onload = () => {
-                img.classList.remove('hidden');
-                fallback?.classList.add('hidden');
-            };
-            img.onerror = () => {
-                img.classList.add('hidden');
-                fallback?.classList.remove('hidden');
-            };
+            const imgs = document.querySelectorAll('#abellaLogoImg');
+            const fallbacks = document.querySelectorAll('#abellaLogoFallback');
+            
+            imgs.forEach((img, idx) => {
+                img.src = resolverImagemFirebase(logoPath);
+                img.onload = () => {
+                    img.classList.remove('hidden');
+                    fallbacks[idx]?.classList.add('hidden');
+                };
+                img.onerror = () => {
+                    img.classList.add('hidden');
+                    fallbacks[idx]?.classList.remove('hidden');
+                };
+            });
         }
 
         function renderizarCarrinho() {
@@ -313,37 +320,19 @@
             }
 
             containerVazio.classList.add('hidden');
+            containerConteudo.setTimeout;
             containerConteudo.classList.remove('hidden');
             listaProdutos.innerHTML = '';
 
             itens.forEach((item) => {
                 const imgUrl = resolverImagemFirebase(item.image || item.imagem);
-                const pesoTotalItem =
-    formatarPeso(
-        (
-            parseFloat(
-                item.peso ||
-                item.pesoUnitario ||
-                0
-            )
-        ) *
-        item.quantidade
-    );
-                
-            const precoUnitario =
-parseFloat(
-    item.precoFinal ??
-    item.price ??
-    item.preco ??
-    item.precoUnitario ??
-    0
-);
+                const pesoTotalItem = formatarPeso((parseFloat(item.peso || item.pesoUnitario || 0)) * item.quantidade);
+                const precoUnitario = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
                 const subtotalItem = precoUnitario * item.quantidade;
 
                 const txtUnitario = typeof money !== 'undefined' ? money.formatar(precoUnitario) : `R$ ${precoUnitario.toFixed(2)}`;
                 const txtSubtotal = typeof money !== 'undefined' ? money.formatar(subtotalItem) : `R$ ${subtotalItem.toFixed(2)}`;
 
-                // Sanitização básica contra ataques XSS
                 const limpoNome = String(item.name || item.titulo || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 const limpoId = String(item.id || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -359,48 +348,17 @@ parseFloat(
                             <p class="text-zinc-400 text-xs mt-1">🔋 Peso total: <span class="text-zinc-300 font-medium">${pesoTotalItem}g</span></p>
                         </div>
 
-                        <div class="flex items-center bg-black rounded-xl border border-zinc-800 p-1 flex-shrink-0 gap-1">
+                        <div class="flex items-center bg-black rounded-xl border border-zinc-800 p-1 flex-shrink-0 gap-1 my-2 sm:my-0">
                             <button onclick="alterarQtd('${limpoId}', -1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Diminuir">-</button>
-                           <input
-    type="number"
-    min="1"
-    step="1"
-    inputmode="numeric"
-    value="${item.quantidade}"
-    onchange="alterarQtdInput('${limpoId}', this.value)"
-    class="w-20 h-9 bg-black text-center text-white font-bold rounded-lg border border-zinc-700"
-/>
+                            <input type="number" min="1" step="1" inputmode="numeric" value="${item.quantidade}" onchange="alterarQtdInput('${limpoId}', this.value)" class="w-20 h-9 bg-black text-center text-white font-bold rounded-lg border border-zinc-700"/>
                             <button onclick="alterarQtd('${limpoId}', 1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Aumentar">+</button>
                         </div>
 
                         <div class="text-center sm:text-right flex-shrink-0 min-w-[120px]">
-
-    <p class="text-xs text-zinc-500 uppercase tracking-wider">
-        Subtotal
-    </p>
-
-    <p class="font-black text-[#caa85c] mt-1 text-base">
-        ${txtSubtotal}
-    </p>
-
-    <button
-    onclick="removerItemCarrinho('${limpoId}')"
-    class="
-        mt-3
-        w-9
-        h-9
-        rounded-xl
-        border
-        border-[#caa85c]
-        text-[#caa85c]
-        hover:bg-[#caa85c]
-        hover:text-black
-        transition
-    "
->
-    🗑
-</button>
-</div>
+                            <p class="text-xs text-zinc-500 uppercase tracking-wider">Subtotal</p>
+                            <p class="font-black text-[#caa85c] mt-1 text-base">${txtSubtotal}</p>
+                            <button onclick="removerItemCarrinho('${limpoId}')" class="mt-3 w-9 h-9 rounded-xl border border-[#caa85c] text-[#caa85c] hover:bg-[#caa85c] hover:text-black transition">🗑</button>
+                        </div>
                     </div>
                 `;
             });
@@ -408,108 +366,48 @@ parseFloat(
             atualizarTotaisResumo(itens);
         }
 
-function alterarQtd(id, delta) {
+        function alterarQtd(id, delta) {
+            const itens = carrinhoService.obterItens();
+            const index = itens.findIndex(i => String(i.id) === String(id));
+            if(index === -1) return;
 
-    const itens = carrinhoService.obterItens();
+            const item = itens[index];
+            const novaQtd = (parseInt(item.quantidade) || 0) + delta;
 
-    const index = itens.findIndex(
-        i => String(i.id) === String(id)
-    );
+            if(novaQtd <= 0){
+                carrinhoService.removerItem(index);
+            }else{
+                carrinhoService.atualizarQuantidade(index, novaQtd);
+            }
 
-    if(index === -1) return;
-
-    const item = itens[index];
-
-    const novaQtd =
-        (parseInt(item.quantidade) || 0) + delta;
-
-    if(novaQtd <= 0){
-        carrinhoService.removerItem(index);
-    }else{
-        carrinhoService.atualizarQuantidade(
-            index,
-            novaQtd
-        );
-    }
-
-    renderizarCarrinho();
-
-    if(typeof atualizarMiniCarrinho === 'function'){
-        atualizarMiniCarrinho();
-    }
-}
+            renderizarCarrinho();
+            if(typeof atualizarMiniCarrinho === 'function'){
+                atualizarMiniCarrinho();
+            }
+        }
 
         function removerItemCarrinho(id) {
+            if (!confirm('Deseja remover este item do carrinho?')) return;
+            const itens = carrinhoService.obterItens() || [];
+            const index = itens.findIndex(item => String(item.id) === String(id));
+            if (index === -1) return;
 
-    if (
-        !confirm(
-            'Deseja remover este item do carrinho?'
-        )
-    ) {
-        return;
-    }
+            carrinhoService.removerItem(index);
+            renderizarCarrinho();
+            if (typeof atualizarMiniCarrinho === 'function') {
+                atualizarMiniCarrinho();
+            }
+        }
 
-    const itens =
-        carrinhoService.obterItens() || [];
+        function alterarQtdInput(id, valor) {
+            const itens = carrinhoService.obterItens();
+            const index = itens.findIndex(i => String(i.id) === String(id));
+            if (index === -1) return;
 
-    const index =
-        itens.findIndex(
-            item =>
-                String(item.id) === String(id)
-        );
-
-    if (index === -1) {
-        return;
-    }
-
-    carrinhoService.removerItem(index);
-
-    renderizarCarrinho();
-
-    if (
-        typeof atualizarMiniCarrinho ===
-        'function'
-    ) {
-        atualizarMiniCarrinho();
-    }
-}
-
-
-// ADICIONE AQUI
-function alterarQtdInput(id, valor) {
-    console.log('[INPUT DIGITADO]', valor);
-
-    // Obtém a referência atual dos itens
-    const itens = carrinhoService.obterItens();
-
-    // Localiza o índice do item
-    const index = itens.findIndex(i => String(i.id) === String(id));
-
-    if (index === -1) return;
-
-    // Define a nova quantidade garantindo que seja um número inteiro positivo
-    const novaQuantidade = Math.max(1, parseInt(valor, 10) || 1);
-
-    console.log('[QUANTIDADE SALVA]', novaQuantidade);
-
-    // MANTENDO A INTEGRIDADE: 
-    // Em vez de sobrescrever o objeto todo, garantimos que o serviço
-    // apenas atualize a propriedade 'quantidade' no objeto existente
-    // para preservar campos como 'descontoPorcentagem', 'precoFinal', etc.
-    
-    // Verificamos se o serviço lida com a atualização do objeto completo ou apenas o valor
-    // Se o seu serviço for simples, garantimos que o item preserve suas chaves:
-    const itemAtualizado = { ...itens[index], quantidade: novaQuantidade };
-    
-    // Supondo que seu carrinhoService.atualizarQuantidade(index, valor) 
-    // faça a persistência correta, mantemos a chamada original
-    carrinhoService.atualizarQuantidade(index, novaQuantidade);
-
-    console.log('[ITEM APÓS SALVAR]', carrinhoService.obterItens()[index]);
-
-    // Recarrega a interface para aplicar os cálculos de totais com a nova quantidade
-    renderizarCarrinho();
-}
+            const novaQuantidade = Math.max(1, parseInt(valor, 10) || 1);
+            carrinhoService.atualizarQuantidade(index, novaQuantidade);
+            renderizarCarrinho();
+        }
 
         function limparCarrinhoCompleto() {
             if (confirm("Deseja realmente esvaziar seu carrinho?")) {
@@ -528,15 +426,7 @@ function alterarQtdInput(id, valor) {
             itens.forEach(item => {
                 totalItens += item.quantidade;
                 totalPeso += (parseFloat(item.peso || item.pesoUnitario || 0) * item.quantidade);
-                
-                const preco =
-parseFloat(
-    item.precoFinal ??
-    item.price ??
-    item.preco ??
-    item.precoUnitario ??
-    0
-);
+                const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
                 const brutoItem = preco * item.quantidade;
                 subtotalBruto += brutoItem;
 
@@ -548,10 +438,7 @@ parseFloat(
             const totalFinal = subtotalBruto - descontoTotal;
 
             document.getElementById('resumo-itens').innerText = totalItens;
-            document.getElementById(
-    'resumo-peso'
-).innerText =
-    formatarPeso(totalPeso);
+            document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso);
             
             if (typeof money !== 'undefined') {
                 document.getElementById('resumo-subtotal').innerText = money.formatar(subtotalBruto);
@@ -569,7 +456,6 @@ parseFloat(
                 blocoDesc.classList.add('hidden');
             }
 
-            // Regra de Frete Inteligente baseada no Subtotal Bruto
             const limiteFrete = 100.00;
             const barraFrete = document.getElementById('barra-frete');
             const freteAviso = document.getElementById('frete-aviso');
@@ -595,37 +481,28 @@ parseFloat(
         }
 
         function prosseguirParaCheckout() {
-    try {
-        // 1. Validação física do serviço de carrinho
-        if (typeof carrinhoService === 'undefined' || !carrinhoService.obterItens) {
-            alert('Erro Crítico: O serviço de carrinho não foi carregado corretamente.');
-            return;
+            try {
+                if (typeof carrinhoService === 'undefined' || !carrinhoService.obterItens) {
+                    alert('Erro Crítico: O serviço de carrinho não foi carregado corretamente.');
+                    return;
+                }
+                const itens = carrinhoService.obterItens() || [];
+                if (itens.length === 0) {
+                    alert('Seu carrinho está vazio. Adicione produtos antes de prosseguir.');
+                    return;
+                }
+                window.location.href = 'checkout.html';
+            } catch (error) {
+                console.error('Erro na transição para o checkout:', error);
+                alert('Não foi possível abrir a tela de finalização. Tente novamente.');
+            }
         }
 
-        const itens = carrinhoService.obterItens() || [];
-
-        // 2. Impede o avanço com o carrinho vazio
-        if (itens.length === 0) {
-            alert('Seu carrinho está vazio. Adicione produtos antes de prosseguir.');
-            return;
-        }
-
-        console.info('[Navegação] Carrinho validado com sucesso. Itens:', itens.length);
-
-        // 3. Redirecionamento Seguro e Direto
-        // Mudamos de assign() para href para garantir consistência de rotas no ecossistema Abella
-        window.location.href = 'checkout.html';
-
-    } catch (error) {
-        console.error('Erro na transição para o checkout:', error);
-        alert('Não foi possível abrir a tela de finalização. Tente novamente.');
-    }
-}
         document.addEventListener('DOMContentLoaded', inicializarPagina);
-       window.alterarQtd = alterarQtd;
-       window.removerItemCarrinho = removerItemCarrinho;
-       window.limparCarrinhoCompleto = limparCarrinhoCompleto;
-       window.prosseguirParaCheckout = prosseguirParaCheckout;
+        window.alterarQtd = alterarQtd;
+        window.removerItemCarrinho = removerItemCarrinho;
+        window.limparCarrinhoCompleto = limparCarrinhoCompleto;
+        window.prosseguirParaCheckout = prosseguirParaCheckout;
     </script>
 </body>
 </html>

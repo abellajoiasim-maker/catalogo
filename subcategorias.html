@@ -24,6 +24,9 @@
             --bg-card: #111111;
             --border: #1e1e1e;
             --border-gold: rgba(202,168,92,.25);
+            --text-muted: #666;
+            --text-dim: #444;
+            --emerald: #34d399;
         }
 
         body {
@@ -80,17 +83,37 @@
 
         /* Arrow btn padronizado */
         .arrow-btn {
-            width: 40px; height: 40px;
-            border-radius: 12px;
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
             background: var(--gold);
             color: #000;
             display: flex; align-items: center; justify-content: center;
-            font-size: 1rem;
+            font-size: 1.1rem;
             font-weight: 900;
             flex-shrink: 0;
             transition: background .2s;
         }
         .sub-card:hover .arrow-btn { background: var(--gold-light); }
+
+        #abellaLogoContainer {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--gold), #8b6a2b);
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(202,168,92,.2);
+            box-shadow: 0 4px 20px rgba(202,168,92,.12);
+            flex-shrink: 0;
+        }
+
+        /* Pulse dot */
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .6; transform: scale(1.4); }
+        }
+        .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
         /* Mobile adjustments override */
         @media (max-width: 768px) {
@@ -101,10 +124,31 @@
                 font-size: 2.25rem !important;
                 line-height: 1.1 !important;
             }
+            .badge {
+                font-size: .65rem;
+            }
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center; gap: .5rem;
+            background: rgba(202,168,92,.08);
+            border: 1px solid rgba(202,168,92,.18);
+            border-radius: 999px;
+            padding: .35rem 1rem;
+        }
+
+        /* Mobile bar */
+        .mobile-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 50;
+            padding: .75rem;
+            background: linear-gradient(to top, #000 60%, transparent);
         }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen pb-20 lg:pb-0">
 
     <div id="banner" class="hidden border-b border-[#caa85c]/20 bg-gradient-to-r from-[#1a1407] via-black to-[#1a1407]" role="banner">
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center">
@@ -116,29 +160,37 @@
         <div class="max-w-7xl mx-auto px-4 md:px-6">
             <div class="h-14 md:h-20 flex items-center justify-between gap-2 md:gap-4">
 
-                <a href="index.html" class="flex items-center gap-3 md:gap-4 group">
+                <a href="index.html" class="flex items-center gap-4 group">
                     <div id="abellaLogoContainer">
                         <span id="abellaLogoFallback" class="text-black font-black text-xl serif">A</span>
                         <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
                     </div>
                     <div>
-                        <h1 id="nome" class="serif gold text-base md:text-2xl uppercase tracking-[.25em]">Abella Joias</h1>
-                        <p id="slogan" class="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-[.25em] mt-0.5">Catálogo Premium</p>
+                        <h1 id="nome" class="serif gold text-lg md:text-2xl uppercase tracking-[.25em] mb-0.5">Abella Joias</h1>
+                        <p id="slogan" class="text-[10px] text-zinc-500 uppercase tracking-[.25em] mt-1">Catálogo Premium</p>
                     </div>
                 </a>
 
-                <div class="flex items-center gap-2 md:gap-3">
+                <div class="flex items-center gap-3">
                     <button onclick="window.history.back()" 
-                            class="h-10 md:h-12 px-3 md:px-5 rounded-xl md:rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] text-zinc-300 hover:text-white transition-all flex items-center gap-2 text-xs md:text-sm font-bold uppercase tracking-wider">
+                            class="h-12 px-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] text-zinc-300 hover:text-white transition-all flex items-center gap-2 text-sm font-bold uppercase tracking-wider">
                         <span>←</span> <span class="hidden sm:inline">Voltar</span>
                     </button>
 
+                    <nav class="hidden lg:flex items-center gap-3" aria-label="Navegação do carrinho">
+                        <a href="carrinho.html"
+                           class="h-12 px-5 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.15em] flex items-center gap-3">
+                            <span>🛒</span>
+                            <span id="cart-count">0</span>
+                            <span class="opacity-60">|</span>
+                            <span id="cart-total">R$ 0,00</span>
+                        </a>
+                    </nav>
+
                     <a href="carrinho.html"
-                       class="h-10 md:h-12 px-3 md:px-5 rounded-xl md:rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.15em] flex items-center gap-2 md:gap-3 text-xs md:text-sm">
-                        <span>🛒</span>
-                        <span id="cart-count">0</span>
-                        <span class="opacity-30 hidden md:inline">|</span>
-                        <span id="cart-total" class="hidden md:inline">R$ 0,00</span>
+                       class="lg:hidden w-12 h-12 rounded-2xl bg-[#caa85c] text-black flex items-center justify-center font-black"
+                       aria-label="Carrinho">
+                        🛒
                     </a>
                 </div>
 
@@ -149,9 +201,9 @@
     <section class="hero-section border-b border-zinc-900 relative overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-20 relative z-10">
             <div class="max-w-3xl">
-                <div class="inline-flex items-center gap-2 bg-rgba bg-zinc-900/80 border border-zinc-800 rounded-full px-3 py-1.5 mb-6">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span id="txt-badge" class="text-[10px] uppercase tracking-[.25em] gold font-black">Coleção Selecionada</span>
+                <div class="badge mb-6">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                    <span id="txt-badge" class="text-[11px] uppercase tracking-[.25em] gold font-black">Coleção Selecionada</span>
                 </div>
 
                 <h2 id="categoriaNome" class="serif text-4xl md:text-7xl font-black tracking-wide leading-tight uppercase">
@@ -176,7 +228,7 @@
 
             <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10 border-b border-zinc-900 pb-6">
                 <div>
-                    <p class="gold uppercase tracking-[.25em] text-[10px] md:text-xs font-black">Filtragem de Atacado</p>
+                    <p class="gold uppercase tracking-[.25em] text-xs font-black">Filtragem de Atacado</p>
                     <h3 class="serif text-xl md:text-3xl mt-1">Selecione uma Subcategoria</h3>
                 </div>
                 <p class="text-zinc-500 text-xs md:text-sm leading-relaxed max-w-md md:text-right">
@@ -233,6 +285,12 @@
         </div>
     </footer>
 
+    <div class="mobile-bar lg:hidden">
+        <a href="carrinho.html" class="w-full h-14 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] flex items-center justify-center gap-3">
+            🛒 <span>Finalizar Pedido</span>
+        </a>
+    </div>
+
     <script src="js/firebase/firebase-config.js"></script>
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
@@ -250,7 +308,6 @@
             const loading = document.getElementById('loading');
             const noResult = document.getElementById('no-result');
 
-            // Captura de parâmetros operacionais da URL (?categoria=)
             const params = new URLSearchParams(window.location.search);
             categoriaSlug = (params.get('categoria') || params.get('id') || '').toString().trim();
 
@@ -260,7 +317,6 @@
             }
 
             try {
-                // Sincroniza configurações globais (Settings) para manter topo e rodapé idênticos ao index
                 const snapSettings = await db.ref('abella/settings').once('value');
                 if (snapSettings.exists()) {
                     const cfg = snapSettings.val();
@@ -269,7 +325,8 @@
                         const img = document.getElementById('abellaLogoImg');
                         const fallback = document.getElementById('abellaLogoFallback');
                         if (img) {
-                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(cfg.logoUrl) : cfg.logoUrl;
+                            img.src = typeof resolverImagemFirebase !== 'undefined' ?
+                                resolverImagemFirebase(cfg.logoUrl) : cfg.logoUrl;
                             img.onload = () => {
                                 img.classList.remove('hidden');
                                 fallback?.classList.add('hidden');
@@ -292,25 +349,20 @@
                     }
                 }
 
-                // Sincroniza e processa a categoria ativa específica obtida via Slug
                 const snapCategories = await db.ref('abella/categories').once('value');
                 let categoriaAtual = null;
 
                 if (snapCategories.exists()) {
                     const dadosCat = snapCategories.val();
-                    
-                    // Busca inteligente para capturar o nó correto baseado no campo slug ou chave primária
                     const found = Object.entries(dadosCat).find(([key, value]) => {
                         const itemSlug = value.slug || value.id || key;
                         return String(itemSlug).toLowerCase() === String(categoriaSlug).toLowerCase();
                     });
-
                     if (found) {
                         categoriaAtual = found[1];
                     }
                 }
 
-                // Fallback de segurança se a categoria pai não for localizada
                 if (!categoriaAtual) {
                     loading.classList.add('hidden');
                     document.getElementById('categoriaNome').innerText = "Coleção Especial";
@@ -318,31 +370,25 @@
                     return;
                 }
 
-                // Define textos e metadados do Hero da página ativa
                 const nomeCategoria = categoriaAtual.nome || categoriaAtual.name || categoriaSlug;
                 document.getElementById('categoriaNome').innerText = nomeCategoria;
                 document.title = `${nomeCategoria} • Subcategorias • Abella Joias`;
-                document.getElementById('categoriaDescricao').innerText = categoriaAtual.descricao || categoriaAtual.description || 'Explore as linhas exclusivas da coleção premium Abella Joias.';
+                document.getElementById('categoriaDescricao').innerText = categoriaAtual.descricao || categoriaAtual.description ||
+                    'Explore as linhas exclusivas da coleção premium Abella Joias.';
 
-                // Captura e processamento do nó interno de subcategorias (Trata escrita PT/EN)
                 const subcategoriasObj = categoriaAtual.subcategories || categoriaAtual.subcategorias || {};
                 const listaSubcategorias = Object.entries(subcategoriasObj).filter(([_, sub]) => sub && sub.paused !== true);
 
                 loading.classList.add('hidden');
-
-                // Redirecionamento automático para a tela de produtos se não houver subcategorias aninhadas
                 if (listaSubcategorias.length === 0) {
                     window.location.href = `produtos.html?categoria=${encodeURIComponent(categoriaSlug)}`;
                     return;
                 }
 
-                // Montagem do Grid Inteligente por DocumentFragment
                 const fragmento = document.createDocumentFragment();
-
                 listaSubcategorias.forEach(([subSlug, subData]) => {
                     const nomeSub = subData.name || subData.nome || subSlug;
                     
-                    // Resgate e resolução de imagens de capa (subcategoria -> fallback categoria pai)
                     let imgBanco = subData.image || subData.imagem || subData.cover || subData.banner || categoriaAtual.image || categoriaAtual.imagem || '';
                     if (imgBanco && typeof resolverImagemFirebase !== 'undefined') {
                         imgBanco = resolverImagemFirebase(imgBanco);
@@ -351,7 +397,7 @@
                     }
 
                     const card = document.createElement('div');
-                    card.className = "sub-card aspect-[3/4] relative group";
+                    card.className = "sub-card aspect-[3/4] relative group rounded-2xl overflow-hidden shadow-md";
                     card.setAttribute('role', 'listitem');
                     
                     card.onclick = () => {
@@ -359,13 +405,13 @@
                     };
 
                     card.innerHTML = `
-                        <img src="${imgBanco}" alt="${nomeSub}" loading="lazy" onerror="this.src='images/fallback.jpg'" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-4 md:p-5 flex flex-col justify-end">
-                            <p class="text-[9px] md:text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Linha Atacado</p>
-                            <h4 class="serif text-white text-sm md:text-lg font-bold tracking-wide uppercase mt-1 leading-tight truncate">${nomeSub}</h4>
-                            <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <span class="text-[9px] md:text-[10px] uppercase font-bold text-[#caa85c] tracking-wider">Ver Produtos</span>
-                                <div class="arrow-btn text-xs bg-[#caa85c] text-black rounded-lg w-5 h-5 flex items-center justify-center font-bold">→</div>
+                        <img src="${imgBanco}" alt="${nomeSub}" loading="lazy" onerror="this.src='images/fallback.jpg'" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-5 flex flex-col justify-end">
+                            <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">Linha Atacado</p>
+                            <h4 class="serif text-white text-base md:text-lg font-bold tracking-wide uppercase mt-1 leading-tight truncate">${nomeSub}</h4>
+                            <div class="mt-3 pt-3 border-t border-white/10 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span class="text-[10px] uppercase font-bold text-[#caa85c] tracking-wider">Ver Produtos</span>
+                                <div class="arrow-btn text-xs bg-[#caa85c] text-black rounded-lg w-6 h-6 flex items-center justify-center font-bold">→</div>
                             </div>
                         </div>
                     `;

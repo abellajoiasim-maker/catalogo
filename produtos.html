@@ -377,46 +377,122 @@
             }
         }
 
-        // 3. Define a URL definitiva com base no retorno do banco
-        let logoFinal = (logo && logo.trim() !== '' && logo !== 'logo' && logo !== 'undefined') ? logo : urlDefinitivaStorage;
+      // ======================================================================
+// 3. Resolve a URL da logo utilizando EXCLUSIVAMENTE o valor salvo
+// em abella/settings/logoUrl.
+// ======================================================================
 
-        let logoResolvida = '';
-        if (logoFinal) {
-            if (typeof obterLogo === 'function') {
-                logoResolvida = obterLogo();
-            } else if (typeof resolverImagemFirebase === 'function' && logoFinal !== urlDefinitivaStorage) {
-                logoResolvida = resolverImagemFirebase(logoFinal);
-            } else {
-                logoResolvida = logoFinal;
-            }
-        }
+// Valor padrão caso não exista configuração
+const logoPadrao = urlDefinitivaStorage;
 
-        // 4. Atribuição do SRC: Ativa de forma limpa os tratamentos do passo 1
-        if (logoImg) {
-            if (logoResolvida && logoResolvida !== 'logo' && logoResolvida.trim() !== '') {
-                logoImg.src = logoResolvida;
-            } else {
-                logoImg.src = urlDefinitivaStorage;
-            }
-        }
+// Validação da string recebida do Firebase
+let logoFinal = '';
 
-    } catch(e) {
-        console.error('Erro logo header:', e);
+if (
+    typeof logo === 'string' &&
+    logo.trim() !== '' &&
+    logo !== 'logo' &&
+    logo !== 'undefined' &&
+    logo !== 'null'
+) {
+    logoFinal = logo.trim();
+}
+
+// Fallback para a logo padrão
+if (!logoFinal) {
+    logoFinal = logoPadrao;
+}
+
+// Resolve a URL somente quando necessário
+let logoResolvida = logoFinal;
+
+try {
+
+    // URLs HTTP/HTTPS já estão prontas
+    if (/^https?:\/\//i.test(logoFinal)) {
+
+        logoResolvida = logoFinal;
+
+    }
+
+    // Caminhos gs:// ou internos do Firebase
+    else if (
+        typeof resolverImagemFirebase === 'function'
+    ) {
+
+        logoResolvida = resolverImagemFirebase(logoFinal);
+
+    }
+
+} catch (erroResolver) {
+
+    console.warn('Falha ao resolver a logo:', erroResolver);
+
+    logoResolvida = logoPadrao;
+
+}
+
+// Segurança extra
+if (
+    !logoResolvida ||
+    typeof logoResolvida !== 'string' ||
+    logoResolvida.trim() === ''
+) {
+    logoResolvida = logoPadrao;
+}
+
+// ======================================================================
+// 4. Atualiza a imagem
+// ======================================================================
+
+if (logoImg) {
+    logoImg.src = logoResolvida;
+}
+
+} catch (e) {
+
+    console.error('Erro logo header:', e);
+
+    // Garante o fallback visual
+    if (logoImg) {
+        logoImg.src = urlDefinitivaStorage;
+    }
+
+    if (fallback) {
+        fallback.classList.remove('hidden');
     }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+
     try {
+
         await carregarLogoHeader();
-        
-        if (typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
-        if (typeof carregarProdutos === 'function') await carregarProdutos();
-        if (typeof iniciarBusca === 'function') iniciarBusca();
-    } catch(e) {
+
+        if (typeof atualizarMiniCarrinho === 'function') {
+            atualizarMiniCarrinho();
+        }
+
+        if (typeof carregarProdutos === 'function') {
+            await carregarProdutos();
+        }
+
+        if (typeof iniciarBusca === 'function') {
+            iniciarBusca();
+        }
+
+    } catch (e) {
+
         console.error('Erro init:', e);
+
         const loading = document.getElementById('loading');
-        if (loading) loading.classList.add('hidden');
+
+        if (loading) {
+            loading.classList.add('hidden');
+        }
+
     }
+
 });
         function atualizarMiniCarrinho(){
             try {

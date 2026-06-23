@@ -116,19 +116,20 @@
         <div class="h-20 flex items-center justify-between gap-3">
             
             <a href="index.html" class="flex items-center gap-3 min-w-0 group">
-                <!-- ID unificado para o container da Logo mantendo o estilo visual premium -->
-                <div id="abellaLogoContainer" class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl p-0.5 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
-                    
-                    <!-- Fallback padrão (Letra A) mapeado com o ID que o script procura -->
-                    <span id="abellaLogoFallback" class="text-black font-black text-xl font-serif">A</span>
-                    
-                    <!-- Imagem oficial mapeada com o ID correto. Inicia oculta para o script realizar o onload sem quebras -->
-                    <img id="abellaLogoImg" 
-                         src="" 
-                         onerror="this.classList.add('hidden'); document.getElementById('abellaLogoFallback').classList.remove('hidden');" 
-                         alt="Abella Joias" 
-                         class="w-full h-full object-cover rounded-2xl hidden">
-                </div>
+<!-- ID unificado para o container da Logo com fundo branco e bordas arredondadas -->
+<div id="abellaLogoContainer" class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
+    
+    <!-- O Fallback inicia VISÍVEL (sem a classe hidden) para segurar o layout imediatamente -->
+    <div id="abellaLogoFallback" class="absolute inset-0 bg-white text-black font-black text-xl font-serif flex items-center justify-center rounded-2xl select-none">
+        A
+    </div>
+    
+    <!-- A Imagem inicia OCULTA (com a classe hidden) e sem inline styles para não forçar blocos quebrados -->
+    <img id="abellaLogoImg" 
+         src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media" 
+         alt="Abella Joias" 
+         class="absolute inset-0 w-full h-full object-cover rounded-2xl hidden">
+</div>
 
                 <div class="min-w-0 flex flex-col justify-center">
                     <!-- ID 'nome' adicionado para receber a string exata vinda de 'abella/settings' -->
@@ -320,104 +321,103 @@
         let descontoPixGlobal = 5;
 
         async function carregarLogoHeader(){
-            try {
-                // Seletores flexíveis: tenta achar os novos IDs unificados ou mantém compatibilidade com os antigos
-                const logoImg = document.getElementById('abellaLogoImg') || document.getElementById('headerLogo');
-                const fallback = document.getElementById('abellaLogoFallback') || document.getElementById('headerLogoFallback');
-                const urlDefinitivaStorage = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
-                
-                // 1. Estado Visual Imediato: Evita saltos visuais na tela
-                if (logoImg) {
-                    if (!logoImg.src || logoImg.src === window.location.href) {
-                        logoImg.src = urlDefinitivaStorage;
-                    }
-                    logoImg.classList.remove('hidden');
-                    logoImg.style.display = 'block';
-                }
-                if (fallback) {
-                    fallback.classList.add('hidden');
-                }
+    try {
+        const logoImg = document.getElementById('abellaLogoImg') || document.getElementById('headerLogo');
+        const fallback = document.getElementById('abellaLogoFallback') || document.getElementById('headerLogoFallback');
+        const urlDefinitivaStorage = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
+        
+        let logo = '';
+        let config = {};
 
-                let logo = '';
-                let config = {};
+        // 1. Configura os ouvintes de evento ANTES de definir o src para evitar perder o gatilho de carregamento
+        if (logoImg) {
+            logoImg.onload = () => {
+                logoImg.classList.remove('hidden');
+                logoImg.style.display = 'block';
+                if (fallback) fallback.classList.add('hidden');
+            };
 
-                // Resolvendo de forma segura o caminho do Firebase
-                if (typeof firebase !== 'undefined' && firebase.database) {
-                    let path = 'abella/settings';
-                    if (typeof window.getAbellaPath === 'function') {
-                        path = window.getAbellaPath('settings');
-                    }
-                    
-                    const snap = await firebase.database().ref(path).once('value');
-                    config = snap.val() || {};
-                    logo = config.logo || config.logoUrl || '';
-                    
-                    // Injeta dinamicamente textos institucionais caso existam na base
-                    if (config.name && document.getElementById('nome')) document.getElementById('nome').innerText = config.name;
-                    if (config.slogan && document.getElementById('slogan')) document.getElementById('slogan').innerText = config.slogan;
-                    
-                    if (config.pix) {
-                        descontoPixGlobal = parseFloat(config.pix) || 0;
-                        if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
-                        if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
-                    }
-                    if (config.parcelas) {
-                        if (document.getElementById('parcelasBadgeValue')) document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
-                    }
+            logoImg.onerror = () => {
+                logoImg.classList.add('hidden');
+                logoImg.style.display = 'none';
+                if (fallback) fallback.classList.remove('hidden');
+            };
+        }
 
-                    // Exibe e preenche o banner de aviso superior se estiver ativo
-                    const banner = document.getElementById('banner');
-                    if (banner && config.bannerAtivo && config.bannerTexto) {
-                        const bannerTextoEl = document.getElementById('bannerTexto');
-                        if (bannerTextoEl) bannerTextoEl.innerText = config.bannerTexto;
-                        banner.classList.remove('hidden');
-                    }
-                }
+        // 2. Busca de forma assíncrona as configurações no Firebase
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            let path = 'abella/settings';
+            if (typeof window.getAbellaPath === 'function') {
+                path = window.getAbellaPath('settings');
+            }
+            
+            const snap = await firebase.database().ref(path).once('value');
+            config = snap.val() || {};
+            logo = config.logo || config.logoUrl || '';
+            
+            // Injeta os textos institucionais caso existam na base
+            if (config.name && document.getElementById('nome')) document.getElementById('nome').innerText = config.name;
+            if (config.slogan && document.getElementById('slogan')) document.getElementById('slogan').innerText = config.slogan;
+            
+            if (config.pix) {
+                descontoPixGlobal = parseFloat(config.pix) || 0;
+                if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
+                if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
+            }
+            if (config.parcelas) {
+                if (document.getElementById('parcelasBadgeValue')) document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
+            }
 
-                // 2. Proteção Dinâmica da Logo
-                let logoFinal = (logo && logo.trim() !== '' && logo !== 'logo' && logo !== 'undefined') ? logo : urlDefinitivaStorage;
-
-                let logoResolvida = '';
-                if (logoFinal) {
-                    if (typeof obterLogo === 'function') {
-                        logoResolvida = obterLogo();
-                    } else if (typeof resolverImagemFirebase === 'function' && logoFinal !== urlDefinitivaStorage) {
-                        logoResolvida = resolverImagemFirebase(logoFinal);
-                    } else {
-                        logoResolvida = logoFinal;
-                    }
-                }
-
-                // 3. Aplicação controlada com tratamento onload para segurança
-                if (logoResolvida && logoResolvida !== 'logo' && logoResolvida.trim() !== '') {
-                    if (logoImg) {
-                        logoImg.src = logoResolvida;
-                        logoImg.onload = () => {
-                            logoImg.classList.remove('hidden');
-                            logoImg.style.display = 'block';
-                            if (fallback) fallback.classList.add('hidden');
-                        };
-                    }
-                }
-            } catch(e) {
-                console.error('Erro logo header:', e);
+            // Exibe e preenche o banner promocional superior
+            const banner = document.getElementById('banner');
+            if (banner && config.bannerAtivo && config.bannerTexto) {
+                const bannerTextoEl = document.getElementById('bannerTexto');
+                if (bannerTextoEl) bannerTextoEl.innerText = config.bannerTexto;
+                banner.classList.remove('hidden');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                await carregarLogoHeader();
-                
-                if (typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
-                if (typeof carregarProdutos === 'function') await carregarProdutos();
-                if (typeof iniciarBusca === 'function') iniciarBusca();
-            } catch(e) {
-                console.error('Erro init:', e);
-                const loading = document.getElementById('loading');
-                if (loading) loading.classList.add('hidden');
-            }
-        });
+        // 3. Define a URL definitiva com base no retorno do banco
+        let logoFinal = (logo && logo.trim() !== '' && logo !== 'logo' && logo !== 'undefined') ? logo : urlDefinitivaStorage;
 
+        let logoResolvida = '';
+        if (logoFinal) {
+            if (typeof obterLogo === 'function') {
+                logoResolvida = obterLogo();
+            } else if (typeof resolverImagemFirebase === 'function' && logoFinal !== urlDefinitivaStorage) {
+                logoResolvida = resolverImagemFirebase(logoFinal);
+            } else {
+                logoResolvida = logoFinal;
+            }
+        }
+
+        // 4. Atribuição do SRC: Ativa de forma limpa os tratamentos do passo 1
+        if (logoImg) {
+            if (logoResolvida && logoResolvida !== 'logo' && logoResolvida.trim() !== '') {
+                logoImg.src = logoResolvida;
+            } else {
+                logoImg.src = urlDefinitivaStorage;
+            }
+        }
+
+    } catch(e) {
+        console.error('Erro logo header:', e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await carregarLogoHeader();
+        
+        if (typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
+        if (typeof carregarProdutos === 'function') await carregarProdutos();
+        if (typeof iniciarBusca === 'function') iniciarBusca();
+    } catch(e) {
+        console.error('Erro init:', e);
+        const loading = document.getElementById('loading');
+        if (loading) loading.classList.add('hidden');
+    }
+});
         function atualizarMiniCarrinho(){
             try {
                 if (typeof carrinhoService !== 'undefined' && typeof money !== 'undefined') {

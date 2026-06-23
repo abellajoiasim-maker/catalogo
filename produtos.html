@@ -120,9 +120,17 @@
                         </div>
 
                         <div class="min-w-0">
-                            <h1 id="tituloPagina" class="serif gold text-xs md:text-2xl uppercase tracking-[.12em] md:tracking-[.25em] whitespace-nowrap truncate">Abella Joias</h1>
-                            <p id="slogan" class="text-[7px] md:text-[10px] text-zinc-500 uppercase tracking-[.12em] md:tracking-[.25em] mt-0.5 md:mt-1 whitespace-nowrap truncate">Atacado de Joias no Bruto</p>
-                        </div>
+    <h1 class="serif gold text-xs md:text-xl uppercase tracking-[.12em] md:tracking-[.20em] whitespace-nowrap truncate">
+        Abella Joias
+    </h1>
+    <!-- Este elemento vai receber dinamicamente o nome da categoria/subcategoria -->
+    <p id="categoriaAtual" class="text-[9px] md:text-[11px] text-zinc-400 uppercase tracking-[.12em] md:tracking-[.25em] mt-0.5 font-bold whitespace-nowrap truncate">
+        Carregando...
+    </p>
+    <p id="slogan" class="text-[7px] md:text-[9px] text-zinc-500 uppercase tracking-[.12em] md:tracking-[.25em] mt-0.5 whitespace-nowrap truncate">
+        Atacado de Joias no Bruto
+    </p>
+</div>
                     </div>
                 </div>
 
@@ -299,7 +307,7 @@
         let produtoAtual = null;
         let descontoPixGlobal = 5;
 
-        async function carregarLogoHeader(){
+async function carregarLogoHeader(){
             try{
                 if(typeof window.getAbellaPath !== 'function') return;
                 const snap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
@@ -315,19 +323,24 @@
                     document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
                 }
 
-                if(!logo) return;
                 const logoImg = document.getElementById('headerLogo');
                 const fallback = document.getElementById('headerLogoFallback');
                 
+                // Validação estrita de imagem para não quebrar em caminhos nulos ou strings vazias
+                let logoResolvida = '';
                 if(typeof obterLogo === 'function') {
-                    logoImg.src = obterLogo();
-                } else if(typeof resolverImagemFirebase === 'function') {
-                    logoImg.src = resolverImagemFirebase(logo);
+                    logoResolvida = obterLogo();
+                } else if(typeof resolverImagemFirebase === 'function' && logo) {
+                    logoResolvida = resolverImagemFirebase(logo);
                 } else {
-                    logoImg.src = logo;
+                    logoResolvida = logo;
                 }
-                logoImg.classList.remove('hidden');
-                fallback.classList.add('hidden');
+
+                if(logoResolvida) {
+                    logoImg.src = logoResolvida;
+                    logoImg.classList.remove('hidden');
+                    fallback.classList.add('hidden');
+                }
             }catch(e){
                 console.error('Erro logo header:', e);
             }
@@ -374,13 +387,27 @@
                 
                 const categoria = normalizarTexto(params.get('categoria') || params.get('cat'));
                 const subcategoria = normalizarTexto(decodeURIComponent(params.get('subcategoria') || params.get('sub') || ''));
-                let tituloFormatado = 'Abella Joias';
                 
-                if(subcategoria) tituloFormatado = params.get('subcategoria') || params.get('sub');
-                else if(categoria) tituloFormatado = params.get('categoria') || params.get('cat');
+                // Define o rótulo do filtro sem sobrescrever os elementos raiz da marca
+                let nomeFiltro = 'Todos os Produtos';
+                if(subcategoria) {
+                    nomeFiltro = params.get('subcategoria') || params.get('sub');
+                } else if(categoria) {
+                    nomeFiltro = params.get('categoria') || params.get('cat');
+                }
                 
-                document.getElementById('tituloPagina').innerText = tituloFormatado;
-                document.getElementById('heroTitulo').innerText = tituloFormatado;
+                // Altera apenas o subtítulo e o topo do Hero. O h1 principal mantém-se estático.
+                const elCategoria = document.getElementById('categoriaAtual');
+                if (elCategoria) {
+                    elCategoria.innerText = nomeFiltro;
+                } else {
+                    // Fallback de segurança caso o elemento ainda não tenha sido renomeado no HTML
+                    const elTitulo = document.getElementById('tituloPagina');
+                    if (elTitulo) elTitulo.innerText = nomeFiltro;
+                }
+
+                const elHero = document.getElementById('heroTitulo');
+                if (elHero) elHero.innerText = nomeFiltro;
 
                 if(typeof produtoService === 'undefined' || typeof produtoService.listarTodos !== 'function') {
                     throw new Error('Serviço de produto indisponível.');

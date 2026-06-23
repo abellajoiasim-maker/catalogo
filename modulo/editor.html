@@ -57,13 +57,13 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V7</h1>
-          <p class="text-xs text-zinc-500">Controle Total • Criação, Edição, Variações e Imagens Sincronizadas</p>
+          <p class="text-xs text-zinc-500">Controle Total • Criação, Edição e Imagens Sincronizadas em Espelho</p>
         </div>
         <div class="flex flex-wrap gap-2 w-full sm:w-auto">
           <button id="btnCriarNovo" onclick="abrirCriacaoPorAba()" class="px-4 py-2 bg-[#caa85c] text-black rounded-xl text-xs font-bold hover:bg-opacity-90 transition-all">
             ➕ Criar Item
           </button>
-          <button id="btnRefresh" onclick="carregarTudo()" class="px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all">
+          <button id="btnRefresh" class="px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all">
             Sincronizar Vitrine
           </button>
         </div>
@@ -96,27 +96,26 @@
           type="text"
           class="w-full md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none focus:border-zinc-700"
           placeholder="Buscar SKU, Nome, Categoria..."
-          oninput="adicionarDebounceBusca()"
         />
-        <select id="filtroTipo" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none" onchange="renderCurrentTab()">
+        <select id="filtroTipo" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none">
           <option value="todos">Todos</option>
           <option value="produto">Produtos</option>
           <option value="categoria">Categorias</option>
           <option value="subcategoria">Subcategorias</option>
         </select>
-        <select id="filtroCategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none" onchange="renderProdutos()">
+        <select id="filtroCategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none">
           <option value="">Todas Categorias</option>
         </select>
-        <select id="filtroSubcategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none" onchange="renderProdutos()">
+        <select id="filtroSubcategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none">
           <option value="">Todas Subcategorias</option>
         </select>
       </div>
     </section>
 
     <section class="flex gap-2 mb-4">
-      <button class="tab-btn active" data-tab="produtos" type="button" onclick="alternarAba(this)">Produtos</button>
-      <button class="tab-btn" data-tab="categorias" type="button" onclick="alternarAba(this)">Categorias</button>
-      <button class="tab-btn" data-tab="subcategorias" type="button" onclick="alternarAba(this)">Subcategorias</button>
+      <button class="tab-btn active" data-tab="produtos" type="button">Produtos</button>
+      <button class="tab-btn" data-tab="categorias" type="button">Categorias</button>
+      <button class="tab-btn" data-tab="subcategorias" type="button">Subcategorias</button>
     </section>
 
     <section>
@@ -130,7 +129,7 @@
 
   <div
     id="drawer"
-    class="fixed top-0 right-0 h-full w-[600px] bg-zinc-950 border-l border-zinc-800 hidden z-50 overflow-y-auto shadow-2xl"
+    class="fixed top-0 right-0 h-full w-[520px] bg-zinc-950 border-l border-zinc-800 hidden z-50 overflow-y-auto shadow-2xl"
   >
     <div class="p-5">
       <div class="flex justify-between mb-5">
@@ -169,7 +168,9 @@
     getImage(obj) { return obj?.imagem ?? obj?.image ?? obj?.img ?? ''; },
     getPrice(obj) { return Number(obj?.preco ?? obj?.price ?? 0); },
     getWeight(obj) { return Number(obj?.peso ?? obj?.weight ?? 0); },
-    getDesc(obj) { return obj?.description ?? obj?.descricao ?? ''; }
+    getDesc(obj) { return obj?.description ?? obj?.descricao ?? ''; },
+    getDizeres(obj) { return obj?.dizeres ?? obj?.sayings ?? []; },
+    getIniciais(obj) { return obj?.iniciais ?? obj?.initials ?? []; }
   };
 
   function setStatus(msg, type = 'info') {
@@ -250,26 +251,6 @@
     document.getElementById('drawerContent').innerHTML = '';
   }
 
-  function alternarAba(btn) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    
-    const tab = btn.dataset.tab;
-    document.getElementById('tab-produtos').classList.add('hidden');
-    document.getElementById('tab-categorias').classList.add('hidden');
-    document.getElementById('tab-subcategorias').classList.add('hidden');
-    document.getElementById(`tab-${tab}`).classList.remove('hidden');
-    
-    renderCurrentTab();
-  }
-
-  function adicionarDebounceBusca() {
-    clearTimeout(STATE.buscaDebounceTimer);
-    STATE.buscaDebounceTimer = setTimeout(() => {
-      renderCurrentTab();
-    }, CONFIG.debounceBusca);
-  }
-
   function abrirCriacaoPorAba() {
     const tab = getActiveTab();
     if (tab === 'produtos') criarProdutoForm();
@@ -279,21 +260,10 @@
 
   async function carregarTudo(){
     try {
-      if (!STATE.db) {
-        STATE.db = resolverDB();
-        if (!STATE.db) {
-          setTimeout(carregarTudo, 500);
-          return;
-        }
-      }
-      
-      const pathCat = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('categories') : 'categories';
-      const pathProd = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('products') : 'products';
-
-      const snapCat = await STATE.db.ref(pathCat).once('value');
+      const snapCat = await STATE.db.ref(window.getAbellaPath('categories')).once('value');
       STATE.categorias = snapCat.val() || {};
 
-      const snapProd = await STATE.db.ref(pathProd).once('value');
+      const snapProd = await STATE.db.ref(window.getAbellaPath('products')).once('value');
       const dados = snapProd.val() || {};
       STATE.produtos = Object.entries(dados).map(([id, p]) => ({ id, ...p }));
 
@@ -301,7 +271,6 @@
       renderAll();
       setStatus('✅ Catálogo perfeitamente sincronizado com as páginas de venda', 'ok');
     } catch(err) {
-      console.error(err);
       setStatus('❌ Erro de conexão com o banco de dados Firebase', 'error');
     }
   }
@@ -354,48 +323,24 @@
     renderCurrentTab();
   }
 
-  // ==========================================================
-  // GERENCIADOR DE VARIANTES EM TEMPO REAL (MÓDULO NOVO)
-  // ==========================================================
-  function adicionarLinhaVariacao(nome = '', valor = '', preco = 0, peso = 0) {
-    const container = document.getElementById('containerVariacoes');
+  // Métodos auxiliares para gerenciar as tags dinâmicas de Dizeres e Iniciais na UI do Drawer
+  function adicionarTagInput(containerId, valor = '') {
+    const container = document.getElementById(containerId);
     if (!container) return;
-
-    const div = document.createElement('div');
-    div.className = "grid grid-cols-12 gap-2 mb-2 bg-zinc-900 p-2 rounded-lg border border-zinc-800 item-variacao";
-    div.innerHTML = `
-      <div class="col-span-3">
-        <input type="text" class="input-dark !mb-0 text-xs var-nome" placeholder="Ex: Tamanho" value="${escapeHtml(nome)}">
-      </div>
-      <div class="col-span-3">
-        <input type="text" class="input-dark !mb-0 text-xs var-valor" placeholder="Ex: 45cm" value="${escapeHtml(valor)}">
-      </div>
-      <div class="col-span-3">
-        <input type="number" step="0.01" class="input-dark !mb-0 text-xs var-preco" placeholder="+ R$ Pr." value="${preco || ''}">
-      </div>
-      <div class="col-span-2">
-        <input type="number" step="0.01" class="input-dark !mb-0 text-xs var-peso" placeholder="+ Peso" value="${peso || ''}">
-      </div>
-      <div class="col-span-1 flex items-center justify-center">
-        <button type="button" onclick="this.parentNode.parentNode.remove()" class="text-red-400 hover:text-red-600 text-sm font-bold">✕</button>
-      </div>
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex gap-2 mb-1 items-center tag-item-row';
+    wrapper.innerHTML = `
+      <input type="text" class="input-dark !mb-0 tag-value-input" value="${escapeHtml(valor)}" placeholder="Ex: Amor, Fé, A, B...">
+      <button type="button" onclick="this.parentNode.remove()" class="bg-zinc-900 border border-zinc-800 text-red-400 px-3 py-2 rounded-lg hover:bg-zinc-800 text-xs">✕</button>
     `;
-    container.appendChild(div);
+    container.appendChild(wrapper);
   }
 
-  function coletarVariacoesForm() {
-    const arr = [];
-    document.querySelectorAll('.item-variacao').forEach(div => {
-      const nome = div.querySelector('.var-nome').value.trim();
-      const valor = div.querySelector('.var-valor').value.trim();
-      const preco = parseFloat(div.querySelector('.var-preco').value) || 0;
-      const peso = parseFloat(div.querySelector('.var-peso').value) || 0;
-
-      if (nome && valor) {
-        arr.push({ name: nome, value: valor, price: preco, preco: preco, weight: peso, peso: peso });
-      }
-    });
-    return arr;
+  function extrairValoresTags(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return [];
+    const inputs = container.querySelectorAll('.tag-value-input');
+    return Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== '');
   }
 
   // ==========================================================
@@ -425,10 +370,10 @@
       const cardBg = isPaused ? 'bg-zinc-950 opacity-60 border-red-900/40' : 'bg-zinc-950 border-zinc-900';
       const statusTag = isPaused ? `<span class="bg-red-950 text-red-400 border border-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">PAUSADO</span>` : `<span class="bg-green-950 text-green-400 border border-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold">ATIVO</span>`;
       const imgUrl = converterGsUrl(DataService.getImage(p));
-      
-      // Indicador de Variações Cadastradas
-      const totalVars = p.variations ? (Array.isArray(p.variations) ? p.variations.length : Object.keys(p.variations).length) : 0;
-      const varTag = totalVars > 0 ? `<span class="bg-amber-950/80 text-amber-400 border border-amber-900 text-[10px] px-2 py-0.5 rounded-full font-bold">${totalVars} VARIAÇÕES</span>` : '';
+
+      // Extrai contadores das variações cadastrados para exibir no card corporativo
+      const qtdDizeres = DataService.getDizeres(p).length;
+      const qtdIniciais = DataService.getIniciais(p).length;
 
       html += `
         <div class="border rounded-2xl p-5 mb-1 transition-all hover:border-zinc-800 ${cardBg}">
@@ -441,11 +386,15 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
                   ${statusTag}
-                  ${varTag}
                   <span class="text-xs font-mono text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">${escapeHtml(p.sku || 'SEM SKU')}</span>
                 </div>
                 <h3 class="font-bold text-base text-white truncate">${escapeHtml(p.name || 'Sem nome definido')}</h3>
                 <p class="text-xs text-zinc-500 line-clamp-1 mt-0.5">${escapeHtml(DataService.getDesc(p) || 'Sem descrição cadastrada.')}</p>
+                
+                <div class="flex gap-2 mt-2">
+                  <span class="text-[10px] bg-zinc-900 text-zinc-400 px-2 py-0.5 rounded border border-zinc-800 font-medium">💬 Dizeres: ${qtdDizeres}</span>
+                  <span class="text-[10px] bg-zinc-900 text-zinc-400 px-2 py-0.5 rounded border border-zinc-800 font-medium">🔤 Iniciais: ${qtdIniciais}</span>
+                </div>
               </div>
             </div>
 
@@ -576,21 +525,25 @@
       <select id="newSubcategoria" class="input-dark">
          <option value="">Selecione a categoria primeiro</option>
       </select>
-      
-      <div class="mb-4 border border-zinc-800 p-3 rounded-xl bg-zinc-950">
+
+      <!-- SEÇÃO VARIANTES: DIZERES -->
+      <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-bold text-[#caa85c] block">Variações do Produto (Opcional)</label>
-          <button type="button" onclick="adicionarLinhaVariacao()" class="text-[11px] bg-zinc-900 border border-zinc-800 px-2 py-1 rounded text-zinc-300 hover:bg-zinc-800">+ Var.</button>
+          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Dizeres (Frases)</label>
+          <button type="button" onclick="adicionarTagInput('newDizeresContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add Opção</button>
         </div>
-        <div class="grid grid-cols-12 gap-2 px-1 mb-1 text-[10px] text-zinc-500 font-bold uppercase">
-          <div class="col-span-3">Nome</div>
-          <div class="col-span-3">Valor</div>
-          <div class="col-span-3">Adic. Preço</div>
-          <div class="col-span-2">Adic. Peso</div>
-        </div>
-        <div id="containerVariacoes"></div>
+        <div id="newDizeresContainer" class="flex flex-col gap-1"></div>
       </div>
 
+      <!-- SEÇÃO VARIANTES: INICIAIS -->
+      <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
+        <div class="flex justify-between items-center mb-2">
+          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Iniciais (Letras)</label>
+          <button type="button" onclick="adicionarTagInput('newIniciaisContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add Opção</button>
+        </div>
+        <div id="newIniciaisContainer" class="flex flex-col gap-1"></div>
+      </div>
+      
       <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Upload / gs:// / Link)</label>
       <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
          <div class="absolute text-xs text-zinc-600">Preview da Foto</div>
@@ -627,7 +580,9 @@
       const preco = parseFloat(document.getElementById('newPreco').value) || 0;
       const peso = parseFloat(document.getElementById('newPeso').value) || 0;
       const subcat = document.getElementById('newSubcategoria').value;
-      const variacoes = coletarVariacoesForm();
+
+      const listaDizeres = extrairValoresTags('newDizeresContainer');
+      const listaIniciais = extrairValoresTags('newIniciaisContainer');
 
       const novoProduto = {
         name: nome,
@@ -643,128 +598,19 @@
         imagem: img,
         description: document.getElementById('newDescricao').value,
         descricao: document.getElementById('newDescricao').value,
-        variations: variacoes,
+        dizeres: listaDizeres,
+        sayings: listaDizeres,
+        iniciais: listaIniciais,
+        initials: listaIniciais,
         paused: false,
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
 
-      const pathProd = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('products') : 'products';
-      await STATE.db.ref(pathProd).push(novoProduto);
+      await STATE.db.ref(window.getAbellaPath('products')).push(novoProduto);
       fecharDrawer();
       await carregarTudo();
-    } catch (e) { console.error(e); setStatus('❌ Erro ao criar novo produto', 'error'); }
-  }
-
-  function criarCategoriaForm() {
-    abrirDrawer('Criar Nova Categoria', `
-      <label class="text-xs text-zinc-400 block mb-1">Nome da Categoria</label>
-      <input id="newCatName" class="input-dark" placeholder="Ex: Brincos, Anéis, Correntes">
-      
-      <label class="text-xs text-zinc-400 block mb-1">Descrição Comercial</label>
-      <textarea id="newCatDesc" class="input-dark h-20" placeholder="Breve descrição da categoria..."></textarea>
-      
-      <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Ícone / Capa)</label>
-      <div class="w-full h-32 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
-         <div class="absolute text-xs text-zinc-600">Preview da Imagem</div>
-         <img id="previewCatNovo" src="" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-      </div>
-      <input id="newCatImagem" class="input-dark" placeholder="URL da imagem ou link gs://" oninput="tratarInputImagem(this, 'previewCatNovo')">
-
-      <p class="text-[10px] text-zinc-500 mb-4">Nota: O identificador de rota (slug) será gerado automaticamente a partir do nome informado.</p>
-      <button onclick="salvarNovaCategoria()" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold">Criar Categoria</button>
-    `);
-  }
-
-  async function salvarNovaCategoria() {
-    try {
-      const nome = document.getElementById('newCatName').value.trim();
-      if(!nome) return alert('O nome da categoria é obrigatório!');
-      
-      const slug = gerarSlug(nome);
-      if(STATE.categorias[slug]) return alert('Já existe uma categoria cadastrada com um nome idêntico!');
-
-      const imgVal = document.getElementById('newCatImagem').value.trim();
-      const pathCat = typeof window.getAbellaPath === 'function' ? window.getAbellaPath(`categories/${slug}`) : `categories/${slug}`;
-
-      await STATE.db.ref(pathCat).set({
-        name: nome,
-        description: document.getElementById('newCatDesc').value,
-        imagem: imgVal,
-        image: imgVal,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      });
-      fecharDrawer();
-      await carregarTudo();
-    } catch (e) { setStatus('❌ Erro ao salvar categoria', 'error'); }
-  }
-
-  function criarSubcategoriaForm() {
-    let catsHtml = '<option value="">Escolha a Categoria Mãe...</option>';
-    Object.keys(STATE.categorias).forEach(cat => catsHtml += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`);
-
-    abrirDrawer('Criar Nova Subcategoria', `
-      <label class="text-xs text-zinc-400 block mb-1">Categoria Pai (Vínculo Superior)</label>
-      <select id="newSubParent" class="input-dark">${catsHtml}</select>
-
-      <label class="text-xs text-zinc-400 block mb-1">Nome da Subcategoria</label>
-      <input id="newSubName" class="input-dark" placeholder="Ex: Argolas, Solitários, Chokers">
-      
-      <label class="text-xs text-zinc-400 block mb-1">Descrição Curta</label>
-      <textarea id="newSubDesc" class="input-dark h-20" placeholder="Descrição opcional..."></textarea>
-      
-      <div class="mb-4 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem do Grid (Miniatura)</label>
-        <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
-           <div class="absolute text-[10px] text-zinc-600">Preview Grid</div>
-           <img id="previewGridNovo" src="" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-        </div>
-        <input id="newSubGrid" class="input-dark" placeholder="Link da foto do grid" oninput="tratarInputImagem(this, 'previewGridNovo')">
-      </div>
-
-      <div class="mb-4 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem Hero (Banner Superior)</label>
-        <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
-           <div class="absolute text-[10px] text-zinc-600">Preview Hero</div>
-           <img id="previewHeroNovo" src="" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-        </div>
-        <input id="newSubHero" class="input-dark" placeholder="Link do banner de capa" oninput="tratarInputImagem(this, 'previewHeroNovo')">
-      </div>
-
-      <button onclick="salvarNovaSubcategoria()" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold hover:bg-opacity-90">Cadastrar Subcategoria</button>
-    `);
-  }
-
-  async function salvarNovaSubcategoria() {
-    try {
-      const parent = document.getElementById('newSubParent').value;
-      const nome = document.getElementById('newSubName').value.trim();
-      if(!parent || !nome) return alert('Selecione a Categoria Pai e informe o Nome da Subcategoria!');
-
-      const slug = gerarSlug(nome);
-      if(STATE.categorias[parent]?.subcategories?.[slug]) return alert('Esta subcategoria já existe dentro desta categoria pai!');
-
-      const gridVal = document.getElementById('newSubGrid').value.trim();
-      const heroVal = document.getElementById('newSubHero').value.trim();
-      const pathSub = typeof window.getAbellaPath === 'function' ? window.getAbellaPath(`categories/${parent}/subcategories/${slug}`) : `categories/${parent}/subcategories/${slug}`;
-
-      await STATE.db.ref(pathSub).set({
-        name: nome,
-        title: nome,
-        description: document.getElementById('newSubDesc').value,
-        imagem: gridVal,
-        grid: gridVal,
-        gridImage: gridVal,
-        hero: heroVal,
-        heroImage: heroVal,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      });
-
-      fecharDrawer();
-      await carregarTudo();
-    } catch (e) { setStatus('❌ Erro ao salvar subcategoria', 'error'); }
+    } catch (e) { setStatus('❌ Erro ao criar novo produto', 'error'); }
   }
 
   // ==========================================================
@@ -776,77 +622,298 @@
 
     let catsHtml = '';
     Object.keys(STATE.categorias).forEach(cat => catsHtml += `<option value="${escapeHtml(cat)}" ${p.category === cat ? 'selected' : ''}>${escapeHtml(cat)}</option>`);
-    
-    let subCatsHtml = '<option value="">Nenhuma</option>';
-    if (p.category && STATE.categorias[p.category]?.subcategories) {
-      Object.entries(STATE.categorias[p.category].subcategories).forEach(([slug, s]) => {
-        subCatsHtml += `<option value="${escapeHtml(slug)}" ${DataService.getSubcategory(p) === slug ? 'selected' : ''}>${escapeHtml(s.name || slug)}</option>`;
-      });
-    }
-
-    const imgUrl = converterGsUrl(DataService.getImage(p));
 
     abrirDrawer('Editar Produto', `
-      <input type="hidden" id="editId" value="${escapeHtml(p.id)}">
-      
       <label class="text-xs text-zinc-400 block mb-1">Nome do Item</label>
       <input id="editNome" class="input-dark" value="${escapeHtml(p.name || '')}">
       
-      <label class="text-xs text-zinc-400 block mb-1">SKU</label>
+      <label class="text-xs text-zinc-400 block mb-1">SKU do Produto</label>
       <input id="editSku" class="input-dark" value="${escapeHtml(p.sku || '')}">
 
-      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
+      <label class="text-xs text-zinc-400 block mb-1">Descrição Comercial</label>
       <textarea id="editDescricao" class="input-dark h-20">${escapeHtml(DataService.getDesc(p))}</textarea>
-
+      
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="text-xs text-zinc-400 block mb-1">Preço (R$)</label>
           <input id="editPreco" type="number" step="0.01" class="input-dark" value="${DataService.getPrice(p)}">
         </div>
         <div>
-          <label class="text-xs text-zinc-400 block mb-1">Peso (g)</label>
+          <label class="text-xs text-zinc-400 block mb-1">Peso (Gramas)</label>
           <input id="editPeso" type="number" step="0.01" class="input-dark" value="${DataService.getWeight(p)}">
         </div>
       </div>
 
-      <label class="text-xs text-zinc-400 block mb-1">Categoria</label>
-      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProdutoEdicao()">${catsHtml}</select>
+      <label class="text-xs text-zinc-400 block mb-1">Categoria Principal</label>
+      <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">${catsHtml}</select>
+      
+      <label class="text-xs text-zinc-400 block mb-1">Subcategoria Vinculada</label>
+      <select id="editSubcategoria" class="input-dark"></select>
 
-      <label class="text-xs text-zinc-400 block mb-1">Subcategoria</label>
-      <select id="editSubcategoria" class="input-dark">${subCatsHtml}</select>
-
-      <div class="mb-4 border border-zinc-800 p-3 rounded-xl bg-zinc-950">
+      <!-- SEÇÃO VARIANTES EDIÇÃO: DIZERES -->
+      <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-bold text-[#caa85c] block">Variações do Produto</label>
-          <button type="button" onclick="adicionarLinhaVariacao()" class="text-[11px] bg-zinc-900 border border-zinc-800 px-2 py-1 rounded text-zinc-300 hover:bg-zinc-800">+ Var.</button>
+          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Dizeres (Frases)</label>
+          <button type="button" onclick="adicionarTagInput('editDizeresContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add Opção</button>
         </div>
-        <div class="grid grid-cols-12 gap-2 px-1 mb-1 text-[10px] text-zinc-500 font-bold uppercase">
-          <div class="col-span-3">Nome</div>
-          <div class="col-span-3">Valor</div>
-          <div class="col-span-3">Adic. Preço</div>
-          <div class="col-span-2">Adic. Peso</div>
-        </div>
-        <div id="containerVariacoes"></div>
+        <div id="editDizeresContainer" class="flex flex-col gap-1"></div>
       </div>
 
+      <!-- SEÇÃO VARIANTES EDIÇÃO: INICIAIS -->
+      <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
+        <div class="flex justify-between items-center mb-2">
+          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Iniciais (Letras)</label>
+          <button type="button" onclick="adicionarTagInput('editIniciaisContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add Opção</button>
+        </div>
+        <div id="editIniciaisContainer" class="flex flex-col gap-1"></div>
+      </div>
+      
       <label class="text-xs text-zinc-400 block mb-1">Link de Imagem</label>
       <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
-         <img id="previewProdutoEdit" src="${escapeHtml(imgUrl)}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
+         <div class="absolute text-xs text-zinc-600">Preview Indisponível</div>
+         <img id="previewProduto" src="${escapeHtml(converterGsUrl(DataService.getImage(p)))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
       </div>
-      <input id="editImagem" class="input-dark" value="${escapeHtml(DataService.getImage(p))}" oninput="tratarInputImagem(this, 'previewProdutoEdit')">
-
-      <button onclick="atualizarProduto()" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4">Salvar Alterações</button>
+      <input id="editImagem" class="input-dark" value="${escapeHtml(DataService.getImage(p))}" oninput="tratarInputImagem(this, 'previewProduto')">
+      
+      <button onclick="salvarProduto('${escapeAttr(id)}')" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90 transition-all">Salvar Alterações em Espelho</button>
     `);
+    
+    carregarSubcategoriasProduto(p.category, DataService.getSubcategory(p));
 
-    // Injeta as variações salvas se existirem
-    if (p.variations) {
-      const listaVars = Array.isArray(p.variations) ? p.variations : Object.values(p.variations);
-      listaVars.forEach(v => {
-        adicionarLinhaVariacao(v.name, v.value, v.price || v.preco, v.weight || v.peso);
+    // Hidrata os containers com as variações já existentes salvos no banco
+    DataService.getDizeres(p).forEach(val => adicionarTagInput('editDizeresContainer', val));
+    DataService.getIniciais(p).forEach(val => adicionarTagInput('editIniciaisContainer', val));
+  }
+
+  function carregarSubcategoriasProduto(catSel, subSel = '') {
+    const cat = catSel || document.getElementById('editCategoria')?.value;
+    const select = document.getElementById('editSubcategoria');
+    if (!select) return;
+    select.innerHTML = '<option value="">Nenhuma</option>';
+    Object.entries(STATE.categorias[cat]?.subcategories || {}).forEach(([slug, sub]) => {
+      select.innerHTML += `<option value="${escapeHtml(slug)}" ${slug === subSel ? 'selected' : ''}>${escapeHtml(sub.name || slug)}</option>`;
+    });
+  }
+
+  async function salvarProduto(id) {
+    try {
+      const img = document.getElementById('editImagem').value.trim();
+      const preco = parseFloat(document.getElementById('editPreco').value) || 0;
+      const peso = parseFloat(document.getElementById('editPeso').value) || 0;
+      const subcat = document.getElementById('editSubcategoria').value;
+
+      const listaDizeres = extrairValoresTags('editDizeresContainer');
+      const listaIniciais = extrairValoresTags('editIniciaisContainer');
+
+      await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({
+        name: document.getElementById('editNome').value,
+        sku: document.getElementById('editSku').value,
+        category: document.getElementById('editCategoria').value,
+        subcategory: subcat,
+        subCategory: subcat,
+        price: preco,
+        preco: preco,
+        weight: peso,
+        peso: peso,
+        image: img,
+        imagem: img,
+        description: document.getElementById('editDescricao').value,
+        descricao: document.getElementById('editDescricao').value,
+        dizeres: listaDizeres,
+        sayings: listaDizeres,
+        iniciais: listaIniciais,
+        initials: listaIniciais,
+        updatedAt: Date.now()
       });
+      fecharDrawer();
+      await carregarTudo();
+    } catch (e) { setStatus('❌ Erro ao salvar dados no Firebase', 'error'); }
+  }
+
+  function editarSubcategoria(catSlug, subSlug) {
+    const sub = STATE.categorias[catSlug]?.subcategories?.[subSlug];
+    if (!sub) return;
+
+    const imgGrid = sub.grid || sub.gridImage || sub.imagem || '';
+    const imgHero = sub.hero || sub.heroImage || sub.imagem || '';
+
+    abrirDrawer('Editar Subcategoria', `
+      <label class="text-xs text-zinc-400 block mb-1">Nome da Subcategoria</label>
+      <input id="subName" class="input-dark" value="${escapeHtml(sub.name || sub.title || '')}">
+      
+      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
+      <textarea id="subDesc" class="input-dark h-20">${escapeHtml(sub.description || '')}</textarea>
+      
+      <div class="mb-4 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
+        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem do Grid (Listagem)</label>
+        <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
+           <div class="absolute text-[10px] text-zinc-600">Sem Imagem</div>
+           <img id="previewGrid" src="${escapeHtml(converterGsUrl(imgGrid))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
+        </div>
+        <input id="subGrid" class="input-dark" value="${escapeHtml(imgGrid)}" oninput="tratarInputImagem(this, 'previewGrid')">
+      </div>
+
+      <div class="mb-4 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
+        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem Hero (Capa Superior)</label>
+        <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
+           <div class="absolute text-[10px] text-zinc-600">Sem Imagem</div>
+           <img id="previewHero" src="${escapeHtml(converterGsUrl(imgHero))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
+        </div>
+        <input id="subHero" class="input-dark" value="${escapeHtml(imgHero)}" oninput="tratarInputImagem(this, 'previewHero')">
+      </div>
+
+      <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90">Salvar Subcategoria</button>
+    `);
+  }
+
+  async function salvarSubcategoria(catSlug, subSlug) {
+    const gridVal = document.getElementById('subGrid').value.trim();
+    const heroVal = document.getElementById('subHero').value.trim();
+
+    try {
+      await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
+        name: document.getElementById('subName').value,
+        description: document.getElementById('subDesc').value,
+        imagem: gridVal,
+        grid: gridVal,
+        gridImage: gridVal,
+        hero: heroVal,
+        heroImage: heroVal,
+        updatedAt: Date.now()
+      });
+      fecharDrawer();
+      await carregarTudo();
+    } catch (e) { setStatus('❌ Erro ao salvar subcategoria', 'error'); }
+  }
+
+  function editarCategoria(slug) {
+    const cat = STATE.categorias[slug];
+    if (!cat) return;
+    const catImg = cat.imagem || cat.image || '';
+
+    abrirDrawer('Editar Categoria', `
+      <label class="text-xs text-zinc-400 block mb-1">Nome da Categoria</label>
+      <input id="editCatName" class="input-dark" value="${escapeHtml(cat.name || '')}">
+      
+      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
+      <textarea id="editCatDesc" class="input-dark h-20">${escapeHtml(cat.description || '')}</textarea>
+
+      <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Espelhamento Duplo)</label>
+      <div class="w-full h-32 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
+         <div class="absolute text-xs text-zinc-600">Sem Imagem Definida</div>
+         <img id="previewCatEdicao" src="${escapeHtml(converterGsUrl(catImg))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
+      </div>
+      <input id="editCatImagem" class="input-dark" value="${escapeHtml(catImg)}" oninput="tratarInputImagem(this, 'previewCatEdicao')">
+
+      <button onclick="salvarCategoria('${escapeAttr(slug)}')" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90">Salvar Alterações</button>
+    `);
+  }
+
+  async function salvarCategoria(slug) {
+    try {
+      const imgVal = document.getElementById('editCatImagem').value.trim();
+
+      await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({
+        name: document.getElementById('editCatName').value,
+        description: document.getElementById('editCatDesc').value,
+        imagem: imgVal,
+        image: imgVal, 
+        updatedAt: Date.now()
+      });
+      fecharDrawer();
+      await carregarTudo();
+    } catch(e) { setStatus('❌ Erro ao atualizar categoria', 'error'); }
+  }
+
+  async function duplicarProduto(id) {
+    const p = STATE.produtos.find(prod => prod.id === id);
+    if (!p) return;
+    const copia = { ...p, sku: (p.sku || '') + '-COPY', createdAt: Date.now(), updatedAt: Date.now() };
+    delete copia.id;
+    await STATE.db.ref(window.getAbellaPath('products')).push(copia);
+    await carregarTudo();
+  }
+
+  async function pausarProduto(id) {
+    const p = STATE.produtos.find(prod => prod.id === id);
+    if (!p) return;
+    await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({ paused: !p.paused, updatedAt: Date.now() });
+    await carregarTudo();
+  }
+
+  async function deletarProduto(id) {
+    if (confirm('Deseja realmente excluir permanentemente este item da sua base?')) {
+      await STATE.db.ref(window.getAbellaPath('products')).child(id).remove();
+      await carregarTudo();
     }
   }
 
-  function carregarSubcategoriasProdutoEdicao() {
-    const cat = document.getElementById('editCategoria')?.value;
-    const select
+  async function deletarCategoria(slug) {
+    if (confirm(`Deseja excluir a categoria [${slug}]? Isso não apagará os produtos, mas eles perderão o vínculo de menu.`)) {
+      await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).remove();
+      await carregarTudo();
+    }
+  }
+
+  async function deletarSubcategoria(catSlug, subSlug) {
+    if (confirm(`Deseja excluir a subcategoria [${subSlug}] da categoria [${catSlug}]?`)) {
+      await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).remove();
+      await carregarTudo();
+    }
+  }
+
+  function wireSearch() {
+    document.getElementById('buscaGlobal').addEventListener('input', () => {
+      clearTimeout(STATE.buscaDebounceTimer);
+      STATE.buscaDebounceTimer = setTimeout(renderCurrentTab, CONFIG.debounceBusca);
+    });
+    ['filtroTipo', 'filtroCategoria', 'filtroSubcategoria'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', () => renderCurrentTab());
+    });
+  }
+
+  function wireTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        ['produtos', 'categories', 'subcategorias'].forEach(t => {
+          const el = document.getElementById('tab-' + (t === 'categories' ? 'categorias' : t));
+          if(el) el.classList.add('hidden');
+        });
+        const targetEl = document.getElementById('tab-' + btn.dataset.tab);
+        if(targetEl) targetEl.classList.remove('hidden');
+        renderCurrentTab();
+      });
+    });
+  }
+
+  (async function init() {
+    let t = 0;
+    while(!STATE.db && t < CONFIG.firebaseRetries){
+      STATE.db = resolverDB();
+      if(!STATE.db) { await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay)); t++; }
+    }
+    if (!STATE.db) return setStatus('❌ Falha de carregamento do Firebase SDK', 'error');
+
+    wireTabs();
+    wireSearch();
+    document.getElementById('btnRefresh').addEventListener('click', () => carregarTudo());
+    await carregarTudo();
+  })();
+
+  window.editarProduto = editarProduto; window.salvarProduto = salvarProduto;
+  window.duplicarProduto = duplicarProduto; window.pausarProduto = pausarProduto;
+  window.deletarProduto = deletarProduto; window.editarCategoria = editarCategoria;
+  window.salvarCategoria = salvarCategoria; window.editarSubcategoria = editarSubcategoria;
+  window.salvarSubcategoria = salvarSubcategoria; window.fecharDrawer = fecharDrawer;
+  window.tratarInputImagem = tratarInputImagem; window.handleImageError = handleImageError;
+  window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
+  window.abrirCriacaoPorAba = abrirCriacaoPorAba; window.salvarNovoProduto = salvarNovoProduto;
+  window.salvarNovaCategoria = salvarNovaCategoria; window.salvarNovaSubcategoria = salvarNovaSubcategoria;
+  window.carregarSubcategoriasProdutoCriacao = carregarSubcategoriasProdutoCriacao;
+  window.deletarCategoria = deletarCategoria; window.deletarSubcategoria = deletarSubcategoria;
+  window.adicionarTagInput = adicionarTagInput;
+  </script>
+</body>
+</html>

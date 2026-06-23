@@ -103,45 +103,48 @@
 
 <body class="min-h-screen overflow-x-hidden bg-black">
 
-<!-- HEADER PREMIUM ABELLA JOIAS -->
+<!-- BANNER INICIAL PREPARADO PARA RECEBER O AVISO DINÂMICO -->
+<div id="banner" class="hidden border-b border-[#caa85c]/20 bg-gradient-to-r from-[#1a1407] via-black to-[#1a1407]" role="banner">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center">
+        <p id="bannerTexto" class="gold font-black uppercase tracking-[.25em] text-xs md:text-sm"></p>
+    </div>
+</div>
+
+<!-- HEADER PREMIUM ABELLA JOIAS SINCRO COM SUBCATEGORIAS -->
 <header class="sticky top-0 z-50 border-b border-zinc-900 bg-black/82 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 md:px-6">
         <div class="h-20 flex items-center justify-between gap-3">
             
-            <div class="flex items-center gap-3 min-w-0">
-                <!-- Conteiner da Logo com Bordas Arredondadas (rounded-2xl) conforme o Print -->
-                <div class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl p-0.5 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
-                    <!-- Começa visível (sem a classe hidden) apontando direto para a URL estável do seu Storage -->
-                    <img id="headerLogo" 
-                         src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media" 
-                         onerror="this.classList.add('hidden'); document.getElementById('headerLogoFallback').classList.remove('hidden');" 
-                         alt="Abella Joias" 
-                         class="w-full h-full object-cover rounded-2xl block">
+            <a href="index.html" class="flex items-center gap-3 min-w-0 group">
+                <!-- ID unificado para o container da Logo mantendo o estilo visual premium -->
+                <div id="abellaLogoContainer" class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl p-0.5 border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
                     
-                    <!-- O Grid Dourado com a letra A padrão inicia estritamente oculto (hidden), agindo apenas como segurança de rede -->
-                    <div id="headerLogoFallback" class="hidden absolute inset-0 bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center text-black font-black text-xl rounded-2xl">
-                        A
-                    </div>
+                    <!-- Fallback padrão (Letra A) mapeado com o ID que o script procura -->
+                    <span id="abellaLogoFallback" class="text-black font-black text-xl font-serif">A</span>
+                    
+                    <!-- Imagem oficial mapeada com o ID correto. Inicia oculta para o script realizar o onload sem quebras -->
+                    <img id="abellaLogoImg" 
+                         src="" 
+                         onerror="this.classList.add('hidden'); document.getElementById('abellaLogoFallback').classList.remove('hidden');" 
+                         alt="Abella Joias" 
+                         class="w-full h-full object-cover rounded-2xl hidden">
                 </div>
 
                 <div class="min-w-0 flex flex-col justify-center">
-                    <h1 class="font-serif text-[#caa85c] text-sm md:text-xl font-bold uppercase tracking-[0.18em] leading-tight whitespace-nowrap">
+                    <!-- ID 'nome' adicionado para receber a string exata vinda de 'abella/settings' -->
+                    <h1 id="nome" class="font-serif text-[#caa85c] text-sm md:text-xl font-bold uppercase tracking-[0.18em] leading-tight whitespace-nowrap">
                         Abella Joias
                     </h1>
-                    <!-- Slogan Protegido: Alterado o ID para "sloganFixo" para blindar o texto contra as alterações dinâmicas do JS -->
-                    <p id="sloganFixo" class="text-zinc-400 text-[9px] md:text-[11px] uppercase tracking-[0.12em] font-bold leading-tight mt-0.5 whitespace-nowrap">
+                    <!-- ID 'slogan' adicionado para receber a string dinâmica sem quebrar o layout -->
+                    <p id="slogan" class="text-zinc-400 text-[9px] md:text-[11px] uppercase tracking-[0.12em] font-bold leading-tight mt-0.5 whitespace-nowrap">
                         Atacado de Joias no Bruto
                     </p>
-                    
-                    <!-- Elemento técnico oculto mantendo o ID original para o script trabalhar em background sem quebrar o seu visual -->
-                    <span id="categoriaAtual" class="hidden"></span>
-                    <span id="slogan" class="hidden"></span>
                 </div>
-            </div>
+            </a>
 
             <div class="flex items-center gap-2 shrink-0">
                 
-                <button onclick="voltarPagina()" class="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-[#caa85c]/40 text-white flex items-center justify-center transition-all duration-200" aria-label="Voltar">
+                <button onclick="window.history.back()" class="w-11 h-11 md:w-12 md:h-12 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-[#caa85c]/40 text-white flex items-center justify-center transition-all duration-200" aria-label="Voltar">
                     <span class="text-base font-bold select-none">←</span>
                 </button>
 
@@ -301,7 +304,7 @@
         </div>
     </div>
 
-    <script src="js/firebase/firebase-config.js"></script>
+<script src="js/firebase/firebase-config.js"></script>
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
     <script src="js/utils/imagens.js"></script>
@@ -316,15 +319,18 @@
         let produtoAtual = null;
         let descontoPixGlobal = 5;
 
-async function carregarLogoHeader(){
-            try{
-                const logoImg = document.getElementById('headerLogo');
-                const fallback = document.getElementById('headerLogoFallback');
+        async function carregarLogoHeader(){
+            try {
+                // Seletores flexíveis: tenta achar os novos IDs unificados ou mantém compatibilidade com os antigos
+                const logoImg = document.getElementById('abellaLogoImg') || document.getElementById('headerLogo');
+                const fallback = document.getElementById('abellaLogoFallback') || document.getElementById('headerLogoFallback');
                 const urlDefinitivaStorage = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
                 
-                // 1. Estado Visual Imediato: Renderiza a imagem direto na tela para evitar telas brancas ou saltos
+                // 1. Estado Visual Imediato: Evita saltos visuais na tela
                 if (logoImg) {
-                    logoImg.src = urlDefinitivaStorage;
+                    if (!logoImg.src || logoImg.src === window.location.href) {
+                        logoImg.src = urlDefinitivaStorage;
+                    }
                     logoImg.classList.remove('hidden');
                     logoImg.style.display = 'block';
                 }
@@ -335,73 +341,91 @@ async function carregarLogoHeader(){
                 let logo = '';
                 let config = {};
 
-                // Se o Firebase estiver ativo, busca as configurações atuais em background
-                if(typeof window.getAbellaPath === 'function') {
-                    const snap = await firebase.database().ref(window.getAbellaPath('settings')).once('value');
+                // Resolvendo de forma segura o caminho do Firebase
+                if (typeof firebase !== 'undefined' && firebase.database) {
+                    let path = 'abella/settings';
+                    if (typeof window.getAbellaPath === 'function') {
+                        path = window.getAbellaPath('settings');
+                    }
+                    
+                    const snap = await firebase.database().ref(path).once('value');
                     config = snap.val() || {};
                     logo = config.logo || config.logoUrl || '';
                     
-                    if(config.pix) {
+                    // Injeta dinamicamente textos institucionais caso existam na base
+                    if (config.name && document.getElementById('nome')) document.getElementById('nome').innerText = config.name;
+                    if (config.slogan && document.getElementById('slogan')) document.getElementById('slogan').innerText = config.slogan;
+                    
+                    if (config.pix) {
                         descontoPixGlobal = parseFloat(config.pix) || 0;
                         if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
                         if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
                     }
-                    if(config.parcelas) {
+                    if (config.parcelas) {
                         if (document.getElementById('parcelasBadgeValue')) document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
+                    }
+
+                    // Exibe e preenche o banner de aviso superior se estiver ativo
+                    const banner = document.getElementById('banner');
+                    if (banner && config.bannerAtivo && config.bannerTexto) {
+                        const bannerTextoEl = document.getElementById('bannerTexto');
+                        if (bannerTextoEl) bannerTextoEl.innerText = config.bannerTexto;
+                        banner.classList.remove('hidden');
                     }
                 }
 
-                // 2. Proteção Dinâmica: Mantém o link do storage fixo caso o banco de dados retorne nulo ou sem links novos
+                // 2. Proteção Dinâmica da Logo
                 let logoFinal = (logo && logo.trim() !== '' && logo !== 'logo' && logo !== 'undefined') ? logo : urlDefinitivaStorage;
 
-                // Resolve o caminho final caso existam conversores de imagem ativos no projeto
                 let logoResolvida = '';
-                if(logoFinal) {
-                    if(typeof obterLogo === 'function') {
+                if (logoFinal) {
+                    if (typeof obterLogo === 'function') {
                         logoResolvida = obterLogo();
-                    } else if(typeof resolverImagemFirebase === 'function' && logoFinal !== urlDefinitivaStorage) {
+                    } else if (typeof resolverImagemFirebase === 'function' && logoFinal !== urlDefinitivaStorage) {
                         logoResolvida = resolverImagemFirebase(logoFinal);
                     } else {
                         logoResolvida = logoFinal;
                     }
                 }
 
-                // 3. Aplicação do resultado: Garante a persistência da imagem na tela de forma permanente
-                if(logoResolvida && logoResolvida !== 'logo' && logoResolvida.trim() !== '') {
+                // 3. Aplicação controlada com tratamento onload para segurança
+                if (logoResolvida && logoResolvida !== 'logo' && logoResolvida.trim() !== '') {
                     if (logoImg) {
                         logoImg.src = logoResolvida;
-                        logoImg.classList.remove('hidden');
-                        logoImg.style.display = 'block';
-                    }
-                    if (fallback) {
-                        fallback.classList.add('hidden');
+                        logoImg.onload = () => {
+                            logoImg.classList.remove('hidden');
+                            logoImg.style.display = 'block';
+                            if (fallback) fallback.classList.add('hidden');
+                        };
                     }
                 }
-            }catch(e){
+            } catch(e) {
                 console.error('Erro logo header:', e);
-                // Em caso de falha de conexão severa do Firebase, o script preserva o estado inicial e não oculta a imagem à toa
             }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            try{
+            try {
                 await carregarLogoHeader();
-                // Verifica se as funções existem antes de executar para não interromper outros fluxos na página
-                if(typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
-                if(typeof carregarProdutos === 'function') await carregarProdutos();
-                if(typeof iniciarBusca === 'function') iniciarBusca();
-            }catch(e){
+                
+                if (typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
+                if (typeof carregarProdutos === 'function') await carregarProdutos();
+                if (typeof iniciarBusca === 'function') iniciarBusca();
+            } catch(e) {
                 console.error('Erro init:', e);
+                const loading = document.getElementById('loading');
+                if (loading) loading.classList.add('hidden');
             }
         });
+
         function atualizarMiniCarrinho(){
-            try{
-                if(typeof carrinhoService !== 'undefined' && typeof money !== 'undefined') {
+            try {
+                if (typeof carrinhoService !== 'undefined' && typeof money !== 'undefined') {
                     const resumo = carrinhoService.obterResumo();
                     if (document.getElementById('cart-count')) document.getElementById('cart-count').innerText = resumo.totalPecas || 0;
                     if (document.getElementById('cart-total')) document.getElementById('cart-total').innerText = money.formatar(resumo.subtotal || 0);
                 }
-            }catch(e){
+            } catch(e) {
                 console.error('Erro mini carrinho:', e);
             }
         }
@@ -416,7 +440,7 @@ async function carregarLogoHeader(){
                 .replace(/\s+/g, '-');
         }
 
-       async function carregarProdutos(){
+        async function carregarProdutos(){
             try{
                 const loading = document.getElementById('loading');
                 if (loading) loading.innerHTML = 'Carregando produtos premium...';

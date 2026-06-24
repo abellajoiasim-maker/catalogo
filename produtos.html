@@ -596,7 +596,8 @@
             
             // Tratamento corrigido: Verifica 'variacao', 'variacoes' ou 'variations'
             // Substitua por esta versão atualizada:
-let variacoesRaw = produto.variacao || produto.variacoes || produto.variations || produto.iniciais || produto.letras || produto.variacaoLetra || '';
+// Tratamento corrigido: Verifica 'variacao', 'variacoes' ou 'variations'
+            let variacoesRaw = produto.variacao || produto.variacoes || produto.variations || produto.iniciais || produto.letras || produto.variacaoLetra || '';
             let listaVariacoes = [];
 
             if (typeof variacoesRaw === 'string' && variacoesRaw.trim() !== '') {
@@ -622,65 +623,72 @@ let variacoesRaw = produto.variacao || produto.variacoes || produto.variations |
                                 <input type="number" id="qtdVar_${idx}" data-variacao="${v}" value="0" min="0" class="input-quantidade-variacao w-12 h-8 bg-zinc-950 border border-zinc-800 rounded-md text-center font-bold text-white text-xs focus:outline-none focus:border-[#caa85c]">
                                 <button onclick="alterarQtdManualNoElemento('qtdVar_${idx}', 1)" class="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 font-bold text-sm hover:border-zinc-700 flex items-center justify-center select-none" type="button">+</button>
                             </div>
-                        </div>`;
+                        </div>
+                    `;
                 });
                 
                 variacoesHtml += `</div>`;
                 containerVariacoes.innerHTML = variacoesHtml;
             } else {
-                // Mostra o seletor padrão se NÃO houver variações cadastradas
-                if(containerQtdPadrao) containerQtdPadrao.classList.remove('hidden');
-                document.getElementById('qtdPadrao').value = 1;
+                // Se não houver variações, exibe o seletor padrão e reinicia o valor para 1
+                if(containerQtdPadrao) {
+                    containerQtdPadrao.classList.remove('hidden');
+                    const inputPadrao = document.getElementById('qtdPadrao');
+                    if(inputPadrao) inputPadrao.value = "1";
+                }
             }
         }
+
+        // Remove a classe 'hidden' do Tailwind e exibe o modal
         modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Bloqueia o scroll de fundo
     }
 
     function fecharModalProduto() {
         const modal = document.getElementById('modalProduto');
         if (modal) modal.classList.add('hidden');
+        document.body.style.overflow = ''; // Libera o scroll de fundo
         produtoAtual = null;
     }
 
     function adicionarAoCarrinho() {
-        if (!produtoAtual) return;
-
-        if (typeof carrinhoService === 'undefined' || typeof carrinhoService.adicionar !== 'function') {
-            alert('Erro: Serviço de carrinho não carregado corretamente.');
-            return;
-        }
+        if (!produtoAtual || typeof carrinhoService === 'undefined') return;
 
         const inputsVariacao = document.querySelectorAll('.input-quantidade-variacao');
+        let itensAdicionados = 0;
 
         if (inputsVariacao.length > 0) {
-            let totalAdicionado = 0;
-
+            // Fluxo de Produto COM Variações
             inputsVariacao.forEach(input => {
                 const qtd = parseInt(input.value) || 0;
                 const varNome = input.getAttribute('data-variacao');
                 
-                if (qtd > 0 && varNome) {
-                    carrinhoService.adicionar(produtoAtual, qtd, varNome);
-                    totalAdicionado++;
+                if (qtd > 0) {
+                    // Cria uma cópia do produto para preservar os metadados e injetar a variação selecionada
+                    const itemCarrinho = {
+                        ...produtoAtual,
+                        variacaoSelecionada: varNome
+                    };
+                    carrinhoService.adicionar(itemCarrinho, qtd);
+                    itensAdicionados += qtd;
                 }
             });
 
-            if (totalAdicionado === 0) {
-                alert('Por favor, defina a quantidade para pelo menos um tamanho/variação.');
+            if (itensAdicionados === 0) {
+                alert('Por favor, adicione pelo menos 1 quantidade em alguma das variações disponíveis.');
                 return;
             }
-            
-            atualizarMiniCarrinho();
-            fecharModalProduto();
-
         } else {
-            const qtdInput = document.getElementById('qtdPadrao');
-            const quantidade = parseInt(qtdInput.value) || 1;
+            // Fluxo de Produto SEM Variações (Qtd Padrão)
+            const inputPadrao = document.getElementById('qtdPadrao');
+            const qtd = inputPadrao ? parseInt(inputPadrao.value) || 1 : 1;
             
-            carrinhoService.adicionar(produtoAtual, quantidade, '');
-            atualizarMiniCarrinho();
-            fecharModalProduto();
+            carrinhoService.adicionar(produtoAtual, qtd);
         }
+
+        // Atualiza o contador flutuante do header e fecha a janela do modal
+        atualizarMiniCarrinho();
+        fecharModalProduto();
     }
 </script>
 </body>

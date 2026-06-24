@@ -376,7 +376,7 @@
     <script src="js/services/carrinhoService.js"></script>
 
     <script>
-        const db = firebase.database();
+const db = firebase.database();
 
         const CONFIG = {
             descontoPix: 5,
@@ -389,19 +389,11 @@
 
         let itensCarrinho = [];
 
-        const money = {
-            formatar(v){
-                return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
-            }
-        };
-
-        function formatarPeso(valor) {
-            const num = Number(valor || 0);
-            const formatter = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            if (num >= 1000) {
-                return formatter.format(num / 1000) + ' kg';
-            }
-            return formatter.format(num) + ' g';
+        if (typeof formatarPeso !== 'function') {
+            window.formatarPeso = function(peso) {
+                const p = parseFloat(peso) || 0;
+                return p.toFixed(2);
+            };
         }
 
         function resolverImagemFirebase(url) {
@@ -434,17 +426,16 @@
                     return;
                 }
 
-                renderizarItens();
-                atualizarResumo();
                 await carregarConfiguracoes();
+                renderizarItens();
                 atualizarResumo();
             } catch (erro) {
                 console.error('[CHECKOUT ERRO]', erro);
             }
         });
 
-        async function carregarConfiguracoes()){
-            try{
+        async function carregarConfiguracoes() {
+            try {
                 if (typeof window.getAbellaPath !== 'function') return;
 
                 const snap = await db.ref(window.getAbellaPath('settings')).once('value');
@@ -470,31 +461,37 @@
                         }
                     }
                 }
-            }catch(e){
+            } catch (e) {
                 console.warn('Erro ao carregar configurações globais:', e);
             }
         }
 
-        function renderizarItens(){
+        function renderizarItens() {
             const container = document.getElementById('lista-itens-checkout');
-            if(!container) return;
+            if (!container) return;
             container.innerHTML = '';
 
             itensCarrinho.forEach(item => {
-                const qtd = parseInt(item.quantidade || item.qtd || 1, 10);
-                const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
+                const qtd = parseInt(item.quantidade, 10) || 1;
+                const preco = parseFloat(item.preco) || 0;
                 const total = preco * qtd;
-                const imagem = resolverImagemFirebase(item.image || item.imagem);
-                const nomeLimpo = String(item.name || item.nome || item.titulo || 'Produto').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const imagem = resolverImagemFirebase(item.thumbnail);
+                const nomeLimpo = String(item.nome || 'Produto').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const vNome = String(item.variacaoSelecionada || '').trim();
+                const exibirVariacao = vNome ? `<span class="block text-[10px] text-zinc-400 font-medium mt-0.5">Tam: ${vNome}</span>` : '';
+
+                const txtTotal = typeof money !== 'undefined' ? money.formatar(total) : `R$ ${total.toFixed(2)}`;
+                const txtPrecoUn = typeof money !== 'undefined' ? money.formatar(preco) : `R$ ${preco.toFixed(2)}`;
 
                 container.innerHTML += `
                     <div class="flex items-center gap-4 border border-white/5 rounded-2xl p-3 bg-zinc-900/40">
-                        <img src="${imagem}" class="w-16 h-16 rounded-xl object-cover bg-black border border-zinc-800" alt="${nomeLimpo}" onerror="this.src='https://via.placeholder.com/100/111111/caa85c?text=Joia'">
+                        <img src="${imagem}" class="w-16 h-16 rounded-xl object-cover bg-black border border-zinc-800 shrink-0" alt="${nomeLimpo}" onerror="this.src='https://via.placeholder.com/100/111111/caa85c?text=Joia'">
                         <div class="flex-1 min-w-0">
-                            <h3 class="font-bold text-sm truncate text-white">${nomeLimpo}</h3>
-                            <p class="text-zinc-500 text-xs mt-1">${qtd}x • ${money.formatar(preco)}</p>
+                            <h3 class="font-bold text-sm truncate text-white uppercase tracking-wide">${nomeLimpo}</h3>
+                            ${exibirVariacao}
+                            <p class="text-zinc-500 text-xs mt-0.5">${qtd}x • ${txtPrecoUn}</p>
                         </div>
-                        <span class="font-black text-sm text-[#caa85c]">${money.formatar(total)}</span>
+                        <span class="font-black text-sm text-[#caa85c] shrink-0">${txtTotal}</span>
                     </div>
                 `;
             });
@@ -506,9 +503,9 @@
             let subtotal = 0;
 
             itensCarrinho.forEach(item => {
-                const quantidade = parseInt(item.quantidade ?? item.qtd ?? 1, 10);
-                const preco = Number(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0) || 0;
-                const pesoItem = Number(item.peso ?? item.pesoUnitario ?? item.weight ?? 0) || 0;
+                const quantidade = parseInt(item.quantidade, 10) || 1;
+                const preco = parseFloat(item.preco) || 0;
+                const pesoItem = parseFloat(item.peso) || 0;
 
                 qtd += quantidade;
                 peso += pesoItem * quantidade;
@@ -523,8 +520,8 @@
             }
 
             let frete = 0;
-            if (subtotal > 0 && subtotal < (CONFIG.freteGratisAlvo || 0)) {
-                frete = Number(CONFIG.freteFixo || 0);
+            if (subtotal > 0 && subtotal < (CONFIG.freteGratisAlvo || 100)) {
+                frete = parseFloat(CONFIG.freteFixo || 0);
             }
 
             const total = subtotal - desconto + frete;
@@ -532,18 +529,24 @@
             return { qtd, peso, subtotal, desconto, frete, total, pagamento };
         }
 
-        function atualizarResumo(){
+        function atualizarResumo() {
             const t = calcularTotais();
 
             document.getElementById('res-qtd').innerText = `${t.qtd} pçs`;
-            document.getElementById('res-peso').innerText = formatarPeso(t.peso);
-            document.getElementById('res-subtotal').innerText = money.formatar(t.subtotal);
-            document.getElementById('res-total').innerText = money.formatar(t.total);
+            document.getElementById('res-peso').innerText = `${formatarPeso(t.peso)}g`;
+            
+            if (typeof money !== 'undefined') {
+                document.getElementById('res-subtotal').innerText = money.formatar(t.subtotal);
+                document.getElementById('res-total').innerText = money.formatar(t.total);
+            } else {
+                document.getElementById('res-subtotal').innerText = `R$ ${t.subtotal.toFixed(2)}`;
+                document.getElementById('res-total').innerText = `R$ ${t.total.toFixed(2)}`;
+            }
 
             const box = document.getElementById('box-desconto');
             if (t.desconto > 0) {
                 box.classList.remove('hidden');
-                document.getElementById('res-desconto').innerText = `- ${money.formatar(t.desconto)}`;
+                document.getElementById('res-desconto').innerText = typeof money !== 'undefined' ? `- ${money.formatar(t.desconto)}` : `- R$ ${t.desconto.toFixed(2)}`;
             } else {
                 box.classList.add('hidden');
             }
@@ -555,6 +558,8 @@
             const whats = document.getElementById('cli-whats')?.value || 'Não informado';
             const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
             const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
+
+            const fnMoney = typeof money !== 'undefined' ? money.formatar : (v => `R$ ${v.toFixed(2)}`);
 
             let html = `
                 <div style="text-align:center; margin-bottom:20px; font-family:sans-serif;">
@@ -571,7 +576,7 @@
                 <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px;">
                     <thead>
                         <tr style="border-bottom: 1px solid #27272a; text-align:left; color:#caa85c;">
-                            <th style="padding:8px 0; width:80px;">SKU</th>
+                            <th style="padding:8px 0; width:80px;">REF</th>
                             <th style="padding:8px 0;">PRODUTO</th>
                             <th style="padding:8px 0; text-align:center; width:50px;">QTD</th>
                             <th style="padding:8px 0; text-align:right; width:80px;">VALOR UNIT.</th>
@@ -586,19 +591,20 @@
                 html += `<tr><td colspan="6" style="padding:15px; text-align:center; color:#ef4444;">Nenhum item no carrinho.</td></tr>`;
             } else {
                 itensCarrinho.forEach(item => {
-                    const sku = item.sku || 'N/I';
-                    const qtd = parseInt(item.quantidade || item.qtd || 1, 10);
-                    const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? 0);
-                    const pesoUn = parseFloat(item.peso || item.pesoUnitario || 0);
+                    const ref = item.codigo || '-';
+                    const qtd = parseInt(item.quantidade, 10) || 1;
+                    const preco = parseFloat(item.preco) || 0;
+                    const pesoUn = parseFloat(item.peso) || 0;
+                    const vNome = item.variacaoSelecionada ? ` (Tam: ${item.variacaoSelecionada})` : '';
                     
                     html += `
                         <tr style="border-bottom:1px solid #18181b;">
-                            <td style="padding:8px 0; color:#a1a1aa; font-family:monospace;">${sku}</td>
-                            <td style="padding:8px 0; color:#e4e4e7;">${item.name || item.nome || 'Produto'}</td>
+                            <td style="padding:8px 0; color:#a1a1aa; font-family:monospace;">${ref}</td>
+                            <td style="padding:8px 0; color:#e4e4e7;">${item.nome || 'Produto'}${vNome}</td>
                             <td style="padding:8px 0; text-align:center; color:#e4e4e7;">${qtd}</td>
-                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${money.formatar(preco)}</td>
-                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarPeso(pesoUn)}</td>
-                            <td style="padding:8px 0; text-align:right; color:#caa85c; font-weight:bold;">${money.formatar(preco * qtd)}</td>
+                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${fnMoney(preco)}</td>
+                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarPeso(pesoUn)}g</td>
+                            <td style="padding:8px 0; text-align:right; color:#caa85c; font-weight:bold;">${fnMoney(preco * qtd)}</td>
                         </tr>
                     `;
                 });
@@ -608,10 +614,10 @@
                     </tbody>
                 </table>
                 <div style="border-top:1px dashed #27272a; padding-top:15px; text-align:right; font-size:13px; line-height:1.6;">
-                    <div><span style="color:#71717a">Bruto:</span> <b>${money.formatar(t.subtotal)}</b></div>
-                    ${t.desconto > 0 ? `<div><span style="color:#34d399">Desconto PIX (${CONFIG.descontoPix}%):</span> <b style="color:#34d399">-${money.formatar(t.desconto)}</b></div>` : ''}
-                    ${t.frete > 0 ? `<div><span style="color:#71717a">Frete:</span> <b>${money.formatar(t.frete)}</b></div>` : '<div><span style="color:#34d399">Frete:</span> <b>Grátis</b></div>'}
-                    <div style="font-size:18px; margin-top:10px; color:#fff;"><span style="color:#caa85c">VALOR FINAL:</span> <b style="color:#caa85c">${money.formatar(t.total)}</b></div>
+                    <div><span style="color:#71717a">Bruto:</span> <b>${fnMoney(t.subtotal)}</b></div>
+                    ${t.desconto > 0 ? `<div><span style="color:#34d399">Desconto PIX (${CONFIG.descontoPix}%):</span> <b style="color:#34d399">-${fnMoney(t.desconto)}</b></div>` : ''}
+                    ${t.frete > 0 ? `<div><span style="color:#71717a">Frete:</span> <b>${fnMoney(t.frete)}</b></div>` : '<div><span style="color:#34d399">Frete:</span> <b>Grátis (Limeira)</b></div>'}
+                    <div style="font-size:18px; margin-top:10px; color:#fff;"><span style="color:#caa85c">VALOR FINAL:</span> <b style="color:#caa85c">${fnMoney(t.total)}</b></div>
                 </div>
                 <div style="margin-top:20px; font-size:11px; color:#71717a; border-top:1px solid #18181b; padding-top:10px;">
                     <b>Obs:</b> ${obs}
@@ -627,7 +633,6 @@
             document.getElementById('modal-romaneio')?.classList.add('hidden');
         }
 
-        // FUNÇÃO DE GERAÇÃO DE PDF COMPLETA (CORRIGIDA)
         function gerarPDF(autoPrint = false) {
             try {
                 const { jsPDF } = window.jspdf;
@@ -638,8 +643,8 @@
                 const whats = document.getElementById('cli-whats')?.value || 'Não informado';
                 const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
                 const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
+                const fnMoney = typeof money !== 'undefined' ? money.formatar : (v => `R$ ${v.toFixed(2)}`);
 
-                // Cabeçalho
                 doc.setFont('Helvetica', 'bold');
                 doc.setFontSize(22);
                 doc.setTextColor(186, 154, 91);
@@ -651,7 +656,6 @@
                 doc.text('ROMANEIO DE PEDIDO PREMIUM', 105, 26, { align: 'center' });
                 doc.text(new Date().toLocaleString('pt-BR'), 105, 31, { align: 'center' });
 
-                // Caixa Cliente
                 doc.setDrawColor(220, 220, 220);
                 doc.setFillColor(248, 248, 248);
                 doc.roundedRect(14, 38, 182, 28, 3, 3, 'FD');
@@ -667,9 +671,8 @@
                 doc.text(`Cidade: ${cidade}`, 18, 61);
                 doc.text(`Pagamento: ${t.pagamento}`, 120, 51);
                 doc.text(`Total Peças: ${t.qtd} pçs`, 120, 56);
-                doc.text(`Peso Total: ${formatarPeso(t.peso)}`, 120, 61);
+                doc.text(`Peso Total: ${formatarPeso(t.peso)}g`, 120, 61);
 
-                // Grid Estrutural da Tabela
                 let y = 74;
                 doc.setFont('Helvetica', 'bold');
                 doc.setFontSize(9);
@@ -677,7 +680,7 @@
                 doc.rect(14, y, 182, 7, 'F');
                 doc.setTextColor(50, 50, 50);
                 
-                doc.text('SKU', 16, y + 5);
+                doc.text('REF', 16, y + 5);
                 doc.text('PRODUTO', 45, y + 5);
                 doc.text('QTD', 115, y + 5, { align: 'center' });
                 doc.text('VALOR UN.', 140, y + 5, { align: 'right' });
@@ -690,40 +693,40 @@
                 itensCarrinho.forEach(item => {
                     if (y > 260) { doc.addPage(); y = 20; }
                     
-                    const sku = item.sku || 'N/I';
-                    const nome = item.name || item.nome || 'Produto';
-                    const qtd = parseInt(item.quantidade || item.qtd || 1, 10);
-                    const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? 0);
+                    const ref = item.codigo || '-';
+                    const vNome = item.variacaoSelecionada ? ` (${item.variacaoSelecionada})` : '';
+                    const nome = (item.nome || 'Produto') + vNome;
+                    const qtd = parseInt(item.quantidade, 10) || 1;
+                    const preco = parseFloat(item.preco) || 0;
 
-                    doc.text(sku, 16, y + 5);
+                    doc.text(ref, 16, y + 5);
                     doc.text(nome.substring(0, 35), 45, y + 5);
                     doc.text(String(qtd), 115, y + 5, { align: 'center' });
-                    doc.text(money.formatar(preco), 140, y + 5, { align: 'right' });
-                    doc.text(money.formatar(preco * qtd), 190, y + 5, { align: 'right' });
+                    doc.text(fnMoney(preco), 140, y + 5, { align: 'right' });
+                    doc.text(fnMoney(preco * qtd), 190, y + 5, { align: 'right' });
                     
                     y += 7;
                 });
 
-                // Totais Finais
                 y += 5;
                 if (y > 250) { doc.addPage(); y = 20; }
                 doc.setDrawColor(200, 200, 200);
                 doc.line(14, y, 196, y);
                 
                 y += 6;
-                doc.text(`Subtotal: ${money.formatar(t.subtotal)}`, 195, y, { align: 'right' });
+                doc.text(`Subtotal: ${fnMoney(t.subtotal)}`, 195, y, { align: 'right' });
                 if(t.desconto > 0) {
                     y += 5;
-                    doc.text(`Desconto PIX: -${money.formatar(t.desconto)}`, 195, y, { align: 'right' });
+                    doc.text(`Desconto PIX: -${fnMoney(t.desconto)}`, 195, y, { align: 'right' });
                 }
                 y += 5;
-                doc.text(`Frete: ${t.frete > 0 ? money.formatar(t.frete) : 'Grátis'}`, 195, y, { align: 'right' });
+                doc.text(`Frete: ${t.frete > 0 ? fnMoney(t.frete) : 'Grátis'}`, 195, y, { align: 'right' });
                 
                 y += 8;
                 doc.setFont('Helvetica', 'bold');
                 doc.setFontSize(12);
                 doc.setTextColor(186, 154, 91);
-                doc.text(`VALOR TOTAL: ${money.formatar(t.total)}`, 195, y, { align: 'right' });
+                doc.text(`VALOR TOTAL: ${fnMoney(t.total)}`, 195, y, { align: 'right' });
 
                 if (autoPrint) {
                     doc.autoPrint();
@@ -737,7 +740,6 @@
             }
         }
 
-        // SCRIPT COMPLETO DE ENVIO PARA O WHATSAPP (CONECTANDO O BOTÃO FINALIZAR)
         async function finalizarPedido() {
             const nome = document.getElementById('cli-nome')?.value.trim();
             const whats = document.getElementById('cli-whats')?.value.trim();
@@ -755,8 +757,8 @@
             }
 
             const t = calcularTotais();
+            const fnMoney = typeof money !== 'undefined' ? money.formatar : (v => `R$ ${v.toFixed(2)}`);
 
-            // Montagem do texto estruturado para leitura clara no WhatsApp corporativo
             let msg = `✨ *NOVO PEDIDO - ABELLA JOIAS* ✨\n\n`;
             msg += `👤 *Cliente:* ${nome}\n`;
             msg += `📱 *WhatsApp:* ${whats}\n`;
@@ -769,30 +771,36 @@
 
             msg += `🛒 *ITENS DO PEDIDO:*\n`;
             itensCarrinho.forEach(item => {
-                const qtd = parseInt(item.quantidade || item.qtd || 1, 10);
-                const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? 0);
-                msg += `▪️ ${qtd}x ${item.name || item.nome} (${money.formatar(preco)}/un)\n`;
+                const qtd = parseInt(item.quantidade, 10) || 1;
+                const preco = parseFloat(item.preco) || 0;
+                const vNome = item.variacaoSelecionada ? ` (Tam: ${item.variacaoSelecionada})` : '';
+                msg += `▪️ ${qtd}x ${item.nome}${vNome} (${fnMoney(preco)}/un)\n`;
             });
 
             msg += `\n📊 *RESUMO FINANCEIRO:*\n`;
-            msg += `💰 *Subtotal:* ${money.formatar(t.subtotal)}\n`;
-            if (t.desconto > 0) msg += `🟢 *Desconto PIX:* -${money.formatar(t.desconto)}\n`;
-            msg += `🚚 *Frete:* ${t.frete > 0 ? money.formatar(t.frete) : 'Grátis'}\n`;
-            msg += `⚖️ *Peso Total:* ${formatarPeso(t.peso)}\n`;
+            msg += `💰 *Subtotal:* ${fnMoney(t.subtotal)}\n`;
+            if (t.desconto > 0) msg += `🟢 *Desconto PIX:* -${fnMoney(t.desconto)}\n`;
+            msg += `🚚 *Frete:* ${t.frete > 0 ? fnMoney(t.frete) : 'Grátis (Limeira)'}\n`;
+            msg += `⚖️ *Peso Total:* ${formatarPeso(t.peso)}g\n`;
             msg += `💳 *Forma de Pagamento:* ${t.pagamento}\n`;
-            msg += `⭐ *TOTAL FINAL:* ${money.formatar(t.total)}\n\n`;
+            msg += `⭐ *TOTAL FINAL:* ${fnMoney(t.total)}\n\n`;
 
             if (obs) msg += `📝 *Obs:* ${obs}\n`;
 
-            // Envio e limpeza segura do estado local
             const urlWhats = `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(msg)}`;
             
-            if (typeof carrinhoService !== 'undefined' && carrinhoService.limparCarrinho) {
-                carrinhoService.limparCarrinho();
+            if (typeof carrinhoService !== 'undefined' && carrinhoService.limpar) {
+                carrinhoService.limpar();
             }
             
             window.open(urlWhats, '_blank');
         }
+
+        window.visualizarRomaneio = visualizarRomaneio;
+        window.fecharModal = fecharModal;
+        window.gerarPDF = gerarPDF;
+        window.finalizarPedido = finalizarPedido;
+        window.atualizarResumo = atualizarResumo;
     </script>
 </body>
 </html>

@@ -156,15 +156,11 @@ renderCounters() {
                 `${totais.totalPecas} pçs`;
         }
 
-        if (
-            this._elements.weight
-        ) {
-
-            this._elements.weight
-                .textContent =
-
-                `${this._safeNumber(totais.pesoTotal).toFixed(2)}g`;
-        }
+       if (this._elements.weight) {
+    this._elements.weight.textContent = typeof window.formatarPeso === 'function'
+        ? window.formatarPeso(totais.pesoTotal)
+        : `${this._safeNumber(totais.pesoTotal).toFixed(2)}g`;
+}
 
         if (
             this._elements.total

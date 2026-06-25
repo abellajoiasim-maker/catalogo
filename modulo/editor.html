@@ -47,30 +47,47 @@
     .tab-btn:hover {
       background: rgba(255,255,255,0.10);
     }
+    
+    /* Customização de Scrollbar para o ecossistema Escuro do Painel */
+    .class-scrollbar-custom::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .class-scrollbar-custom::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .class-scrollbar-custom::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    .scrollbar-none::-webkit-scrollbar {
+      display: none;
+    }
   </style>
 </head>
 
-<body class="bg-black text-white">
-  <div class="max-w-7xl mx-auto p-4">
+<body class="bg-black text-white p-4 md:p-8">
+  
+  <div class="max-w-7xl mx-auto space-y-6">
 
-    <header class="bg-zinc-950 border border-zinc-900 rounded-2xl p-5 mb-4">
+    <header class="bg-zinc-950 border border-zinc-900 rounded-2xl p-5">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 class="text-2xl font-bold text-[#caa85c]">Super Editor V7</h1>
           <p class="text-xs text-zinc-500">Controle Total • Criação, Edição e Imagens Sincronizadas em Espelho</p>
         </div>
         <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-          <button id="btnCriarNovo" onclick="abrirCriacaoPorAba()" class="px-4 py-2 bg-[#caa85c] text-black rounded-xl text-xs font-bold hover:bg-opacity-90 transition-all">
+          <button id="btnCriarNovo" onclick="abrirCriacaoPorAba()" class="flex-1 sm:flex-none px-4 py-2 bg-[#caa85c] text-black rounded-xl text-xs font-bold hover:bg-opacity-90 transition-all">
             ➕ Criar Item
           </button>
-          <button id="btnRefresh" class="px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all">
+          <button id="btnRefresh" class="flex-1 sm:flex-none px-4 py-2 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all">
             Sincronizar Vitrine
           </button>
         </div>
       </div>
     </header>
 
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
       <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
         <div class="text-zinc-500 text-[10px]">Produtos</div>
         <div id="statProdutos" class="text-2xl font-bold">0</div>
@@ -89,58 +106,73 @@
       </div>
     </section>
 
-    <section class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 mb-4">
-      <div class="grid md:grid-cols-5 gap-3">
+    <section class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
         <input
           id="buscaGlobal"
           type="text"
-          class="w-full md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none focus:border-zinc-700"
+          class="w-full md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-zinc-700 placeholder-zinc-500"
           placeholder="Buscar SKU, Nome, Categoria..."
         />
-        <select id="filtroTipo" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none">
+        <select id="filtroTipo" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-white focus:outline-none">
           <option value="todos">Todos</option>
           <option value="produto">Produtos</option>
           <option value="categoria">Categorias</option>
           <option value="subcategoria">Subcategorias</option>
         </select>
-        <select id="filtroCategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none">
+        <select id="filtroCategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-white focus:outline-none">
           <option value="">Todas Categorias</option>
         </select>
-        <select id="filtroSubcategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm focus:outline-none">
+        <select id="filtroSubcategoria" class="bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm text-white focus:outline-none">
           <option value="">Todas Subcategorias</option>
         </select>
       </div>
     </section>
 
-    <section class="flex gap-2 mb-4">
-      <button class="tab-btn active" data-tab="produtos" type="button">Produtos</button>
-      <button class="tab-btn" data-tab="categorias" type="button">Categorias</button>
-      <button class="tab-btn" data-tab="subcategorias" type="button">Subcategorias</button>
+    <section class="flex gap-2 overflow-x-auto scrollbar-none pb-2 md:pb-0">
+      <button class="tab-btn active whitespace-nowrap" data-tab="produtos" type="button">Produtos</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="categorias" type="button">Categorias</button>
+      <button class="tab-btn whitespace-nowrap" data-tab="subcategorias" type="button">Subcategorias</button>
     </section>
 
-    <section>
-      <div id="tab-produtos" class="grid grid-cols-1 gap-3"></div>
-      <div id="tab-categorias" class="hidden grid grid-cols-1 gap-3"></div>
-      <div id="tab-subcategorias" class="hidden grid grid-cols-1 gap-3"></div>
+    <section class="bg-zinc-950/40 rounded-2xl border border-zinc-900 overflow-hidden">
+      <div class="overflow-x-auto w-full class-scrollbar-custom">
+        <div id="tab-produtos" class="grid grid-cols-1 gap-3 p-1"></div>
+        <div id="tab-categorias" class="hidden grid grid-cols-1 gap-3 p-1"></div>
+        <div id="tab-subcategorias" class="hidden grid grid-cols-1 gap-3 p-1"></div>
+      </div>
     </section>
 
     <div id="status" class="text-xs text-zinc-500 mt-6"></div>
   </div>
 
-  <div
-    id="drawer"
-    class="fixed top-0 right-0 h-full w-[520px] bg-zinc-950 border-l border-zinc-800 hidden z-50 overflow-y-auto shadow-2xl"
-  >
-    <div class="p-5">
-      <div class="flex justify-between mb-5">
-        <h2 id="drawerTitle" class="text-lg font-bold text-[#caa85c]">Editor Avançado</h2>
-        <button type="button" onclick="fecharDrawer()" class="text-xl hover:text-red-400">✕</button>
+  <div id="drawer" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden transition-opacity duration-300">
+    <div class="fixed inset-y-0 right-0 w-full sm:max-w-xl bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col h-full transform translate-x-full transition-transform duration-300" id="drawerContainer">
+      
+      <div class="p-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/40">
+        <h3 id="drawerTitle" class="text-lg font-bold text-white tracking-wide">Editar Registro</h3>
+        <button onclick="fecharDrawer()" class="text-zinc-400 hover:text-white bg-zinc-800/50 px-3 py-1.5 rounded-xl transition text-xs">
+          ✕ Fechar
+        </button>
       </div>
-      <div id="drawerContent"></div>
+
+      <div class="flex-1 overflow-y-auto p-6 space-y-4 class-scrollbar-custom">
+        </div>
+
+      <div class="p-4 border-t border-zinc-800 bg-zinc-950 flex gap-3">
+        <button onclick="fecharDrawer()" class="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-medium py-3 rounded-xl transition text-sm">
+          Cancelar
+        </button>
+        <button id="btnSalvarDrawer" class="flex-1 bg-[#caa85c] hover:bg-[#bfa054] text-black font-bold py-3 rounded-xl transition text-sm">
+          Salvar Alterações
+        </button>
+      </div>
+
     </div>
   </div>
 
   <script>
+    const db = firebase.database();
   function resolverDB() {
     if (window.db) return window.db;
     if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0) {

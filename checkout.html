@@ -408,14 +408,14 @@
         }
 
         function obterImagemProdutoSegura(item) {
+            let url = item.image || item.imagem || item.thumbnail || '';
             if (typeof window.obterImagemProduto === 'function') {
-                return window.obterImagemProduto(item.thumbnail || item.imagem || item.image);
+                return window.obterImagemProduto(url);
             }
             if (window.ImageHelper && typeof window.ImageHelper.converterGsUrl === 'function') {
-                return window.ImageHelper.converterGsUrl(item.thumbnail || item.imagem || item.image);
+                return window.ImageHelper.converterGsUrl(url);
             }
             try {
-                let url = item.thumbnail || item.imagem || '';
                 if (!url) return 'https://via.placeholder.com/100/111111/caa85c?text=Joia';
                 url = String(url).trim();
                 if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -502,10 +502,10 @@
 
             itensCarrinho.forEach(item => {
                 const qtd = parseInt(item.quantidade, 10) || 1;
-                const preco = parseFloat(item.preco) || 0;
+                const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
                 const total = preco * qtd;
                 const imagem = obterImagemProdutoSegura(item);
-                const nomeLimpo = String(item.nome || 'Produto').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const nomeLimpo = String(item.name || item.titulo || item.nome || 'Produto').replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 const vNome = String(item.variacaoSelecionada || '').trim();
                 const exibirVariacao = vNome ? `<span class="block text-[10px] text-[#caa85c] font-bold mt-0.5 uppercase tracking-wide">Variação: ${vNome}</span>` : '';
 
@@ -530,8 +530,8 @@
 
             itensCarrinho.forEach(item => {
                 const quantidade = parseInt(item.quantidade, 10) || 1;
-                const preco = parseFloat(item.preco) || 0;
-                const pesoItem = parseFloat(item.peso) || 0;
+                const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
+                const pesoItem = parseFloat(item.peso || item.pesoUnitario || 0);
 
                 qtd += quantidade;
                 peso += pesoItem * quantidade;
@@ -559,7 +559,7 @@
             const t = calcularTotais();
 
             document.getElementById('res-qtd').innerText = `${t.qtd} pçs`;
-            document.getElementById('res-peso').innerText = formatarPesoSeguro(t.peso);
+            document.getElementById('res-peso').innerText = `${formatarPesoSeguro(t.peso)}g`;
             
             document.getElementById('res-subtotal').innerText = formatarMoedaSeguro(t.subtotal);
             document.getElementById('res-total').innerText = formatarMoedaSeguro(t.total);
@@ -610,16 +610,17 @@
                 html += `<tr><td colspan="6" style="padding:15px; text-align:center; color:#ef4444;">Nenhum item no carrinho.</td></tr>`;
             } else {
                 itensCarrinho.forEach(item => {
-                    const ref = item.codigo || item.sku || '-';
+                    const ref = item.id || item.codigo || item.sku || '-';
                     const qtd = parseInt(item.quantidade, 10) || 1;
-                    const preco = parseFloat(item.preco) || 0;
-                    const pesoUn = parseFloat(item.peso) || 0;
+                    const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
+                    const pesoUn = parseFloat(item.peso || item.pesoUnitario || 0);
                     const vNome = item.variacaoSelecionada ? ` (Tam: ${item.variacaoSelecionada})` : '';
+                    const nomeStr = item.name || item.titulo || item.nome || 'Produto';
                     
                     html += `
                         <tr style="border-bottom:1px solid #18181b;">
                             <td style="padding:8px 0; color:#a1a1aa; font-family:monospace;">${ref}</td>
-                            <td style="padding:8px 0; color:#e4e4e7;">${item.nome || 'Produto'}${vNome}</td>
+                            <td style="padding:8px 0; color:#e4e4e7;">${nomeStr}${vNome}</td>
                             <td style="padding:8px 0; text-align:center; color:#e4e4e7;">${qtd}</td>
                             <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarMoedaSeguro(preco)}</td>
                             <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarPesoSeguro(pesoUn)}</td>
@@ -660,7 +661,7 @@
                 const t = calcularTotais();
                 const cliente = document.getElementById('cli-nome')?.value || 'Não informado';
                 const whats = document.getElementById('cli-whats')?.value || 'Não informado';
-                const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
+                const city = document.getElementById('cli-cidade')?.value || 'Não informado';
                 const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
 
                 doc.setFont('Helvetica', 'bold');
@@ -686,10 +687,10 @@
                 doc.setFont('Helvetica', 'normal');
                 doc.text(`Cliente: ${cliente}`, 18, 51);
                 doc.text(`WhatsApp: ${whats}`, 18, 56);
-                doc.text(`Cidade: ${cidade}`, 18, 61);
+                doc.text(`Cidade: ${city}`, 18, 61);
                 doc.text(`Pagamento: ${t.pagamento}`, 120, 51);
                 doc.text(`Total Peças: ${t.qtd} pçs`, 120, 56);
-                doc.text(`Peso Total: ${formatarPesoSeguro(t.peso)}`, 120, 61);
+                doc.text(`Peso Total: ${formatarPesoSeguro(t.peso)}g`, 120, 61);
 
                 let y = 74;
                 doc.setFont('Helvetica', 'bold');
@@ -711,11 +712,11 @@
                 itensCarrinho.forEach(item => {
                     if (y > 260) { doc.addPage(); y = 20; }
                     
-                    const ref = item.codigo || item.sku || '-';
+                    const ref = item.id || item.codigo || item.sku || '-';
                     const vNome = item.variacaoSelecionada ? ` (${item.variacaoSelecionada})` : '';
-                    const nome = (item.nome || 'Produto') + vNome;
+                    const nome = (item.name || item.titulo || item.nome || 'Produto') + vNome;
                     const qtd = parseInt(item.quantidade, 10) || 1;
-                    const preco = parseFloat(item.preco) || 0;
+                    const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
 
                     doc.text(ref, 16, y + 5);
                     doc.text(nome.substring(0, 35), 45, y + 5);
@@ -758,7 +759,6 @@
             }
         }
 
-        // FUNÇÃO DE ENVIO AJUSTADA CONFORME SOLICITAÇÃO ESPECÍFICA
         async function finalizarPedido() {
             const nome = document.getElementById('cli-nome')?.value.trim();
             const whats = document.getElementById('cli-whats')?.value.trim();
@@ -777,7 +777,6 @@
 
             const t = calcularTotais();
 
-            // Mensagem limpa: Sem a lista detalhada de produtos
             let msg = `✨ *NOVO PEDIDO CONFIRMADO - ABELLA JOIAS* ✨\n\n`;
             msg += `👤 *DADOS DO CLIENTE:*\n`;
             msg += `▪️ *Nome:* ${nome}\n`;
@@ -791,7 +790,7 @@
 
             msg += `📊 *RESUMO FINANCEIRO:*\n`;
             msg += `▪️ *Total de Peças:* ${t.qtd} pçs\n`;
-            msg += `▪️ *Peso Total:* ${formatarPesoSeguro(t.peso)}\n`;
+            msg += `▪️ *Peso Total:* ${formatarPesoSeguro(t.peso)}g\n`;
             msg += `▪️ *Subtotal:* ${formatarMoedaSeguro(t.subtotal)}\n`;
             if (t.desconto > 0) msg += `▪️ *Desconto PIX:* -${formatarMoedaSeguro(t.desconto)}\n`;
             msg += `▪️ *Frete:* ${t.frete > 0 ? formatarMoedaSeguro(t.frete) : 'Grátis (Galvânicas Limeira)'}\n`;
@@ -800,7 +799,6 @@
 
             if (obs) msg += `📝 *Observações:* ${obs}\n\n`;
 
-            // Mensagem de aguardo adicionada nativamente
             msg += `💬 O meu pedido já foi gerado com sucesso! Fico no aguardo do envio do *link de pagamento* e da confirmação do *prazo de entrega*. Obrigado!`;
 
             const urlWhats = `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(msg)}`;

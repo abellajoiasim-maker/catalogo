@@ -98,60 +98,172 @@
 
   <script type="module" src="./js/editorApp.js"></script>
 
-  <!-- Orquestrador Visual das Abas e Integração com os Módulos -->
-  <script type="module">
-    import { CategoriaModule } from './js/categoriaModule.js';
-
+  <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const tabs = document.querySelectorAll('.tab-btn');
-      const contents = document.querySelectorAll('.tab-content');
-      const btnCriarNovo = document.getElementById('btnCriarNovo');
+      // Pequeno delay para garantir que a infraestrutura do editorApp.js acoplou o Firebase global
+      setTimeout(() => {
+        const tabs = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
+        const btnCriarNovo = document.getElementById('btnCriarNovo');
 
-      // Executa a inicialização do módulo de Categorias passando a instância global do database
-      // (Assumindo que sua config expõe o 'db' ou 'firebase.database()')
-      const bancoDeDados = window.db || firebase.database();
-      if (bancoDeDados) {
-          CategoriaModule.init(bancoDeDados);
-      }
+        // Captura a instância do Realtime Database oficial do projeto
+        const database = window.db || (typeof firebase !== 'undefined' ? firebase.database() : null);
+        
+        if (!database) {
+          console.error("Erro: Instância do Firebase Database não detectada no escopo global.");
+          return;
+        }
 
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          const targetTab = tab.getAttribute('data-tab');
+        // Caminhos de nós usando os Helpers Oficiais da arquitetura Abella Joias
+        const nóCategorias = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('categories') : 'abella/categories';
+        const nóSubcategorias = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('subcategories') : 'abella/subcategories';
 
-          // 1. Alterna visual dos botões do menu interno
-          tabs.forEach(t => {
-            t.classList.remove('bg-[#caa85c]', 'text-black', 'active');
-            t.classList.add('text-zinc-400', 'hover:text-zinc-200');
-          });
-          tab.classList.add('bg-[#caa85c]', 'text-black', 'active');
-          tab.classList.remove('text-zinc-400', 'hover:text-zinc-200');
+        let categoriasLocais = {};
+        let subcategoriasLocais = {};
 
-          // 2. Alterna visibilidade dos containers de lista
-          contents.forEach(content => {
-            if (content.id === `tab-${targetTab}`) {
-              content.classList.remove('hidden');
+        // Ouvintes Realtime para manter as abas sincronizadas automaticamente
+        database.ref(nóCategorias).on('value', (snapshot) => {
+          categoriasLocais = snapshot.val() || {};
+          const currentTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
+          if (currentTab === 'categorias') renderizarPainelCategorias(categoriasLocais);
+        });
+
+        database.ref(nóSubcategorias).on('value', (snapshot) => {
+          subcategoriasLocais = snapshot.val() || {};
+          const currentTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
+          if (currentTab === 'subcategorias') renderizarPainelSubcategorias(subcategoriasLocais, categoriasLocais);
+        });
+
+        // Eventos de clique nas Abas
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            const targetTab = tab.getAttribute('data-tab');
+
+            // 1. Atualização estética dos botões ativos
+            tabs.forEach(t => {
+              t.classList.remove('bg-[#caa85c]', 'text-black', 'active');
+              t.classList.add('text-zinc-400', 'hover:text-zinc-200');
+            });
+            tab.classList.add('bg-[#caa85c]', 'text-black', 'active');
+            tab.classList.remove('text-zinc-400', 'hover:text-zinc-200');
+
+            // 2. Alterna visibilidade das listas de exibição
+            contents.forEach(content => {
+              if (content.id === `tab-${targetTab}`) {
+                content.classList.remove('hidden');
+              } else {
+                content.classList.add('hidden');
+              }
+            });
+
+            // 3. Atualiza o contexto do botão dourado superior "+ Criar Item"
+            if (targetTab === 'categorias') {
+              if (btnCriarNovo) {
+                btnCriarNovo.innerHTML = '➕ Criar Categoria';
+                btnCriarNovo.setAttribute('data-contexto', 'categoria');
+              }
+              renderizarPainelCategorias(categoriasLocais);
+            } else if (targetTab === 'subcategorias') {
+              if (btnCriarNovo) {
+                btnCriarNovo.innerHTML = '➕ Criar Subcategoria';
+                btnCriarNovo.setAttribute('data-contexto', 'subcategoria');
+              }
+              renderizarPainelSubcategorias(subcategoriasLocais, categoriasLocais);
             } else {
-              content.classList.add('hidden');
+              if (btnCriarNovo) {
+                btnCriarNovo.innerHTML = '➕ Criar Item';
+                btnCriarNovo.setAttribute('data-contexto', 'produtos');
+              }
             }
           });
-
-          // 3. Modifica o contexto do botão dourado superior "+ Criar Item"
-          if (targetTab === 'categorias') {
-            btnCriarNovo.innerHTML = '➕ Criar Categoria';
-            btnCriarNovo.setAttribute('data-contexto', 'categoria');
-            CategoriaModule.abaAtiva = 'categorias';
-            CategoriaModule.renderCategorias();
-          } else if (targetTab === 'subcategorias') {
-            btnCriarNovo.innerHTML = '➕ Criar Subcategoria';
-            btnCriarNovo.setAttribute('data-contexto', 'subcategoria');
-            CategoriaModule.abaAtiva = 'subcategorias';
-            CategoriaModule.renderSubcategorias();
-          } else {
-            btnCriarNovo.innerHTML = '➕ Criar Item';
-            btnCriarNovo.setAttribute('data-contexto', 'produtos');
-          }
         });
-      });
+
+        // Renderizadores de conteúdo dinâmico das tabelas
+        function renderizarPainelCategorias(dados) {
+          const container = document.getElementById('lista-categorias-container');
+          if (!container) return;
+
+          const keys = Object.keys(dados);
+          if (keys.length === 0) {
+            container.innerHTML = `<div class="p-8 text-center text-zinc-500 text-xs uppercase font-bold tracking-wider">Nenhuma categoria cadastrada no Firebase.</div>`;
+            return;
+          }
+
+          let html = '';
+          keys.forEach(id => {
+            const item = dados[id];
+            html += `
+              <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl hover:border-zinc-800 transition-all">
+                <div>
+                  <div class="text-[10px] text-zinc-500 font-mono">CHAVE / SLUG: ${id}</div>
+                  <div class="text-sm font-bold text-zinc-200 mt-0.5">${item.nome || item.name || 'Sem Nome'}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="if(typeof window.editarCategoria === 'function') { window.editarCategoria('${id}') } else { alert('Ação indisponível no momento') }" class="px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-[#caa85c] hover:text-black transition-all text-xs font-semibold">✏️ Editar</button>
+                  <button onclick="if(typeof window.deletarCategoria === 'function') { window.deletarCategoria('${id}') } else { alert('Ação indisponível no momento') }" class="px-3 py-2 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all text-xs font-semibold">🗑️ Excluir</button>
+                </div>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        }
+
+        function renderizarPainelSubcategorias(subdados, catdados) {
+          const container = document.getElementById('lista-subcategorias-container');
+          if (!container) return;
+
+          const keys = Object.keys(subdados);
+          if (keys.length === 0) {
+            container.innerHTML = `<div class="p-8 text-center text-zinc-500 text-xs uppercase font-bold tracking-wider">Nenhuma subcategoria cadastrada no Firebase.</div>`;
+            return;
+          }
+
+          let html = '';
+          keys.forEach(id => {
+            const item = subdados[id];
+            const paiId = item.categoriaPai || item.category || '';
+            const nomePai = catdados[paiId]?.nome || catdados[paiId]?.name || paiId || 'Geral';
+
+            html += `
+              <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl hover:border-zinc-800 transition-all">
+                <div>
+                  <div class="text-[10px] text-zinc-500 font-mono">CATEGORIA MÃE: <span class="text-[#caa85c] font-bold">${nomePai}</span></div>
+                  <div class="text-sm font-bold text-zinc-200 mt-0.5">${item.nome || item.name || 'Sem Nome'}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="if(typeof window.editarSubcategoria === 'function') { window.editarSubcategoria('${id}') } else { alert('Ação indisponível no momento') }" class="px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-[#caa85c] hover:text-black transition-all text-xs font-semibold">✏️ Editar</button>
+                  <button onclick="if(typeof window.deletarSubcategoria === 'function') { window.deletarSubcategoria('${id}') } else { alert('Ação indisponível no momento') }" class="px-3 py-2 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all text-xs font-semibold">🗑️ Excluir</button>
+                </div>
+              </div>
+            `;
+          });
+          container.innerHTML = html;
+        }
+
+        // Acoplamento do Botão Superior de Ação Dinâmica "+ Criar"
+        if (btnCriarNovo) {
+          // Remove event listeners antigos clonando o botão para evitar duplicidade de disparos
+          const novoBtn = btnCriarNovo.cloneNode(true);
+          btnCriarNovo.parentNode.replaceChild(novoBtn, btnCriarNovo);
+
+          novoBtn.addEventListener('click', () => {
+            const contexto = novoBtn.getAttribute('data-contexto') || 'produtos';
+            
+            if (contexto === 'categoria') {
+              if (typeof window.abrirCriacaoPorAba === 'function') window.abrirCriacaoPorAba('categoria');
+            } else if (contexto === 'subcategoria') {
+              if (typeof window.abrirCriacaoPorAba === 'function') window.abrirCriacaoPorAba('subcategoria');
+            } else {
+              if (typeof window.abrirCriacaoPorAba === 'function') {
+                window.abrirCriacaoPorAba('produto');
+              } else if (typeof window.abrirNovoProduto === 'function') {
+                window.abrirNovoProduto();
+              }
+            }
+          });
+        }
+
+      }, 300);
     });
   </script>
 

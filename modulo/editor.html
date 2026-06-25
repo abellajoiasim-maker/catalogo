@@ -217,19 +217,36 @@
     return stringUrl;
   }
 
-  function tratarInputImagem(inputElement, previewId) {
-    if (!inputElement) return;
-    let valor = inputElement.value.trim();
-    if (valor.startsWith('gs://') || valor.includes('drive.google.com')) {
-      valor = converterGsUrl(valor);
-      inputElement.value = valor;
-    }
-    const preview = document.getElementById(previewId);
-    if (preview) {
-      preview.src = valor;
-      preview.style.opacity = '1';
+  function tratarInputImagem(inputValue, imgElementId) {
+  const previewImg = document.getElementById(imgElementId);
+  if (!previewImg) return;
+
+  let urlFinal = inputValue ? inputValue.trim() : '';
+  if (!urlFinal) {
+    previewImg.src = '';
+    previewImg.classList.add('hidden');
+    return;
+  }
+
+  // Se for caminho do Storage gs://, faz a conversão direta para HTTP estável
+  if (urlFinal.startsWith('gs://')) {
+    const semGs = urlFinal.replace('gs://', '');
+    const primeiraBarra = semGs.indexOf('/');
+    if (primeiraBarra !== -1) {
+      const bucket = semGs.substring(0, primeiraBarra);
+      const caminho = semGs.substring(primeiraBarra + 1);
+      urlFinal = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
     }
   }
+
+  previewImg.src = urlFinal;
+  previewImg.classList.remove('hidden');
+  
+  previewImg.onerror = () => {
+    previewImg.classList.add('hidden');
+    console.warn('Caminho de imagem inválido para pré-visualização no editor.');
+  };
+}
 
   function handleImageError(img) {
     img.style.opacity = '0';
@@ -567,52 +584,86 @@
   }
 
   async function salvarNovoProduto() {
+  try {
+    const nomeEl = document.getElementById('newNome');
+    const skuEl = document.getElementById('newSku');
+    const catEl = document.getElementById('newCategoria');
+    const subcatEl = document.getElementById('newSubcategoria');
+    const descEl = document.getElementById('newDescricao');
+    const imgEl = document.getElementById('newImagem');
+    const precoEl = document.getElementById('newPreco');
+    const pesoEl = document.getElementById('newPeso');
+
+    if (!nomeEl || !skuEl) {
+      setStatus('❌ Erro: Campos fundamentais de criação ausentes.', 'error');
+      return;
+    }
+
+    const nome = nomeEl.value.trim();
+    const sku = skuEl.value.trim();
+    if (!nome || !sku) {
+      setStatus('❌ Erro: Nome e SKU são obrigatórios.', 'error');
+      return;
+    }
+
+    const preco = precoEl ? (parseFloat(precoEl.value) || 0) : 0;
+    const peso = pesoEl ? (parseFloat(pesoEl.value) || 0) : 0;
+    const subcat = subcatEl ? subcatEl.value : '';
+
+    let listaDizeres = [];
+    let listaIniciais = [];
     try {
-      const nome = document.getElementById('newNome').value.trim();
-      const sku = document.getElementById('newSku').value.trim();
-      const cat = document.getElementById('newCategoria').value;
-      if(!nome || !sku || !cat) {
-        alert('Por favor, preencha Nome, SKU e selecione a Categoria!');
-        return;
+      if (typeof extrairValoresTags === 'function') {
+        listaDizeres = extrairValoresTags('newDizeresContainer') || [];
+        listaIniciais = extrairValoresTags('newIniciaisContainer') || [];
       }
+    } catch (e) {
+      console.warn('Falha ao extrair tags na criação:', e);
+    }
 
-      const img = document.getElementById('newImagem').value.trim();
-      const preco = parseFloat(document.getElementById('newPreco').value) || 0;
-      const peso = parseFloat(document.getElementById('newPeso').value) || 0;
-      const subcat = document.getElementById('newSubcategoria').value;
+    // Gera um ID único baseado no timestamp para evitar colisões no Firebase
+    const novoId = 'p_' + Date.now();
 
-      const listaDizeres = extrairValoresTags('newDizeresContainer');
-      const listaIniciais = extrairValoresTags('newIniciaisContainer');
+    const payload = {
+      id: novoId,
+      name: nome,
+      sku: sku,
+      category: catEl ? catEl.value : '',
+      subcategory: subcat,
+      subCategory: subcat,
+      price: preco,
+      preco: preco,
+      weight: peso,
+      peso: peso,
+      image: imgEl ? imgEl.value.trim() : '',
+      imagem: imgEl ? imgEl.value.trim() : '',
+      description: descEl ? descEl.value.trim() : '',
+      descricao: descEl ? descEl.value.trim() : '',
+      ativo: true,
+      dizeres: listaDizeres.length > 0 ? listaDizeres : null,
+      sayings: listaDizeres.length > 0 ? listaDizeres : null,
+      iniciais: listaIniciais.length > 0 ? listaIniciais : null,
+      initials: listaIniciais.length > 0 ? listaIniciais : null,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
 
-      const novoProduto = {
-        name: nome,
-        sku: sku,
-        category: cat,
-        subcategory: subcat,
-        subCategory: subcat,
-        price: preco,
-        preco: preco,
-        weight: peso,
-        peso: peso,
-        image: img,
-        imagem: img,
-        description: document.getElementById('newDescricao').value,
-        descricao: document.getElementById('newDescricao').value,
-        dizeres: listaDizeres,
-        sayings: listaDizeres,
-        iniciais: listaIniciais,
-        initials: listaIniciais,
-        paused: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      };
+    let path = `products/${novoId}`;
+    if (window && typeof window.getAbellaPath === 'function') {
+      path = window.getAbellaPath(`products/${novoId}`);
+    }
 
-      await STATE.db.ref(window.getAbellaPath('products')).push(novoProduto);
-      fecharDrawer();
-      await carregarTudo();
-    } catch (e) { setStatus('❌ Erro ao criar novo produto', 'error'); }
+    await STATE.db.ref(path).set(payload);
+
+    setStatus('✅ Novo produto cadastrado com sucesso!', 'success');
+    fecharDrawer();
+    await carregarTudo();
+
+  } catch (e) {
+    console.error('Erro ao criar novo produto:', e);
+    setStatus('❌ Erro ao registrar novo produto no Firebase.', 'error');
   }
-
+}
   // ==========================================================
   // BLOCO DE EDIÇÃO E REMOÇÃO (SEGURO COM DUPLO CANAL)
   // ==========================================================
@@ -695,40 +746,93 @@
     });
   }
 
-  async function salvarProduto(id) {
+ async function salvarProduto(id) {
+  try {
+    if (!id) {
+      setStatus('❌ Erro: ID do produto inválido.', 'error');
+      return;
+    }
+
+    // 1. Captura e higienização dos elementos do DOM para evitar erros de ".value" de elementos inexistentes
+    const nomeEl = document.getElementById('editNome');
+    const skuEl = document.getElementById('editSku');
+    const catEl = document.getElementById('editCategoria');
+    const subcatEl = document.getElementById('editSubcategoria');
+    const descEl = document.getElementById('editDescricao');
+    const imgEl = document.getElementById('editImagem');
+    const precoEl = document.getElementById('editPreco');
+    const pesoEl = document.getElementById('editPeso');
+
+    // Validações básicas e fallback seguro (se o campo não existir na tela, assume vazio ou zero)
+    const nome = nomeEl ? nomeEl.value.trim() : '';
+    const sku = skuEl ? skuEl.value.trim() : '';
+    const category = catEl ? catEl.value : '';
+    const subcat = subcatEl ? subcatEl.value : '';
+    const description = descEl ? descEl.value.trim() : '';
+    const img = imgEl ? imgEl.value.trim() : '';
+    const preco = precoEl ? (parseFloat(precoEl.value) || 0) : 0;
+    const peso = pesoEl ? (parseFloat(pesoEl.value) || 0) : 0;
+
+    // 2. Extração segura das listas (Garante que se retornar vazio, envie null ou um array limpo)
+    let listaDizeres = [];
+    let listaIniciais = [];
+
     try {
-      const img = document.getElementById('editImagem').value.trim();
-      const preco = parseFloat(document.getElementById('editPreco').value) || 0;
-      const peso = parseFloat(document.getElementById('editPeso').value) || 0;
-      const subcat = document.getElementById('editSubcategoria').value;
+      if (typeof extrairValoresTags === 'function') {
+        listaDizeres = extrairValoresTags('editDizeresContainer') || [];
+        listaIniciais = extrairValoresTags('editIniciaisContainer') || [];
+      }
+    } catch (errTags) {
+      console.warn('[Aviso] Falha ao extrair tags/customizações:', errTags);
+    }
 
-      const listaDizeres = extrairValoresTags('editDizeresContainer');
-      const listaIniciais = extrairValoresTags('editIniciaisContainer');
+    // 3. Montagem do objeto de atualização de forma simétrica (Mantém inglês e português)
+    const payload = {
+      name: nome,
+      sku: sku,
+      category: category,
+      subcategory: subcat,
+      subCategory: subcat, // Mantém compatibilidade com outros scripts antigos
+      price: preco,
+      preco: preco,
+      weight: peso,
+      peso: peso,
+      image: img,
+      imagem: img,
+      description: description,
+      descricao: description,
+      // Se a lista estiver vazia, salvamos como null para limpar no Firebase e não gerar nós quebrados
+      dizeres: listaDizeres.length > 0 ? listaDizeres : null,
+      sayings: listaDizeres.length > 0 ? listaDizeres : null,
+      iniciais: listaIniciais.length > 0 ? listaIniciais : null,
+      initials: listaIniciais.length > 0 ? listaIniciais : null,
+      updatedAt: Date.now()
+    };
 
-      await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({
-        name: document.getElementById('editNome').value,
-        sku: document.getElementById('editSku').value,
-        category: document.getElementById('editCategoria').value,
-        subcategory: subcat,
-        subCategory: subcat,
-        price: preco,
-        preco: preco,
-        weight: peso,
-        peso: peso,
-        image: img,
-        imagem: img,
-        description: document.getElementById('editDescricao').value,
-        descricao: document.getElementById('editDescricao').value,
-        dizeres: listaDizeres,
-        sayings: listaDizeres,
-        iniciais: listaIniciais,
-        initials: listaIniciais,
-        updatedAt: Date.now()
-      });
-      fecharDrawer();
-      await carregarTudo();
-    } catch (e) { setStatus('❌ Erro ao salvar dados no Firebase', 'error'); }
+    // 4. Caminho dinâmico seguro do Firebase
+    let path = `products/${id}`;
+    if (window && typeof window.getAbellaPath === 'function') {
+      path = window.getAbellaPath(`products/${id}`);
+    }
+
+    // 5. Persistência atômica no Banco
+    await STATE.db.ref(path).update(payload);
+
+    // Feedback visual de sucesso e fechamento do painel
+    if (typeof setStatus === 'function') {
+      setStatus('✅ Produto salvo com sucesso!', 'success');
+    }
+    
+    if (typeof fecharDrawer === 'function') fecharDrawer();
+    if (typeof carregarTudo === 'function') await carregarTudo();
+
+  } catch (e) {
+    console.error('Erro detalhado ao salvar no Firebase:', e);
+    if (typeof setStatus === 'function') {
+      setStatus('❌ Erro ao salvar dados no Firebase', 'error');
+    }
   }
+}
 
   function editarSubcategoria(catSlug, subSlug) {
     const sub = STATE.categorias[catSlug]?.subcategories?.[subSlug];

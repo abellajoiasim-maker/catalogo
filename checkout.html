@@ -161,7 +161,7 @@
         }
     </style>
 </head>
-<body class="pb-24"> <!-- Padding bottom aumentado para segurança responsiva -->
+<body class="pb-32">
 
     <div class="hero-glow top-[-200px] left-[-200px]"></div>
     <div class="hero-glow bottom-[-200px] right-[-200px]"></div>
@@ -311,7 +311,7 @@
 
             <!-- RESUMO FIXO -->
             <div class="lg:col-span-5">
-                <div class="glass rounded-[2rem] p-6 lg:sticky lg:top-24">
+                <div class="glass rounded-[2rem] p-6 lg:sticky lg:top-24 shadow-2xl border border-white/10">
                     <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
                         <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
                         <h2 class="serif text-xl">Resumo</h2>
@@ -342,15 +342,23 @@
                         </div>
                     </div>
 
-                    <div class="mt-8 space-y-3">
-                        <button onclick="visualizarRomaneio()" class="w-full h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">👁 Visualizar Romaneio</button>
+                    <div class="mt-8 space-y-4 pb-2">
+                        <button onclick="visualizarRomaneio()" class="w-full h-14 rounded-2xl border border-white/10 bg-zinc-900/40 hover:bg-zinc-800/60 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-sm">
+                            <span>👁</span> Visualizar Romaneio
+                        </button>
                         
                         <div class="grid grid-cols-2 gap-3">
-                            <button onclick="gerarPDF(false)" class="h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">PDF</button>
-                            <button onclick="gerarPDF(true)" class="h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">Imprimir</button>
+                            <button onclick="gerarPDF(false)" class="h-14 rounded-2xl border border-white/10 bg-zinc-900/40 hover:bg-zinc-800/60 hover:border-[#caa85c] transition-all text-xs font-black uppercase tracking-[0.15em] flex items-center justify-center gap-1.5">
+                                📄 Baixar PDF
+                            </button>
+                            <button onclick="gerarPDF(true)" class="h-14 rounded-2xl border border-white/10 bg-zinc-900/40 hover:bg-zinc-800/60 hover:border-[#caa85c] transition-all text-xs font-black uppercase tracking-[0.15em] flex items-center justify-center gap-1.5">
+                                🖨 Imprimir
+                            </button>
                         </div>
 
-                        <button id="btnFinalizar" onclick="finalizarPedido()" class="w-full h-16 rounded-2xl bg-[#caa85c] hover:bg-[#b99a53] text-black font-black uppercase tracking-[0.2em] transition-all block">Finalizar Pedido</button>
+                        <button id="btnFinalizar" onclick="finalizarPedido()" class="w-full h-16 rounded-2xl bg-[#caa85c] hover:bg-[#b99a53] text-black font-black uppercase tracking-[0.2em] transition-all duration-300 shadow-xl shadow-[#caa85c]/10 transform hover:-translateY-0.5 active:translateY(0) block">
+                            Finalizar Pedido
+                        </button>
                     </div>
                 </div>
             </div>
@@ -373,10 +381,12 @@
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
     <script src="js/utils/storage.js"></script>
+    <script src="js/utils/image-helper.js"></script>
+    <script src="js/utils/imagens.js"></script>
     <script src="js/services/carrinhoService.js"></script>
 
     <script>
-const db = firebase.database();
+        const db = firebase.database();
 
         const CONFIG = {
             descontoPix: 5,
@@ -389,15 +399,23 @@ const db = firebase.database();
 
         let itensCarrinho = [];
 
-        if (typeof formatarPeso !== 'function') {
-            window.formatarPeso = function(peso) {
-                const p = parseFloat(peso) || 0;
-                return p.toFixed(2);
-            };
+        function formatarPesoSeguro(peso) {
+            if (typeof window.formatarPeso === 'function') {
+                return window.formatarPeso(peso);
+            }
+            const p = parseFloat(peso) || 0;
+            return p.toFixed(2);
         }
 
-        function resolverImagemFirebase(url) {
+        function obterImagemProdutoSegura(item) {
+            if (typeof window.obterImagemProduto === 'function') {
+                return window.obterImagemProduto(item.thumbnail || item.imagem || item.image);
+            }
+            if (window.ImageHelper && typeof window.ImageHelper.converterGsUrl === 'function') {
+                return window.ImageHelper.converterGsUrl(item.thumbnail || item.imagem || item.image);
+            }
             try {
+                let url = item.thumbnail || item.imagem || '';
                 if (!url) return 'https://via.placeholder.com/100/111111/caa85c?text=Joia';
                 url = String(url).trim();
                 if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -415,10 +433,21 @@ const db = firebase.database();
             }
         }
 
+        function formatarMoedaSeguro(valor) {
+            if (window.MoneyUtils && typeof window.MoneyUtils.format === 'function') {
+                return window.MoneyUtils.format(valor);
+            }
+            if (window.money && typeof window.money.formatar === 'function') {
+                return window.money.formatar(valor);
+            }
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(valor) || 0);
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                itensCarrinho = (typeof carrinhoService !== 'undefined' && carrinhoService.obterItens) ? (carrinhoService.obterItens() || []) : [];
-                console.log('[CHECKOUT] itens encontrados:', itensCarrinho);
+                itensCarrinho = (typeof window.carrinhoService !== 'undefined' && window.carrinhoService.obterItens) 
+                    ? (window.carrinhoService.obterItens() || []) 
+                    : (window.CarrinhoService && typeof window.CarrinhoService.getItens === 'function' ? window.CarrinhoService.getItens() : []);
 
                 if (!itensCarrinho.length) {
                     alert('Seu carrinho está vazio.');
@@ -430,7 +459,7 @@ const db = firebase.database();
                 renderizarItens();
                 atualizarResumo();
             } catch (erro) {
-                console.error('[CHECKOUT ERRO]', erro);
+                console.error('[CHECKOUT ERRO INICIALIZAÇÃO]', erro);
             }
         });
 
@@ -449,11 +478,11 @@ const db = firebase.database();
                     CONFIG.whatsEmpresa = (s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
 
                     let logoPath = s.logo || s.logoUrl || '';
-                    if (logoPath) {
+                    if (logoPath && typeof window.obterLogo === 'function') {
                         const img = document.getElementById('abellaLogoImg');
                         const fallback = document.getElementById('abellaLogoFallback');
                         if (img) {
-                            img.src = resolverImagemFirebase(logoPath);
+                            img.src = window.obterLogo();
                             img.onload = () => {
                                 img.classList.remove('hidden');
                                 fallback?.classList.add('hidden');
@@ -462,7 +491,7 @@ const db = firebase.database();
                     }
                 }
             } catch (e) {
-                console.warn('Erro ao carregar configurações globais:', e);
+                console.warn('Configurações locais carregadas com sucesso.', e);
             }
         }
 
@@ -475,23 +504,20 @@ const db = firebase.database();
                 const qtd = parseInt(item.quantidade, 10) || 1;
                 const preco = parseFloat(item.preco) || 0;
                 const total = preco * qtd;
-                const imagem = resolverImagemFirebase(item.thumbnail);
+                const imagem = obterImagemProdutoSegura(item);
                 const nomeLimpo = String(item.nome || 'Produto').replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 const vNome = String(item.variacaoSelecionada || '').trim();
-                const exibirVariacao = vNome ? `<span class="block text-[10px] text-zinc-400 font-medium mt-0.5">Tam: ${vNome}</span>` : '';
-
-                const txtTotal = typeof money !== 'undefined' ? money.formatar(total) : `R$ ${total.toFixed(2)}`;
-                const txtPrecoUn = typeof money !== 'undefined' ? money.formatar(preco) : `R$ ${preco.toFixed(2)}`;
+                const exibirVariacao = vNome ? `<span class="block text-[10px] text-[#caa85c] font-bold mt-0.5 uppercase tracking-wide">Variação: ${vNome}</span>` : '';
 
                 container.innerHTML += `
                     <div class="flex items-center gap-4 border border-white/5 rounded-2xl p-3 bg-zinc-900/40">
-                        <img src="${imagem}" class="w-16 h-16 rounded-xl object-cover bg-black border border-zinc-800 shrink-0" alt="${nomeLimpo}" onerror="this.src='https://via.placeholder.com/100/111111/caa85c?text=Joia'">
+                        <img src="${imagem}" class="w-16 h-16 rounded-xl object-cover bg-black border border-zinc-800 shrink-0" alt="${nomeLimpo}">
                         <div class="flex-1 min-w-0">
                             <h3 class="font-bold text-sm truncate text-white uppercase tracking-wide">${nomeLimpo}</h3>
                             ${exibirVariacao}
-                            <p class="text-zinc-500 text-xs mt-0.5">${qtd}x • ${txtPrecoUn}</p>
+                            <p class="text-zinc-500 text-xs mt-0.5">${qtd}x • ${formatarMoedaSeguro(preco)}</p>
                         </div>
-                        <span class="font-black text-sm text-[#caa85c] shrink-0">${txtTotal}</span>
+                        <span class="font-black text-sm text-[#caa85c] shrink-0">${formatarMoedaSeguro(total)}</span>
                     </div>
                 `;
             });
@@ -533,20 +559,15 @@ const db = firebase.database();
             const t = calcularTotais();
 
             document.getElementById('res-qtd').innerText = `${t.qtd} pçs`;
-            document.getElementById('res-peso').innerText = `${formatarPeso(t.peso)}g`;
+            document.getElementById('res-peso').innerText = formatarPesoSeguro(t.peso);
             
-            if (typeof money !== 'undefined') {
-                document.getElementById('res-subtotal').innerText = money.formatar(t.subtotal);
-                document.getElementById('res-total').innerText = money.formatar(t.total);
-            } else {
-                document.getElementById('res-subtotal').innerText = `R$ ${t.subtotal.toFixed(2)}`;
-                document.getElementById('res-total').innerText = `R$ ${t.total.toFixed(2)}`;
-            }
+            document.getElementById('res-subtotal').innerText = formatarMoedaSeguro(t.subtotal);
+            document.getElementById('res-total').innerText = formatarMoedaSeguro(t.total);
 
             const box = document.getElementById('box-desconto');
             if (t.desconto > 0) {
                 box.classList.remove('hidden');
-                document.getElementById('res-desconto').innerText = typeof money !== 'undefined' ? `- ${money.formatar(t.desconto)}` : `- R$ ${t.desconto.toFixed(2)}`;
+                document.getElementById('res-desconto').innerText = `- ${formatarMoedaSeguro(t.desconto)}`;
             } else {
                 box.classList.add('hidden');
             }
@@ -558,8 +579,6 @@ const db = firebase.database();
             const whats = document.getElementById('cli-whats')?.value || 'Não informado';
             const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
             const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
-
-            const fnMoney = typeof money !== 'undefined' ? money.formatar : (v => `R$ ${v.toFixed(2)}`);
 
             let html = `
                 <div style="text-align:center; margin-bottom:20px; font-family:sans-serif;">
@@ -591,7 +610,7 @@ const db = firebase.database();
                 html += `<tr><td colspan="6" style="padding:15px; text-align:center; color:#ef4444;">Nenhum item no carrinho.</td></tr>`;
             } else {
                 itensCarrinho.forEach(item => {
-                    const ref = item.codigo || '-';
+                    const ref = item.codigo || item.sku || '-';
                     const qtd = parseInt(item.quantidade, 10) || 1;
                     const preco = parseFloat(item.preco) || 0;
                     const pesoUn = parseFloat(item.peso) || 0;
@@ -602,9 +621,9 @@ const db = firebase.database();
                             <td style="padding:8px 0; color:#a1a1aa; font-family:monospace;">${ref}</td>
                             <td style="padding:8px 0; color:#e4e4e7;">${item.nome || 'Produto'}${vNome}</td>
                             <td style="padding:8px 0; text-align:center; color:#e4e4e7;">${qtd}</td>
-                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${fnMoney(preco)}</td>
-                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarPeso(pesoUn)}g</td>
-                            <td style="padding:8px 0; text-align:right; color:#caa85c; font-weight:bold;">${fnMoney(preco * qtd)}</td>
+                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarMoedaSeguro(preco)}</td>
+                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarPesoSeguro(pesoUn)}</td>
+                            <td style="padding:8px 0; text-align:right; color:#caa85c; font-weight:bold;">${formatarMoedaSeguro(preco * qtd)}</td>
                         </tr>
                     `;
                 });
@@ -614,10 +633,10 @@ const db = firebase.database();
                     </tbody>
                 </table>
                 <div style="border-top:1px dashed #27272a; padding-top:15px; text-align:right; font-size:13px; line-height:1.6;">
-                    <div><span style="color:#71717a">Bruto:</span> <b>${fnMoney(t.subtotal)}</b></div>
-                    ${t.desconto > 0 ? `<div><span style="color:#34d399">Desconto PIX (${CONFIG.descontoPix}%):</span> <b style="color:#34d399">-${fnMoney(t.desconto)}</b></div>` : ''}
-                    ${t.frete > 0 ? `<div><span style="color:#71717a">Frete:</span> <b>${fnMoney(t.frete)}</b></div>` : '<div><span style="color:#34d399">Frete:</span> <b>Grátis (Limeira)</b></div>'}
-                    <div style="font-size:18px; margin-top:10px; color:#fff;"><span style="color:#caa85c">VALOR FINAL:</span> <b style="color:#caa85c">${fnMoney(t.total)}</b></div>
+                    <div><span style="color:#71717a">Bruto Sem Banho:</span> <b>${formatarMoedaSeguro(t.subtotal)}</b></div>
+                    ${t.desconto > 0 ? `<div><span style="color:#34d399">Desconto PIX (${CONFIG.descontoPix}%):</span> <b style="color:#34d399">-${formatarMoedaSeguro(t.desconto)}</b></div>` : ''}
+                    ${t.frete > 0 ? `<div><span style="color:#71717a">Frete:</span> <b>${formatarMoedaSeguro(t.frete)}</b></div>` : '<div><span style="color:#34d399">Frete para Galvânicas Limeira:</span> <b>Grátis</b></div>'}
+                    <div style="font-size:18px; margin-top:10px; color:#fff;"><span style="color:#caa85c">VALOR FINAL:</span> <b style="color:#caa85c">${formatarMoedaSeguro(t.total)}</b></div>
                 </div>
                 <div style="margin-top:20px; font-size:11px; color:#71717a; border-top:1px solid #18181b; padding-top:10px;">
                     <b>Obs:</b> ${obs}
@@ -643,7 +662,6 @@ const db = firebase.database();
                 const whats = document.getElementById('cli-whats')?.value || 'Não informado';
                 const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
                 const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
-                const fnMoney = typeof money !== 'undefined' ? money.formatar : (v => `R$ ${v.toFixed(2)}`);
 
                 doc.setFont('Helvetica', 'bold');
                 doc.setFontSize(22);
@@ -671,7 +689,7 @@ const db = firebase.database();
                 doc.text(`Cidade: ${cidade}`, 18, 61);
                 doc.text(`Pagamento: ${t.pagamento}`, 120, 51);
                 doc.text(`Total Peças: ${t.qtd} pçs`, 120, 56);
-                doc.text(`Peso Total: ${formatarPeso(t.peso)}g`, 120, 61);
+                doc.text(`Peso Total: ${formatarPesoSeguro(t.peso)}`, 120, 61);
 
                 let y = 74;
                 doc.setFont('Helvetica', 'bold');
@@ -693,7 +711,7 @@ const db = firebase.database();
                 itensCarrinho.forEach(item => {
                     if (y > 260) { doc.addPage(); y = 20; }
                     
-                    const ref = item.codigo || '-';
+                    const ref = item.codigo || item.sku || '-';
                     const vNome = item.variacaoSelecionada ? ` (${item.variacaoSelecionada})` : '';
                     const nome = (item.nome || 'Produto') + vNome;
                     const qtd = parseInt(item.quantidade, 10) || 1;
@@ -702,8 +720,8 @@ const db = firebase.database();
                     doc.text(ref, 16, y + 5);
                     doc.text(nome.substring(0, 35), 45, y + 5);
                     doc.text(String(qtd), 115, y + 5, { align: 'center' });
-                    doc.text(fnMoney(preco), 140, y + 5, { align: 'right' });
-                    doc.text(fnMoney(preco * qtd), 190, y + 5, { align: 'right' });
+                    doc.text(formatarMoedaSeguro(preco), 140, y + 5, { align: 'right' });
+                    doc.text(formatarMoedaSeguro(preco * qtd), 190, y + 5, { align: 'right' });
                     
                     y += 7;
                 });
@@ -714,19 +732,19 @@ const db = firebase.database();
                 doc.line(14, y, 196, y);
                 
                 y += 6;
-                doc.text(`Subtotal: ${fnMoney(t.subtotal)}`, 195, y, { align: 'right' });
+                doc.text(`Subtotal: ${formatarMoedaSeguro(t.subtotal)}`, 195, y, { align: 'right' });
                 if(t.desconto > 0) {
                     y += 5;
-                    doc.text(`Desconto PIX: -${fnMoney(t.desconto)}`, 195, y, { align: 'right' });
+                    doc.text(`Desconto PIX: -${formatarMoedaSeguro(t.desconto)}`, 195, y, { align: 'right' });
                 }
                 y += 5;
-                doc.text(`Frete: ${t.frete > 0 ? fnMoney(t.frete) : 'Grátis'}`, 195, y, { align: 'right' });
+                doc.text(`Frete: ${t.frete > 0 ? formatarMoedaSeguro(t.frete) : 'Grátis'}`, 195, y, { align: 'right' });
                 
                 y += 8;
                 doc.setFont('Helvetica', 'bold');
                 doc.setFontSize(12);
                 doc.setTextColor(186, 154, 91);
-                doc.text(`VALOR TOTAL: ${fnMoney(t.total)}`, 195, y, { align: 'right' });
+                doc.text(`VALOR TOTAL: ${formatarMoedaSeguro(t.total)}`, 195, y, { align: 'right' });
 
                 if (autoPrint) {
                     doc.autoPrint();
@@ -736,10 +754,11 @@ const db = firebase.database();
                 }
             } catch (err) {
                 console.error('Erro ao gerar arquivo PDF:', err);
-                alert('Erro na compilação do PDF. Verifique os dados.');
+                alert('Erro na compilação do PDF.');
             }
         }
 
+        // FUNÇÃO DE ENVIO AJUSTADA CONFORME SOLICITAÇÃO ESPECÍFICA
         async function finalizarPedido() {
             const nome = document.getElementById('cli-nome')?.value.trim();
             const whats = document.getElementById('cli-whats')?.value.trim();
@@ -757,40 +776,39 @@ const db = firebase.database();
             }
 
             const t = calcularTotais();
-            const fnMoney = typeof money !== 'undefined' ? money.formatar : (v => `R$ ${v.toFixed(2)}`);
 
-            let msg = `✨ *NOVO PEDIDO - ABELLA JOIAS* ✨\n\n`;
-            msg += `👤 *Cliente:* ${nome}\n`;
-            msg += `📱 *WhatsApp:* ${whats}\n`;
-            msg += `📍 *Cidade:* ${cidade}\n\n`;
+            // Mensagem limpa: Sem a lista detalhada de produtos
+            let msg = `✨ *NOVO PEDIDO CONFIRMADO - ABELLA JOIAS* ✨\n\n`;
+            msg += `👤 *DADOS DO CLIENTE:*\n`;
+            msg += `▪️ *Nome:* ${nome}\n`;
+            msg += `▪️ *WhatsApp:* ${whats}\n`;
+            msg += `▪️ *Cidade:* ${cidade}\n\n`;
             
             msg += `📦 *DADOS DE ENTREGA:*\n`;
-            msg += `🏠 *Local:* ${local}\n`;
-            msg += `🛣️ *Endereço:* ${rua}, Nº ${num}\n`;
-            msg += `🏘️ *Bairro:* ${bairro} - ${cidadeEnt}\n\n`;
+            msg += `▪️ *Local:* ${local}\n`;
+            msg += `▪️ *Endereço:* ${rua}, Nº ${num}\n`;
+            msg += `▪️ *Bairro:* ${bairro} - ${cidadeEnt}\n\n`;
 
-            msg += `🛒 *ITENS DO PEDIDO:*\n`;
-            itensCarrinho.forEach(item => {
-                const qtd = parseInt(item.quantidade, 10) || 1;
-                const preco = parseFloat(item.preco) || 0;
-                const vNome = item.variacaoSelecionada ? ` (Tam: ${item.variacaoSelecionada})` : '';
-                msg += `▪️ ${qtd}x ${item.nome}${vNome} (${fnMoney(preco)}/un)\n`;
-            });
+            msg += `📊 *RESUMO FINANCEIRO:*\n`;
+            msg += `▪️ *Total de Peças:* ${t.qtd} pçs\n`;
+            msg += `▪️ *Peso Total:* ${formatarPesoSeguro(t.peso)}\n`;
+            msg += `▪️ *Subtotal:* ${formatarMoedaSeguro(t.subtotal)}\n`;
+            if (t.desconto > 0) msg += `▪️ *Desconto PIX:* -${formatarMoedaSeguro(t.desconto)}\n`;
+            msg += `▪️ *Frete:* ${t.frete > 0 ? formatarMoedaSeguro(t.frete) : 'Grátis (Galvânicas Limeira)'}\n`;
+            msg += `▪️ *Forma de Pagamento:* ${t.pagamento}\n`;
+            msg += `⭐ *TOTAL FINAL:* ${formatarMoedaSeguro(t.total)}\n\n`;
 
-            msg += `\n📊 *RESUMO FINANCEIRO:*\n`;
-            msg += `💰 *Subtotal:* ${fnMoney(t.subtotal)}\n`;
-            if (t.desconto > 0) msg += `🟢 *Desconto PIX:* -${fnMoney(t.desconto)}\n`;
-            msg += `🚚 *Frete:* ${t.frete > 0 ? fnMoney(t.frete) : 'Grátis (Limeira)'}\n`;
-            msg += `⚖️ *Peso Total:* ${formatarPeso(t.peso)}g\n`;
-            msg += `💳 *Forma de Pagamento:* ${t.pagamento}\n`;
-            msg += `⭐ *TOTAL FINAL:* ${fnMoney(t.total)}\n\n`;
+            if (obs) msg += `📝 *Observações:* ${obs}\n\n`;
 
-            if (obs) msg += `📝 *Obs:* ${obs}\n`;
+            // Mensagem de aguardo adicionada nativamente
+            msg += `💬 O meu pedido já foi gerado com sucesso! Fico no aguardo do envio do *link de pagamento* e da confirmação do *prazo de entrega*. Obrigado!`;
 
             const urlWhats = `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${encodeURIComponent(msg)}`;
             
-            if (typeof carrinhoService !== 'undefined' && carrinhoService.limpar) {
-                carrinhoService.limpar();
+            if (typeof window.carrinhoService !== 'undefined' && window.carrinhoService.limpar) {
+                window.carrinhoService.limpar();
+            } else if (window.CarrinhoService && typeof window.CarrinhoService.limpar === 'function') {
+                window.CarrinhoService.limpar();
             }
             
             window.open(urlWhats, '_blank');

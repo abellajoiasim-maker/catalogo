@@ -5,34 +5,7 @@
 
 const DescontoService = {
 
-    // ========================// services/descontoService.js
-export const DescontoService = {
-    calcularPrecoFinal(produto) {
-        if (!produto) return 0;
-        const precoBase = Number(produto.preco || 0);
-        const precoPromocional = Number(produto.precoPromocional || 0);
-        
-        if (precoPromocional > 0 && precoPromocional < precoBase) {
-            return this.arredondar(precoPromocional);
-        }
-        return this.arredondar(precoBase);
-    },
-
-    calcularDescontoPorFaixaQuantidade(quantidadeTotal, subtotalAtual, listaDescontos) {
-        if (!listaDescontos || !Array.isArray(listaDescontos)) return subtotalAtual;
-        
-        const faixaAtiva = listaDescontos.find(d => d.ativo && quantidadeTotal >= d.minimo && quantidadeTotal <= d.maximo);
-        if (faixaAtiva) {
-            const fatorDesconto = (100 - Number(faixaAtiva.percentual)) / 100;
-            return this.arredondar(subtotalAtual * fatorDesconto);
-        }
-        return subtotalAtual;
-    },
-
-    arredondar(valor) {
-        return Math.round((valor + Number.EPSILON) * 100) / 100;
-    }
-};==================================
+    // ==========================================================
     // Helpers
     // ==========================================================
 

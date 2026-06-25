@@ -289,17 +289,38 @@
     }
   }
 
-  function abrirDrawer(titulo, html) {
+ function abrirDrawer(titulo, html) {
     document.getElementById('drawerTitle').textContent = titulo;
-    document.getElementById('drawerContent').innerHTML = html;
-    document.getElementById('drawer').classList.remove('hidden');
+    
+    // Localiza a div interna de conteúdo que está logo abaixo do cabeçalho do drawer
+    const containerInterno = document.getElementById('drawerContainer').querySelector('.flex-1');
+    if (containerInterno) {
+      containerInterno.innerHTML = html;
+    }
+    
+    // Remove a classe hidden e aplica a animação visual de deslizar
+    const drawerGeral = document.getElementById('drawer');
+    const drawerMenu = document.getElementById('drawerContainer');
+    
+    drawerGeral.classList.remove('hidden');
+    setTimeout(() => {
+      drawerMenu.classList.remove('translate-x-full');
+    }, 50);
   }
 
   function fecharDrawer() {
-    document.getElementById('drawer').classList.add('hidden');
-    document.getElementById('drawerContent').innerHTML = '';
+    const drawerMenu = document.getElementById('drawerContainer');
+    const drawerGeral = document.getElementById('drawer');
+    
+    drawerMenu.addClassList ? drawerMenu.classList.add('translate-x-full') : drawerMenu.style.transform = 'translateX(100%)';
+    
+    // Aguarda a animação terminar para esconder o container de fundo
+    setTimeout(() => {
+      drawerGeral.classList.add('hidden');
+      const containerInterno = document.getElementById('drawerContainer').querySelector('.flex-1');
+      if (containerInterno) containerInterno.innerHTML = '';
+    }, 300);
   }
-
   function abrirCriacaoPorAba() {
     const tab = getActiveTab();
     if (tab === 'produtos') criarProdutoForm();
@@ -1060,7 +1081,6 @@
   window.tratarInputImagem = tratarInputImagem; window.handleImageError = handleImageError;
   window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
   window.abrirCriacaoPorAba = abrirCriacaoPorAba; window.salvarNovoProduto = salvarNovoProduto;
-  window.salvarNovaCategoria = salvarNovaCategoria; window.salvarNovaSubcategoria = salvarNovaSubcategoria;
   window.carregarSubcategoriasProdutoCriacao = carregarSubcategoriasProdutoCriacao;
   window.deletarCategoria = deletarCategoria; window.deletarSubcategoria = deletarSubcategoria;
   window.adicionarTagInput = adicionarTagInput;

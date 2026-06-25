@@ -2,22 +2,24 @@ import { Drawer } from './drawer.js';
 
 export const ProdutoModule = {
     dbRef: null,
-    produtosEmMemoria: {}, // Guarda os dados localmente para agilizar a edição e evitar refetch
+    produtosEmMemoria: {}, 
 
     /**
-     * Inicializa o módulo de produtos
-     * @param {Object} firebaseDb - A referência global do banco de dados (ex: firebase.database())
-     * @param {string} path - O caminho no banco de dados (ex: 'produtos' ou 'abella/produtos')
+     * Inicializa o módulo de produtos usando as diretrizes oficiais da Abella Joias
      */
-    init(firebaseDb, path = 'produtos') {
-        this.dbRef = firebaseDb.ref(path);
+    init(firebaseDb, path = '') {
+        // Usa o helper oficial global se disponível, garantindo o nó correto ('products')
+        const nóOficial = typeof window.getAbellaPath === 'function' 
+            ? window.getAbellaPath('products') 
+            : 'abella/products';
+
+        this.dbRef = firebaseDb.ref(nóOficial);
         this._configurarEventosGerais();
         this.listarProdutos();
     },
 
     /**
-     * Configura um único listener para todos os botões de ação (Event Delegation).
-     * Substitui os antigos `onclick=` soltos no HTML.
+     * Event Delegation para evitar onclick inline
      */
     _configurarEventosGerais() {
         const containerLista = document.getElementById('lista-produtos-container');
@@ -41,7 +43,7 @@ export const ProdutoModule = {
     },
 
     /**
-     * Busca os produtos no Firebase e aciona a renderização em tempo real
+     * Escuta em tempo real o nó oficial do Firebase
      */
     listarProdutos() {
         this.dbRef.on('value', (snapshot) => {
@@ -54,8 +56,7 @@ export const ProdutoModule = {
     },
 
     /**
-     * Gera o HTML da vitrine administrativa
-     * @param {Object} produtos 
+     * Renderiza os produtos aplicando as chaves oficiais do banco (sku, nome, price, paused)
      */
     renderProdutos(produtos) {
         const container = document.getElementById('lista-produtos-container');
@@ -64,44 +65,60 @@ export const ProdutoModule = {
         const ids = Object.keys(produtos);
         
         if (ids.length === 0) {
-            container.innerHTML = `<div class="p-8 text-center text-zinc-500">Nenhum produto cadastrado.</div>`;
+            container.innerHTML = `<div class="p-8 text-center text-zinc-500 text-xs uppercase tracking-wider font-bold">Nenhum produto encontrado no banco.</div>`;
             return;
         }
 
         let html = '';
         ids.forEach(id => {
             const p = produtos[id];
-            const statusColor = p.ativo !== false ? 'bg-green-500' : 'bg-red-500';
-            const statusText = p.ativo !== false ? 'ATIVO' : 'PAUSADO';
+            
+            // Regra oficial: p.paused === true significa que o produto está pausado
+            const isPausado = p.paused === true || p.status === 'pausado';
+            const statusColor = !isPausado ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30';
+            const statusText = !isPausado ? 'ATIVO' : 'PAUSADO';
 
-            // Usamos data-action e data-id no lugar de onclick()
+            // Mapeamento blindado de valores (aceita strings antigas e numéricos)
+            const valorBruto = p.price !== undefined ? p.price : (p.precoFinal || p.preco || 0);
+            const precoNum = typeof valorBruto === 'string' ? parseFloat(valorBruto.replace(',', '.')) : valorBruto;
+            const precoFormatado = !isNaN(precoNum) ? precoNum.toFixed(2).replace('.', ',') : '0,00';
+
+            // Fallbacks de propriedades oficiais do banco
+            const titulo = p.nome || p.name || 'Produto Sem Nome';
+            const urlImagem = p.image || p.imagem || '';
+            const referencia = p.sku || p.ref || id;
+
             html += `
-                <div class="flex items-center justify-between p-4 mb-2 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 transition-colors">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 mb-2 bg-zinc-950 border border-zinc-900 rounded-2xl hover:border-zinc-800 transition-all gap-4">
                     <div class="flex items-center gap-4">
-                        <img src="${p.imagem || ''}" class="w-12 h-12 rounded object-cover bg-zinc-800" onerror="this.src='imagem-padrao.png'">
+                        <div class="w-14 h-14 rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center relative flex-shrink-0">
+                            <img src="${urlImagem}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
+                            <span class="absolute text-[9px] text-zinc-700 font-bold uppercase select-none">Sem Foto</span>
+                        </div>
                         <div>
-                            <div class="text-xs text-zinc-500 font-mono">${p.ref || id}</div>
-                            <div class="text-sm font-bold text-zinc-200">${p.nome || 'Produto Sem Nome'}</div>
-                            <div class="text-xs text-[#caa85c] font-bold">R$ ${Number(p.preco || 0).toFixed(2).replace('.', ',')}</div>
+                            <div class="text-[10px] text-zinc-500 font-mono tracking-wider">SKU/REF: ${referencia}</div>
+                            <div class="text-sm font-bold text-zinc-200 mt-0.5">${titulo}</div>
+                            <div class="text-xs text-[#caa85c] font-black mt-1">R$ ${precoFormatado}</div>
                         </div>
                     </div>
                     
-                    <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-bold px-2 py-1 rounded text-white ${statusColor}">${statusText}</span>
+                    <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto border-t border-zinc-900/50 sm:border-0 pt-3 sm:pt-0">
+                        <span class="text-[9px] font-black px-2.5 py-1 rounded-lg ${statusColor} tracking-widest">${statusText}</span>
                         
-                        <!-- BOTÕES DE AÇÃO COM DATA ATTRIBUTES -->
-                        <button data-action="editar" data-id="${id}" class="p-2 bg-zinc-800 text-zinc-300 rounded hover:bg-[#caa85c] hover:text-black transition-colors" title="Editar">
-                            ✏️
-                        </button>
-                        <button data-action="duplicar" data-id="${id}" class="p-2 bg-zinc-800 text-zinc-300 rounded hover:bg-zinc-700 transition-colors" title="Duplicar">
-                            📋
-                        </button>
-                        <button data-action="pausar" data-id="${id}" class="p-2 bg-zinc-800 text-zinc-300 rounded hover:bg-zinc-700 transition-colors" title="Pausar/Ativar">
-                            ⏸️
-                        </button>
-                        <button data-action="excluir" data-id="${id}" class="p-2 bg-red-900/30 text-red-400 rounded hover:bg-red-600 hover:text-white transition-colors" title="Excluir">
-                            🗑️
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <button data-action="editar" data-id="${id}" class="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-[#caa85c] hover:text-black hover:border-[#caa85c] transition-all text-xs" title="Editar Peça">
+                                ✏️
+                            </button>
+                            <button data-action="duplicar" data-id="${id}" class="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-zinc-800 hover:text-zinc-200 transition-all text-xs" title="Duplicar Item">
+                                📋
+                            </button>
+                            <button data-action="pausar" data-id="${id}" class="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-zinc-800 hover:text-zinc-200 transition-all text-xs" title="Alternar Status">
+                                ⏸️
+                            </button>
+                            <button data-action="excluir" data-id="${id}" class="p-2.5 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl hover:bg-red-600 hover:text-white hover:border-red-600 transition-all text-xs" title="Remover Definitivamente">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -111,33 +128,32 @@ export const ProdutoModule = {
     },
 
     /**
-     * Abre o Drawer configurado para Criar um Novo Produto
+     * Abre o formulário para criação
      */
-    abrirNovoProduto() {
-        const formHtml = this._gerarFormularioHTML('novo');
+    abrirNovoProduto(categoriasDisponiveis = {}) {
+        const formHtml = this._gerarFormularioHTML('novo', '', {}, categoriasDisponiveis);
         Drawer.open({
-            title: '➕ CRIAR NOVO PRODUTO',
+            title: '➕ CADASTRAR PRODUTO NO BRUTO',
             content: formHtml,
             width: '600px'
         });
         
-        // Adiciona listener específico para o botão salvar do form recém renderizado
         setTimeout(() => {
             document.getElementById('btn-salvar-produto')?.addEventListener('click', () => this.salvarProduto('novo'));
         }, 100);
     },
 
     /**
-     * Abre o Drawer configurado para Editar um Produto existente
-     * @param {string} id 
+     * Abre o formulário carregando o cache da memória instantaneamente
      */
     abrirEditarProduto(id) {
         const produto = this.produtosEmMemoria[id];
         if (!produto) return;
 
-        const formHtml = this._gerarFormularioHTML('editar', id, produto);
+        // Dispara uma solicitação silenciosa das categorias atuais se necessário para preencher o select
+        const formHtml = this._gerarFormularioHTML('editar', id, produto, {});
         Drawer.open({
-            title: `✏️ EDITAR: ${produto.ref || id}`,
+            title: `✏️ EDITAR PRODUTO`,
             content: formHtml,
             width: '600px'
         });
@@ -148,165 +164,126 @@ export const ProdutoModule = {
     },
 
     /**
-     * Salva o produto (Criação ou Edição) lendo os dados do formulário do Drawer
-     * @param {string} idOuAcao - ID do produto ou a string 'novo'
-     */
-   /**
-     * Salva o produto (Criação ou Edição) lendo os dados completos do formulário do Drawer
-     * @param {string} idOuAcao - ID do produto ou a string 'novo'
+     * Grava salvando estritamente a árvore oficial do banco da Abella Joias
      */
     async salvarProduto(idOuAcao) {
         const nome = document.getElementById('prod-nome')?.value.trim();
-        const preco = document.getElementById('prod-preco')?.value;
-        const ref = document.getElementById('prod-ref')?.value.trim();
-        const imagem = document.getElementById('newImagem')?.value.trim() || '';
-        const categoria = document.getElementById('prod-categoria')?.value || '';
-        const subcategoria = document.getElementById('prod-subcategoria')?.value || '';
+        const price = document.getElementById('prod-price')?.value;
+        const sku = document.getElementById('prod-sku')?.value.trim();
+        const image = document.getElementById('prod-image')?.value.trim() || '';
+        const category = document.getElementById('prod-category')?.value || '';
 
-        if (!nome || !preco) {
-            alert("Nome e preço são obrigatórios!");
+        if (!nome || !price) {
+            alert("Nome e Preço são campos obrigatórios!");
             return;
         }
 
         const dadosProduto = {
+            name: nome,
             nome: nome,
-            preco: parseFloat(preco.replace(',', '.')),
-            ref: ref || Date.now().toString(),
-            imagem: imagem,
-            categoria: categoria,
-            subcategoria: subcategoria,
-            ativo: true,
-            atualizadoEm: new Date().toISOString()
+            price: parseFloat(price.replace(',', '.')),
+            precoFinal: parseFloat(price.replace(',', '.')),
+            sku: sku || Date.now().toString(),
+            image: image,
+            imagem: image,
+            category: category,
+            updatedAt: Date.now()
         };
 
         try {
             if (idOuAcao === 'novo') {
-                dadosProduto.criadoEm = new Date().toISOString();
+                dadosProduto.paused = false;
+                dadosProduto.createdAt = Date.now();
                 await this.dbRef.push(dadosProduto);
             } else {
                 await this.dbRef.child(idOuAcao).update(dadosProduto);
             }
             Drawer.close();
         } catch (error) {
-            console.error("Erro ao salvar:", error);
-            alert("Erro al salvar produto.");
+            console.error("Erro ao persistir dados:", error);
         }
     },
 
     /**
-     * Módulo Privado: Gera a estrutura do formulário baseando-se no produto
-     * @private
-     */
-    _gerarFormularioHTML(modo, id = '', p = {}) {
-        const isEdit = modo === 'editar';
-        
-        return `
-            <div class="space-y-4">
-                <div>
-                    <label class="text-xs text-zinc-400">Referência (REF)</label>
-                    <input type="text" id="prod-ref" value="${isEdit ? p.ref || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
-                </div>
-                <div>
-                    <label class="text-xs text-zinc-400">Nome do Produto</label>
-                    <input type="text" id="prod-nome" value="${isEdit ? p.nome || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
-                </div>
-                <div>
-                    <label class="text-xs text-zinc-400">Preço (R$)</label>
-                    <input type="text" id="prod-preco" value="${isEdit ? p.preco || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]" placeholder="0.00">
-                </div>
-                
-                <div>
-                    <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Upload / gs:// / Link)</label>
-                    <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
-                       <div class="absolute text-xs text-zinc-600">Preview da Foto</div>
-                       <img id="previewProdutoNovo" src="${isEdit ? p.imagem || '' : ''}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-                    </div>
-                    <input id="newImagem" value="${isEdit ? p.imagem || '' : ''}" class="input-dark" placeholder="Cole a URL ou link gs://">
-                </div>
-
-                <button id="btn-salvar-produto" type="button" class="w-full bg-[#caa85c] text-black font-bold py-3 rounded hover:bg-opacity-90 transition-opacity mt-6">
-                    ${isEdit ? '💾 Salvar Alterações' : '➕ Adicionar Produto'}
-                </button>
-            </div>
-        `;
-    }
-    async duplicarProduto(id) {
-        const produtoOriginal = this.produtosEmMemoria[id];
-        if (!produtoOriginal) return;
-
-        const produtoCopia = { 
-            ...produtoOriginal, 
-            nome: `${produtoOriginal.nome} (Cópia)`,
-            ref: `${produtoOriginal.ref}-COPIA`,
-            criadoEm: new Date().toISOString()
-        };
-        
-        // Remove IDs ou chaves antigas se necessário
-        delete produtoCopia.id; 
-
-        try {
-            await this.dbRef.push(produtoCopia);
-        } catch (error) {
-            console.error("Erro ao duplicar:", error);
-        }
-    },
-
-    /**
-     * Altera o status entre Ativo e Pausado
-     * @param {string} id 
+     * Alterna o estado com a propriedade oficial .paused
      */
     async pausarProduto(id) {
         const produto = this.produtosEmMemoria[id];
         if (!produto) return;
 
+        // Se p.paused for true, vira false. Se não existir ou for false, vira true.
+        const novoStatus = produto.paused === true ? false : true;
+
         try {
             await this.dbRef.child(id).update({
-                ativo: produto.ativo === false ? true : false
+                paused: novoStatus,
+                updatedAt: Date.now()
             });
         } catch (error) {
             console.error("Erro ao alterar status:", error);
         }
     },
 
-    /**
-     * Exclui permanentemente o produto do Firebase
-     * @param {string} id 
-     */
+    async duplicarProduto(id) {
+        const original = this.produtosEmMemoria[id];
+        if (!original) return;
+
+        const copia = {
+            ...original,
+            name: `${original.name || original.nome} (Cópia)`,
+            nome: `${original.nome || original.name} (Cópia)`,
+            sku: `${original.sku || ''}-COPY`,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        try {
+            await this.dbRef.push(copia);
+        } catch (error) {
+            console.error("Erro ao duplicar produto:", error);
+        }
+    },
+
     async excluirProduto(id) {
-        if (confirm("Tem certeza que deseja excluir este produto permanentemente?")) {
+        if (confirm("Deseja deletar este item permanentemente do banco?")) {
             try {
                 await this.dbRef.child(id).remove();
             } catch (error) {
-                console.error("Erro ao excluir:", error);
+                console.error("Erro ao remover:", error);
             }
         }
     },
 
     /**
-     * Módulo Privado: Gera a estrutura do formulário baseando-se no produto
-     * @private
+     * Montagem do formulário respeitando os campos da Abella Joias
      */
-    _gerarFormularioHTML(modo, id = '', p = {}) {
+    _gerarFormularioHTML(modo, id = '', p = {}, categorias = {}) {
         const isEdit = modo === 'editar';
-        
+        const titulo = isEdit ? (p.nome || p.name || '') : '';
+        const skuValor = isEdit ? (p.sku || p.ref || '') : '';
+        const precoValor = isEdit ? (p.price || p.precoFinal || p.preco || '') : '';
+        const urlImagem = isEdit ? (p.image || p.imagem || '') : '';
+
         return `
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs text-zinc-400">Referência (REF)</label>
-                    <input type="text" id="prod-ref" value="${isEdit ? p.ref || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
+                    <label class="text-xs text-zinc-400">SKU / Referência</label>
+                    <input type="text" id="prod-sku" value="${skuValor}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
                 </div>
                 <div>
-                    <label class="text-xs text-zinc-400">Nome do Produto</label>
-                    <input type="text" id="prod-nome" value="${isEdit ? p.nome || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
+                    <label class="text-xs text-zinc-400">Nome da Joia (Atacado)</label>
+                    <input type="text" id="prod-nome" value="${titulo}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
                 </div>
                 <div>
-                    <label class="text-xs text-zinc-400">Preço (R$)</label>
-                    <input type="number" id="prod-preco" value="${isEdit ? p.preco || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
+                    <label class="text-xs text-zinc-400">Preço Base (R$)</label>
+                    <input type="text" id="prod-price" value="${precoValor}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]" placeholder="0.00">
                 </div>
-                
-                <!-- O Botão chama a lógica via evento vinculado no setTimeout -->
+                <div>
+                    <label class="text-xs text-zinc-400">URL da Imagem</label>
+                    <input type="text" id="prod-image" value="${urlImagem}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]" placeholder="https://...">
+                </div>
                 <button id="btn-salvar-produto" type="button" class="w-full bg-[#caa85c] text-black font-bold py-3 rounded hover:bg-opacity-90 transition-opacity mt-6">
-                    ${isEdit ? '💾 Salvar Alterações' : '➕ Adicionar Produto'}
+                    ${isEdit ? '💾 Salvar Alterações' : '➕ Cadastrar Item'}
                 </button>
             </div>
         `;

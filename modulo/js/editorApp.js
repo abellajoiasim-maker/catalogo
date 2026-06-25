@@ -7,6 +7,13 @@ import { ProdutoModule } from './produtoModule.js';
 import { CategoriaModule } from './categoriaModule.js';
 import { SubcategoriaModule } from './subcategoriaModule.js';
 
+// --- EXPANSÃO GLOBAL: Fundamental para os botões 'onclick' no seu HTML ---
+window.editarCategoria = (id) => CategoriaModule.abrirEditarCategoria(id);
+window.excluirCategoria = (id) => CategoriaModule.excluirCategoria(id);
+window.editarSubcategoria = (id) => SubcategoriaModule.abrirEditarSubcategoria(id, CategoriaModule.categoriasEmMemoria);
+window.excluirSubcategoria = (id) => SubcategoriaModule.excluirSubcategoria(id);
+window.salvarCategoria = () => CategoriaModule.salvar(); // Garante que o salvar funcione no Drawer
+
 const EditorApp = {
     db: null,
     tentativas: 0,
@@ -25,11 +32,18 @@ const EditorApp = {
 
         this.db = window.db || window.firebase.database();
 
-        // Inicializa os módulos passando a instância do banco
+        // Inicializa o Drawer
         Drawer.init();
-        ProdutoModule.init(this.db);
+
+        // Inicializa módulos de dados
         CategoriaModule.init(this.db);
         SubcategoriaModule.init(this.db);
+
+        // Inicializa ProdutoModule aguardando um breve momento para garantir que 
+        // os dados de subcategorias estejam carregados em memória
+        setTimeout(() => {
+            ProdutoModule.init(this.db, SubcategoriaModule.subcategoriasEmMemoria);
+        }, 800);
 
         this._configurarAbas();
         this._configurarBotoesGlobais();
@@ -55,18 +69,18 @@ const EditorApp = {
 
                 // Atualiza o botão superior
                 const btnCriar = document.getElementById('btnCriarNovo');
-                btnCriar.setAttribute('data-contexto', alvo);
-                btnCriar.textContent = `➕ Criar ${alvo.charAt(0).toUpperCase() + alvo.slice(1, -1)}`;
+                if(btnCriar) {
+                    btnCriar.setAttribute('data-contexto', alvo);
+                    btnCriar.textContent = `➕ Criar ${alvo.charAt(0).toUpperCase() + alvo.slice(1, -1)}`;
+                }
             });
         });
     },
 
     _configurarBotoesGlobais() {
-        // Criar Novo
         document.getElementById('btnCriarNovo')?.addEventListener('click', () => {
             const contexto = document.getElementById('btnCriarNovo').getAttribute('data-contexto');
             
-            // Passamos as dependências de dados para o módulo correspondente
             const cats = CategoriaModule.categoriasEmMemoria || {};
             const subs = SubcategoriaModule.subcategoriasEmMemoria || {};
 
@@ -83,19 +97,17 @@ const EditorApp = {
             }
         });
 
-        // Refresh
         document.getElementById('btnRefresh')?.addEventListener('click', (e) => {
             const btn = e.target;
             btn.textContent = '🔄 Sincronizando...';
             
             // Re-lista tudo via módulos
-            Promise.all([
-                ProdutoModule.listarProdutos(),
-                CategoriaModule.listarCategorias(),
-                SubcategoriaModule.listarSubcategorias()
-            ]).then(() => {
-                setTimeout(() => btn.textContent = '🔄 Sincronizar', 500);
-            });
+            // Garantimos que os métodos existem antes de chamar
+            if (typeof ProdutoModule.listarProdutos === 'function') ProdutoModule.listarProdutos();
+            if (typeof CategoriaModule.listarCategorias === 'function') CategoriaModule.listarCategorias();
+            if (typeof SubcategoriaModule.listarSubcategorias === 'function') SubcategoriaModule.listarSubcategorias();
+            
+            setTimeout(() => btn.textContent = '🔄 Sincronizar', 500);
         });
     }
 };

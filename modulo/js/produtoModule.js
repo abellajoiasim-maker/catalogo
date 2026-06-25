@@ -11,11 +11,12 @@ export const ProdutoModule = {
             : 'abella/products';
 
         this.dbRef = firebaseDb.ref(nóOficial);
+        // Garante que o cache não seja undefined
         this.subcategoriasEmMemoria = subcategoriasCache || {};
         
-        // Chamada segura dos métodos
-        this._configurarEventosGerais();
-        this.listarProdutos();
+        // Chamadas protegidas
+        ProdutoModule._configurarEventosGerais();
+        ProdutoModule.listarProdutos();
     },
 
     _configurarEventosGerais() {
@@ -28,16 +29,17 @@ export const ProdutoModule = {
                 const acao = btn.getAttribute('data-action');
                 const id = btn.getAttribute('data-id');
 
-                if (acao === 'editar') this.abrirEditarProduto(id);
-                if (acao === 'excluir') this.excluirProduto(id);
+                if (acao === 'editar') ProdutoModule.abrirEditarProduto(id);
+                if (acao === 'excluir') ProdutoModule.excluirProduto(id);
             });
         }
     },
 
     listarProdutos() {
+        if (!this.dbRef) return;
         this.dbRef.on('value', (snapshot) => {
             this.produtosEmMemoria = snapshot.val() || {};
-            this.renderProdutos();
+            ProdutoModule.renderProdutos();
         });
     },
 
@@ -46,34 +48,35 @@ export const ProdutoModule = {
         if (!container) return;
 
         container.innerHTML = Object.entries(this.produtosEmMemoria).map(([id, p]) => `
-            <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl">
+            <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl hover:border-zinc-800 transition-all">
                 <div class="flex items-center gap-4">
-                    <img src="${p.image || ''}" class="w-12 h-12 rounded-lg object-cover bg-zinc-900">
+                    <img src="${p.image || ''}" class="w-12 h-12 rounded-lg object-cover bg-zinc-900 border border-zinc-800" onerror="this.src='https://via.placeholder.com/48'">
                     <div>
                         <div class="text-sm font-bold text-zinc-200">${p.nome || 'Sem Nome'}</div>
                         <div class="text-[10px] text-zinc-500 font-mono">ID: ${id}</div>
                     </div>
                 </div>
                 <div class="flex gap-1.5">
-                    <button data-action="editar" data-id="${id}" class="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-[#caa85c] hover:text-black">✏️</button>
-                    <button data-action="excluir" data-id="${id}" class="p-2.5 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl hover:bg-red-600 hover:text-white">🗑️</button>
+                    <button data-action="editar" data-id="${id}" class="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-[#caa85c] hover:text-black transition-all">✏️</button>
+                    <button data-action="excluir" data-id="${id}" class="p-2.5 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all">🗑️</button>
                 </div>
             </div>
-        `).join('');
+        `).join('') || '<div class="text-center p-8 text-zinc-500 text-xs">Nenhum produto cadastrado.</div>';
     },
 
-    abrirNovoProduto(categorias = {}) {
-        const formHtml = this._gerarFormularioHTML('novo', '', {}, categorias);
+    abrirNovoProduto(subcategorias = {}) {
+        this.subcategoriasEmMemoria = subcategorias; // Atualiza para o estado mais recente
+        const formHtml = ProdutoModule._gerarFormularioHTML('novo', '', {});
         Drawer.open({ title: '➕ CADASTRAR NOVA JOIA', content: formHtml, width: '650px' });
-        this._vincularOuvintesFormulario('novo');
+        ProdutoModule._vincularOuvintesFormulario('novo');
     },
 
     abrirEditarProduto(id) {
         const produto = this.produtosEmMemoria[id];
         if (!produto) return;
-        const formHtml = this._gerarFormularioHTML('editar', id, produto);
+        const formHtml = ProdutoModule._gerarFormularioHTML('editar', id, produto);
         Drawer.open({ title: '✏️ EDITAR PRODUTO', content: formHtml, width: '650px' });
-        this._vincularOuvintesFormulario(id);
+        ProdutoModule._vincularOuvintesFormulario(id);
     },
 
     _gerarFormularioHTML(modo, id, p = {}) {
@@ -86,25 +89,26 @@ export const ProdutoModule = {
             <div class="space-y-4">
                 <div>
                     <label class="text-xs text-zinc-400 font-bold block mb-1">Subcategoria</label>
-                    <select id="prod-subcategoria" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white">
-                        <option value="">Selecione...</option>${optionsSubcat}
+                    <select id="prod-subcategoria" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white text-sm">
+                        <option value="">Selecione uma subcategoria...</option>${optionsSubcat}
                     </select>
                 </div>
                 <div>
                     <label class="text-xs text-zinc-400 font-bold block mb-1">Nome da Joia</label>
-                    <input type="text" id="prod-nome" value="${p.nome || ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white">
+                    <input type="text" id="prod-nome" value="${p.nome || ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white text-sm">
                 </div>
                 <div>
                     <label class="text-xs text-zinc-400 font-bold block mb-1">URL Imagem</label>
-                    <input type="text" id="prod-image" value="${p.image || ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white">
+                    <input type="text" id="prod-image" value="${p.image || ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white text-sm">
                 </div>
-                <button id="btn-salvar-produto" class="w-full bg-[#caa85c] text-black font-black py-3 rounded-xl">SALVAR</button>
+                <button id="btn-salvar-produto" class="w-full bg-[#caa85c] text-black font-black py-3 rounded-xl hover:bg-opacity-90 transition-all">SALVAR ALTERAÇÕES</button>
             </div>
         `;
     },
 
     _vincularOuvintesFormulario(idOuAcao) {
-        document.getElementById('btn-salvar-produto').onclick = () => this.salvarProduto(idOuAcao);
+        const btn = document.getElementById('btn-salvar-produto');
+        if (btn) btn.onclick = () => ProdutoModule.salvarProduto(idOuAcao);
     },
 
     async salvarProduto(idOuAcao) {
@@ -114,6 +118,8 @@ export const ProdutoModule = {
             image: document.getElementById('prod-image').value,
             updatedAt: Date.now()
         };
+
+        if (!dados.nome) return alert("Nome é obrigatório!");
 
         if (idOuAcao === 'novo') await this.dbRef.push({ ...dados, createdAt: Date.now() });
         else await this.dbRef.child(idOuAcao).update(dados);

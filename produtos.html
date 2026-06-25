@@ -297,320 +297,391 @@
 <script src="js/utils/image-helper.js"></script>
 
 <script>
-   // ======================================================================
-// Scripts do Catálogo - Abella Joias v5.0 (Auditado)
-// ======================================================================
-let produtos = [];
-let produtosFiltrados = [];
-let produtoAtual = null;
-let descontoPixGlobal = 5;
+    let produtos = [];
+    let produtosFiltrados = [];
+    let produtoAtual = null;
+    let descontoPixGlobal = 5;
 
-function normalizarTexto(texto) {
-    return (texto || '')
-        .toString()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '-');
-}
-
-async function carregarLogoHeader() {
-    try {
-        const logoImg = document.getElementById('abellaLogoImg');
-        const fallback = document.getElementById('abellaLogoFallback');
-        const urlDefinitivaStorage = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
-        
-        if (logoImg) {
-            logoImg.onload = () => {
-                logoImg.classList.remove('hidden');
-                logoImg.style.display = 'block';
-                if (fallback) fallback.classList.add('hidden');
-            };
-            logoImg.onerror = () => {
-                logoImg.classList.add('hidden');
-                logoImg.style.display = 'none';
-                if (fallback) fallback.classList.remove('hidden');
-            };
-        }
-
-        if (typeof firebase !== 'undefined' && firebase.database) {
-            let path = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('settings') : 'abella/settings';
-            const snap = await firebase.database().ref(path).once('value');
-            const config = snap.val() || {};
+    async function carregarLogoHeader(){
+        try {
+            const logoImg = document.getElementById('abellaLogoImg');
+            const fallback = document.getElementById('abellaLogoFallback');
+            const urlDefinitivaStorage = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
             
-            if (config.name && document.getElementById('nome')) document.getElementById('nome').innerText = config.name;
-            if (config.slogan && document.getElementById('slogan')) document.getElementById('slogan').innerText = config.slogan;
-            
-            if (config.pix) {
-                descontoPixGlobal = parseFloat(config.pix) || 0;
-                if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
-                if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
-            }
-            if (config.parcelas && document.getElementById('parcelasBadgeValue')) {
-                document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
-            }
+            let logo = '';
+            let config = {};
 
-            const banner = document.getElementById('banner');
-            if (banner && config.bannerAtivo && config.bannerTexto) {
-                const bannerTextoEl = document.getElementById('bannerTexto');
-                if (bannerTextoEl) bannerTextoEl.innerText = config.bannerTexto;
-                banner.classList.remove('hidden');
-            }
-
-            let logoRaw = config.logo || config.logoUrl || '';
             if (logoImg) {
-                logoImg.src = logoRaw && logoRaw !== 'logo' ? logoRaw.trim() : urlDefinitivaStorage;
-            }
-        }
-    } catch (e) {
-        console.error('Erro logo header:', e);
-        const logoImg = document.getElementById('abellaLogoImg');
-        if (logoImg) logoImg.src = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
-    }
-}
-
-function atualizarMiniCarrinho() {
-    try {
-        if (typeof carrinhoService !== 'undefined') {
-            const resumo = carrinhoService.obterResumo();
-            if (document.getElementById('cart-count')) {
-                document.getElementById('cart-count').innerText = resumo.totalPecas || 0;
-            }
-        }
-    } catch (e) {
-        console.error('Erro mini carrinho:', e);
-    }
-}
-
-async function carregarProdutos() {
-    try {
-        const loading = document.getElementById('loading');
-        if (loading) loading.innerHTML = 'Carregando produtos premium...';
-        
-        const params = new URLSearchParams(window.location.search);
-        const categoryParam = params.get('categoria') || params.get('cat');
-        const subcategoryParam = params.get('subcategoria') || params.get('sub') || '';
-        
-        const categoria = normalizarTexto(categoryParam);
-        const subcategoria = normalizarTexto(decodeURIComponent(subcategoryParam));
-        
-        let nomeFiltro = 'Todos os Produtos';
-        if (subcategoryParam) nomeFiltro = subcategoryParam;
-        else if (categoryParam) nomeFiltro = categoryParam;
-        
-        const elHero = document.getElementById('heroTitulo');
-        if (elHero) elHero.innerText = nomeFiltro;
-
-        if (typeof produtoService === 'undefined') {
-            throw new Error('Serviço de produto indisponível.');
-        }
-        
-        const todos = await produtoService.listarTodos();
-        produtos = todos.filter(prod => {
-            if (!prod.ativo) return false;
-            const catProduto = normalizarTexto(prod.categoria);
-            const subProduto = normalizarTexto(prod.subcategoria);
-            if (!categoria) return true;
-            if (catProduto !== categoria) return false;
-            if (!subcategoria) return true;
-            return (subProduto === subcategoria || subProduto.includes(subcategoria));
-        });
-
-        if (document.getElementById('totalProdutos')) document.getElementById('totalProdutos').innerText = produtos.length;
-        produtosFiltrados = [...produtos];
-        
-        if (loading) loading.classList.add('hidden');
-        renderizarProdutos();
-    } catch (err) {
-        console.error('Erro carregar produtos:', err);
-        if (document.getElementById('loading')) document.getElementById('loading').innerHTML = 'Erro ao carregar produtos do catálogo.';
-    }
-}
-
-function renderizarProdutos() {
-    const container = document.getElementById('grid-produtos');
-    if (!container) return;
-    container.innerHTML = '';
-    
-    if (produtosFiltrados.length === 0) {
-        container.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-500 uppercase tracking-widest text-xs">Nenhum item localizado.</div>`;
-        return;
-    }
-
-    produtosFiltrados.forEach((prod) => {
-        const cardHtml = window.ProdutoCard.render(prod);
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(cardHtml, 'text/html');
-        const cardElement = doc.body.firstElementChild;
-        if (cardElement) {
-            container.appendChild(cardElement);
-        }
-    });
-
-    window.ProdutoCard.bindEvents(container);
-}
-
-function iniciarBusca() {
-    const inputBusca = document.getElementById('busca');
-    if (!inputBusca) return;
-    inputBusca.addEventListener('input', (e) => {
-        const termo = normalizarTexto(e.target.value);
-        if (!termo) {
-            produtosFiltrados = [...produtos];
-        } else {
-            produtosFiltrados = produtos.filter(p => {
-                const nome = normalizarTexto(p.nome);
-                const sku = normalizarTexto(p.codigo);
-                return nome.includes(termo) || sku.includes(termo);
-            });
-        }
-        renderizarProdutos();
-    });
-}
-
-function alterarQtdManualNoElemento(idElemento, valor) {
-    const input = document.getElementById(idElemento);
-    if (!input) return;
-    let atual = parseInt(input.value) || 0;
-    atual += valor;
-    let minVal = parseInt(input.getAttribute('min')) || 0;
-    if (atual < minVal) atual = minVal;
-    input.value = atual;
-}
-
-// Injeção da Regra Absoluta Nº 2: O modal agora recebe o Objeto Puro e Completo do ProdutoCard
-window.abrirModalCompra = function (produto) {
-    if (!produto || !produto.id) return;
-    produtoAtual = produto;
-
-    const modal = document.getElementById('modalProduto');
-    if (!modal) return;
-
-    const imagemPrincipal = window.ImageHelper && typeof window.ImageHelper.getPrimary === 'function'
-        ? window.ImageHelper.getPrimary(produto)
-        : (produto.thumbnail || '');
-
-    document.getElementById('modalNome').innerText = produto.nome;
-    document.getElementById('modalSku').innerText = 'Ref: ' + (produto.codigo || '-');
-    document.getElementById('modalPeso').innerText = produto.peso.toFixed(2) + ' g';
-    document.getElementById('modalDescricao').innerText = produto.descricao || 'Sem descrição adicional disponível.';
-    document.getElementById('modalImagem').src = imagemPrincipal;
-
-    // Cálculo unificado de preços base do contrato
-    let precoBase = produto.preco;
-    if (produto.precoPromocional && produto.precoPromocional > 0 && produto.precoPromocional < produto.preco) {
-        precoBase = produto.precoPromocional;
-    }
-
-    const formatador = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-    document.getElementById('modalPreco').innerText = formatador.format(precoBase);
-
-    const valorPix = precoBase - (precoBase * (descontoPixGlobal || 0) / 100);
-    const modalPix = document.getElementById('modalPix');
-    if (modalPix) modalPix.innerText = formatador.format(valorPix);
-
-    const containerQtdPadrao = document.getElementById('containerQtdPadrao');
-    const containerVariacoes = document.getElementById('variacoesContainer');
-    
-    if (containerVariacoes) {
-        containerVariacoes.innerHTML = '';
-        
-        if (produto.variacoes && produto.variacoes.length > 0) {
-            if (containerQtdPadrao) containerQtdPadrao.classList.add('hidden');
-            
-            let variacoesHtml = `<p class="text-[10px] md:text-xs font-bold text-zinc-400 block mb-1">Quantidades por Variação / Tamanho:</p><div class="space-y-2">`;
-            
-            produto.variacoes.forEach((v) => {
-                if (!v.ativo) return;
-                variacoesHtml += `
-                    <div class="flex items-center justify-between bg-zinc-900/50 border border-zinc-800 p-2 rounded-xl gap-3">
-                        <span class="text-xs font-semibold text-zinc-200 truncate flex-1">Tamanho/Variação: ${v.nome}</span>
-                        <div class="flex items-center gap-1.5 shrink-0">
-                            <button onclick="alterarQtdManualNoElemento('qtdVar_${v.id}', -1)" class="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 font-bold text-sm hover:border-zinc-700 flex items-center justify-center select-none" type="button">-</button>
-                            <input type="number" id="qtdVar_${v.id}" data-variacao-id="${v.id}" data-variacao-nome="${v.nome}" value="0" min="0" class="input-quantidade-variacao w-12 h-8 bg-zinc-950 border border-zinc-800 rounded-md text-center font-bold text-white text-xs focus:outline-none focus:border-[#caa85c]">
-                            <button onclick="alterarQtdManualNoElemento('qtdVar_${v.id}', 1)" class="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 font-bold text-sm hover:border-zinc-700 flex items-center justify-center select-none" type="button">+</button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            variacoesHtml += `</div>`;
-            containerVariacoes.innerHTML = variacoesHtml;
-        } else {
-            if (containerQtdPadrao) {
-                containerQtdPadrao.classList.remove('hidden');
-                const inputPadrao = document.getElementById('qtdPadrao');
-                if (inputPadrao) inputPadrao.value = "1";
-            }
-        }
-    }
-
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-};
-
-// Mapeador de Fallback legado para o index do card
-function abrirModalProduto(index) {
-    const prod = produtosFiltrados[index];
-    if (prod) window.abrirModalCompra(prod);
-}
-
-function fecharModalProduto() {
-    const modal = document.getElementById('modalProduto');
-    if (modal) modal.classList.add('hidden');
-    document.body.style.overflow = '';
-    produtoAtual = null;
-}
-
-function adicionarAoCarrinho() {
-    if (!produtoAtual || typeof carrinhoService === 'undefined') return;
-
-    const inputsVariacao = document.querySelectorAll('.input-quantidade-variacao');
-    let itensAdicionados = 0;
-
-    if (inputsVariacao.length > 0) {
-        inputsVariacao.forEach(input => {
-            const qtd = parseInt(input.value) || 0;
-            const varId = input.getAttribute('data-variacao-id');
-            const varNome = input.getAttribute('data-variacao-nome');
-            
-            if (qtd > 0) {
-                const itemCarrinho = {
-                    ...produtoAtual,
-                    variacaoSelecionada: { id: varId, nome: varNome }
+                logoImg.onload = () => {
+                    logoImg.classList.remove('hidden');
+                    logoImg.style.display = 'block';
+                    if (fallback) fallback.classList.add('hidden');
                 };
-                carrinhoService.adicionar(itemCarrinho, qtd);
-                itensAdicionados += qtd;
-            }
-        });
 
-        if (itensAdicionados === 0) {
-            alert('Por favor, adicione pelo menos 1 quantidade em alguma das variações disponíveis.');
+                logoImg.onerror = () => {
+                    logoImg.classList.add('hidden');
+                    logoImg.style.display = 'none';
+                    if (fallback) fallback.classList.remove('hidden');
+                };
+            }
+
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                let path = 'abella/settings';
+                if (typeof window.getAbellaPath === 'function') {
+                    path = window.getAbellaPath('settings');
+                }
+                
+                const snap = await firebase.database().ref(path).once('value');
+                config = snap.val() || {};
+                logo = config.logo || config.logoUrl || '';
+                
+                if (config.name && document.getElementById('nome')) document.getElementById('nome').innerText = config.name;
+                if (config.slogan && document.getElementById('slogan')) document.getElementById('slogan').innerText = config.slogan;
+                
+                if (config.pix) {
+                    descontoPixGlobal = parseFloat(config.pix) || 0;
+                    if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
+                    if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
+                }
+                if (config.parcelas) {
+                    if (document.getElementById('parcelasBadgeValue')) document.getElementById('parcelasBadgeValue').innerText = `${config.parcelas}x`;
+                }
+
+                const banner = document.getElementById('banner');
+                if (banner && config.bannerAtivo && config.bannerTexto) {
+                    const bannerTextoEl = document.getElementById('bannerTexto');
+                    if (bannerTextoEl) bannerTextoEl.innerText = config.bannerTexto;
+                    banner.classList.remove('hidden');
+                }
+            }
+
+            const logoPadrao = urlDefinitivaStorage;
+            let logoFinal = '';
+
+            if (typeof logo === 'string' && logo.trim() !== '' && logo !== 'logo' && logo !== 'undefined' && logo !== 'null') {
+                logoFinal = logo.trim();
+            }
+
+            if (!logoFinal) {
+                logoFinal = logoPadrao;
+            }
+
+            let logoResolvida = logoFinal;
+
+            try {
+                if (/^https?:\/\//i.test(logoFinal)) {
+                    logoResolvida = logoFinal;
+                } else if (typeof resolverImagemFirebase === 'function') {
+                    logoResolvida = resolverImagemFirebase(logoFinal);
+                }
+            } catch (erroResolver) {
+                console.warn('Falha ao resolver a logo:', erroResolver);
+                logoResolvida = logoPadrao;
+            }
+
+            if (!logoResolvida || typeof logoResolvida !== 'string' || logoResolvida.trim() === '') {
+                logoResolvida = logoPadrao;
+            }
+
+            if (logoImg) {
+                logoImg.src = logoResolvida;
+            }
+
+        } catch (e) {
+            console.error('Erro logo header:', e);
+            const logoImg = document.getElementById('abellaLogoImg');
+            const fallback = document.getElementById('abellaLogoFallback');
+            if (logoImg) logoImg.src = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media";
+            if (fallback) fallback.classList.remove('hidden');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await carregarLogoHeader();
+
+            if (typeof atualizarMiniCarrinho === 'function') {
+                atualizarMiniCarrinho();
+            }
+
+            await carregarProdutos();
+
+            if (typeof iniciarBusca === 'function') {
+                iniciarBusca();
+            }
+        } catch (e) {
+            console.error('Erro init:', e);
+            const loading = document.getElementById('loading');
+            if (loading) loading.classList.add('hidden');
+        }
+    });
+
+    function atualizarMiniCarrinho(){
+        try {
+            if (typeof carrinhoService !== 'undefined' && typeof money !== 'undefined') {
+                const resumo = carrinhoService.obterResumo();
+                if (document.getElementById('cart-count')) document.getElementById('cart-count').innerText = resumo.totalPecas || 0;
+            }
+        } catch(e) {
+            console.error('Erro mini carrinho:', e);
+        }
+    }
+
+    function normalizarTexto(texto){
+        return (texto || '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, '-');
+    }
+
+    async function carregarProdutos(){
+        try{
+            const loading = document.getElementById('loading');
+            if (loading) loading.innerHTML = 'Carregando produtos premium...';
+            const params = new URLSearchParams(window.location.search);
+            
+            const categoryParam = params.get('categoria') || params.get('cat');
+            const subcategoryParam = params.get('subcategoria') || params.get('sub') || '';
+            
+            const categoria = normalizarTexto(categoryParam);
+            const subcategoria = normalizarTexto(decodeURIComponent(subcategoryParam));
+            
+            let nomeFiltro = 'Todos os Produtos';
+            if(subcategoryParam) {
+                nomeFiltro = subcategoryParam;
+            } else if(categoryParam) {
+                nomeFiltro = categoryParam;
+            }
+            
+            const elHero = document.getElementById('heroTitulo');
+            if (elHero) elHero.innerText = nomeFiltro;
+
+            if(typeof produtoService === 'undefined' || typeof produtoService.listarTodos !== 'function') {
+                throw new Error('Serviço de produto indisponível.');
+            }
+            
+            const todos = await produtoService.listarTodos();
+            if(!Array.isArray(todos)){
+                throw new Error('produtoService.listarTodos() não retornou array');
+            }
+            
+            produtos = todos.filter(prod => {
+                if (prod.paused === true) return false;
+                const catProduto = normalizarTexto(prod.categorySlug || prod.category || prod.categoria || prod.categoriaSlug);
+                const subProduto = normalizarTexto(prod.subcategorySlug || prod.subcategory || prod.subcategoria);
+                if(!categoria) return true;
+                if(catProduto !== categoria) return false;
+                if(!subcategoria) return true;
+                return (subProduto === subcategoria || subProduto.includes(subcategoria) || subcategoria.includes(subProduto));
+            });
+
+            if (document.getElementById('totalProdutos')) document.getElementById('totalProdutos').innerText = produtos.length;
+            produtosFiltrados = [...produtos];
+            
+            let settingsPath = 'abella/settings';
+            if (typeof window.getAbellaPath === 'function') settingsPath = window.getAbellaPath('settings');
+            
+            const cfgSnap = await firebase.database().ref(settingsPath).once('value');
+            const cfg = cfgSnap.val() || {};
+            let heroUrl = subcategoria ? (cfg.bannerSubcategoria || cfg.banner_subcategoria || '') : (cfg.bannerHeroUrl || '');
+            
+            if(typeof resolverImagemFirebase === 'function' && heroUrl) {
+                const elHeroImg = document.getElementById('heroImagem');
+                if (elHeroImg) elHeroImg.src = resolverImagemFirebase(heroUrl);
+            }
+            if (loading) loading.classList.add('hidden');
+            renderizarProdutos();
+        }catch(err){
+            console.error('Erro carregar produtos:', err);
+            if (document.getElementById('loading')) document.getElementById('loading').innerHTML = 'Erro ao carregar produtos do catálogo.';
+        }
+    }
+
+    function renderizarProdutos(){
+        const container = document.getElementById('grid-produtos');
+        if (!container) return;
+        container.innerHTML = '';
+        if(produtosFiltrados.length === 0){
+            container.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-500 uppercase tracking-widest text-xs">Nenhum item localizado.</div>`;
             return;
         }
-    } else {
-        const inputPadrao = document.getElementById('qtdPadrao');
-        const qtd = inputPadrao ? parseInt(inputPadrao.value) || 1 : 1;
-        carrinhoService.adicionar(produtoAtual, qtd);
+        produtosFiltrados.forEach((prod, index) => {
+            const imgUrl = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(prod.image || prod.imagem || 'https://via.placeholder.com/600') : (prod.image || prod.imagem || 'https://via.placeholder.com/600');
+            const precoExibir = parseFloat(prod.precoFinal || prod.price || prod.preco || 0);
+            const card = document.createElement('div');
+            card.className = "produto-card bg-card rounded-2xl border border-zinc-900 overflow-hidden flex flex-col justify-between p-2 md:p-3";
+            card.innerHTML = `
+                <div class="cursor-pointer" onclick="abrirModalProduto(${index})">
+                    <div class="aspect-square w-full overflow-hidden bg-zinc-950 rounded-xl relative">
+                        <img src="${imgUrl}" class="w-full h-full object-cover" alt="${prod.name || prod.nome || 'Produto'}" loading="lazy">
+                    </div>
+                    <div class="pt-2 px-1">
+                        <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold truncate">${prod.sku || 'Premium'}</p>
+                        <h3 class="text-zinc-200 font-medium tracking-tight text-xs md:text-sm mt-0.5 line-clamp-2 min-h-[2rem] md:min-h-[2.5rem] leading-snug">${prod.name || prod.nome || 'Sem Nome'}</h3>
+                    </div>
+                </div>
+                <div class="pt-2 px-1">
+                    <div class="flex justify-between items-center gap-1 mb-2">
+                        <span class="gold font-bold text-sm md:text-base">${typeof money !== 'undefined' ? money.formatar(precoExibir) : 'R$ ' + precoExibir.toFixed(2)}</span>
+                    </div>
+                    <button onclick="abrirModalProduto(${index})" class="w-full h-9 bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] text-[#caa85c] font-bold text-[11px] uppercase tracking-wider rounded-lg transition-all duration-200">
+                        Ver Detalhes
+                    </button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
     }
 
-    atualizarMiniCarrinho();
-    fecharModalProduto();
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await carregarLogoHeader();
-        atualizarMiniCarrinho();
-        await carregarProdutos();
-        iniciarBusca();
-    } catch (e) {
-        console.error('Erro init:', e);
-        const loading = document.getElementById('loading');
-        if (loading) loading.classList.add('hidden');
+    function iniciarBusca(){
+        const inputBusca = document.getElementById('busca');
+        if(!inputBusca) return;
+        inputBusca.addEventListener('input', (e) => {
+            const termo = normalizarTexto(e.target.value);
+            if(!termo){
+                produtosFiltrados = [...produtos];
+            } else {
+                produtosFiltrados = produtos.filter(p => {
+                    const nome = normalizarTexto(p.name || p.nome);
+                    const sku = normalizarTexto(p.sku);
+                    return nome.includes(termo) || sku.includes(termo);
+                });
+            }
+            renderizarProdutos();
+        });
     }
-});
+
+    function alterarQtdManualNoElemento(idElemento, valor) {
+        const input = document.getElementById(idElemento);
+        if (!input) return;
+        let atual = parseInt(input.value) || 0;
+        atual += valor;
+        let minVal = parseInt(input.getAttribute('min')) || 0;
+        if (atual < minVal) atual = minVal;
+        input.value = atual;
+    }
+
+    function abrirModalProduto(index) {
+        const produto = produtosFiltrados[index];
+        if (!produto) { console.error('Produto não encontrado:', index); return; }
+        produtoAtual = produto;
+        
+        const preco = parseFloat(produto.precoFinal || produto.price || produto.preco || 0);
+        const peso = produto.peso || produto.weight || 0;
+        const imagem = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(produto.image || produto.imagem || '') : (produto.image || produto.imagem || '');
+        const modal = document.getElementById('modalProduto');
+        if (!modal) return;
+        
+        document.getElementById('modalNome').innerText = produto.name || produto.nome || 'Produto';
+        document.getElementById('modalPreco').innerText = typeof money !== 'undefined' ? money.formatar(preco) : 'R$ ' + preco.toFixed(2);
+        document.getElementById('modalSku').innerText = 'Ref: ' + (produto.sku || '-');
+        document.getElementById('modalPeso').innerText = peso + ' g';
+        document.getElementById('modalDescricao').innerText = produto.description || produto.descricao || 'Sem descrição adicional disponível.';
+        document.getElementById('modalImagem').src = imagem;
+
+        const valorPix = preco - (preco * (descontoPixGlobal || 0) / 100);
+        const modalPix = document.getElementById('modalPix');
+        if (modalPix) {
+            modalPix.innerText = typeof money !== 'undefined' ? money.formatar(valorPix) : 'R$ ' + valorPix.toFixed(2);
+        }
+
+        const containerQtdPadrao = document.getElementById('containerQtdPadrao');
+        const containerVariacoes = document.getElementById('variacoesContainer');
+        
+        if (containerVariacoes) {
+            containerVariacoes.innerHTML = '';
+            
+            // Tratamento corrigido: Verifica 'variacao', 'variacoes' ou 'variations'
+            // Substitua por esta versão atualizada:
+let variacoesRaw = produto.variacao || produto.variacoes || produto.variations || produto.iniciais || produto.letras || produto.variacaoLetra || '';
+            let listaVariacoes = [];
+
+            if (typeof variacoesRaw === 'string' && variacoesRaw.trim() !== '') {
+                // Caso o campo seja uma string separada por vírgulas (ex: "16, 17, 18")
+                listaVariacoes = variacoesRaw.split(',').map(v => v.trim()).filter(v => v !== '');
+            } else if (Array.isArray(variacoesRaw)) {
+                // Caso venha como um Array tradicional
+                listaVariacoes = variacoesRaw.map(v => String(v).trim()).filter(v => v !== '');
+            }
+            
+            if (listaVariacoes.length > 0) {
+                // Oculta o seletor padrão geral
+                if(containerQtdPadrao) containerQtdPadrao.classList.add('hidden');
+                
+                let variacoesHtml = `<p class="text-[10px] md:text-xs font-bold text-zinc-400 block mb-1">Quantidades por Variação / Tamanho:</p><div class="space-y-2">`;
+                
+                listaVariacoes.forEach((v, idx) => {
+                    variacoesHtml += `
+                        <div class="flex items-center justify-between bg-zinc-900/50 border border-zinc-800 p-2 rounded-xl gap-3">
+                            <span class="text-xs font-semibold text-zinc-200 truncate flex-1">Tamanho/Variação: ${v}</span>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="alterarQtdManualNoElemento('qtdVar_${idx}', -1)" class="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 font-bold text-sm hover:border-zinc-700 flex items-center justify-center select-none" type="button">-</button>
+                                <input type="number" id="qtdVar_${idx}" data-variacao="${v}" value="0" min="0" class="input-quantidade-variacao w-12 h-8 bg-zinc-950 border border-zinc-800 rounded-md text-center font-bold text-white text-xs focus:outline-none focus:border-[#caa85c]">
+                                <button onclick="alterarQtdManualNoElemento('qtdVar_${idx}', 1)" class="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 font-bold text-sm hover:border-zinc-700 flex items-center justify-center select-none" type="button">+</button>
+                            </div>
+                        </div>`;
+                });
+                
+                variacoesHtml += `</div>`;
+                containerVariacoes.innerHTML = variacoesHtml;
+            } else {
+                // Mostra o seletor padrão se NÃO houver variações cadastradas
+                if(containerQtdPadrao) containerQtdPadrao.classList.remove('hidden');
+                document.getElementById('qtdPadrao').value = 1;
+            }
+        }
+        modal.classList.remove('hidden');
+    }
+
+    function fecharModalProduto() {
+        const modal = document.getElementById('modalProduto');
+        if (modal) modal.classList.add('hidden');
+        produtoAtual = null;
+    }
+
+    function adicionarAoCarrinho() {
+        if (!produtoAtual) return;
+
+        if (typeof carrinhoService === 'undefined' || typeof carrinhoService.adicionar !== 'function') {
+            alert('Erro: Serviço de carrinho não carregado corretamente.');
+            return;
+        }
+
+        const inputsVariacao = document.querySelectorAll('.input-quantidade-variacao');
+
+        if (inputsVariacao.length > 0) {
+            let totalAdicionado = 0;
+
+            inputsVariacao.forEach(input => {
+                const qtd = parseInt(input.value) || 0;
+                const varNome = input.getAttribute('data-variacao');
+                
+                if (qtd > 0 && varNome) {
+                    carrinhoService.adicionar(produtoAtual, qtd, varNome);
+                    totalAdicionado++;
+                }
+            });
+
+            if (totalAdicionado === 0) {
+                alert('Por favor, defina a quantidade para pelo menos um tamanho/variação.');
+                return;
+            }
+            
+            atualizarMiniCarrinho();
+            fecharModalProduto();
+
+        } else {
+            const qtdInput = document.getElementById('qtdPadrao');
+            const quantidade = parseInt(qtdInput.value) || 1;
+            
+            carrinhoService.adicionar(produtoAtual, quantidade, '');
+            atualizarMiniCarrinho();
+            fecharModalProduto();
+        }
+    }
 </script>
 </body>
 </html>

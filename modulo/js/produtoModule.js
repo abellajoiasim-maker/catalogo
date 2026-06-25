@@ -71,7 +71,6 @@ export const ProdutoModule = {
             const statusColor = !isPausado ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30';
             const statusText = !isPausado ? 'ATIVO' : 'PAUSADO';
 
-            // Formatação dos preços originais
             const precoBase = parseFloat(p.price || p.precoFinal || p.preco || 0);
             const precoPromo = parseFloat(p.promo || 0);
             
@@ -137,16 +136,13 @@ export const ProdutoModule = {
             width: '650px'
         });
         
-        setTimeout(() => {
-            document.getElementById('btn-salvar-produto')?.addEventListener('click', () => this.salvarProduto('novo'));
-        }, 100);
+        this._vincularOuvintesFormulario('novo');
     },
 
     abrirEditarProduto(id) {
         const produto = this.produtosEmMemoria[id];
         if (!produto) return;
 
-        // Dispara o formulário injetando o objeto antigo completo
         const formHtml = this._gerarFormularioHTML('editar', id, produto, {});
         Drawer.open({
             title: `✏️ EDITAR PRODUTO`,
@@ -154,8 +150,28 @@ export const ProdutoModule = {
             width: '650px'
         });
 
+        this._vincularOuvintesFormulario(id);
+    },
+
+    /**
+     * Vincula listeners de salvamento e atualização dinâmica de imagem em tempo real
+     * @private
+     */
+    _vincularOuvintesFormulario(idOuAcao) {
         setTimeout(() => {
-            document.getElementById('btn-salvar-produto')?.addEventListener('click', () => this.salvarProduto(id));
+            // Gatilho do botão salvar
+            document.getElementById('btn-salvar-produto')?.addEventListener('click', () => this.salvarProduto(idOuAcao));
+
+            // Ouvinte dinâmico para atualizar o Preview da Imagem digitada/colada
+            const inputImg = document.getElementById('prod-image');
+            const previewImg = document.getElementById('preview-modal-produto');
+            
+            inputImg?.addEventListener('input', (e) => {
+                if (previewImg) {
+                    previewImg.src = e.target.value.trim();
+                    previewImg.style.opacity = e.target.value.trim() ? '1' : '0';
+                }
+            });
         }, 100);
     },
 
@@ -242,12 +258,11 @@ export const ProdutoModule = {
     },
 
     /**
-     * Formulário Estendido contendo todos os inputs operacionais da Abella Joias
+     * Formulário Estendido contendo todos os inputs e a caixa visual de Preview de Foto
      */
     _gerarFormularioHTML(modo, id = '', p = {}, categorias = {}) {
         const isEdit = modo === 'editar';
         
-        // Mapeamentos de dados para os inputs
         const nomeValor = isEdit ? (p.nome || p.name || '') : '';
         const skuValor = isEdit ? (p.sku || p.ref || '') : '';
         const precoValor = isEdit ? (p.price || p.precoFinal || p.preco || '') : '';
@@ -260,6 +275,15 @@ export const ProdutoModule = {
 
         return `
             <div class="space-y-4 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
+                
+                <div>
+                    <label class="text-xs text-zinc-400 font-bold block mb-1">Visualização Prévia do Produto</label>
+                    <div class="w-full h-44 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden relative flex items-center justify-center border-dashed">
+                        <div class="absolute text-xs text-zinc-600 select-none pointer-events-none">Sem imagem ou URL inválida</div>
+                        <img id="preview-modal-produto" src="${imgDesktop}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'" onload="this.style.opacity='1'">
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-xs text-zinc-400 font-bold block mb-1">SKU / Referência</label>

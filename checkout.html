@@ -580,17 +580,18 @@ function atualizarResumo() {
             }
         }
         
-        // CORREÇÃO DO PESO: Regra de (grs.) até 999,99g, depois (kg.)
+       // CORREÇÃO DO PESO: Exibição unificada sempre em grs. com formato de milhar (Ex: 1.250,50 grs.)
         const pesoEl = document.getElementById('res-peso');
         if (pesoEl) {
             const pesoBruto = Number(t.peso || 0);
-            if (pesoBruto >= 1000) {
-                const valorKg = (pesoBruto / 1000).toFixed(2).replace('.', ',');
-                pesoEl.innerText = `${valorKg} kg.`;
-            } else {
-                const valorGrs = pesoBruto.toFixed(2).replace('.', ',');
-                pesoEl.innerText = `${valorGrs} grs.`;
-            }
+            
+            // Formata usando o padrão pt-BR para garantir pontos no milhar e vírgula nos decimais
+            const pesoFormatado = new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(pesoBruto);
+
+            pesoEl.innerText = `${pesoFormatado} grs.`;
         }
 
         // Frete

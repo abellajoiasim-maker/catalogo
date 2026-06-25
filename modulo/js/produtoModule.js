@@ -151,12 +151,17 @@ export const ProdutoModule = {
      * Salva o produto (Criação ou Edição) lendo os dados do formulário do Drawer
      * @param {string} idOuAcao - ID do produto ou a string 'novo'
      */
+   /**
+     * Salva o produto (Criação ou Edição) lendo os dados completos do formulário do Drawer
+     * @param {string} idOuAcao - ID do produto ou a string 'novo'
+     */
     async salvarProduto(idOuAcao) {
-        // Coleta os valores dos inputs do Drawer
-        const nome = document.getElementById('prod-nome').value;
-        const preco = document.getElementById('prod-preco').value;
-        const ref = document.getElementById('prod-ref').value;
-        // ... (Adicione os outros campos conforme seu modelo de dados)
+        const nome = document.getElementById('prod-nome')?.value.trim();
+        const preco = document.getElementById('prod-preco')?.value;
+        const ref = document.getElementById('prod-ref')?.value.trim();
+        const imagem = document.getElementById('newImagem')?.value.trim() || '';
+        const categoria = document.getElementById('prod-categoria')?.value || '';
+        const subcategoria = document.getElementById('prod-subcategoria')?.value || '';
 
         if (!nome || !preco) {
             alert("Nome e preço são obrigatórios!");
@@ -167,28 +172,64 @@ export const ProdutoModule = {
             nome: nome,
             preco: parseFloat(preco.replace(',', '.')),
             ref: ref || Date.now().toString(),
+            imagem: imagem,
+            categoria: categoria,
+            subcategoria: subcategoria,
             ativo: true,
             atualizadoEm: new Date().toISOString()
         };
 
         try {
             if (idOuAcao === 'novo') {
+                dadosProduto.criadoEm = new Date().toISOString();
                 await this.dbRef.push(dadosProduto);
             } else {
                 await this.dbRef.child(idOuAcao).update(dadosProduto);
             }
             Drawer.close();
-            // Um toast de sucesso seria legal aqui!
         } catch (error) {
             console.error("Erro ao salvar:", error);
-            alert("Erro ao salvar produto.");
+            alert("Erro al salvar produto.");
         }
     },
 
     /**
-     * Duplica um item e adiciona (Cópia) ao nome
-     * @param {string} id 
+     * Módulo Privado: Gera a estrutura do formulário baseando-se no produto
+     * @private
      */
+    _gerarFormularioHTML(modo, id = '', p = {}) {
+        const isEdit = modo === 'editar';
+        
+        return `
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-zinc-400">Referência (REF)</label>
+                    <input type="text" id="prod-ref" value="${isEdit ? p.ref || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400">Nome do Produto</label>
+                    <input type="text" id="prod-nome" value="${isEdit ? p.nome || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]">
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-400">Preço (R$)</label>
+                    <input type="text" id="prod-preco" value="${isEdit ? p.preco || '' : ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-white outline-none focus:border-[#caa85c]" placeholder="0.00">
+                </div>
+                
+                <div>
+                    <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Upload / gs:// / Link)</label>
+                    <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
+                       <div class="absolute text-xs text-zinc-600">Preview da Foto</div>
+                       <img id="previewProdutoNovo" src="${isEdit ? p.imagem || '' : ''}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
+                    </div>
+                    <input id="newImagem" value="${isEdit ? p.imagem || '' : ''}" class="input-dark" placeholder="Cole a URL ou link gs://">
+                </div>
+
+                <button id="btn-salvar-produto" type="button" class="w-full bg-[#caa85c] text-black font-bold py-3 rounded hover:bg-opacity-90 transition-opacity mt-6">
+                    ${isEdit ? '💾 Salvar Alterações' : '➕ Adicionar Produto'}
+                </button>
+            </div>
+        `;
+    }
     async duplicarProduto(id) {
         const produtoOriginal = this.produtosEmMemoria[id];
         if (!produtoOriginal) return;

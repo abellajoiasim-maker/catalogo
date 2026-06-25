@@ -13,6 +13,7 @@ export const ProdutoModule = {
         this.dbRef = firebaseDb.ref(nóOficial);
         this.subcategoriasEmMemoria = subcategoriasCache || {};
         
+        // Chamadas explícitas pelo nome do módulo para evitar erro de escopo
         ProdutoModule._configurarEventosGerais();
         ProdutoModule.listarProdutos();
     },
@@ -64,7 +65,7 @@ export const ProdutoModule = {
         if (!p) return;
         
         const optionsSubcat = Object.entries(this.subcategoriasEmMemoria).map(([subId, sub]) => 
-            `<option value="${subId}" ${p.subcategoria === subId ? 'selected' : ''}>${sub.nome}</option>`
+            `<option value="${subId}" ${p.subcategoria === subId ? 'selected' : ''}>${sub.nome || sub.titulo || 'Sem Nome'}</option>`
         ).join('');
 
         const formHtml = `
@@ -99,7 +100,6 @@ export const ProdutoModule = {
             image: document.getElementById('prod-image').value,
             updatedAt: Date.now()
         };
-
         await this.dbRef.child(id).update(dados);
         Drawer.close();
     },

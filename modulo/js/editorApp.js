@@ -70,6 +70,9 @@ const EditorApp = {
     /**
      * Intercepta os botões superiores do Shell Administrativo
      */
+  /**
+     * Intercepta os botões superiores do Shell Administrativo
+     */
     _configurarBotoesGlobais() {
         // Botão "➕ Criar Item" Superior
         document.getElementById('btnCriarNovo')?.addEventListener('click', () => {
@@ -78,7 +81,8 @@ const EditorApp = {
             
             switch (abaAtiva) {
                 case 'produtos':
-                    ProdutoModule.abrirNovoProduto();
+                    // Passa o cache de categorias para popular os seletores se necessário
+                    ProdutoModule.abrirNovoProduto(CategoriaModule.categoriasEmMemoria);
                     break;
                 case 'categorias':
                     CategoriaModule.abrirNovaCategoria();
@@ -88,10 +92,35 @@ const EditorApp = {
                     SubcategoriaModule.abrirNovaSubcategoria(CategoriaModule.categoriasEmMemoria);
                     break;
                 default:
-                    ProdutoModule.abrirNovoProduto();
+                    ProdutoModule.abrirNovoProduto(CategoriaModule.categoriasEmMemoria);
             }
         });
 
+        // Botão "🔄 Sincronizar Vitrine" Superior
+        document.getElementById('btnRefresh')?.addEventListener('click', () => {
+            const btn = document.getElementById('btnRefresh');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '🔄 Sincronizando...';
+            btn.disabled = true;
+            
+            // Força a releitura manual e imediata dos nós no Firebase
+            ProdutoModule.listarProdutos();
+            CategoriaModule.listarCategorias();
+            SubcategoriaModule.listarSubcategorias();
+
+            setTimeout(() => {
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }, 800);
+        });
+
+        // Evento customizado para comunicação limpa entre módulos quando necessário
+        window.addEventListener('pedirCategoriasParaSub', (e) => {
+            if (typeof e.detail?.callback === 'function') {
+                e.detail.callback(CategoriaModule.categoriasEmMemoria);
+            }
+        });
+    }
         // Evento customizado para quando o módulo de Subcategorias pedir edição, carregar as categorias injetadas
         window.addEventListener('pedirCategoriasParaSub', (e) => {
             // Permite comunicação limpa entre os módulos de forma desacoplada

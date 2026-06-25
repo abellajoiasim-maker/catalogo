@@ -388,7 +388,7 @@
 
                             <span>Peso Total Estimado:</span>
 
-                            <span id="resumo-peso" class="font-bold text-white">0.00g</span>
+                            <span id="resumo-peso" class="font-bold text-white">0,00g</span>
 
                         </div>
 
@@ -476,20 +476,18 @@
 
 
 
-    <script>
-
+<script>
         const db = firebase.database();
-
         let configGlobal = {};
 
-        // Adicione isto logo abaixo de "let configGlobal = {};" para evitar quebra do script
-if (typeof formatarPeso !== 'function') {
-    window.formatarPeso = function(peso) {
-        const p = parseFloat(peso) || 0;
-        return p.toFixed(2);
-    };
-}
-
+        // Força a função de formatação a usar o padrão de milhar pt-BR com 2 casas decimais
+        window.formatarPeso = function(peso) {
+            const p = parseFloat(peso) || 0;
+            return new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(p);
+        };
 
 
         function resolverImagemFirebase(url) {

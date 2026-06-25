@@ -477,7 +477,6 @@
 
 async function carregarConfiguracoes() {
     try {
-        // Tenta buscar as configurações diretamente do Firebase
         let pathSettings = 'settings';
         if (typeof window.getAbellaPath === 'function') {
             pathSettings = window.getAbellaPath('settings');
@@ -494,12 +493,11 @@ async function carregarConfiguracoes() {
             CONFIG.whatsEmpresa = (s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
         }
 
-        // Resolução Forense da Logo (Força o link direto do bucket Abella Joias)
+        // Resolução Forense da Logo (Link direto do bucket principal)
         const img = document.getElementById('abellaLogoImg');
         const fallback = document.getElementById('abellaLogoFallback');
         
         if (img) {
-            // URL direta resolvida do seu bucket principal que sempre funciona
             let urlFinal = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2Flogo.png?alt=media";
             
             img.src = urlFinal;
@@ -515,6 +513,65 @@ async function carregarConfiguracoes() {
         }
     } catch (e) {
         console.warn('Erro ao processar configurações da logo:', e);
+    }
+}
+
+function atualizarResumo() {
+    try {
+        const t = calcularTotais();
+        
+        // CORREÇÃO DA QUANTIDADE: Mapeia dinamicamente do objeto retornado
+        const qtdEl = document.getElementById('res-qtd');
+        if (qtdEl) {
+            const quantidadeReal = t.totalPecas ?? t.quantidade ?? t.qtd ?? 0;
+            qtdEl.innerText = `${quantidadeReal} pçs`;
+        }
+        
+        // Subtotal
+        const subtotalEl = document.getElementById('res-subtotal');
+        if (subtotalEl) subtotalEl.innerText = formatarMoedaSeguro(t.subtotal);
+        
+        // Desconto PIX
+        const descontoEl = document.getElementById('res-desconto');
+        const boxDesconto = document.getElementById('box-desconto');
+        if (descontoEl) {
+            descontoEl.innerText = `- ${formatarMoedaSeguro(t.desconto)}`;
+            if (boxDesconto) {
+                if (t.desconto > 0) {
+                    boxDesconto.classList.remove('hidden');
+                    boxDesconto.classList.add('flex');
+                } else {
+                    boxDesconto.classList.remove('flex');
+                    boxDesconto.classList.add('hidden');
+                }
+            }
+        }
+        
+        // CORREÇÃO DO PESO: Regra estrita de (grs.) até 999,99g, depois (kg.)
+        const pesoEl = document.getElementById('res-peso');
+        if (pesoEl) {
+            const pesoBruto = Number(t.peso || 0);
+            if (pesoBruto >= 1000) {
+                const valorKg = (pesoBruto / 1000).toFixed(2).replace('.', ',');
+                pesoEl.innerText = `${valorKg} kg.`;
+            } else {
+                const valorGrs = pesoBruto.toFixed(2).replace('.', ',');
+                pesoEl.innerText = `${valorGrs} grs.`;
+            }
+        }
+
+        // Frete
+        const freteEl = document.getElementById('res-frete');
+        if (freteEl) {
+            freteEl.innerText = t.frete > 0 ? formatarMoedaSeguro(t.frete) : 'Grátis (Limeira)';
+        }
+
+        // Total Final
+        const totalEl = document.getElementById('res-total');
+        if (totalEl) totalEl.innerText = formatarMoedaSeguro(t.total);
+
+    } catch (error) {
+        console.error('[ERRO INTERNO ATUALIZAR RESUMO]:', error);
     }
 }
         function renderizarItens() {
@@ -577,114 +634,7 @@ async function carregarConfiguracoes() {
             return { qtd, peso, subtotal, desconto, frete, total, pagamento };
         }
 
-function atualizarResumo() {
-    try {
-        const t = calcularTotais();
-        
-        // CORREÇÃO DA QUANTIDADE: Mapeia tanto totalPecas quanto pesoTotal/quantidade se houver
-        const qtdEl = document.getElementById('res-qtd');
-        if (qtdEl) {
-            const quantidadeReal = t.totalPecas ?? t.quantidade ?? t.qtd ?? 0;
-            qtdEl.innerText = `${quantidadeReal} pçs`;
-        }
-        
-        // Subtotal
-        const subtotalEl = document.getElementById('res-subtotal');
-        if (subtotalEl) subtotalEl.innerText = formatarMoedaSeguro(t.subtotal);
-        
-        // Desconto PIX
-        const descontoEl = document.getElementById('res-desconto');
-        const boxDesconto = document.getElementById('box-desconto');
-        if (descontoEl) {
-            descontoEl.innerText = `- ${formatarMoedaSeguro(t.desconto)}`;
-            if (boxDesconto) {
-                if (t.desconto > 0) {
-                    boxDesconto.classList.remove('hidden');
-                    boxDesconto.classList.add('flex');
-                } else {
-                    boxDesconto.classList.remove('flex');
-                    boxDesconto.classList.add('hidden');
-                }
-            }
-        }
-        
-        // CORREÇÃO DO PESO: Regra estrita de (grs.) até 1.000g, depois (kg.)
-        const pesoEl = document.getElementById('res-peso');
-        if (pesoEl) {
-            const pesoBruto = Number(t.peso || 0);
-            if (pesoBruto >= 1000) {
-                const valorKg = (pesoBruto / 1000).toFixed(2).replace('.', ',');
-                pesoEl.innerText = `${valorKg} kg.`;
-            } else {
-                const valorGrs = pesoBruto.toFixed(2).replace('.', ',');
-                pesoEl.innerText = `${valorGrs} grs.`;
-            }
-        }
 
-        // Frete
-        const freteEl = document.getElementById('res-frete');
-        if (freteEl) {
-            freteEl.innerText = t.frete > 0 ? formatarMoedaSeguro(t.frete) : 'Grátis (Limeira)';
-        }
-
-        // Total Final
-        const totalEl = document.getElementById('res-total');
-        if (totalEl) totalEl.innerText = formatarMoedaSeguro(t.total);
-
-    } catch (error) {
-        console.error('[ERRO INTERNO ATUALIZAR RESUMO]:', error);
-    }
-}
-        
-       // Peso (Garante a exibição automática da unidade g ou kg vinda do peso.js)
-        const pesoEl = document.getElementById('res-peso');
-        if (pesoEl) {
-            let pesoFormatado = "";
-            
-            if (typeof window.formatarPesoSeguro === 'function') {
-                pesoFormatado = window.formatarPesoSeguro(t.peso);
-            } else if (typeof window.formatarPeso === 'function') {
-                pesoFormatado = window.formatarPeso(t.peso);
-            } else {
-                pesoFormatado = t.peso >= 1000 
-                    ? `${(t.peso / 1000).toFixed(2).replace('.', ',')} kg` 
-                    : `${t.peso.toFixed(2).replace('.', ',')} g`;
-            }
-
-            // Se o retorno da função por acaso não trouxer a unidade (g/kg), nós adicionamos manualmente
-            if (!pesoFormatado.includes('g') && !pesoFormatado.includes('kg')) {
-                pesoFormatado += t.peso >= 1000 ? ' kg' : ' g';
-            }
-
-            pesoEl.innerText = pesoFormatado;
-        }
-
-        // Frete (Evita o erro de elemento nulo procurando por 'res-frete')
-        const freteEl = document.getElementById('res-frete');
-        if (freteEl) {
-            freteEl.innerText = t.frete > 0 ? formatarMoedaSeguro(t.frete) : 'Grátis (Limeira)';
-        }
-
-        // Total Final
-        const totalEl = document.getElementById('res-total');
-        if (totalEl) totalEl.innerText = formatarMoedaSeguro(t.total);
-
-        // Aviso Dinâmico de Frete (opcional, se houver o container na tela)
-        const avisoFrete = document.getElementById('aviso-frete-checkout');
-        if (avisoFrete) {
-            if (t.subtotal >= CONFIG.freteGratisAlvo) {
-                avisoFrete.innerHTML = `🎉 Parabéns! Seu pedido atingiu <b>${formatarMoedaSeguro(CONFIG.freteGratisAlvo)}</b> e ganhou <b>Frete Grátis</b> para Limeira!`;
-                avisoFrete.className = "p-3 rounded-xl bg-emerald-950/40 border border-emerald-900/40 text-emerald-400 text-xs text-center";
-            } else {
-                const restante = CONFIG.freteGratisAlvo - t.subtotal;
-                avisoFrete.innerHTML = `Faltam apenas <b>${formatarMoedaSeguro(restante)}</b> para garantir o <b>Frete Grátis</b> para Limeira.`;
-                avisoFrete.className = "p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-zinc-400 text-xs text-center";
-            }
-        }
-    } catch (error) {
-        console.error('[ERRO INTERNO ATUALIZAR RESUMO]:', error);
-    }
-}
         function visualizarRomaneio() {
             const t = calcularTotais();
             const cliente = document.getElementById('cli-nome')?.value || 'Não informado';

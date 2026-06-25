@@ -477,12 +477,17 @@
 
 async function carregarConfiguracoes() {
     try {
+        // Tenta pegar o caminho dinâmico. Se falhar, usa o padrão 'settings'
         let pathSettings = 'settings';
         if (typeof window.getAbellaPath === 'function') {
             pathSettings = window.getAbellaPath('settings');
+        } else if (typeof window.getStoragePath === 'function') {
+            pathSettings = window.getStoragePath('settings');
         }
 
         const snap = await db.ref(pathSettings).once('value');
+        let logoPath = '';
+
         if (snap.exists()) {
             const s = snap.val() || {};
             CONFIG.descontoPix = parseFloat(s.pix ?? s.pixDesc ?? s.descontoPix ?? 5);
@@ -491,24 +496,52 @@ async function carregarConfiguracoes() {
             CONFIG.freteGratisAlvo = parseFloat(s.freteGratisAlvo ?? 100);
             CONFIG.pedidoMinimo = parseFloat(s.pedidoMinimo ?? 300);
             CONFIG.whatsEmpresa = (s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
+            
+            // Pega o caminho salvo no banco
+            logoPath = s.logo || s.logoUrl || '';
         }
 
-        // Resolução Forense da Logo (Link direto do bucket principal)
+        // Força o fallback inteligente caso o path venha vazio do banco
+        if (!logoPath && typeof window.obterLogo === 'function') {
+            logoPath = window.obterLogo();
+        }
+
         const img = document.getElementById('abellaLogoImg');
         const fallback = document.getElementById('abellaLogoFallback');
         
         if (img) {
-            let urlFinal = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2Flogo.png?alt=media";
+            // Se não achou no banco, aponta para a URL direta e segura do seu bucket fixo
+            let urlFinal = logoPath ? logoPath.trim() : "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2Flogo.png?alt=media";
             
+            if (urlFinal.startsWith('gs://')) {
+                if (window.ImageHelper && typeof window.ImageHelper.converterGsUrl === 'function') {
+                    urlFinal = window.ImageHelper.converterGsUrl(urlFinal);
+                } else {
+                    const semGs = urlFinal.replace('gs://', '');
+                    const primeiraBarra = semGs.indexOf('/');
+                    if (primeiraBarra !== -1) {
+                        const bucket = semGs.substring(0, primeiraBarra);
+                        const caminho = semGs.substring(primeiraBarra + 1);
+                        urlFinal = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
+                    }
+                }
+            } else if (!urlFinal.startsWith('http')) {
+                // Se for um caminho relativo, monta a URL do storage padrão
+                urlFinal = `https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/${encodeURIComponent(urlFinal)}?alt=media`;
+            }
+
             img.src = urlFinal;
             img.onload = () => {
                 img.classList.remove('hidden');
                 if (fallback) fallback.classList.add('hidden');
             };
             img.onerror = () => {
-                console.warn('Falha ao carregar logo principal, mantendo fallback.');
-                img.classList.add('hidden');
-                if (fallback) fallback.classList.remove('hidden');
+                // Se tudo falhar, ele usa a logo padrão absoluta da Abella
+                img.src = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2Flogo.png?alt=media";
+                img.onload = () => {
+                    img.classList.remove('hidden');
+                    if (fallback) fallback.classList.add('hidden');
+                };
             };
         }
     } catch (e) {
@@ -520,10 +553,10 @@ function atualizarResumo() {
     try {
         const t = calcularTotais();
         
-        // CORREÇÃO DA QUANTIDADE: Mapeia dinamicamente do objeto retornado
+        // CORREÇÃO DA QUANTIDADE: Varre todas as propriedades possíveis retornadas pelo seu carrinho
         const qtdEl = document.getElementById('res-qtd');
         if (qtdEl) {
-            const quantidadeReal = t.totalPecas ?? t.quantidade ?? t.qtd ?? 0;
+            const quantidadeReal = t.totalPecas ?? t.quantidade ?? t.qtd ?? t.totalItens ?? 0;
             qtdEl.innerText = `${quantidadeReal} pçs`;
         }
         
@@ -547,7 +580,7 @@ function atualizarResumo() {
             }
         }
         
-        // CORREÇÃO DO PESO: Regra estrita de (grs.) até 999,99g, depois (kg.)
+        // CORREÇÃO DO PESO: Regra de (grs.) até 999,99g, depois (kg.)
         const pesoEl = document.getElementById('res-peso');
         if (pesoEl) {
             const pesoBruto = Number(t.peso || 0);

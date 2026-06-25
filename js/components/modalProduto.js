@@ -1,5 +1,7 @@
-// components/modalProduto.js
-export const ModalProduto = {
+// js/components/modalProduto.js
+// Abella Joias - ModalProduto v3.0 (Corrigido)
+
+const ModalProduto = {
     abrir(produtoCompleto) {
         if (!produtoCompleto) return;
         window.produtoAtual = produtoCompleto; // Mantém o contrato íntegro na memória
@@ -7,14 +9,24 @@ export const ModalProduto = {
         const modal = document.getElementById('modalProduto');
         if (!modal) return;
 
-        const imgPrincipal = ImageHelper.getPrimary(produtoCompleto);
-        const precoFinal = DescontoService.calcularPrecoFinal(produtoCompleto);
+        // CORREÇÃO: Ajustado para o método correto obterImagem do ImageHelper
+        const imgPrincipal = window.ImageHelper?.obterImagem 
+            ? window.ImageHelper.obterImagem(produtoCompleto)
+            : 'https://via.placeholder.com/800x800/111111/caa85c?text=ABELLA';
+
+        const precoFinal = window.DescontoService?.calcularPrecoFinal 
+            ? window.DescontoService.calcularPrecoFinal(produtoCompleto)
+            : (produtoCompleto.preco || 0);
         
-        document.getElementById('modal-nome').innerText = produtoCompleto.nome;
-        document.getElementById('modal-sku').innerText = `SKU: ${produtoCompleto.codigo || ''}`;
+        document.getElementById('modal-nome').innerText = produtoCompleto.nome || produtoCompleto.name || 'Produto';
+        document.getElementById('modal-sku').innerText = `SKU: ${produtoCompleto.codigo || produtoCompleto.sku || ''}`;
         document.getElementById('modal-descricao').innerText = produtoCompleto.descricao || 'Sem descrição disponível.';
-        document.getElementById('modal-peso').innerText = `${produtoCompleto.peso || 0}g`;
-        document.getElementById('modal-preco').innerText = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(precoFinal);
+        document.getElementById('modal-peso').innerText = `${produtoCompleto.peso || produtoCompleto.weight || 0}g`;
+        
+        // Formatação monetária segura usando o MoneyUtils
+        document.getElementById('modal-preco').innerText = window.MoneyUtils?.format
+            ? window.MoneyUtils.format(precoFinal)
+            : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(precoFinal);
         
         const containerImagem = document.getElementById('modal-imagem-container');
         if (containerImagem) {
@@ -45,14 +57,14 @@ export const ModalProduto = {
                     containerVariacoes.appendChild(row);
                 });
             } else {
-                // Produto sem variações ganha um contador padrão
+                // Produto sem variações ganha um contador padrão (Mínimo 1)
                 containerVariacoes.innerHTML = `
                     <div class="flex items-center justify-between p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl">
                         <span class="text-sm text-zinc-400">Quantidade Desejada:</span>
                         <div class="flex items-center gap-2">
-                            <button onclick="window.ajustarQtdVar('padrao', -1)" class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center font-bold text-white">-</button>
+                            <button onclick="window.ajustarQtdVar('padrao', -1, true)" class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center font-bold text-white">-</button>
                             <input type="number" id="qtd-var-padrao" value="1" min="1" class="w-12 h-8 bg-zinc-950 border border-zinc-800 rounded-lg text-center text-sm font-bold text-white" readonly>
-                            <button onclick="window.ajustarQtdVar('padrao', 1)" class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center font-bold text-white">+</button>
+                            <button onclick="window.ajustarQtdVar('padrao', 1, true)" class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center font-bold text-white">+</button>
                         </div>
                     </div>
                 `;
@@ -63,11 +75,18 @@ export const ModalProduto = {
     }
 };
 
-window.ajustarQtdVar = function(id, delta) {
+// Exposição global compatível com o resto do projeto
+window.ModalProduto = ModalProduto;
+
+window.ajustarQtdVar = function(id, delta, isPadrao = false) {
     const input = document.getElementById(`qtd-var-${id}`);
     if (!input) return;
     let val = parseInt(input.value) || 0;
     val += delta;
-    if (val < 0) val = 0;
+    
+    // Se for o produto padrão (sem variação), o mínimo permitido é 1
+    const minPermitido = isPadrao ? 1 : 0;
+    if (val < minPermitido) val = minPermitido;
+    
     input.value = val;
 };

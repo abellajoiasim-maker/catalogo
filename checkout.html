@@ -354,24 +354,21 @@
                 </div>
             </div>
 
-                    <div class="mt-8 space-y-4 pb-2">
-                        <button onclick="visualizarRomaneio()" class="w-full h-14 rounded-2xl border border-white/10 bg-zinc-900/40 hover:bg-zinc-800/60 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em] flex items-center justify-center gap-2 shadow-sm">
-                            <span>👁</span> Visualizar Romaneio
-                        </button>
-                        
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="gerarPDF(false)" class="h-14 rounded-2xl border border-white/10 bg-zinc-900/40 hover:bg-zinc-800/60 hover:border-[#caa85c] transition-all text-xs font-black uppercase tracking-[0.15em] flex items-center justify-center gap-1.5">
-                                📄 Baixar PDF
-                            </button>
-                            <button onclick="gerarPDF(true)" class="h-14 rounded-2xl border border-white/10 bg-zinc-900/40 hover:bg-zinc-800/60 hover:border-[#caa85c] transition-all text-xs font-black uppercase tracking-[0.15em] flex items-center justify-center gap-1.5">
-                                🖨 Imprimir
-                            </button>
-                        </div>
+                    <div class="mt-6 flex flex-col sm:flex-row items-center justify-end gap-3 w-full border-t border-zinc-900 pt-4">
+  
+  <button onclick="visualizarRomaneio()" class="w-full sm:w-auto md:min-w-[180px] whitespace-nowrap px-5 py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 tracking-wide uppercase">
+    👁️ Visualizar Romaneio
+  </button>
+  
+  <button onclick="gerarPDFRomaneio()" class="w-full sm:w-auto md:min-w-[180px] whitespace-nowrap px-5 py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 tracking-wide uppercase">
+    📥 Baixar PDF
+  </button>
+  
+  <button onclick="window.print()" class="w-full sm:w-auto md:min-w-[180px] whitespace-nowrap px-5 py-3 bg-[#caa85c] hover:bg-[#bfa054] text-black font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 tracking-wide uppercase shadow-lg shadow-[#caa85c]/10">
+    🖨️ Imprimir
+  </button>
 
-                        <button id="btnFinalizar" onclick="finalizarPedido()" class="w-full h-16 rounded-2xl bg-[#caa85c] hover:bg-[#b99a53] text-black font-black uppercase tracking-[0.2em] transition-all duration-300 shadow-xl shadow-[#caa85c]/10 transform hover:-translateY-0.5 active:translateY(0) block">
-                            Finalizar Pedido
-                        </button>
-                    </div>
+</div>
                 </div>
             </div>
 
@@ -669,86 +666,88 @@ function atualizarResumo() {
         }
 
 
-        function visualizarRomaneio() {
-            const t = calcularTotais();
-            const cliente = document.getElementById('cli-nome')?.value || 'Não informado';
-            const whats = document.getElementById('cli-whats')?.value || 'Não informado';
-            const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
-            const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
+       function visualizarRomaneio() {
+    const t = calcularTotais();
+    const cliente = document.getElementById('cli-nome')?.value || 'Não informado';
+    const whats = document.getElementById('cli-whats')?.value || 'Não informado';
+    const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
+    const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
 
-            let html = `
-                <div style="text-align:center; margin-bottom:20px; font-family:sans-serif;">
-                    <h2 style="color:#caa85c; margin:0; font-size:24px; letter-spacing:2px;">ABELLA JOIAS</h2>
-                    <p style="margin:5px 0; color:#a1a1aa; font-size:12px;">ROMANEIO PREMIUM</p>
-                    <p style="margin:5px 0; color:#71717a; font-size:11px;">${new Date().toLocaleString('pt-BR')}</p>
-                </div>
-                <div style="margin-bottom:20px; border:1px solid #27272a; padding:15px; border-radius:12px; background:#09090b;">
-                    <div style="margin-bottom:4px;"><b>CLIENTE:</b> ${cliente}</div>
-                    <div style="margin-bottom:4px;"><b>WHATSAPP:</b> ${whats}</div>
-                    <div style="margin-bottom:4px;"><b>CIDADE:</b> ${cidade}</div>
-                    <div><b>PAGAMENTO:</b> ${t.pagamento}</div>
-                </div>
-                <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px;">
-                    <thead>
-                        <tr style="border-bottom: 1px solid #27272a; text-align:left; color:#caa85c;">
-                            <th style="padding:8px 0; width:80px;">REF</th>
-                            <th style="padding:8px 0;">PRODUTO</th>
-                            <th style="padding:8px 0; text-align:center; width:50px;">QTD</th>
-                            <th style="padding:8px 0; text-align:right; width:80px;">VALOR UNIT.</th>
-                            <th style="padding:8px 0; text-align:right; width:80px;">PESO UNIT.</th>
-                            <th style="padding:8px 0; text-align:right; width:90px;">TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+    let html = `
+        <div style="text-align:center; margin-bottom:20px; font-family:sans-serif;">
+            <h2 style="color:#caa85c; margin:0; font-size:24px; letter-spacing:2px;">ABELLA JOIAS</h2>
+            <p style="margin:5px 0; color:#a1a1aa; font-size:12px;">ROMANEIO PREMIUM</p>
+            <p style="margin:5px 0; color:#71717a; font-size:11px;">${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+        <div style="margin-bottom:20px; border:1px solid #27272a; padding:15px; border-radius:12px; background:#09090b;">
+            <div style="margin-bottom:4px;"><b>CLIENTE:</b> ${cliente}</div>
+            <div style="margin-bottom:4px;"><b>WHATSAPP:</b> ${whats}</div>
+            <div style="margin-bottom:4px;"><b>CIDADE:</b> ${cidade}</div>
+            <div><b>PAGAMENTO:</b> ${t.pagamento}</div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:20px; font-size:13px;">
+            <thead>
+                <tr style="border-bottom: 1px solid #27272a; text-align:left; color:#caa85c;">
+                    <th style="padding:8px 0; width:80px;">REF</th>
+                    <th style="padding:8px 0;">PRODUTO</th>
+                    <th style="padding:8px 0; text-align:center; width:50px;">QTD</th>
+                    <th style="padding:8px 0; text-align:right; width:80px;">VALOR UNIT.</th>
+                    <th style="padding:8px 0; text-align:right; width:90px;">PESO UNIT.</th>
+                    <th style="padding:8px 0; text-align:right; width:90px;">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
-            if (!itensCarrinho.length) {
-                html += `<tr><td colspan="6" style="padding:15px; text-align:center; color:#ef4444;">Nenhum item no carrinho.</td></tr>`;
-            } else {
-                itensCarrinho.forEach(item => {
-                    const ref = item.id || item.codigo || item.sku || '-';
-                    const qtd = parseInt(item.quantidade, 10) || 1;
-                    const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
-                    const pesoUn = parseFloat(item.peso || item.pesoUnitario || 0);
-                    const vNome = item.variacaoSelecionada ? ` (Tam: ${item.variacaoSelecionada})` : '';
-                    const nomeStr = item.name || item.titulo || item.nome || 'Produto';
-                    
-                    html += `
-                        <tr style="border-bottom:1px solid #18181b;">
-                            <td style="padding:8px 0; color:#a1a1aa; font-family:monospace;">${ref}</td>
-                            <td style="padding:8px 0; color:#e4e4e7;">${nomeStr}${vNome}</td>
-                            <td style="padding:8px 0; text-align:center; color:#e4e4e7;">${qtd}</td>
-                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarMoedaSeguro(preco)}</td>
-                            <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarPesoSeguro(pesoUn)}</td>
-                            <td style="padding:8px 0; text-align:right; color:#caa85c; font-weight:bold;">${formatarMoedaSeguro(preco * qtd)}</td>
-                        </tr>
-                    `;
-                });
-            }
-
+    if (!itensCarrinho.length) {
+        html += `<tr><td colspan="6" style="padding:15px; text-align:center; color:#ef4444;">Nenhum item no carrinho.</td></tr>`;
+    } else {
+        itensCarrinho.forEach(item => {
+            const ref = item.id || item.codigo || item.sku || '-';
+            const qtd = parseInt(item.quantidade, 10) || 1;
+            const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
+            const pesoUn = parseFloat(item.peso || item.pesoUnitario || 0);
+            const vNome = item.variacaoSelecionada ? ` (Tam: ${item.variacaoSelecionada})` : '';
+            const nomeStr = item.name || item.titulo || item.nome || 'Produto';
+            
+            // Limpa qualquer 'g' duplicado do peso unitário na tabela
+            const pesoFormatado = formatarPesoSeguro(pesoUn).replace(/g/g, '').trim();
+            
             html += `
-                    </tbody>
-                </table>
-                <div style="border-top:1px dashed #27272a; padding-top:15px; text-align:right; font-size:13px; line-height:1.6;">
-                    <div><span style="color:#71717a">Bruto Sem Banho:</span> <b>${formatarMoedaSeguro(t.subtotal)}</b></div>
-                    ${t.desconto > 0 ? `<div><span style="color:#34d399">Desconto PIX (${CONFIG.descontoPix}%):</span> <b style="color:#34d399">-${formatarMoedaSeguro(t.desconto)}</b></div>` : ''}
-                    ${t.frete > 0 ? `<div><span style="color:#71717a">Frete:</span> <b>${formatarMoedaSeguro(t.frete)}</b></div>` : '<div><span style="color:#34d399">Frete para Galvânicas Limeira:</span> <b>Grátis</b></div>'}
-                    <div style="font-size:18px; margin-top:10px; color:#fff;"><span style="color:#caa85c">VALOR FINAL:</span> <b style="color:#caa85c">${formatarMoedaSeguro(t.total)}</b></div>
-                </div>
-                <div style="margin-top:20px; font-size:11px; color:#71717a; border-top:1px solid #18181b; padding-top:10px;">
-                    <b>Obs:</b> ${obs}
-                </div>
+                <tr style="border-bottom:1px solid #18181b;">
+                    <td style="padding:8px 0; color:#a1a1aa; font-family:monospace;">${ref}</td>
+                    <td style="padding:8px 0; color:#e4e4e7;">${nomeStr}${vNome}</td>
+                    <td style="padding:8px 0; text-align:center; color:#e4e4e7;">${qtd}</td>
+                    <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${formatarMoedaSeguro(preco)}</td>
+                    <td style="padding:8px 0; text-align:right; color:#e4e4e7;">${pesoFormatado} grs.</td>
+                    <td style="padding:8px 0; text-align:right; color:#caa85c; font-weight:bold;">${formatarMoedaSeguro(preco * qtd)}</td>
+                </tr>
             `;
+        });
+    }
 
-            const cr = document.getElementById('conteudo-romaneio');
-            if(cr) cr.innerHTML = html;
-            document.getElementById('modal-romaneio')?.classList.remove('hidden');
-        }
+    // Limpa o peso total do pedido de qualquer caractere 'g' residual antes de exibir
+    const pesoTotalLimpo = formatarPesoSeguro(t.peso).replace(/g/g, '').trim();
 
-        function fecharModal() {
-            document.getElementById('modal-romaneio')?.classList.add('hidden');
-        }
+    html += `
+            </tbody>
+        </table>
+        <div style="border-top:1px dashed #27272a; padding-top:15px; text-align:right; font-size:13px; line-height:1.6;">
+            <div style="margin-bottom: 4px;"><span style="color:#a1a1aa">Peso Total do Pedido:</span> <b style="color:#fff;">${pesoTotalLimpo} grs.</b></div>
+            <div><span style="color:#71717a">Bruto Sem Banho:</span> <b>${formatarMoedaSeguro(t.subtotal)}</b></div>
+            ${t.desconto > 0 ? `<div><span style="color:#34d399">Desconto PIX (${CONFIG.descontoPix}%):</span> <b style="color:#34d399">-${formatarMoedaSeguro(t.desconto)}</b></div>` : ''}
+            ${t.frete > 0 ? `<div><span style="color:#71717a">Frete:</span> <b>${formatarMoedaSeguro(t.frete)}</b></div>` : '<div><span style="color:#34d399">Frete para Galvânicas Limeira:</span> <b>Grátis</b></div>'}
+            <div style="font-size:18px; margin-top:10px; color:#fff;"><span style="color:#caa85c">VALOR FINAL:</span> <b style="color:#caa85c">${formatarMoedaSeguro(t.total)}</b></div>
+        </div>
+        <div style="margin-top:20px; font-size:11px; color:#71717a; border-top:1px solid #18181b; padding-top:10px;">
+            <b>Obs:</b> ${obs}
+        </div>
+    `;
 
+    const cr = document.getElementById('conteudo-romaneio');
+    if(cr) cr.innerHTML = html;
+    document.getElementById('modal-romaneio')?.classList.remove('hidden');
+}
         function gerarPDF(autoPrint = false) {
             try {
                 const { jsPDF } = window.jspdf;
@@ -786,7 +785,7 @@ function atualizarResumo() {
                 doc.text(`Cidade: ${city}`, 18, 61);
                 doc.text(`Pagamento: ${t.pagamento}`, 120, 51);
                 doc.text(`Total Peças: ${t.qtd} pçs`, 120, 56);
-                doc.text(`Peso Total: ${formatarPesoSeguro(t.peso)}g`, 120, 61);
+                doc.text(`Peso Total: ${formatarPesoSeguro(t.peso).replace(/g/g, '').trim()} grs.`, 120, 61);
 
                 let y = 74;
                 doc.setFont('Helvetica', 'bold');
@@ -886,7 +885,7 @@ function atualizarResumo() {
 
             msg += `📊 *RESUMO FINANCEIRO:*\n`;
             msg += `▪️ *Total de Peças:* ${t.qtd} pçs\n`;
-            msg += `▪️ *Peso Total:* ${formatarPesoSeguro(t.peso)}g\n`;
+            msg += `▪️ *Peso Total:* ${formatarPesoSeguro(t.peso).replace(/g/g, '').trim()} grs.\n`;
             msg += `▪️ *Subtotal:* ${formatarMoedaSeguro(t.subtotal)}\n`;
             if (t.desconto > 0) msg += `▪️ *Desconto PIX:* -${formatarMoedaSeguro(t.desconto)}\n`;
             msg += `▪️ *Frete:* ${t.frete > 0 ? formatarMoedaSeguro(t.frete) : 'Grátis (Galvânicas Limeira)'}\n`;

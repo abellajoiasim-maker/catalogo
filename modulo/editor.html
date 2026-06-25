@@ -1,271 +1,58 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Super Editor V7 • Gestão Avançada</title>
-
+  
   <script src="https://cdn.tailwindcss.com"></script>
-
+  
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-
+  
   <script src="../js/firebase/firebase-config.js"></script>
-
-  <style>
-    .input-dark {
-      background-color: rgb(24 24 27);
-      border: 1px solid rgb(39 39 42);
-      color: white;
-      border-radius: 0.5rem;
-      padding: 0.75rem;
-      width: 100%;
-      margin-bottom: 0.5rem;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #09090b;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #27272a;
-      border-radius: 3px;
-    }
-  </style>
 </head>
-<body class="bg-black text-zinc-100 min-h-screen font-sans antialiased">
-
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    
-    <header class="flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-zinc-900 gap-4 mb-8">
+<body class="bg-black text-zinc-100 min-h-screen">
+  
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <header class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-zinc-900 mb-8 gap-4">
       <div>
-        <h1 class="text-2xl font-black tracking-wider text-white">PAINEL ADMINISTRATIVO</h1>
-        <p class="text-xs text-zinc-500 mt-1 uppercase tracking-widest">Controlo de Inventário e Catálogo Geral</p>
+        <h1 class="text-2xl font-black text-white">PAINEL ADMINISTRATIVO</h1>
+        <p class="text-xs text-zinc-500 uppercase tracking-widest">Gestão de Inventário V7</p>
       </div>
-
-      <div class="flex items-center gap-3 w-full sm:w-auto md:min-w-[320px] justify-end">
-        <button id="btnCriarNovo" data-contexto="produtos" class="flex-1 sm:flex-none whitespace-nowrap min-w-[130px] px-4 py-2.5 bg-[#caa85c] text-black rounded-xl text-xs font-bold hover:bg-opacity-90 transition-all shadow-lg shadow-[#caa85c]/10">
+      <div class="flex gap-3">
+        <button id="btnCriarNovo" data-contexto="produtos" class="px-4 py-2.5 bg-[#caa85c] text-black rounded-xl text-xs font-bold hover:opacity-90 transition-opacity">
           ➕ Criar Item
         </button>
-        <button id="btnRefresh" class="flex-1 sm:flex-none whitespace-nowrap min-w-[140px] px-4 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all">
-          🔄 Sincronizar Vitrine
+        <button id="btnRefresh" class="px-4 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-800 transition-colors">
+          🔄 Sincronizar
         </button>
       </div>
     </header>
 
-    <div class="mb-6 bg-zinc-950 border border-zinc-900 p-4 rounded-2xl flex flex-col sm:flex-row gap-3">
-      <div class="relative flex-1">
-        <input type="text" id="inputBusca" placeholder="Pesquise por nome, referência (REF), código..." class="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl py-2.5 pl-4 pr-10 text-sm outline-none focus:border-[#caa85c] transition-colors">
-      </div>
-    </div>
-
-    <nav class="flex gap-2 p-1.5 bg-zinc-950 border border-zinc-900 rounded-2xl mb-6 max-w-md">
-      <button data-tab="produtos" class="tab-btn active flex-1 py-2.5 text-center text-xs font-bold rounded-xl bg-[#caa85c] text-black transition-all">
-        📦 Produtos
-      </button>
-      <button data-tab="categorias" class="tab-btn flex-1 py-2.5 text-center text-xs font-bold rounded-xl text-zinc-400 hover:text-zinc-200 transition-all">
-        📁 Categorias
-      </button>
-      <button data-tab="subcategorias" class="tab-btn flex-1 py-2.5 text-center text-xs font-bold rounded-xl text-zinc-400 hover:text-zinc-200 transition-all">
-        🌿 Subcategorias
-      </button>
+    <nav class="flex gap-2 p-1.5 bg-zinc-950 border border-zinc-900 rounded-2xl mb-6 max-w-lg">
+      <button data-tab="produtos" class="tab-btn active flex-1 py-2.5 text-xs font-bold rounded-xl bg-[#caa85c] text-black transition-all">📦 Produtos</button>
+      <button data-tab="categorias" class="tab-btn flex-1 py-2.5 text-xs font-bold rounded-xl text-zinc-400 hover:text-zinc-200 transition-all">📁 Categorias</button>
+      <button data-tab="subcategorias" class="tab-btn flex-1 py-2.5 text-xs font-bold rounded-xl text-zinc-400 hover:text-zinc-200 transition-all">🌿 Subcategorias</button>
     </nav>
 
-    <main>
+    <main id="main-content">
       <section id="tab-produtos" class="tab-content">
         <div id="lista-produtos-container" class="space-y-2">
-          <div class="p-8 text-center text-zinc-600 text-sm">A carregar catálogo de joias...</div>
+          <p class="text-center py-10 text-zinc-600 text-sm">Carregando catálogo...</p>
         </div>
       </section>
-
       <section id="tab-categorias" class="tab-content hidden">
-        <div id="lista-categorias-container" class="space-y-2">
-          <div class="p-8 text-center text-zinc-600 text-sm">A carregar categorias...</div>
-        </div>
+        <div id="lista-categorias-container" class="space-y-2"></div>
       </section>
-
       <section id="tab-subcategorias" class="tab-content hidden">
-        <div id="lista-subcategorias-container" class="space-y-2">
-          <div class="p-8 text-center text-zinc-600 text-sm">A carregar subcategorias...</div>
-        </div>
+        <div id="lista-subcategorias-container" class="space-y-2"></div>
       </section>
     </main>
-
   </div>
 
   <script type="module" src="./js/editorApp.js"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Pequeno delay para garantir que a infraestrutura do editorApp.js acoplou o Firebase global
-      setTimeout(() => {
-        const tabs = document.querySelectorAll('.tab-btn');
-        const contents = document.querySelectorAll('.tab-content');
-        const btnCriarNovo = document.getElementById('btnCriarNovo');
-
-        // Captura a instância do Realtime Database oficial do projeto
-        const database = window.db || (typeof firebase !== 'undefined' ? firebase.database() : null);
-        
-        if (!database) {
-          console.error("Erro: Instância do Firebase Database não detectada no escopo global.");
-          return;
-        }
-
-        // Caminhos de nós usando os Helpers Oficiais da arquitetura Abella Joias
-        const nóCategorias = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('categories') : 'abella/categories';
-        const nóSubcategorias = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('subcategories') : 'abella/subcategories';
-
-        let categoriasLocais = {};
-        let subcategoriasLocais = {};
-
-        // Ouvintes Realtime para manter as abas sincronizadas automaticamente
-        database.ref(nóCategorias).on('value', (snapshot) => {
-          categoriasLocais = snapshot.val() || {};
-          const currentTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
-          if (currentTab === 'categorias') renderizarPainelCategorias(categoriasLocais);
-        });
-
-        database.ref(nóSubcategorias).on('value', (snapshot) => {
-          subcategoriasLocais = snapshot.val() || {};
-          const currentTab = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
-          if (currentTab === 'subcategorias') renderizarPainelSubcategorias(subcategoriasLocais, categoriasLocais);
-        });
-
-        // Eventos de clique nas Abas
-        tabs.forEach(tab => {
-          tab.addEventListener('click', () => {
-            const targetTab = tab.getAttribute('data-tab');
-
-            // 1. Atualização estética dos botões ativos
-            tabs.forEach(t => {
-              t.classList.remove('bg-[#caa85c]', 'text-black', 'active');
-              t.classList.add('text-zinc-400', 'hover:text-zinc-200');
-            });
-            tab.classList.add('bg-[#caa85c]', 'text-black', 'active');
-            tab.classList.remove('text-zinc-400', 'hover:text-zinc-200');
-
-            // 2. Alterna visibilidade das listas de exibição
-            contents.forEach(content => {
-              if (content.id === `tab-${targetTab}`) {
-                content.classList.remove('hidden');
-              } else {
-                content.classList.add('hidden');
-              }
-            });
-
-            // 3. Atualiza o contexto do botão dourado superior "+ Criar Item"
-            if (targetTab === 'categorias') {
-              if (btnCriarNovo) {
-                btnCriarNovo.innerHTML = '➕ Criar Categoria';
-                btnCriarNovo.setAttribute('data-contexto', 'categoria');
-              }
-              renderizarPainelCategorias(categoriasLocais);
-            } else if (targetTab === 'subcategorias') {
-              if (btnCriarNovo) {
-                btnCriarNovo.innerHTML = '➕ Criar Subcategoria';
-                btnCriarNovo.setAttribute('data-contexto', 'subcategoria');
-              }
-              renderizarPainelSubcategorias(subcategoriasLocais, categoriasLocais);
-            } else {
-              if (btnCriarNovo) {
-                btnCriarNovo.innerHTML = '➕ Criar Item';
-                btnCriarNovo.setAttribute('data-contexto', 'produtos');
-              }
-            }
-          });
-        });
-
-        // Renderizadores de conteúdo dinâmico das tabelas
-        function renderizarPainelCategorias(dados) {
-          const container = document.getElementById('lista-categorias-container');
-          if (!container) return;
-
-          const keys = Object.keys(dados);
-          if (keys.length === 0) {
-            container.innerHTML = `<div class="p-8 text-center text-zinc-500 text-xs uppercase font-bold tracking-wider">Nenhuma categoria cadastrada no Firebase.</div>`;
-            return;
-          }
-
-          let html = '';
-          keys.forEach(id => {
-            const item = dados[id];
-            html += `
-              <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl hover:border-zinc-800 transition-all">
-                <div>
-                  <div class="text-[10px] text-zinc-500 font-mono">CHAVE / SLUG: ${id}</div>
-                  <div class="text-sm font-bold text-zinc-200 mt-0.5">${item.nome || item.name || 'Sem Nome'}</div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button onclick="if(typeof window.editarCategoria === 'function') { window.editarCategoria('${id}') } else { alert('Ação indisponível no momento') }" class="px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-[#caa85c] hover:text-black transition-all text-xs font-semibold">✏️ Editar</button>
-                  <button onclick="if(typeof window.deletarCategoria === 'function') { window.deletarCategoria('${id}') } else { alert('Ação indisponível no momento') }" class="px-3 py-2 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all text-xs font-semibold">🗑️ Excluir</button>
-                </div>
-              </div>
-            `;
-          });
-          container.innerHTML = html;
-        }
-
-        function renderizarPainelSubcategorias(subdados, catdados) {
-          const container = document.getElementById('lista-subcategorias-container');
-          if (!container) return;
-
-          const keys = Object.keys(subdados);
-          if (keys.length === 0) {
-            container.innerHTML = `<div class="p-8 text-center text-zinc-500 text-xs uppercase font-bold tracking-wider">Nenhuma subcategoria cadastrada no Firebase.</div>`;
-            return;
-          }
-
-          let html = '';
-          keys.forEach(id => {
-            const item = subdados[id];
-            const paiId = item.categoriaPai || item.category || '';
-            const nomePai = catdados[paiId]?.nome || catdados[paiId]?.name || paiId || 'Geral';
-
-            html += `
-              <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl hover:border-zinc-800 transition-all">
-                <div>
-                  <div class="text-[10px] text-zinc-500 font-mono">CATEGORIA MÃE: <span class="text-[#caa85c] font-bold">${nomePai}</span></div>
-                  <div class="text-sm font-bold text-zinc-200 mt-0.5">${item.nome || item.name || 'Sem Nome'}</div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button onclick="if(typeof window.editarSubcategoria === 'function') { window.editarSubcategoria('${id}') } else { alert('Ação indisponível no momento') }" class="px-3 py-2 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-xl hover:bg-[#caa85c] hover:text-black transition-all text-xs font-semibold">✏️ Editar</button>
-                  <button onclick="if(typeof window.deletarSubcategoria === 'function') { window.deletarSubcategoria('${id}') } else { alert('Ação indisponível no momento') }" class="px-3 py-2 bg-red-950/20 border border-red-900/30 text-red-400 rounded-xl hover:bg-red-600 hover:text-white transition-all text-xs font-semibold">🗑️ Excluir</button>
-                </div>
-              </div>
-            `;
-          });
-          container.innerHTML = html;
-        }
-
-        // Acoplamento do Botão Superior de Ação Dinâmica "+ Criar"
-        if (btnCriarNovo) {
-          // Remove event listeners antigos clonando o botão para evitar duplicidade de disparos
-          const novoBtn = btnCriarNovo.cloneNode(true);
-          btnCriarNovo.parentNode.replaceChild(novoBtn, btnCriarNovo);
-
-          novoBtn.addEventListener('click', () => {
-            const contexto = novoBtn.getAttribute('data-contexto') || 'produtos';
-            
-            if (contexto === 'categoria') {
-              if (typeof window.abrirCriacaoPorAba === 'function') window.abrirCriacaoPorAba('categoria');
-            } else if (contexto === 'subcategoria') {
-              if (typeof window.abrirCriacaoPorAba === 'function') window.abrirCriacaoPorAba('subcategoria');
-            } else {
-              if (typeof window.abrirCriacaoPorAba === 'function') {
-                window.abrirCriacaoPorAba('produto');
-              } else if (typeof window.abrirNovoProduto === 'function') {
-                window.abrirNovoProduto();
-              }
-            }
-          });
-        }
-
-      }, 300);
-    });
-  </script>
-
 </body>
 </html>

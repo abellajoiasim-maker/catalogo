@@ -484,13 +484,15 @@
             let settingsPath = 'abella/settings';
             if (typeof window.getAbellaPath === 'function') settingsPath = window.getAbellaPath('settings');
             
-            const cfgSnap = await firebase.database().ref(settingsPath).once('value');
-            const cfg = cfgSnap.val() || {};
-            let heroUrl = subcategoria ? (cfg.bannerSubcategoria || cfg.banner_subcategoria || '') : (cfg.bannerHeroUrl || '');
-            
-            if(typeof resolverImagemFirebase === 'function' && heroUrl) {
-                const elHeroImg = document.getElementById('heroImagem');
-                if (elHeroImg) elHeroImg.src = resolverImagemFirebase(heroUrl);
+            if (typeof firebase !== 'undefined' && firebase.database) {
+                const cfgSnap = await firebase.database().ref(settingsPath).once('value');
+                const cfg = cfgSnap.val() || {};
+                let heroUrl = subcategoria ? (cfg.bannerSubcategoria || cfg.banner_subcategoria || '') : (cfg.bannerHeroUrl || '');
+                
+                if(typeof resolverImagemFirebase === 'function' && heroUrl) {
+                    const elHeroImg = document.getElementById('heroImagem');
+                    if (elHeroImg) elHeroImg.src = resolverImagemFirebase(heroUrl);
+                }
             }
             if (loading) loading.classList.add('hidden');
             renderizarProdutos();
@@ -509,7 +511,9 @@
             return;
         }
         produtosFiltrados.forEach((prod, index) => {
-            const imgUrl = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(prod.image || prod.imagem || 'https://via.placeholder.com/600') : (prod.image || prod.imagem || 'https://via.placeholder.com/600');
+            // Substituído para placehold.co para mitigar erro de Conexão Fechada (ERR_CONNECTION_CLOSED)
+            const fallbackImg = 'https://placehold.co/600x600/111111/caa85c?text=ABELLA';
+            const imgUrl = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(prod.image || prod.imagem || fallbackImg) : (prod.image || prod.imagem || fallbackImg);
             const precoExibir = parseFloat(prod.precoFinal || prod.price || prod.preco || 0);
             const card = document.createElement('div');
             card.className = "produto-card bg-card rounded-2xl border border-zinc-900 overflow-hidden flex flex-col justify-between p-2 md:p-3";
@@ -571,7 +575,8 @@
         
         const preco = parseFloat(produto.precoFinal || produto.price || produto.preco || 0);
         const peso = produto.peso || produto.weight || 0;
-        const imagem = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(produto.image || produto.imagem || '') : (produto.image || produto.imagem || '');
+        const fallbackImg = 'https://placehold.co/600x600/111111/caa85c?text=ABELLA';
+        const imagem = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(produto.image || produto.imagem || fallbackImg) : (produto.image || produto.imagem || fallbackImg);
         const modal = document.getElementById('modalProduto');
         if (!modal) return;
         
@@ -594,20 +599,16 @@
         if (containerVariacoes) {
             containerVariacoes.innerHTML = '';
             
-            // Tratamento corrigido: Verifica 'variacao', 'variacoes' ou 'variations'
             let variacoesRaw = produto.variacao || produto.variacoes || produto.variations || '';
             let listaVariacoes = [];
 
             if (typeof variacoesRaw === 'string' && variacoesRaw.trim() !== '') {
-                // Caso o campo seja uma string separada por vírgulas (ex: "16, 17, 18")
                 listaVariacoes = variacoesRaw.split(',').map(v => v.trim()).filter(v => v !== '');
             } else if (Array.isArray(variacoesRaw)) {
-                // Caso venha como um Array tradicional
                 listaVariacoes = variacoesRaw.map(v => String(v).trim()).filter(v => v !== '');
             }
             
             if (listaVariacoes.length > 0) {
-                // Oculta o seletor padrão geral
                 if(containerQtdPadrao) containerQtdPadrao.classList.add('hidden');
                 
                 let variacoesHtml = `<p class="text-[10px] md:text-xs font-bold text-zinc-400 block mb-1">Quantidades por Variação / Tamanho:</p><div class="space-y-2">`;
@@ -627,9 +628,8 @@
                 variacoesHtml += `</div>`;
                 containerVariacoes.innerHTML = variacoesHtml;
             } else {
-                // Mostra o seletor padrão se NÃO houver variações cadastradas
                 if(containerQtdPadrao) containerQtdPadrao.classList.remove('hidden');
-                document.getElementById('qtdPadrao').value = 1;
+                if(document.getElementById('qtdPadrao')) document.getElementById('qtdPadrao').value = 1;
             }
         }
         modal.classList.remove('hidden');
@@ -674,7 +674,7 @@
 
         } else {
             const qtdInput = document.getElementById('qtdPadrao');
-            const quantidade = parseInt(qtdInput.value) || 1;
+            const quantidade = qtdInput ? (parseInt(qtdInput.value) || 1) : 1;
             
             carrinhoService.adicionar(produtoAtual, quantidade, '');
             atualizarMiniCarrinho();

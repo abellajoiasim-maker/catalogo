@@ -34,40 +34,46 @@ export const CategoriaModule = {
         });
     },
 
-    _configurarEventosAbas() {
-        // Mapeia os botões de alternância vistos na imagem image_82581f.png
-        const btnProdutos = document.querySelector('button:contains("Produtos")') || document.getElementById('btn-aba-produtos');
-        const btnCategorias = document.querySelector('button:contains("Categorias")') || document.getElementById('btn-aba-categorias');
-        const btnSubcategorias = document.querySelector('button:contains("Subcategorias")') || document.getElementById('btn-aba-subcategorias');
+_configurarEventosAbas() {
+        // Mapeia os botões utilizando os atributos data-tab que já existem no seu HTML
+        const btnProdutos = document.querySelector('button[data-tab="produtos"]');
+        const btnCategorias = document.querySelector('button[data-tab="categorias"]');
+        const btnSubcategorias = document.querySelector('button[data-tab="subcategorias"]');
 
-        // Fallback caso usem seletores baseados nos elementos do print:
-        // Como o seu HTML usa botões/abas lado a lado, vamos interceptar os cliques neles.
-        document.addEventListener('click', (e) => {
-            const txt = e.target.textContent || '';
-            const containerLista = document.getElementById('lista-produtos-container');
-            if (!containerLista) return;
-
-            if (txt.includes('Produtos')) {
+        // Escuta os cliques diretamente nos botões mapeados (Padrão Vanilla JS seguro)
+        if (btnProdutos) {
+            btnProdutos.addEventListener('click', () => {
                 this.abaAtiva = 'produtos';
                 this._atualizarBotaoCriar('Produto');
-            } else if (txt.includes('Categorias')) {
+            });
+        }
+
+        if (btnCategorias) {
+            btnCategorias.addEventListener('click', () => {
                 this.abaAtiva = 'categorias';
                 this._atualizarBotaoCriar('Categoria');
                 this.renderCategorias();
-            } else if (txt.includes('Subcategorias')) {
+            });
+        }
+
+        if (btnSubcategorias) {
+            btnSubcategorias.addEventListener('click', () => {
                 this.abaAtiva = 'subcategorias';
                 this._atualizarBotaoCriar('Subcategoria');
                 this.renderSubcategorias();
-            }
-        });
+            });
+        }
     },
 
-    _atualizarBotaoCriar(tipo) {
-        const btnCriar = document.querySelector('button:contains("Criar Item")') || document.querySelector('.bg-\\[\\#caa85c\\]') || document.getElementById('btn-criar-geral');
+   _atualizarBotaoCriar(tipo) {
+        // Busca pelo ID oficial ou pela classe dourada do Tailwind
+        const btnCriar = document.getElementById('btnCriarNovo') || document.querySelector('.bg-\\[\\#caa85c\\]');
         if (btnCriar) {
             btnCriar.innerHTML = `<span>➕ Criar ${tipo}</span>`;
-            // Atualiza o atributo data para o admin.html saber quem chamar no clique
-            btnCriar.setAttribute('data-contexto', tipo.toLowerCase());
+            
+            // Converte para o termo exato esperado pela sua aplicação principal
+            const contextoMap = { 'Produto': 'produtos', 'Categoria': 'categoria', 'Subcategoria': 'subcategoria' };
+            btnCriar.setAttribute('data-contexto', contextoMap[tipo] || 'produtos');
         }
     },
 

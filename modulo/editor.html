@@ -47,7 +47,7 @@
       </div>
 
       <div class="flex items-center gap-3 w-full sm:w-auto md:min-w-[320px] justify-end">
-        <button id="btnCriarNovo" class="flex-1 sm:flex-none whitespace-nowrap min-w-[130px] px-4 py-2.5 bg-[#caa85c] text-black rounded-xl text-xs font-bold hover:bg-opacity-90 transition-all shadow-lg shadow-[#caa85c]/10">
+        <button id="btnCriarNovo" data-contexto="produtos" class="flex-1 sm:flex-none whitespace-nowrap min-w-[130px] px-4 py-2.5 bg-[#caa85c] text-black rounded-xl text-xs font-bold hover:bg-opacity-90 transition-all shadow-lg shadow-[#caa85c]/10">
           ➕ Criar Item
         </button>
         <button id="btnRefresh" class="flex-1 sm:flex-none whitespace-nowrap min-w-[140px] px-4 py-2.5 bg-zinc-900 border border-zinc-800 text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-800 transition-all">
@@ -97,6 +97,63 @@
   </div>
 
   <script type="module" src="./js/editorApp.js"></script>
+
+  <!-- Orquestrador Visual das Abas e Integração com os Módulos -->
+  <script type="module">
+    import { CategoriaModule } from './js/categoriaModule.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabs = document.querySelectorAll('.tab-btn');
+      const contents = document.querySelectorAll('.tab-content');
+      const btnCriarNovo = document.getElementById('btnCriarNovo');
+
+      // Executa a inicialização do módulo de Categorias passando a instância global do database
+      // (Assumindo que sua config expõe o 'db' ou 'firebase.database()')
+      const bancoDeDados = window.db || firebase.database();
+      if (bancoDeDados) {
+          CategoriaModule.init(bancoDeDados);
+      }
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetTab = tab.getAttribute('data-tab');
+
+          // 1. Alterna visual dos botões do menu interno
+          tabs.forEach(t => {
+            t.classList.remove('bg-[#caa85c]', 'text-black', 'active');
+            t.classList.add('text-zinc-400', 'hover:text-zinc-200');
+          });
+          tab.classList.add('bg-[#caa85c]', 'text-black', 'active');
+          tab.classList.remove('text-zinc-400', 'hover:text-zinc-200');
+
+          // 2. Alterna visibilidade dos containers de lista
+          contents.forEach(content => {
+            if (content.id === `tab-${targetTab}`) {
+              content.classList.remove('hidden');
+            } else {
+              content.classList.add('hidden');
+            }
+          });
+
+          // 3. Modifica o contexto do botão dourado superior "+ Criar Item"
+          if (targetTab === 'categorias') {
+            btnCriarNovo.innerHTML = '➕ Criar Categoria';
+            btnCriarNovo.setAttribute('data-contexto', 'categoria');
+            CategoriaModule.abaAtiva = 'categorias';
+            CategoriaModule.renderCategorias();
+          } else if (targetTab === 'subcategorias') {
+            btnCriarNovo.innerHTML = '➕ Criar Subcategoria';
+            btnCriarNovo.setAttribute('data-contexto', 'subcategoria');
+            CategoriaModule.abaAtiva = 'subcategorias';
+            CategoriaModule.renderSubcategorias();
+          } else {
+            btnCriarNovo.innerHTML = '➕ Criar Item';
+            btnCriarNovo.setAttribute('data-contexto', 'produtos');
+          }
+        });
+      });
+    });
+  </script>
 
 </body>
 </html>

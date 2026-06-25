@@ -477,9 +477,13 @@
 
 async function carregarConfiguracoes() {
     try {
-        if (typeof window.getAbellaPath !== 'function') return;
+        // Tenta buscar as configurações diretamente do Firebase
+        let pathSettings = 'settings';
+        if (typeof window.getAbellaPath === 'function') {
+            pathSettings = window.getAbellaPath('settings');
+        }
 
-        const snap = await db.ref(window.getAbellaPath('settings')).once('value');
+        const snap = await db.ref(pathSettings).once('value');
         if (snap.exists()) {
             const s = snap.val() || {};
             CONFIG.descontoPix = parseFloat(s.pix ?? s.pixDesc ?? s.descontoPix ?? 5);
@@ -488,44 +492,26 @@ async function carregarConfiguracoes() {
             CONFIG.freteGratisAlvo = parseFloat(s.freteGratisAlvo ?? 100);
             CONFIG.pedidoMinimo = parseFloat(s.pedidoMinimo ?? 300);
             CONFIG.whatsEmpresa = (s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
+        }
 
-            // Resolução robusta da logo idêntica ao comportamento do carrinho
-            let logoPath = s.logo || s.logoUrl || '';
-            if (typeof window.obterLogo === 'function') {
-                logoPath = window.obterLogo();
-            }
-
-            if (logoPath) {
-                const img = document.getElementById('abellaLogoImg');
-                const fallback = document.getElementById('abellaLogoFallback');
-                
-                if (img) {
-                    let urlFinal = logoPath.trim();
-                    if (window.ImageHelper && typeof window.ImageHelper.converterGsUrl === 'function') {
-                        urlFinal = window.ImageHelper.converterGsUrl(logoPath);
-                    } else if (typeof window.resolverImagemFirebase === 'function') {
-                        urlFinal = window.resolverImagemFirebase(logoPath);
-                    } else if (urlFinal.startsWith('gs://')) {
-                        const semGs = urlFinal.replace('gs://', '');
-                        const primeiraBarra = semGs.indexOf('/');
-                        if (primeiraBarra !== -1) {
-                            const bucket = semGs.substring(0, primeiraBarra);
-                            const caminho = semGs.substring(primeiraBarra + 1);
-                            urlFinal = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
-                        }
-                    }
-
-                    img.src = urlFinal;
-                    img.onload = () => {
-                        img.classList.remove('hidden');
-                        if (fallback) fallback.classList.add('hidden');
-                    };
-                    img.onerror = () => {
-                        img.classList.add('hidden');
-                        if (fallback) fallback.classList.remove('hidden');
-                    };
-                }
-            }
+        // Resolução Forense da Logo (Força o link direto do bucket Abella Joias)
+        const img = document.getElementById('abellaLogoImg');
+        const fallback = document.getElementById('abellaLogoFallback');
+        
+        if (img) {
+            // URL direta resolvida do seu bucket principal que sempre funciona
+            let urlFinal = "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2Flogo.png?alt=media";
+            
+            img.src = urlFinal;
+            img.onload = () => {
+                img.classList.remove('hidden');
+                if (fallback) fallback.classList.add('hidden');
+            };
+            img.onerror = () => {
+                console.warn('Falha ao carregar logo principal, mantendo fallback.');
+                img.classList.add('hidden');
+                if (fallback) fallback.classList.remove('hidden');
+            };
         }
     } catch (e) {
         console.warn('Erro ao processar configurações da logo:', e);
@@ -591,13 +577,16 @@ async function carregarConfiguracoes() {
             return { qtd, peso, subtotal, desconto, frete, total, pagamento };
         }
 
-      function atualizarResumo() {
+function atualizarResumo() {
     try {
         const t = calcularTotais();
         
-        // Quantidade total de peças
+        // CORREÇÃO DA QUANTIDADE: Mapeia tanto totalPecas quanto pesoTotal/quantidade se houver
         const qtdEl = document.getElementById('res-qtd');
-        if (qtdEl) qtdEl.innerText = `${t.totalPecas || 0} pçs`;
+        if (qtdEl) {
+            const quantidadeReal = t.totalPecas ?? t.quantidade ?? t.qtd ?? 0;
+            qtdEl.innerText = `${quantidadeReal} pçs`;
+        }
         
         // Subtotal
         const subtotalEl = document.getElementById('res-subtotal');
@@ -618,6 +607,34 @@ async function carregarConfiguracoes() {
                 }
             }
         }
+        
+        // CORREÇÃO DO PESO: Regra estrita de (grs.) até 1.000g, depois (kg.)
+        const pesoEl = document.getElementById('res-peso');
+        if (pesoEl) {
+            const pesoBruto = Number(t.peso || 0);
+            if (pesoBruto >= 1000) {
+                const valorKg = (pesoBruto / 1000).toFixed(2).replace('.', ',');
+                pesoEl.innerText = `${valorKg} kg.`;
+            } else {
+                const valorGrs = pesoBruto.toFixed(2).replace('.', ',');
+                pesoEl.innerText = `${valorGrs} grs.`;
+            }
+        }
+
+        // Frete
+        const freteEl = document.getElementById('res-frete');
+        if (freteEl) {
+            freteEl.innerText = t.frete > 0 ? formatarMoedaSeguro(t.frete) : 'Grátis (Limeira)';
+        }
+
+        // Total Final
+        const totalEl = document.getElementById('res-total');
+        if (totalEl) totalEl.innerText = formatarMoedaSeguro(t.total);
+
+    } catch (error) {
+        console.error('[ERRO INTERNO ATUALIZAR RESUMO]:', error);
+    }
+}
         
        // Peso (Garante a exibição automática da unidade g ou kg vinda do peso.js)
         const pesoEl = document.getElementById('res-peso');

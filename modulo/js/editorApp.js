@@ -1,6 +1,6 @@
 /**
- * Orquestrador Central - editorApp.js
- * Inicializa, gerencia as abas e conecta os módulos estruturais
+ * Orquestrador Central Seguro - editorApp.js
+ * Aguarda a infraestrutura oficial do catálogo estar pronta para iniciar os módulos
  */
 
 import { Drawer } from './drawer.js';
@@ -10,36 +10,50 @@ import { SubcategoriaModule } from './subcategoriaModule.js';
 
 const EditorApp = {
     db: null,
+    tentativas: 0,
 
     async init() {
-        console.log('🚀 Inicializando Orquestrador Modular...');
+        console.log('🚀 Verificando infraestrutura do ecossistema Abella Joias...');
 
-        // 1. Valida a conexão do Firebase vinda do ecossistema global
-        if (typeof window.firebase !== 'undefined') {
-            this.db = window.firebase.database();
-        } else if (typeof window.db !== 'undefined') {
-            this.db = window.db; // Usa o helper global mapeado no projeto
-        } else {
-            console.error('❌ Erro: Firebase não foi carregado globalmente.');
-            alert('Erro crítico: Infraestrutura Firebase ausente.');
+        // Verifica se a conexão oficial já está ativa na janela global
+        const pronto = window.ABELLA_FIREBASE_INITIALIZED === true || window.ABELLA_FIREBASE_CONNECTED === true || typeof window.db !== 'undefined';
+
+        if (!pronto) {
+            this.tentativas++;
+            if (this.tentativas > 10) {
+                console.error('❌ Tempo limite de conexão esgotado. Verifique o arquivo firebase-config.js');
+                return;
+            }
+            // Aguarda 400ms e tenta novamente de forma assíncrona até o Firebase carregar
+            setTimeout(() => this.init(), 400);
             return;
         }
 
-        // 2. Inicializa os módulos passando as referências isoladas
+        // Puxa a instância ativa e testada do banco global
+        this.db = window.db || (typeof window.firebase !== 'undefined' ? window.firebase.database() : null);
+
+        if (!this.db) {
+            console.error('❌ Instância do Realtime Database não encontrada.');
+            return;
+        }
+
+        console.log('🔗 Conexão com o Firebase validada. Acoplando módulos...');
+
+        // Inicializa os módulos estruturais do ecossistema
         Drawer.init();
         ProdutoModule.init(this.db);
         CategoriaModule.init(this.db);
         SubcategoriaModule.init(this.db);
 
-        // 3. Configura a UI local do Shell (Abas, Botões Globais de Criação)
+        // Ativa os listeners de interface do Shell (Abas e cliques superiores)
         this._configurarAbas();
         this._configurarBotoesGlobais();
         
-        console.log('✅ Todos os módulos foram acoplados com sucesso!');
+        console.log('✅ Todos os módulos operando em tempo real!');
     },
 
     /**
-     * Gerencia a troca de abas nativa (Produtos, Categorias, Subcategorias)
+     * Gerencia a troca de abas nativa
      */
     _configurarAbas() {
         const botoesAbas = document.querySelectorAll('.tab-btn');
@@ -49,12 +63,10 @@ const EditorApp = {
             botao.addEventListener('click', () => {
                 const alvo = botao.getAttribute('data-tab');
 
-                // Remove estados ativos de todos
                 botoesAbas.forEach(b => b.classList.remove('active', 'bg-[#caa85c]', 'text-black', 'font-bold'));
                 botoesAbas.forEach(b => b.classList.add('text-zinc-400'));
                 secoesAbas.forEach(s => s.classList.add('hidden'));
 
-                // Ativa a aba clicada
                 botao.classList.add('active', 'bg-[#caa85c]', 'text-black', 'font-bold');
                 botao.classList.remove('text-zinc-400');
                 
@@ -68,7 +80,7 @@ const EditorApp = {
      * Intercepta os botões superiores do Shell Administrativo
      */
     _configurarBotoesGlobais() {
-        // Botão "➕ Criar Item" Superior
+        // Botão "➕ Criar Item"
         document.getElementById('btnCriarNovo')?.addEventListener('click', () => {
             const abaAtiva = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
             
@@ -87,14 +99,13 @@ const EditorApp = {
             }
         });
 
-        // Botão "🔄 Sincronizar Vitrine" Superior
+        // Botão "🔄 Sincronizar Vitrine"
         document.getElementById('btnRefresh')?.addEventListener('click', () => {
             const btn = document.getElementById('btnRefresh');
             const textoOriginal = btn.innerHTML;
             btn.innerHTML = '🔄 Sincronizando...';
             btn.disabled = true;
             
-            // Força a releitura manual e imediata dos nós no Firebase
             ProdutoModule.listarProdutos();
             CategoriaModule.listarCategorias();
             SubcategoriaModule.listarSubcategorias();
@@ -105,7 +116,6 @@ const EditorApp = {
             }, 800);
         });
 
-        // Comunicação limpa entre módulos via evento customizado
         window.addEventListener('pedirCategoriasParaSub', (e) => {
             if (typeof e.detail?.callback === 'function') {
                 e.detail.callback(CategoriaModule.categoriasEmMemoria);
@@ -114,7 +124,5 @@ const EditorApp = {
     }
 };
 
-// Executa automaticamente ao carregar o arquivo via módulo ES6
-document.addEventListener('DOMContentLoaded', () => {
-    EditorApp.init();
-});
+// Inicialização imediata via ciclo do módulo
+EditorApp.init();

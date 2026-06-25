@@ -401,24 +401,38 @@ function abrirDrawer(titulo, html) {
   }
 
   // Métodos auxiliares para gerenciar as tags dinâmicas de Dizeres e Iniciais na UI do Drawer
-  function adicionarTagInput(containerId, valor = '') {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+// Métodos auxiliares para gerenciar as tags dinâmicas de Dizeres e Iniciais na UI do Drawer
+function adicionarTagInput(containerId, valor = '') {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  // Se o valor vier com vírgulas (ex: "A, B, C"), expande em múltiplos itens
+  const valores = String(valor).includes(',')
+    ? valor.split(',').map(v => v.trim()).filter(v => v !== '')
+    : [String(valor).trim()].filter(v => v !== '');
+  valores.forEach(v => {
     const wrapper = document.createElement('div');
     wrapper.className = 'flex gap-2 mb-1 items-center tag-item-row';
     wrapper.innerHTML = `
-      <input type="text" class="input-dark !mb-0 tag-value-input" value="${escapeHtml(valor)}" placeholder="Ex: Amor, Fé, A, B...">
+      <input type="text" class="input-dark !mb-0 tag-value-input" value="${escapeHtml(v)}" placeholder="Ex: AMOR ou A">
       <button type="button" onclick="this.parentNode.remove()" class="bg-zinc-900 border border-zinc-800 text-red-400 px-3 py-2 rounded-lg hover:bg-zinc-800 text-xs">✕</button>
     `;
     container.appendChild(wrapper);
-  }
+  });
+}
 
-  function extrairValoresTags(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return [];
-    const inputs = container.querySelectorAll('.tag-value-input');
-    return Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== '');
-  }
+function importarVariacoes(containerId) {
+  const textoRaw = prompt('Cole os valores separados por vírgula:\nEx: A, B, C, D  ou  DEUS, JESUS, AMOR');
+  if (!textoRaw) return;
+  const valores = textoRaw.split(',').map(v => v.trim()).filter(v => v !== '');
+  valores.forEach(v => adicionarTagInput(containerId, v));
+}
+
+function extrairValoresTags(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return [];
+  const inputs = container.querySelectorAll('.tag-value-input');
+  return Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== '');
+}
 
   // ==========================================================
   // RENDERIZADORES DAS LISTAGENS
@@ -603,23 +617,31 @@ function abrirDrawer(titulo, html) {
          <option value="">Selecione a categoria primeiro</option>
       </select>
 
-      <!-- SEÇÃO VARIANTES: DIZERES -->
-      <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Dizeres (Frases)</label>
-          <button type="button" onclick="adicionarTagInput('newDizeresContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add Opção</button>
-        </div>
-        <div id="newDizeresContainer" class="flex flex-col gap-1"></div>
-      </div>
+<!-- SEÇÃO VARIANTES: DIZERES -->
+<div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
+  <div class="flex justify-between items-center mb-2">
+    <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">✍️ Variações de Dizeres (Frases)</label>
+    <div class="flex gap-1">
+      <button type="button" onclick="importarVariacoes('newDizeresContainer')" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
+      <button type="button" onclick="adicionarTagInput('newDizeresContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add</button>
+    </div>
+  </div>
+  <div id="newDizeresContainer" class="flex flex-wrap gap-1"></div>
+  <p class="text-[10px] text-zinc-600 mt-1">Dica: use "Importar" para colar vários de uma vez (ex: DEUS, JESUS, AMOR)</p>
+</div>
 
-      <!-- SEÇÃO VARIANTES: INICIAIS -->
-      <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Iniciais (Letras)</label>
-          <button type="button" onclick="adicionarTagInput('newIniciaisContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add Opção</button>
-        </div>
-        <div id="newIniciaisContainer" class="flex flex-col gap-1"></div>
-      </div>
+<!-- SEÇÃO VARIANTES: INICIAIS -->
+<div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
+  <div class="flex justify-between items-center mb-2">
+    <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">🔤 Variações de Iniciais (Letras)</label>
+    <div class="flex gap-1">
+      <button type="button" onclick="importarVariacoes('newIniciaisContainer')" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
+      <button type="button" onclick="adicionarTagInput('newIniciaisContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add</button>
+    </div>
+  </div>
+  <div id="newIniciaisContainer" class="flex flex-wrap gap-1"></div>
+  <p class="text-[10px] text-zinc-600 mt-1">Dica: use "Importar" para colar o alfabeto de uma vez (ex: A, B, C, D, E...)</p>
+</div>
       
       <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (Upload / gs:// / Link)</label>
       <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
@@ -631,6 +653,32 @@ function abrirDrawer(titulo, html) {
       <button onclick="salvarNovoProduto()" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90 transition-all">Inserir Novo Item no Catálogo</button>
     `);
   }
+
+    <!-- SEÇÃO VARIANTES EDIÇÃO: DIZERES -->
+<div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
+  <div class="flex justify-between items-center mb-2">
+    <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">✍️ Variações de Dizeres (Frases)</label>
+    <div class="flex gap-1">
+      <button type="button" onclick="importarVariacoes('editDizeresContainer')" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
+      <button type="button" onclick="adicionarTagInput('editDizeresContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add</button>
+    </div>
+  </div>
+  <div id="editDizeresContainer" class="flex flex-wrap gap-1"></div>
+  <p class="text-[10px] text-zinc-600 mt-1">Dica: use "Importar" para colar vários de uma vez</p>
+</div>
+
+<!-- SEÇÃO VARIANTES EDIÇÃO: INICIAIS -->
+<div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
+  <div class="flex justify-between items-center mb-2">
+    <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">🔤 Variações de Iniciais (Letras)</label>
+    <div class="flex gap-1">
+      <button type="button" onclick="importarVariacoes('editIniciaisContainer')" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
+      <button type="button" onclick="adicionarTagInput('editIniciaisContainer')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add</button>
+    </div>
+  </div>
+  <div id="editIniciaisContainer" class="flex flex-wrap gap-1"></div>
+  <p class="text-[10px] text-zinc-600 mt-1">Dica: use "Importar" para colar o alfabeto de uma vez</p>
+</div>
 
   function carregarSubcategoriasProdutoCriacao() {
     const cat = document.getElementById('newCategoria')?.value;

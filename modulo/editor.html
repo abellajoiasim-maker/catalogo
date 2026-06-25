@@ -289,19 +289,19 @@
     }
   }
 
- function abrirDrawer(titulo, html) {
+function abrirDrawer(titulo, html) {
     document.getElementById('drawerTitle').textContent = titulo;
     
-    // Localiza a div interna de conteúdo que está logo abaixo do cabeçalho do drawer
-    const containerInterno = document.getElementById('drawerContainer').querySelector('.flex-1');
+    // Localiza perfeitamente a área de conteúdo do formulário
+    const drawerGeral = document.getElementById('drawer');
+    const drawerMenu = document.getElementById('drawerContainer');
+    const containerInterno = drawerMenu.querySelector('.flex-1');
+    
     if (containerInterno) {
       containerInterno.innerHTML = html;
     }
     
-    // Remove a classe hidden e aplica a animação visual de deslizar
-    const drawerGeral = document.getElementById('drawer');
-    const drawerMenu = document.getElementById('drawerContainer');
-    
+    // Remove o hidden e aciona a transição fluida do CSS
     drawerGeral.classList.remove('hidden');
     setTimeout(() => {
       drawerMenu.classList.remove('translate-x-full');
@@ -309,16 +309,23 @@
   }
 
   function fecharDrawer() {
-    const drawerMenu = document.getElementById('drawerContainer');
     const drawerGeral = document.getElementById('drawer');
+    const drawerMenu = document.getElementById('drawerContainer');
     
-    drawerMenu.addClassList ? drawerMenu.classList.add('translate-x-full') : drawerMenu.style.transform = 'translateX(100%)';
+    // CORRIGIDO: Uso correto do classList.add para fechar sem quebrar o script
+    if (drawerMenu) {
+      drawerMenu.classList.add('translate-x-full');
+    }
     
-    // Aguarda a animação terminar para esconder o container de fundo
+    // Aguarda a animação de fechar (300ms) para ocultar o fundo preto do modal
     setTimeout(() => {
-      drawerGeral.classList.add('hidden');
-      const containerInterno = document.getElementById('drawerContainer').querySelector('.flex-1');
-      if (containerInterno) containerInterno.innerHTML = '';
+      if (drawerGeral) {
+        drawerGeral.classList.add('hidden');
+      }
+      const containerInterno = drawerMenu ? drawerMenu.querySelector('.flex-1') : null;
+      if (containerInterno) {
+        containerInterno.innerHTML = ''; // Limpa a memória para a próxima abertura ser instantânea
+      }
     }, 300);
   }
   function abrirCriacaoPorAba() {

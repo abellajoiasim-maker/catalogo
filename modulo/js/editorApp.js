@@ -14,25 +14,22 @@ const EditorApp = {
     async init() {
         console.log('🚀 Inicializando Orquestrador Modular...');
 
-        // 1. Aguarda e valida a conexão do Firebase vinda do firebase-config.js
+        // 1. Valida a conexão do Firebase vinda do ecossistema global
         if (typeof window.firebase !== 'undefined') {
             this.db = window.firebase.database();
+        } else if (typeof window.db !== 'undefined') {
+            this.db = window.db; // Usa o helper global mapeado no projeto
         } else {
             console.error('❌ Erro: Firebase não foi carregado globalmente.');
             alert('Erro crítico: Infraestrutura Firebase ausente.');
             return;
         }
 
-        // Caso use a função dinâmica multi-lojas do seu ecossistema:
-        const obterCaminho = typeof window.getAbellaPath === 'function' 
-            ? window.getAbellaPath 
-            : (p) => p;
-
-        // 2. Inicializa os módulos passando as referências isoladas do Firebase
+        // 2. Inicializa os módulos passando as referências isoladas
         Drawer.init();
-        ProdutoModule.init(this.db, obterCaminho('produtos'));
-        CategoriaModule.init(this.db, obterCaminho('categorias'));
-        SubcategoriaModule.init(this.db, obterCaminho('subcategorias'));
+        ProdutoModule.init(this.db);
+        CategoriaModule.init(this.db);
+        SubcategoriaModule.init(this.db);
 
         // 3. Configura a UI local do Shell (Abas, Botões Globais de Criação)
         this._configurarAbas();
@@ -70,25 +67,19 @@ const EditorApp = {
     /**
      * Intercepta os botões superiores do Shell Administrativo
      */
-  /**
-     * Intercepta os botões superiores do Shell Administrativo
-     */
     _configurarBotoesGlobais() {
         // Botão "➕ Criar Item" Superior
         document.getElementById('btnCriarNovo')?.addEventListener('click', () => {
-            // Verifica qual aba está ativa para abrir o formulário correto no Drawer
             const abaAtiva = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
             
             switch (abaAtiva) {
                 case 'produtos':
-                    // Passa o cache de categorias para popular os seletores se necessário
                     ProdutoModule.abrirNovoProduto(CategoriaModule.categoriasEmMemoria);
                     break;
                 case 'categorias':
                     CategoriaModule.abrirNovaCategoria();
                     break;
                 case 'subcategorias':
-                    // Passa o cache de categorias atual para popular o select pai da subcategoria
                     SubcategoriaModule.abrirNovaSubcategoria(CategoriaModule.categoriasEmMemoria);
                     break;
                 default:
@@ -114,22 +105,16 @@ const EditorApp = {
             }, 800);
         });
 
-        // Evento customizado para comunicação limpa entre módulos quando necessário
+        // Comunicação limpa entre módulos via evento customizado
         window.addEventListener('pedirCategoriasParaSub', (e) => {
             if (typeof e.detail?.callback === 'function') {
                 e.detail.callback(CategoriaModule.categoriasEmMemoria);
             }
         });
     }
-        // Evento customizado para quando o módulo de Subcategorias pedir edição, carregar as categorias injetadas
-        window.addEventListener('pedirCategoriasParaSub', (e) => {
-            // Permite comunicação limpa entre os módulos de forma desacoplada
-            e.detail.callback(CategoriaModule.categoriasEmMemoria);
-        });
-    }
 };
 
-// Executa automaticamente ao carregar o arquivo via módulo
+// Executa automaticamente ao carregar o arquivo via módulo ES6
 document.addEventListener('DOMContentLoaded', () => {
     EditorApp.init();
 });

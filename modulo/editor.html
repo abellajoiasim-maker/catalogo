@@ -150,7 +150,6 @@
   }
 
   const statusEl = document.getElementById('status');
-  
   const STATE = {
     db: null,
     produtos: [],
@@ -174,27 +173,12 @@
     getIniciais(obj) { return obj?.iniciais ?? obj?.initials ?? []; }
   };
 
-  // ==========================================================
-  // RESOLVER INFRAESTRUTURA (FIREBASE)
-  // ==========================================================
-  function resolverDB() {
-    if (window.db) return window.db;
-    if (window.firebase?.apps?.length > 0) {
-      return window.firebase.database();
-    }
-    return null;
-  }
-
   function setStatus(msg, type = 'info') {
-    if (!statusEl) return;
     const color = type === 'error' ? 'text-red-400' : type === 'ok' ? 'text-green-400' : 'text-zinc-500';
     statusEl.className = `text-xs mt-6 ${color}`;
     statusEl.textContent = msg;
   }
 
-  // ==========================================================
-  // TRATAMENTO DE STRINGS, SLUGS E URLs
-  // ==========================================================
   function escapeHtml(str) {
     return String(str ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
   }
@@ -212,9 +196,8 @@
   }
 
   function converterGsUrl(url) {
-    const stringUrl = String(url ?? '').trim();
+    let stringUrl = String(url ?? '').trim();
     if (!stringUrl) return '';
-    
     if (stringUrl.includes('drive.google.com')) {
       try {
         let idArquivo = '';
@@ -223,7 +206,6 @@
         if (idArquivo) return `https://drive.google.com/uc?export=view&id=${idArquivo}`;
       } catch (e) {}
     }
-    
     if (stringUrl.startsWith('gs://')) {
       try {
         const semProtocolo = stringUrl.replace('gs://', '');
@@ -258,9 +240,6 @@
     }
   }
 
-  // ==========================================================
-  // CONTROLE DE INTERFACE DE USUÁRIO (DRAWER E TABS)
-  // ==========================================================
   function abrirDrawer(titulo, html) {
     document.getElementById('drawerTitle').textContent = titulo;
     document.getElementById('drawerContent').innerHTML = html;
@@ -272,21 +251,14 @@
     document.getElementById('drawerContent').innerHTML = '';
   }
 
-  function getActiveTab() {
-    return document.querySelector('.tab-btn.active')?.dataset?.tab || 'produtos';
-  }
-
   function abrirCriacaoPorAba() {
     const tab = getActiveTab();
     if (tab === 'produtos') criarProdutoForm();
-    else if (tab === 'categorias') criarCategoriaForm(); // Mantida chamada original
-    else if (tab === 'subcategorias') criarSubcategoriaForm(); // Mantida chamada original
+    else if (tab === 'categorias') criarCategoriaForm();
+    else if (tab === 'subcategorias') criarSubcategoriaForm();
   }
 
-  // ==========================================================
-  // SINCRONIZAÇÃO E PROCESSAMENTO DE DADOS
-  // ==========================================================
-  async function carregarTudo() {
+  async function carregarTudo(){
     try {
       const snapCat = await STATE.db.ref(window.getAbellaPath('categories')).once('value');
       STATE.categorias = snapCat.val() || {};
@@ -298,26 +270,18 @@
       popularFiltros();
       renderAll();
       setStatus('✅ Catálogo perfeitamente sincronizado com as páginas de venda', 'ok');
-    } catch (err) {
+    } catch(err) {
       setStatus('❌ Erro de conexão com o banco de dados Firebase', 'error');
     }
   }
 
   function atualizarEstatisticas() {
-    const elProd = document.getElementById('statProdutos');
-    const elCat = document.getElementById('statCategorias');
-    const elSubs = document.getElementById('statSubs');
-    const elPausados = document.getElementById('statPausados');
-
-    if (elProd) elProd.innerText = STATE.produtos.length;
-    if (elCat) elCat.innerText = Object.keys(STATE.categorias).length;
-    
-    if (elSubs) {
-      let totalSubs = 0;
-      Object.values(STATE.categorias).forEach(cat => totalSubs += Object.keys(cat?.subcategories || {}).length);
-      elSubs.innerText = totalSubs;
-    }
-    if (elPausados) elPausados.innerText = STATE.produtos.filter(p => p.paused).length;
+    document.getElementById('statProdutos').innerText = STATE.produtos.length;
+    document.getElementById('statCategorias').innerText = Object.keys(STATE.categorias).length;
+    let totalSubs = 0;
+    Object.values(STATE.categorias).forEach(cat => totalSubs += Object.keys(cat?.subcategories || {}).length);
+    document.getElementById('statSubs').innerText = totalSubs;
+    document.getElementById('statPausados').innerText = STATE.produtos.filter(p => p.paused).length;
   }
 
   function popularFiltros() {
@@ -336,10 +300,14 @@
     selSub.innerHTML = subOptions;
   }
 
+  function getActiveTab() {
+    return document.querySelector('.tab-btn.active')?.dataset?.tab || 'produtos';
+  }
+
   function renderCurrentTab() {
     const t = getActiveTab();
     const btn = document.getElementById('btnCriarNovo');
-    if (btn) {
+    if(btn) {
       if (t === 'produtos') btn.innerText = "➕ Novo Produto";
       else if (t === 'categorias') btn.innerText = "➕ Nova Categoria";
       else if (t === 'subcategorias') btn.innerText = "➕ Nova Subcategoria";
@@ -355,9 +323,7 @@
     renderCurrentTab();
   }
 
-  // ==========================================================
-  // INJETORES DINÂMICOS DE CAMPOS MULTI-VALORADOS (TAGS)
-  // ==========================================================
+  // Métodos auxiliares para gerenciar as tags dinâmicas de Dizeres e Iniciais na UI do Drawer
   function adicionarTagInput(containerId, valor = '') {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -373,27 +339,24 @@
   function extrairValoresTags(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return [];
-    return Array.from(container.querySelectorAll('.tag-value-input'))
-      .map(inp => inp.value.trim())
-      .filter(val => val !== '');
+    const inputs = container.querySelectorAll('.tag-value-input');
+    return Array.from(inputs).map(inp => inp.value.trim()).filter(val => val !== '');
   }
 
   // ==========================================================
-  // INTERFACES VISUAIS - RENDERIZADORES DE TABELAS/LISTAS
+  // RENDERIZADORES DAS LISTAGENS
   // ==========================================================
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
     if (!container) return;
 
-    const termos = (document.getElementById('buscaGlobal')?.value || '').toLowerCase();
-    const filtroCat = document.getElementById('filtroCategoria')?.value;
-    const filtroSub = document.getElementById('filtroSubcategoria')?.value;
+    const termos = (document.getElementById('buscaGlobal').value || '').toLowerCase();
+    const filtroCat = document.getElementById('filtroCategoria').value;
+    const filtroSub = document.getElementById('filtroSubcategoria').value;
 
     const filtrados = STATE.produtos.filter(p => {
-      const texto = `${p.name || ''} ${p.sku || ''} ${p.category || ''} ${DataService.getSubcategory(p)}`.toLowerCase();
-      return (termos === '' || texto.includes(termos)) && 
-             (!filtroCat || p.category === filtroCat) && 
-             (!filtroSub || DataService.getSubcategory(p) === filtroSub);
+      const texto = (p.name || '').toLowerCase() + ' ' + (p.sku || '').toLowerCase() + ' ' + (p.category || '').toLowerCase() + ' ' + (DataService.getSubcategory(p)).toLowerCase();
+      return (termos === '' || texto.includes(termos)) && (!filtroCat || p.category === filtroCat) && (!filtroSub || DataService.getSubcategory(p) === filtroSub);
     });
 
     if (filtrados.length === 0) {
@@ -401,18 +364,18 @@
       return;
     }
 
-    container.innerHTML = filtrados.map(p => {
+    let html = '';
+    filtrados.forEach(p => {
       const isPaused = p.paused;
       const cardBg = isPaused ? 'bg-zinc-950 opacity-60 border-red-900/40' : 'bg-zinc-950 border-zinc-900';
-      const statusTag = isPaused 
-        ? `<span class="bg-red-950 text-red-400 border border-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">PAUSADO</span>` 
-        : `<span class="bg-green-950 text-green-400 border border-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold">ATIVO</span>`;
-      
+      const statusTag = isPaused ? `<span class="bg-red-950 text-red-400 border border-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">PAUSADO</span>` : `<span class="bg-green-950 text-green-400 border border-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold">ATIVO</span>`;
       const imgUrl = converterGsUrl(DataService.getImage(p));
+
+      // Extrai contadores das variações cadastrados para exibir no card corporativo
       const qtdDizeres = DataService.getDizeres(p).length;
       const qtdIniciais = DataService.getIniciais(p).length;
 
-      return `
+      html += `
         <div class="border rounded-2xl p-5 mb-1 transition-all hover:border-zinc-800 ${cardBg}">
           <div class="flex flex-col lg:flex-row gap-5 items-start lg:items-center justify-between">
             <div class="flex items-center gap-4 w-full lg:w-auto">
@@ -462,16 +425,17 @@
             </div>
           </div>
         </div>`;
-    }).join('');
+    });
+    container.innerHTML = html;
   }
 
   function renderCategorias() {
     const el = document.getElementById('tab-categorias');
     if (!el) return;
-    
-    el.innerHTML = Object.entries(STATE.categorias).map(([slug, cat]) => {
+    let html = '';
+    Object.entries(STATE.categorias).forEach(([slug, cat]) => {
       const catImg = cat.imagem || cat.image || '';
-      return `
+      html += `
         <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-4">
@@ -490,13 +454,13 @@
             </div>
           </div>
         </div>`;
-    }).join('');
+    });
+    el.innerHTML = html;
   }
 
   function renderSubcategorias() {
     const el = document.getElementById('tab-subcategorias');
     if (!el) return;
-    
     let html = '';
     Object.entries(STATE.categorias).forEach(([catSlug, cat]) => {
       Object.entries(cat?.subcategories || {}).forEach(([subSlug, subObj]) => {
@@ -526,12 +490,12 @@
   }
 
   // ==========================================================
-  // OPERAÇÕES DE CRIAÇÃO E SALVAMENTO DE REGISTROS
+  // BLOCO DE CRIAÇÃO E PROCESSAMENTO
   // ==========================================================
   function criarProdutoForm() {
     let catsHtml = '<option value="">Selecione uma categoria...</option>';
     Object.keys(STATE.categorias).forEach(cat => catsHtml += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`);
-    const skuSugerido = `AB-${Date.now().toString().substring(8)}`;
+    const skuSugerido = 'AB-' + Date.now().toString().substring(8);
 
     abrirDrawer('Cadastrar Novo Produto', `
       <label class="text-xs text-zinc-400 block mb-1">Nome do Item</label>
@@ -562,6 +526,7 @@
          <option value="">Selecione a categoria primeiro</option>
       </select>
 
+      <!-- SEÇÃO VARIANTES: DIZERES -->
       <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
           <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Dizeres (Frases)</label>
@@ -570,6 +535,7 @@
         <div id="newDizeresContainer" class="flex flex-col gap-1"></div>
       </div>
 
+      <!-- SEÇÃO VARIANTES: INICIAIS -->
       <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
           <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Iniciais (Letras)</label>
@@ -594,8 +560,7 @@
     const select = document.getElementById('newSubcategoria');
     if (!select) return;
     select.innerHTML = '<option value="">Nenhuma</option>';
-    if (!cat) return;
-    
+    if(!cat) return;
     Object.entries(STATE.categorias[cat]?.subcategories || {}).forEach(([slug, sub]) => {
       select.innerHTML += `<option value="${escapeHtml(slug)}">${escapeHtml(sub.name || slug)}</option>`;
     });
@@ -606,8 +571,7 @@
       const nome = document.getElementById('newNome').value.trim();
       const sku = document.getElementById('newSku').value.trim();
       const cat = document.getElementById('newCategoria').value;
-      
-      if (!nome || !sku || !cat) {
+      if(!nome || !sku || !cat) {
         alert('Por favor, preencha Nome, SKU e selecione a Categoria!');
         return;
       }
@@ -616,21 +580,31 @@
       const preco = parseFloat(document.getElementById('newPreco').value) || 0;
       const peso = parseFloat(document.getElementById('newPeso').value) || 0;
       const subcat = document.getElementById('newSubcategoria').value;
-      const desc = document.getElementById('newDescricao').value;
 
       const listaDizeres = extrairValoresTags('newDizeresContainer');
       const listaIniciais = extrairValoresTags('newIniciaisContainer');
 
       const novoProduto = {
-        name: nome, sku, category: cat,
-        subcategory: subcat, subCategory: subcat,
-        price: preco, preco,
-        weight: peso, peso,
-        image: img, imagem: img,
-        description: desc, descricao: desc,
-        dizeres: listaDizeres, sayings: listaDizeres,
-        iniciais: listaIniciais, initials: listaIniciais,
-        paused: false, createdAt: Date.now(), updatedAt: Date.now()
+        name: nome,
+        sku: sku,
+        category: cat,
+        subcategory: subcat,
+        subCategory: subcat,
+        price: preco,
+        preco: preco,
+        weight: peso,
+        peso: peso,
+        image: img,
+        imagem: img,
+        description: document.getElementById('newDescricao').value,
+        descricao: document.getElementById('newDescricao').value,
+        dizeres: listaDizeres,
+        sayings: listaDizeres,
+        iniciais: listaIniciais,
+        initials: listaIniciais,
+        paused: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
       };
 
       await STATE.db.ref(window.getAbellaPath('products')).push(novoProduto);
@@ -640,7 +614,7 @@
   }
 
   // ==========================================================
-  // OPERAÇÕES DE MODIFICAÇÃO, REMOÇÃO E REPLICAÇÃO
+  // BLOCO DE EDIÇÃO E REMOÇÃO (SEGURO COM DUPLO CANAL)
   // ==========================================================
   function editarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
@@ -676,6 +650,7 @@
       <label class="text-xs text-zinc-400 block mb-1">Subcategoria Vinculada</label>
       <select id="editSubcategoria" class="input-dark"></select>
 
+      <!-- SEÇÃO VARIANTES EDIÇÃO: DIZERES -->
       <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
           <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Dizeres (Frases)</label>
@@ -684,6 +659,7 @@
         <div id="editDizeresContainer" class="flex flex-col gap-1"></div>
       </div>
 
+      <!-- SEÇÃO VARIANTES EDIÇÃO: INICIAIS -->
       <div class="mb-4 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
           <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">Variações de Iniciais (Letras)</label>
@@ -703,6 +679,8 @@
     `);
     
     carregarSubcategoriasProduto(p.category, DataService.getSubcategory(p));
+
+    // Hidrata os containers com as variações já existentes salvos no banco
     DataService.getDizeres(p).forEach(val => adicionarTagInput('editDizeresContainer', val));
     DataService.getIniciais(p).forEach(val => adicionarTagInput('editIniciaisContainer', val));
   }
@@ -712,7 +690,6 @@
     const select = document.getElementById('editSubcategoria');
     if (!select) return;
     select.innerHTML = '<option value="">Nenhuma</option>';
-    
     Object.entries(STATE.categorias[cat]?.subcategories || {}).forEach(([slug, sub]) => {
       select.innerHTML += `<option value="${escapeHtml(slug)}" ${slug === subSel ? 'selected' : ''}>${escapeHtml(sub.name || slug)}</option>`;
     });
@@ -724,7 +701,6 @@
       const preco = parseFloat(document.getElementById('editPreco').value) || 0;
       const peso = parseFloat(document.getElementById('editPeso').value) || 0;
       const subcat = document.getElementById('editSubcategoria').value;
-      const desc = document.getElementById('editDescricao').value;
 
       const listaDizeres = extrairValoresTags('editDizeresContainer');
       const listaIniciais = extrairValoresTags('editIniciaisContainer');
@@ -733,13 +709,20 @@
         name: document.getElementById('editNome').value,
         sku: document.getElementById('editSku').value,
         category: document.getElementById('editCategoria').value,
-        subcategory: subcat, subCategory: subcat,
-        price: preco, preco,
-        weight: peso, peso,
-        image: img, imagem: img,
-        description: desc, descricao: desc,
-        dizeres: listaDizeres, sayings: listaDizeres,
-        iniciais: listaIniciais, initials: listaIniciais,
+        subcategory: subcat,
+        subCategory: subcat,
+        price: preco,
+        preco: preco,
+        weight: peso,
+        peso: peso,
+        image: img,
+        imagem: img,
+        description: document.getElementById('editDescricao').value,
+        descricao: document.getElementById('editDescricao').value,
+        dizeres: listaDizeres,
+        sayings: listaDizeres,
+        iniciais: listaIniciais,
+        initials: listaIniciais,
         updatedAt: Date.now()
       });
       fecharDrawer();
@@ -791,8 +774,11 @@
       await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
         name: document.getElementById('subName').value,
         description: document.getElementById('subDesc').value,
-        imagem: gridVal, grid: gridVal, gridImage: gridVal,
-        hero: heroVal, heroImage: heroVal,
+        imagem: gridVal,
+        grid: gridVal,
+        gridImage: gridVal,
+        hero: heroVal,
+        heroImage: heroVal,
         updatedAt: Date.now()
       });
       fecharDrawer();
@@ -830,18 +816,19 @@
       await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({
         name: document.getElementById('editCatName').value,
         description: document.getElementById('editCatDesc').value,
-        imagem: imgVal, image: imgVal, 
+        imagem: imgVal,
+        image: imgVal, 
         updatedAt: Date.now()
       });
       fecharDrawer();
       await carregarTudo();
-    } catch (e) { setStatus('❌ Erro ao atualizar categoria', 'error'); }
+    } catch(e) { setStatus('❌ Erro ao atualizar categoria', 'error'); }
   }
 
   async function duplicarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
     if (!p) return;
-    const copia = { ...p, sku: `${p.sku || ''}-COPY`, createdAt: Date.now(), updatedAt: Date.now() };
+    const copia = { ...p, sku: (p.sku || '') + '-COPY', createdAt: Date.now(), updatedAt: Date.now() };
     delete copia.id;
     await STATE.db.ref(window.getAbellaPath('products')).push(copia);
     await carregarTudo();
@@ -875,11 +862,8 @@
     }
   }
 
-  // ==========================================================
-  // ASSOCIAÇÃO DE EVENTOS DE INTERAÇÃO (LISTENERS)
-  // ==========================================================
   function wireSearch() {
-    document.getElementById('buscaGlobal')?.addEventListener('input', () => {
+    document.getElementById('buscaGlobal').addEventListener('input', () => {
       clearTimeout(STATE.buscaDebounceTimer);
       STATE.buscaDebounceTimer = setTimeout(renderCurrentTab, CONFIG.debounceBusca);
     });
@@ -893,38 +877,34 @@
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
         ['produtos', 'categories', 'subcategorias'].forEach(t => {
-          const el = document.getElementById(`tab-${t === 'categories' ? 'categorias' : t}`);
-          el?.classList.add('hidden');
+          const el = document.getElementById('tab-' + (t === 'categories' ? 'categorias' : t));
+          if(el) el.classList.add('hidden');
         });
-        
-        document.getElementById(`tab-${btn.dataset.tab}`)?.classList.remove('hidden');
+        const targetEl = document.getElementById('tab-' + btn.dataset.tab);
+        if(targetEl) targetEl.classList.remove('hidden');
         renderCurrentTab();
       });
     });
   }
 
-  // ==========================================================
-  // INICIALIZADOR DA APLICAÇÃO (IIFE COMPORTAMENTAL)
-  // ==========================================================
   (async function init() {
     let t = 0;
-    while (!STATE.db && t < CONFIG.firebaseRetries) {
+    // Aguarda o Firebase DB estar disponível
+    while(!STATE.db && t < CONFIG.firebaseRetries){
       STATE.db = resolverDB();
-      if (!STATE.db) { 
-        await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay)); 
-        t++; 
-      }
+      if(!STATE.db) { await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay)); t++; }
     }
     if (!STATE.db) return setStatus('❌ Falha de carregamento do Firebase SDK', 'error');
 
+    // Aguarda a função getAbellaPath estar disponível no escopo global
     let tPath = 0;
-    while (typeof window.getAbellaPath !== 'function' && tPath < CONFIG.firebaseRetries) {
+    while(typeof window.getAbellaPath !== 'function' && tPath < CONFIG.firebaseRetries){
       await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay));
       tPath++;
     }
 
+    // Se mesmo assim não carregar, cria um fallback temporário para não travar a UI
     if (typeof window.getAbellaPath !== 'function') {
       console.warn('Aviso: window.getAbellaPath não foi encontrada. Usando caminhos padrão.');
       window.getAbellaPath = function(p) { return p; }; 
@@ -932,21 +912,22 @@
 
     wireTabs();
     wireSearch();
-    document.getElementById('btnRefresh')?.addEventListener('click', () => carregarTudo());
+    document.getElementById('btnRefresh').addEventListener('click', () => carregarTudo());
     await carregarTudo();
   })();
 
-  // ==========================================================
-  // EXPOSIÇÃO CONTROLADA PARA ESCOPO GLOBAL (WINDOW)
-  // ==========================================================
-  Object.assign(window, {
-    editarProduto, salvarProduto, duplicarProduto, pausarProduto, deletarProduto,
-    editarCategoria, salvarCategoria, editarSubcategoria, salvarSubcategoria,
-    fecharDrawer, tratarInputImagem, handleImageError, carregarSubcategoriasProduto,
-    abrirCriacaoPorAba, salvarNovoProduto, carregarSubcategoriasProdutoCriacao,
-    deletarCategoria, deletarSubcategoria, adicionarTagInput
-  });
-})();
+  window.editarProduto = editarProduto; window.salvarProduto = salvarProduto;
+  window.duplicarProduto = duplicarProduto; window.pausarProduto = pausarProduto;
+  window.deletarProduto = deletarProduto; window.editarCategoria = editarCategoria;
+  window.salvarCategoria = salvarCategoria; window.editarSubcategoria = editarSubcategoria;
+  window.salvarSubcategoria = salvarSubcategoria; window.fecharDrawer = fecharDrawer;
+  window.tratarInputImagem = tratarInputImagem; window.handleImageError = handleImageError;
+  window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
+  window.abrirCriacaoPorAba = abrirCriacaoPorAba; window.salvarNovoProduto = salvarNovoProduto;
+  window.salvarNovaCategoria = salvarNovaCategoria; window.salvarNovaSubcategoria = salvarNovaSubcategoria;
+  window.carregarSubcategoriasProdutoCriacao = carregarSubcategoriasProdutoCriacao;
+  window.deletarCategoria = deletarCategoria; window.deletarSubcategoria = deletarSubcategoria;
+  window.adicionarTagInput = adicionarTagInput;
   </script>
 </body>
 </html>

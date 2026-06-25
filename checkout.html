@@ -619,12 +619,27 @@ async function carregarConfiguracoes() {
             }
         }
         
-        // Peso (Usa o formatador nativo do peso.js que já coloca a unidade 'g' ou 'kg')
+       // Peso (Garante a exibição automática da unidade g ou kg vinda do peso.js)
         const pesoEl = document.getElementById('res-peso');
         if (pesoEl) {
-            pesoEl.innerText = typeof formatarPesoSeguro === 'function' 
-                ? formatarPesoSeguro(t.peso) 
-                : (typeof formatarPeso === 'function' ? formatarPeso(t.peso) : `${t.peso.toFixed(2)} g`);
+            let pesoFormatado = "";
+            
+            if (typeof window.formatarPesoSeguro === 'function') {
+                pesoFormatado = window.formatarPesoSeguro(t.peso);
+            } else if (typeof window.formatarPeso === 'function') {
+                pesoFormatado = window.formatarPeso(t.peso);
+            } else {
+                pesoFormatado = t.peso >= 1000 
+                    ? `${(t.peso / 1000).toFixed(2).replace('.', ',')} kg` 
+                    : `${t.peso.toFixed(2).replace('.', ',')} g`;
+            }
+
+            // Se o retorno da função por acaso não trouxer a unidade (g/kg), nós adicionamos manualmente
+            if (!pesoFormatado.includes('g') && !pesoFormatado.includes('kg')) {
+                pesoFormatado += t.peso >= 1000 ? ' kg' : ' g';
+            }
+
+            pesoEl.innerText = pesoFormatado;
         }
 
         // Frete (Evita o erro de elemento nulo procurando por 'res-frete')

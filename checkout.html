@@ -469,7 +469,7 @@
             }
         });
 
-       async function carregarConfiguracoes() {
+async function carregarConfiguracoes() {
     try {
         if (typeof window.getAbellaPath !== 'function') return;
 
@@ -483,10 +483,9 @@
             CONFIG.pedidoMinimo = parseFloat(s.pedidoMinimo ?? 300);
             CONFIG.whatsEmpresa = (s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
 
-            // 1. Captura o caminho ou URL da logo salva nas configurações
+            // Captura a logo de forma idêntica ao carrinho (testando todas as propriedades possíveis)
             let logoPath = s.logo || s.logoUrl || '';
             
-            // Se houver uma função global legada específica para a logo, usa ela
             if (typeof window.obterLogo === 'function') {
                 logoPath = window.obterLogo();
             }
@@ -496,16 +495,28 @@
                 const fallback = document.getElementById('abellaLogoFallback');
                 
                 if (img) {
-                    let urlFinal = logoPath;
+                    let urlFinal = '';
 
-                    // 2. Resolve de forma segura usando o seu ImageHelper homologado (v2.0)
+                    // Força a resolução usando o mesmo método fallback do carrinho se o ImageHelper falhar
                     if (window.ImageHelper && typeof window.ImageHelper.converterGsUrl === 'function') {
                         urlFinal = window.ImageHelper.converterGsUrl(logoPath);
                     } else if (typeof window.resolverImagemFirebase === 'function') {
                         urlFinal = window.resolverImagemFirebase(logoPath);
+                    } else {
+                        // Fallback manual direto caso as libs globais não tenham mapeado a função a tempo
+                        urlFinal = logoPath.trim();
+                        if (urlFinal.startsWith('gs://')) {
+                            const semGs = urlFinal.replace('gs://', '');
+                            const primeiraBarra = semGs.indexOf('/');
+                            if (primeiraBarra !== -1) {
+                                const bucket = semGs.substring(0, primeiraBarra);
+                                const caminho = semGs.substring(primeiraBarra + 1);
+                                urlFinal = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
+                            }
+                        }
                     }
 
-                    // Aplica a URL resolvida ao elemento de imagem
+                    // Aplica a URL final tratada
                     img.src = urlFinal;
                     
                     img.onload = () => {

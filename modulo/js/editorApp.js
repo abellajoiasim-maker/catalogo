@@ -1,6 +1,5 @@
 /**
  * Orquestrador Central Seguro - editorApp.js
- * Aguarda a infraestrutura oficial do catálogo estar pronta para iniciar os módulos
  */
 
 import { Drawer } from './drawer.js';
@@ -13,116 +12,92 @@ const EditorApp = {
     tentativas: 0,
 
     async init() {
-        console.log('🚀 Verificando infraestrutura do ecossistema Abella Joias...');
+        console.log('🚀 Inicializando infraestrutura Abella Joias...');
 
-        // Verifica se a conexão oficial já está ativa na janela global
-        const pronto = window.ABELLA_FIREBASE_INITIALIZED === true || window.ABELLA_FIREBASE_CONNECTED === true || typeof window.db !== 'undefined';
+        const pronto = window.ABELLA_FIREBASE_INITIALIZED || typeof window.db !== 'undefined';
 
         if (!pronto) {
             this.tentativas++;
-            if (this.tentativas > 10) {
-                console.error('❌ Tempo limite de conexão esgotado. Verifique o arquivo firebase-config.js');
-                return;
-            }
-            // Aguarda 400ms e tenta novamente de forma assíncrona até o Firebase carregar
+            if (this.tentativas > 10) return console.error('❌ Falha na conexão.');
             setTimeout(() => this.init(), 400);
             return;
         }
 
-        // Puxa a instância ativa e testada do banco global
-        this.db = window.db || (typeof window.firebase !== 'undefined' ? window.firebase.database() : null);
+        this.db = window.db || window.firebase.database();
 
-        if (!this.db) {
-            console.error('❌ Instância do Realtime Database não encontrada.');
-            return;
-        }
-
-        console.log('🔗 Conexão com o Firebase validada. Acoplando módulos...');
-
-        // Inicializa os módulos estruturais do ecossistema
+        // Inicializa os módulos passando a instância do banco
         Drawer.init();
         ProdutoModule.init(this.db);
         CategoriaModule.init(this.db);
         SubcategoriaModule.init(this.db);
 
-        // Ativa os listeners de interface do Shell (Abas e cliques superiores)
         this._configurarAbas();
         this._configurarBotoesGlobais();
         
-        console.log('✅ Todos os módulos operando em tempo real!');
+        console.log('✅ Ecossistema operando!');
     },
 
-    /**
-     * Gerencia a troca de abas nativa
-     */
     _configurarAbas() {
         const botoesAbas = document.querySelectorAll('.tab-btn');
-        const secoesAbas = document.querySelectorAll('.tab-content');
-
         botoesAbas.forEach(botao => {
-            botao.addEventListener('click', () => {
-                const alvo = botao.getAttribute('data-tab');
+            botao.addEventListener('click', (e) => {
+                const alvo = e.currentTarget.getAttribute('data-tab');
 
+                // UI das Abas
                 botoesAbas.forEach(b => b.classList.remove('active', 'bg-[#caa85c]', 'text-black', 'font-bold'));
                 botoesAbas.forEach(b => b.classList.add('text-zinc-400'));
-                secoesAbas.forEach(s => s.classList.add('hidden'));
-
-                botao.classList.add('active', 'bg-[#caa85c]', 'text-black', 'font-bold');
-                botao.classList.remove('text-zinc-400');
+                e.currentTarget.classList.add('active', 'bg-[#caa85c]', 'text-black', 'font-bold');
+                e.currentTarget.classList.remove('text-zinc-400');
                 
-                const secaoAlvo = document.getElementById(`tab-${alvo}`);
-                if (secaoAlvo) secaoAlvo.classList.remove('hidden');
+                // Exibição das seções
+                document.querySelectorAll('.tab-content').forEach(s => s.classList.add('hidden'));
+                document.getElementById(`tab-${alvo}`)?.classList.remove('hidden');
+
+                // Atualiza o botão superior
+                const btnCriar = document.getElementById('btnCriarNovo');
+                btnCriar.setAttribute('data-contexto', alvo);
+                btnCriar.textContent = `➕ Criar ${alvo.charAt(0).toUpperCase() + alvo.slice(1, -1)}`;
             });
         });
     },
 
-    /**
-     * Intercepta os botões superiores do Shell Administrativo
-     */
     _configurarBotoesGlobais() {
-        // Botão "➕ Criar Item"
+        // Criar Novo
         document.getElementById('btnCriarNovo')?.addEventListener('click', () => {
-            const abaAtiva = document.querySelector('.tab-btn.active')?.getAttribute('data-tab');
+            const contexto = document.getElementById('btnCriarNovo').getAttribute('data-contexto');
             
-            switch (abaAtiva) {
+            // Passamos as dependências de dados para o módulo correspondente
+            const cats = CategoriaModule.categoriasEmMemoria || {};
+            const subs = SubcategoriaModule.subcategoriasEmMemoria || {};
+
+            switch (contexto) {
                 case 'produtos':
-                    ProdutoModule.abrirNovoProduto(CategoriaModule.categoriasEmMemoria);
+                    ProdutoModule.abrirNovoProduto(cats, subs);
                     break;
                 case 'categorias':
                     CategoriaModule.abrirNovaCategoria();
                     break;
                 case 'subcategorias':
-                    SubcategoriaModule.abrirNovaSubcategoria(CategoriaModule.categoriasEmMemoria);
+                    SubcategoriaModule.abrirNovaSubcategoria(cats);
                     break;
-                default:
-                    ProdutoModule.abrirNovoProduto(CategoriaModule.categoriasEmMemoria);
             }
         });
 
-        // Botão "🔄 Sincronizar Vitrine"
-        document.getElementById('btnRefresh')?.addEventListener('click', () => {
-            const btn = document.getElementById('btnRefresh');
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = '🔄 Sincronizando...';
-            btn.disabled = true;
+        // Refresh
+        document.getElementById('btnRefresh')?.addEventListener('click', (e) => {
+            const btn = e.target;
+            btn.textContent = '🔄 Sincronizando...';
             
-            ProdutoModule.listarProdutos();
-            CategoriaModule.listarCategorias();
-            SubcategoriaModule.listarSubcategorias();
-
-            setTimeout(() => {
-                btn.innerHTML = textoOriginal;
-                btn.disabled = false;
-            }, 800);
-        });
-
-        window.addEventListener('pedirCategoriasParaSub', (e) => {
-            if (typeof e.detail?.callback === 'function') {
-                e.detail.callback(CategoriaModule.categoriasEmMemoria);
-            }
+            // Re-lista tudo via módulos
+            Promise.all([
+                ProdutoModule.listarProdutos(),
+                CategoriaModule.listarCategorias(),
+                SubcategoriaModule.listarSubcategorias()
+            ]).then(() => {
+                setTimeout(() => btn.textContent = '🔄 Sincronizar', 500);
+            });
         });
     }
 };
 
-// Inicialização imediata via ciclo do módulo
 EditorApp.init();

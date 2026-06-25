@@ -29,13 +29,38 @@ export const CategoriaModule = {
         });
     },
 
-    // --- Renderização Padronizada com Botões de Ação ---
+    // --- MÉTODOS DE AÇÃO (Devem existir para o Window acessar) ---
+    abrirEditarCategoria(id) {
+        const cat = this.categoriasEmMemoria[id];
+        if (!cat) return;
+        Drawer.open({
+            title: '✏️ EDITAR CATEGORIA',
+            content: `
+                <input type="text" id="cat-nome-edit" value="${cat.nome || ''}" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-white mb-4">
+                <button onclick="window.salvarCategoria('${id}')" class="w-full bg-[#caa85c] py-3 rounded-xl font-black text-black">SALVAR ALTERAÇÕES</button>
+            `
+        });
+    },
+
+    async excluirCategoria(id) {
+        if (confirm("Tem certeza que deseja excluir esta categoria?")) {
+            await this.dbRefCat.child(id).remove();
+        }
+    },
+
+    async salvarCategoria(id) {
+        const nome = document.getElementById('cat-nome-edit').value;
+        await this.dbRefCat.child(id).update({ nome });
+        Drawer.close();
+    },
+
+    // --- Renderização ---
     renderCategorias() {
         const container = document.getElementById('lista-categorias-container');
         if (!container) return;
 
         container.innerHTML = Object.entries(this.categoriasEmMemoria).map(([id, c]) => `
-            <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl hover:border-zinc-800 transition-all">
+            <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl">
                 <div>
                     <div class="text-[10px] text-zinc-500 font-mono">ID: ${id}</div>
                     <div class="text-sm font-bold text-zinc-200 mt-0.5">${c.nome || 'Sem Nome'}</div>
@@ -53,7 +78,7 @@ export const CategoriaModule = {
         if (!container) return;
 
         container.innerHTML = Object.entries(this.subcategoriasEmMemoria).map(([id, s]) => `
-            <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl hover:border-zinc-800 transition-all">
+            <div class="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-900 rounded-2xl">
                 <div>
                     <div class="text-sm font-bold text-zinc-200">${s.nome || 'Sem Nome'}</div>
                 </div>
@@ -63,16 +88,6 @@ export const CategoriaModule = {
                 </div>
             </div>
         `).join('');
-    },
-
-    // --- Métodos de Controle ---
-    abrirNovaCategoria() {
-        // Exemplo de como você chamaria seu modal aqui
-        Drawer.open({
-            title: '➕ NOVA CATEGORIA',
-            content: `<input type="text" id="cat-nome" class="input-dark" placeholder="Nome da Categoria">
-                      <button onclick="window.salvarCategoria()" class="w-full bg-[#caa85c] py-3 rounded-xl font-bold">SALVAR</button>`
-        });
     },
 
     _configurarEventosAbas() {

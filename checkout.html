@@ -463,7 +463,7 @@
             }
         });
 
-        async function carregarConfiguracoes() {
+       async function carregarConfiguracoes() {
             try {
                 if (typeof window.getAbellaPath !== 'function') return;
 
@@ -477,15 +477,30 @@
                     CONFIG.pedidoMinimo = parseFloat(s.pedidoMinimo ?? 300);
                     CONFIG.whatsEmpresa = (s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
 
+                    // Captura o caminho ou URL da logo salva nas configurações
                     let logoPath = s.logo || s.logoUrl || '';
-                    if (logoPath && typeof window.obterLogo === 'function') {
+                    
+                    // Se houver uma função global específica para a logo, usa ela primeiro
+                    if (typeof window.obterLogo === 'function') {
+                        logoPath = window.obterLogo();
+                    }
+
+                    if (logoPath) {
                         const img = document.getElementById('abellaLogoImg');
                         const fallback = document.getElementById('abellaLogoFallback');
+                        
                         if (img) {
-                            img.src = window.obterLogo();
+                            // Trata a URL da logo com o mesmo helper seguro dos produtos (resolve HTTP, HTTPS e gs://)
+                            img.src = obterImagemProdutoSegura({ image: logoPath });
+                            
                             img.onload = () => {
                                 img.classList.remove('hidden');
                                 fallback?.classList.add('hidden');
+                            };
+                            img.onerror = () => {
+                                console.warn('Falha ao renderizar imagem da logo, mantendo o fallback de texto.');
+                                img.classList.add('hidden');
+                                fallback?.classList.remove('hidden');
                             };
                         }
                     }
@@ -494,7 +509,6 @@
                 console.warn('Configurações locais carregadas com sucesso.', e);
             }
         }
-
         function renderizarItens() {
             const container = document.getElementById('lista-itens-checkout');
             if (!container) return;

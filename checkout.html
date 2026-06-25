@@ -464,51 +464,61 @@
         });
 
        async function carregarConfiguracoes() {
-            try {
-                if (typeof window.getAbellaPath !== 'function') return;
+    try {
+        if (typeof window.getAbellaPath !== 'function') return;
 
-                const snap = await db.ref(window.getAbellaPath('settings')).once('value');
-                if (snap.exists()) {
-                    const s = snap.val() || {};
-                    CONFIG.descontoPix = parseFloat(s.pix ?? s.pixDesc ?? s.descontoPix ?? 5);
-                    CONFIG.parcelasMax = parseInt(s.parcelas ?? s.parcelasMax ?? 6);
-                    CONFIG.freteFixo = parseFloat(s.freteFixo ?? 15);
-                    CONFIG.freteGratisAlvo = parseFloat(s.freteGratisAlvo ?? 100);
-                    CONFIG.pedidoMinimo = parseFloat(s.pedidoMinimo ?? 300);
-                    CONFIG.whatsEmpresa = (s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
+        const snap = await db.ref(window.getAbellaPath('settings')).once('value');
+        if (snap.exists()) {
+            const s = snap.val() || {};
+            CONFIG.descontoPix = parseFloat(s.pix ?? s.pixDesc ?? s.descontoPix ?? 5);
+            CONFIG.parcelasMax = parseInt(s.parcelas ?? s.parcelasMax ?? 6);
+            CONFIG.freteFixo = parseFloat(s.freteFixo ?? 15);
+            CONFIG.freteGratisAlvo = parseFloat(s.freteGratisAlvo ?? 100);
+            CONFIG.pedidoMinimo = parseFloat(s.pedidoMinimo ?? 300);
+            CONFIG.whatsEmpresa = (s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
 
-                    // Captura o caminho ou URL da logo salva nas configurações
-                    let logoPath = s.logo || s.logoUrl || '';
+            // 1. Captura o caminho ou URL da logo salva nas configurações
+            let logoPath = s.logo || s.logoUrl || '';
+            
+            // Se houver uma função global legada específica para a logo, usa ela
+            if (typeof window.obterLogo === 'function') {
+                logoPath = window.obterLogo();
+            }
+
+            if (logoPath) {
+                const img = document.getElementById('abellaLogoImg');
+                const fallback = document.getElementById('abellaLogoFallback');
+                
+                if (img) {
+                    let urlFinal = logoPath;
+
+                    // 2. Resolve de forma segura usando o seu ImageHelper homologado (v2.0)
+                    if (window.ImageHelper && typeof window.ImageHelper.converterGsUrl === 'function') {
+                        urlFinal = window.ImageHelper.converterGsUrl(logoPath);
+                    } else if (typeof window.resolverImagemFirebase === 'function') {
+                        urlFinal = window.resolverImagemFirebase(logoPath);
+                    }
+
+                    // Aplica a URL resolvida ao elemento de imagem
+                    img.src = urlFinal;
                     
-                    // Se houver uma função global específica para a logo, usa ela primeiro
-                    if (typeof window.obterLogo === 'function') {
-                        logoPath = window.obterLogo();
-                    }
-
-                    if (logoPath) {
-                        const img = document.getElementById('abellaLogoImg');
-                        const fallback = document.getElementById('abellaLogoFallback');
-                        
-                        if (img) {
-                            // Trata a URL da logo com o mesmo helper seguro dos produtos (resolve HTTP, HTTPS e gs://)
-                            img.src = obterImagemProdutoSegura({ image: logoPath });
-                            
-                            img.onload = () => {
-                                img.classList.remove('hidden');
-                                fallback?.classList.add('hidden');
-                            };
-                            img.onerror = () => {
-                                console.warn('Falha ao renderizar imagem da logo, mantendo o fallback de texto.');
-                                img.classList.add('hidden');
-                                fallback?.classList.remove('hidden');
-                            };
-                        }
-                    }
+                    img.onload = () => {
+                        img.classList.remove('hidden');
+                        if (fallback) fallback.classList.add('hidden');
+                    };
+                    
+                    img.onerror = () => {
+                        console.warn('Falha crítica ao renderizar imagem da logo. Ativando fallback de texto.');
+                        img.classList.add('hidden');
+                        if (fallback) fallback.classList.remove('hidden');
+                    };
                 }
-            } catch (e) {
-                console.warn('Configurações locais carregadas com sucesso.', e);
             }
         }
+    } catch (e) {
+        console.warn('Erro ao processar configurações remotas da logo:', e);
+    }
+}
         function renderizarItens() {
             const container = document.getElementById('lista-itens-checkout');
             if (!container) return;

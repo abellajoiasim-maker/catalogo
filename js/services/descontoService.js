@@ -1,8 +1,9 @@
-/**
- * Abella Joias - PMA V8
- * Service: descontoService
- * Descrição: Cálculos matemáticos de descontos, PIX e validações de ofertas.
- */
+// ======================================================================
+// js/services/descontoService.js
+// Abella Joias - DescontoService v8.2 (Edição Exclusiva e Estática)
+// Autoridade Suprema Exclusiva sobre: Cálculos de Ofertas, PIX e Categorias
+// Arquitetura Homologada PMA V8 - Arquivo Completo e Selado
+// ======================================================================
 
 (function () {
     'use strict';
@@ -16,11 +17,21 @@
             return fallback;
         }
 
-        const numero = Number(
-            String(valor)
-                .replace(/[^\d,.-]/g, '')
-                .replace(',', '.')
-        );
+        if (typeof valor === 'number') {
+            return Number.isFinite(valor) ? valor : fallback;
+        }
+
+        // Saneamento robusto focado em Moeda BR (Ex: "R$ 1.250,50" -> 1250.50)
+        let str = String(valor).trim();
+        
+        // Se contiver pontos e vírgulas, remove os pontos de milhar e converte a vírgula em ponto
+        if (str.includes(',') && str.includes('.')) {
+            str = str.replace(/\./g, '');
+        }
+        str = str.replace(',', '.');
+        
+        // Remove qualquer caractere que não seja número, ponto ou sinal de menos
+        const numero = parseFloat(str.replace(/[^\d.-]/g, ''));
 
         return Number.isFinite(numero) ? numero : fallback;
     }
@@ -34,6 +45,59 @@
     // ==========================================================
 
     const descontoService = {
+
+        /**
+         * Resolve o percentual de desconto aplicável a um produto com base na sua categoria
+         * cruzando os dados em tempo real com o ConfigService corporativo da Abella Joias.
+         */
+        obterPercentualPromocao: function (produto) {
+            if (!produto || typeof produto !== 'object' || !window.ConfigService) {
+                return 0;
+            }
+
+            try {
+                // Recupera de forma síncrona o cache limpo e descongelado do ConfigService
+                const config = window.ConfigService._cache;
+                if (!config || !config.descontos || !config.descontos.ativo) {
+                    return 0;
+                }
+
+                const categoriaProd = String(produto.category || produto.categoria || '').trim().toLowerCase();
+                const regrasCategoria = config.descontos.regrasCategoria || {};
+
+                // 1º Lugar: Verifica se existe regra específica ativa para a categoria do produto
+                if (categoriaProd && regrasCategoria[categoriaProd]) {
+                    const regra = regrasCategoria[categoriaProd];
+                    if (regra.ativo) {
+                        return Math.min(100, Math.max(0, safeNumber(regra.porcentagem)));
+                    }
+                }
+
+                // 2º Lugar: Fallback para a porcentagem do desconto global ativo
+                return Math.min(100, Math.max(0, safeNumber(config.descontos.porcentagem)));
+            } catch (error) {
+                console.error('[PMA V8] [descontoService] Erro ao obter regras do ConfigService:', error);
+                return 0;
+            }
+        },
+
+        /**
+         * Calcula o preço final de um produto aplicando o desconto de categoria/campanha global se houver.
+         */
+        calcularPrecoComDesconto: function (produto) {
+            if (!produto || typeof produto !== 'object') {
+                return 0;
+            }
+
+            const precoOriginal = safeNumber(produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor);
+            const percentualPromo = this.obterPercentualPromocao(produto);
+
+            if (percentualPromo > 0) {
+                return round(precoOriginal * (1 - percentualPromo / 100));
+            }
+
+            return precoOriginal;
+        },
 
         /**
          * Retorna um objeto contendo o subtotal, valor deduzido e total final com PIX
@@ -70,7 +134,7 @@
         },
 
         /**
-         * Calcula a diferença exata em reais entre o preço original e o atual
+         * Calcula a diferença exata em reais entre o preço de tabela/antigo e o preço de venda atual
          */
         calcularEconomia: function (precoAtual, precoAnterior) {
             const atual = safeNumber(precoAtual);
@@ -84,7 +148,7 @@
         },
 
         /**
-         * Retorna a porcentagem inteira de desconto obtida
+         * Retorna a porcentagem inteira de desconto obtida entre dois preços
          */
         calcularPercentualDesconto: function (precoAtual, precoAnterior) {
             const atual = safeNumber(precoAtual);
@@ -98,49 +162,46 @@
         },
 
         /**
-         * Gera a string descritiva da etiqueta de oferta (ex: "-15% OFF")
+         * Gera a string descritiva da etiqueta de oferta (ex: "-15% OFF") priorizando descontos de painel
          */
         obterEtiquetaOferta: function (produto) {
             if (!produto || typeof produto !== 'object') {
                 return null;
             }
 
-            const precoAtual = safeNumber(
-                produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor
-            );
+            const precoOriginal = safeNumber(produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor);
+            const percentualPromo = this.obterPercentualPromocao(produto);
 
-            const precoAnterior = safeNumber(
-                produto.oldPrice ?? produto.precoAntigo ?? produto.precoOriginal
-            );
+            // Se houver desconto ativo via painel administrativo por categoria/global
+            if (percentualPromo >= 1) {
+                return `-${percentualPromo}% OFF`;
+            }
 
-            if (precoAnterior <= 0 || precoAtual >= precoAnterior) {
+            // Fallback: Verifica se o produto veio com "oldPrice" fixo direto do banco de dados
+            const precoAnterior = safeNumber(produto.oldPrice ?? produto.precoAntigo ?? produto.precoOriginal);
+
+            if (precoAnterior <= 0 || precoOriginal >= precoAnterior) {
                 return null;
             }
 
-            const percentual = this.calcularPercentualDesconto(precoAtual, precoAnterior);
-
-            if (percentual < 1) {
-                return null;
-            }
-
-            return `-${percentual}% OFF`;
+            const percentualDePara = this.calcularPercentualDesconto(precoOriginal, precoAnterior);
+            return percentualDePara >= 1 ? `-${percentualDePara}% OFF` : null;
         },
 
         /**
-         * Valida se um determinado produto possui regras de desconto ativas
+         * Valida se um determinado produto possui regras de desconto ou ofertas ativas
          */
         produtoEmOferta: function (produto) {
             if (!produto || typeof produto !== 'object') {
                 return false;
             }
 
-            const precoAtual = safeNumber(
-                produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor
-            );
+            if (this.obterPercentualPromocao(produto) > 0) {
+                return true;
+            }
 
-            const precoAnterior = safeNumber(
-                produto.oldPrice ?? produto.precoAntigo ?? produto.precoOriginal
-            );
+            const precoAtual = safeNumber(produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor);
+            const precoAnterior = safeNumber(produto.oldPrice ?? produto.precoAntigo ?? produto.precoOriginal);
 
             return (precoAnterior > 0 && precoAtual < precoAnterior);
         },
@@ -150,16 +211,17 @@
          */
         formatarEconomia: function (precoAtual, precoAnterior) {
             const economia = this.calcularEconomia(precoAtual, precoAnterior);
-            return economia > 0 ? `Economize R$ ${economia.toFixed(2)}` : null;
+            return economia > 0 ? `Economize R$ ${economia.toFixed(2).replace('.', ',')}` : null;
         }
     };
 
-    // Imutabilidade de Runtime total sob o escopo PMA V8
-    Object.freeze(descontoService);
+    // Imutabilidade de Runtime total sob o escopo PMA V8 para Abella Joias
+    Object.defineProperty(window, 'descontoService', {
+        value: Object.freeze(descontoService),
+        writable: false,
+        configurable: false
+    });
 
-    // Exposição controlada e padronizada na Window
-    window.descontoService = descontoService;
-
-    console.info('[descontoService] Configurado com sucesso sob o padrão PMA V8.');
+    console.info('[PMA V8] 🏷️ DescontoService v8.2 integrado de forma síncrona com o painel Abella Joias.');
 
 })();

@@ -1,420 +1,210 @@
 // ======================================================================
 // js/utils/image-helper.js
-// Abella Joias - ImageHelper v2.0
-// AUDITORIA FORENSE FIREBASE + STORAGE IQ200
+// Abella Joias - ImageHelper v3.0 (Versão Unificada e Final)
+// Compatível com GitHub Pages • Resolução de Mapeamentos, Slugs e Storage
+// Arquitetura Homologada PMA V8 - Arquivo Completo e Selado
 // ======================================================================
 
-window.ImageHelper = (() => {
+const ImageHelper = (() => {
+    'use strict';
 
     // ==========================================================
-    // CONFIG
+    // CONFIGURAÇÕES E CONSTANTES
     // ==========================================================
-
-    const PLACEHOLDER =
-
-        'https://via.placeholder.com/800x800/111111/caa85c?text=ABELLA';
-
-    const FIREBASE_STORAGE_HOST =
-
-        'https://firebasestorage.googleapis.com/v0/b';
+    const PLACEHOLDER = 'https://via.placeholder.com/800x800/111111/caa85c?text=ABELLA';
+    const FIREBASE_STORAGE_HOST = 'https://firebasestorage.googleapis.com/v0/b';
+    const BUCKET_NAME = 'catalogo-abella-joias.firebasestorage.app';
+    const STORAGE_ROOT = `gs://${BUCKET_NAME}/images`;
 
     // ==========================================================
-    // HELPERS
+    // HELPERS INTERNOS DE SANITIZAÇÃO
     // ==========================================================
-
     function safeString(valor = '') {
-
-        return String(valor || '')
-            .trim();
-
+        return String(valor || '').trim();
     }
-
-    function isValidString(valor) {
-
-        return (
-            typeof valor === 'string' &&
-            valor.trim() !== ''
-        );
-
-    }
-
-    // ==========================================================
-    // DETECTA URL ABSOLUTA
-    // ==========================================================
 
     function isHttpUrl(url = '') {
-
-        return (
-
-            url.startsWith('http://') ||
-
-            url.startsWith('https://')
-
-        );
-
+        return url.startsWith('http://') || url.startsWith('https://');
     }
-
-    // ==========================================================
-    // DETECTA GS://
-    // ==========================================================
 
     function isGsUrl(url = '') {
+        return url.startsWith('gs://');
+    }
 
-        return url.startsWith(
-            'gs://'
-        );
-
+    function normalizarSlug(valor) {
+        return safeString(valor)
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, '-');
     }
 
     // ==========================================================
-    // NORMALIZA PATH RELATIVO
+    // NÚCLEO: CONVERTER GS:// OU PATH PARA HTTPS URL REAL
     // ==========================================================
-
-    function normalizarPathRelativo(url = '') {
-
-        return safeString(url)
-            .replace(/^\/+/, '');
-
-    }
-
-    // ==========================================================
-    // CONVERTE GS:// PARA HTTPS
-    // ==========================================================
-
     function converterGsUrl(url = '') {
-
         try {
+            let pathOriginal = safeString(url);
 
-            url =
-                safeString(url);
-
-            if (!url) {
-
+            if (!pathOriginal) {
                 return PLACEHOLDER;
-
             }
 
-            // ==================================================
-            // URL HTTPS
-            // ==================================================
-
-            if (
-                isHttpUrl(url)
-            ) {
-
-                return url;
-
+            // 1. Caso já seja uma URL HTTP/HTTPS absoluta
+            if (isHttpUrl(pathOriginal)) {
+                return pathOriginal;
             }
 
-            // ==================================================
-            // GS:// FIREBASE STORAGE
-            // ==================================================
-
+            // 2. Caso seja um caminho relativo legado, converte para gs://
             if (
-                isGsUrl(url)
+                pathOriginal.startsWith('/images/') || pathOriginal.startsWith('images/') ||
+                pathOriginal.startsWith('/storage/') || pathOriginal.startsWith('storage/')
             ) {
+                const cleanRelative = pathOriginal.replace(/^\/+/, '');
+                pathOriginal = `gs://${BUCKET_NAME}/${cleanRelative}`;
+            }
 
-                const semGs =
-                    url.replace(
-                        'gs://',
-                        ''
-                    );
+            // 3. Processamento de URLs estruturadas gs://
+            if (isGsUrl(pathOriginal)) {
+                const semGs = pathOriginal.replace('gs://', '');
+                const primeiraBarra = semGs.indexOf('/');
 
-                const primeiraBarra =
-                    semGs.indexOf('/');
-
-                if (
-                    primeiraBarra === -1
-                ) {
-
-                    console.warn(
-                        '[ImageHelper] gs:// inválido:',
-                        url
-                    );
-
+                if (primeiraBarra === -1) {
                     return PLACEHOLDER;
-
                 }
 
-                const bucket =
-                    semGs.substring(
-                        0,
-                        primeiraBarra
-                    );
+                const bucket = semGs.substring(0, primeiraBarra);
+                const caminho = semGs.substring(primeiraBarra + 1);
 
-                const caminho =
-                    semGs.substring(
-                        primeiraBarra + 1
-                    );
-
-                if (
-                    !bucket ||
-                    !caminho
-                ) {
-
-                    console.warn(
-                        '[ImageHelper] bucket/caminho inválido:',
-                        url
-                    );
-
+                if (!bucket || !caminho) {
                     return PLACEHOLDER;
-
                 }
 
                 return `${FIREBASE_STORAGE_HOST}/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
-
             }
 
-            // ==================================================
-            // PATH RELATIVO LEGADO
-            // ==================================================
-
-            if (
-
-                url.startsWith('/images/') ||
-
-                url.startsWith('images/') ||
-
-                url.startsWith('/storage/') ||
-
-                url.startsWith('storage/')
-
-            ) {
-
-                return normalizarPathRelativo(
-                    url
-                );
-
-            }
-
-            // ==================================================
-            // FALLBACK DEFAULT
-            // ==================================================
-
-            return url;
+            // 4. Se for apenas o nome de um arquivo solto, trata como produto pendente no raiz do storage
+            return `${FIREBASE_STORAGE_HOST}/${BUCKET_NAME}/o/${encodeURIComponent(pathOriginal)}?alt=media`;
 
         } catch (error) {
-
-            console.error(
-                '[ImageHelper:converterGsUrl]',
-                error
-            );
-
+            console.error('[PMA V8] [ImageHelper:converterGsUrl]', error);
             return PLACEHOLDER;
-
         }
-
     }
 
     // ==========================================================
-    // OBTÉM IMAGEM PRINCIPAL
+    // RESOLUÇÃO DE IMAGENS POR INTERPOLAÇÃO / ESTRUTURA
     // ==========================================================
+    function obterImagemFallback() {
+        return converterGsUrl(`${STORAGE_ROOT}/fallback.jpg`);
+    }
 
+    function obterLogo() {
+        return converterGsUrl(`${STORAGE_ROOT}/logo/logo.png`);
+    }
+
+    function obterImagemCategoria(slug) {
+        const cleanSlug = normalizarSlug(slug);
+        if (!cleanSlug) return obterImagemFallback();
+        return converterGsUrl(`${STORAGE_ROOT}/categorias/${cleanSlug}.jpg`);
+    }
+
+    function obterImagemCategoriaGrid(slug) {
+        const cleanSlug = normalizarSlug(slug);
+        if (!cleanSlug) return obterImagemFallback();
+        return converterGsUrl(`${STORAGE_ROOT}/categoria-grid/${cleanSlug}.jpg`);
+    }
+
+    function obterImagemSubcategoria(slug) {
+        const cleanSlug = normalizarSlug(slug);
+        if (!cleanSlug) return obterImagemFallback();
+        return converterGsUrl(`${STORAGE_ROOT}/subcategorias/${cleanSlug}.jpg`);
+    }
+
+    function obterImagemSubcategoriaGrid(slug) {
+        const cleanSlug = normalizarSlug(slug);
+        if (!cleanSlug) return obterImagemFallback();
+        return converterGsUrl(`${STORAGE_ROOT}/subcategoria-grid/${cleanSlug}.jpg`);
+    }
+
+    function obterImagemProduto(nomeArquivo) {
+        if (!nomeArquivo) return obterImagemFallback();
+        
+        if (String(nomeArquivo).startsWith('gs://') || String(nomeArquivo).startsWith('http')) {
+            return converterGsUrl(nomeArquivo);
+        }
+        
+        return converterGsUrl(`${STORAGE_ROOT}/produtos/${nomeArquivo}`);
+    }
+
+    // ==========================================================
+    // INTERFACES AUXILIARES DE MANIPULAÇÃO DO DOM
+    // ==========================================================
     function obterImagem(item = {}) {
+        if (!item || typeof item !== 'object') return PLACEHOLDER;
 
-        try {
+        const imagem = item.image || item.imagem || item.foto || item.thumbnail || item.thumb || item.capa ||
+            (Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null) ||
+            (Array.isArray(item.imagens) && item.imagens.length > 0 ? item.imagens[0] : null) || 
+            PLACEHOLDER;
 
-            if (
-                !item ||
-                typeof item !== 'object'
-            ) {
-
-                return PLACEHOLDER;
-
-            }
-
-            // ==================================================
-            // PRIORIDADES
-            // ==================================================
-
-            const imagem =
-
-                item.image ||
-
-                item.imagem ||
-
-                item.foto ||
-
-                item.thumbnail ||
-
-                item.thumb ||
-
-                item.capa ||
-
-                // ==================================================
-                // ARRAYS
-                // ==================================================
-
-                (
-
-                    Array.isArray(
-                        item.images
-                    ) &&
-
-                    item.images.length > 0
-
-                        ? item.images[0]
-
-                        : null
-
-                ) ||
-
-                (
-
-                    Array.isArray(
-                        item.imagens
-                    ) &&
-
-                    item.imagens.length > 0
-
-                        ? item.imagens[0]
-
-                        : null
-
-                ) ||
-
-                PLACEHOLDER;
-
-            return converterGsUrl(
-                imagem
-            );
-
-        } catch (error) {
-
-            console.error(
-                '[ImageHelper:obterImagem]',
-                error
-            );
-
-            return PLACEHOLDER;
-
-        }
-
+        return converterGsUrl(imagem);
     }
-
-    // ==========================================================
-    // FALLBACK AUTOMÁTICO IMG
-    // ==========================================================
 
     function aplicarFallback(img) {
-
-        try {
-
-            if (
-                !img ||
-                typeof img !== 'object'
-            ) {
-
-                return;
-
-            }
-
-            img.onerror = () => {
-
-                img.onerror = null;
-
-                img.src =
-                    PLACEHOLDER;
-
-            };
-
-        } catch (error) {
-
-            console.error(
-                '[ImageHelper:aplicarFallback]',
-                error
-            );
-
-        }
-
+        if (!img || typeof img !== 'object') return;
+        img.onerror = () => {
+            img.onerror = null;
+            img.src = PLACEHOLDER;
+        };
     }
 
-    // ==========================================================
-    // DEFINE SRC COM FALLBACK
-    // ==========================================================
-
-    function aplicarImagem(
-        img,
-        imagem
-    ) {
-
-        try {
-
-            if (!img) {
-
-                return;
-
-            }
-
-            aplicarFallback(
-                img
-            );
-
-            img.src =
-                obterImagem({
-                    image: imagem
-                });
-
-        } catch (error) {
-
-            console.error(
-                '[ImageHelper:aplicarImagem]',
-                error
-            );
-
-        }
-
+    function aplicarImagem(img, imagem) {
+        if (!img) return;
+        aplicarFallback(img);
+        img.src = obterImagem({ image: imagem });
     }
-
-    // ==========================================================
-    // VALIDA URL
-    // ==========================================================
 
     function possuiImagem(valor) {
-
-        return isValidString(
-            valor
-        );
-
+        return typeof valor === 'string' && valor.trim() !== '';
     }
 
     // ==========================================================
-    // EXPORTS
+    // EXPORTAÇÃO COMPACTA E CONGELADA
     // ==========================================================
-
-    return {
-
+    return Object.freeze({
         PLACEHOLDER,
-
+        STORAGE_ROOT,
         converterGsUrl,
-
+        obterLogo,
+        obterImagemFallback,
+        obterImagemCategoria,
+        obterImagemCategoriaGrid,
+        obterImagemSubcategoria,
+        obterImagemSubcategoriaGrid,
+        obterImagemProduto,
         obterImagem,
-
         aplicarFallback,
-
         aplicarImagem,
-
         possuiImagem,
-
         isGsUrl,
-
         isHttpUrl
-
-    };
-
+    });
 })();
 
 // ==========================================================
-// LEGADO
+// FIXAÇÃO DAS PROPRIEDADES NO ESCOPO GLOBAL (WINDOW)
 // ==========================================================
+Object.defineProperty(window, 'ImageHelper', { value: ImageHelper, writable: false, configurable: false });
+Object.defineProperty(window, 'imageHelper', { value: ImageHelper, writable: false, configurable: false });
 
-window.imageHelper =
-    window.ImageHelper;
+// Atalhos Globais Mapeados Diretamente para Evitar Quebras em Outros Módulos
+Object.defineProperty(window, 'obterImagemProduto', { value: ImageHelper.obterImagemProduto, writable: false, configurable: false });
+Object.defineProperty(window, 'obterImagemCategoria', { value: ImageHelper.obterImagemCategoria, writable: false, configurable: false });
+Object.defineProperty(window, 'obterImagemCategoriaGrid', { value: ImageHelper.obterImagemCategoriaGrid, writable: false, configurable: false });
+Object.defineProperty(window, 'obterImagemSubcategoria', { value: ImageHelper.obterImagemSubcategoria, writable: false, configurable: false });
+Object.defineProperty(window, 'obterImagemSubcategoriaGrid', { value: ImageHelper.obterImageBox || ImageHelper.obterImagemSubcategoriaGrid, writable: false, configurable: false });
+Object.defineProperty(window, 'obterLogo', { value: ImageHelper.obterLogo, writable: false, configurable: false });
+Object.defineProperty(window, 'obterImagemFallback', { value: ImageHelper.obterImagemFallback, writable: false, configurable: false });
 
-// ==========================================================
-// INIT
-// ==========================================================
-
-console.log(
-    '🖼️ ImageHelper v2.0 carregado.'
-);
+console.info('[PMA V8] 🖼️ ImageHelper v3.0 unificado, fixado e congelado com sucesso.');

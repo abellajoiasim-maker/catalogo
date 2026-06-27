@@ -160,7 +160,7 @@
         }
     </style>
 </head>
-<body class="pb-32">
+<body class="pb-36 md:pb-24">[cite: 5]
 
     <div class="hero-glow top-[-200px] left-[-200px]"></div>
     <div class="hero-glow bottom-[-200px] right-[-200px]"></div>
@@ -290,7 +290,7 @@
 
             <!-- RESUMO FIXO COM BOTÕES CORRIGIDOS -->
             <div class="lg:col-span-5">
-                <div class="glass rounded-[2rem] p-6 lg:sticky lg:top-24 shadow-2xl border border-white/10">
+                <div class="glass rounded-[2rem] p-5 md:p-6 lg:sticky lg:top-24 shadow-2xl border border-white/10">
                     <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
                         <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
                         <h2 class="serif text-xl">Resumo</h2>
@@ -326,20 +326,20 @@
                     </div>
 
                     <!-- BOTÕES SECUNDÁRIOS DE SUPORTE -->
-                    <div class="grid grid-cols-3 gap-2 mb-3">
-                        <button onclick="visualizarRomaneio()" class="whitespace-nowrap px-2 py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <button onclick="visualizarRomaneio()" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
                             👁️ Romaneio
                         </button>
-                        <button onclick="gerarPDF(false)" class="whitespace-nowrap px-2 py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
+                        <button onclick="gerarPDF(false)" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
                             📥 Baixar PDF
                         </button>
-                        <button onclick="gerarPDF(true)" class="whitespace-nowrap px-2 py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
+                        <button onclick="gerarPDF(true)" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
                             🖨️ Imprimir
                         </button>
                     </div>
 
-                    <!-- BOTÃO PRINCIPAL: FINALIZAR PEDIDO (RESTAURADO E VISÍVEL) -->
-                    <button onclick="finalizarPedido()" class="w-full py-4 bg-[#caa85c] hover:bg-[#bfa054] text-black font-black text-sm rounded-xl transition-all flex items-center justify-center gap-2 tracking-widest uppercase shadow-lg shadow-[#caa85c]/20">
+                    <!-- BOTÃO PRINCIPAL: FINALIZAR PEDIDO (TOTALMENTE VISÍVEL) -->
+                    <button onclick="finalizarPedido()" class="w-full py-4 bg-[#caa85c] hover:bg-[#bfa054] text-black font-black text-xs md:text-sm rounded-xl transition-all flex items-center justify-center gap-2 tracking-widest uppercase shadow-lg shadow-[#caa85c]/20">[cite: 5]
                         🚀 Finalizar Pedido via WhatsApp
                     </button>
                 </div>
@@ -536,7 +536,6 @@
             let desconto = 0;
 
             if (pagamento === 'PIX') {
-                descolored = subtotal * ((CONFIG.descontoPix || 0) / 100);
                 desconto = subtotal * ((CONFIG.descontoPix || 0) / 100);
             }
 
@@ -599,6 +598,10 @@
             }
         }
 
+        function textClean(text) {
+            return String(text || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
         function renderizarItens() {
             const container = document.getElementById('lista-itens-checkout');
             if (!container) return;
@@ -609,8 +612,8 @@
                 const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
                 const total = preco * qtd;
                 const imagem = obterImagemProdutoSegura(item);
-                const nomeLimpo = String(item.name || item.titulo || item.nome || 'Produto').replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                const vNome = String(item.variacaoSelecionada || '').trim();
+                const nomeLimpo = textClean(item.name || item.titulo || item.nome || 'Produto');
+                const vNome = textClean(item.variacaoSelecionada || '');
                 const exibirVariacao = vNome ? `<span class="block text-[10px] text-[#caa85c] font-bold mt-0.5 uppercase tracking-wide">Variação: ${vNome}</span>` : '';
 
                 container.innerHTML += `
@@ -629,10 +632,10 @@
 
         function visualizarRomaneio() {
             const t = calcularTotais();
-            const cliente = document.getElementById('cli-nome')?.value || 'Não informado';
-            const whats = document.getElementById('cli-whats')?.value || 'Não informado';
-            const cidade = document.getElementById('cli-cidade')?.value || 'Não informado';
-            const obs = document.getElementById('obs-pedido')?.value || 'Sem observações';
+            const cliente = textClean(document.getElementById('cli-nome')?.value || 'Não informado');
+            const whats = textClean(document.getElementById('cli-whats')?.value || 'Não informado');
+            const cidade = textClean(document.getElementById('cli-cidade')?.value || 'Não informado');
+            const obs = textClean(document.getElementById('obs-pedido')?.value || 'Sem observações');
 
             let html = `
                 <div style="text-align:center; margin-bottom:20px; font-family:sans-serif;">
@@ -664,12 +667,12 @@
                 html += `<tr><td colspan="6" style="padding:15px; text-align:center; color:#ef4444;">Nenhum item no carrinho.</td></tr>`;
             } else {
                 itensCarrinho.forEach(item => {
-                    const ref = item.id || item.codigo || item.sku || '-';
+                    const ref = textClean(item.id || item.codigo || item.sku || '-');
                     const qtd = parseInt(item.quantidade, 10) || 1;
                     const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
                     const pesoUn = parseFloat(item.peso || item.pesoUnitario || 0);
-                    const vNome = item.variacaoSelecionada ? ` (Tam: ${item.variacaoSelecionada})` : '';
-                    const nomeStr = item.name || item.titulo || item.nome || 'Produto';
+                    const vNome = item.variacaoSelecionada ? ` (Tam: ${textClean(item.variacaoSelecionada)})` : '';
+                    const nomeStr = textClean(item.name || item.titulo || item.nome || 'Produto');
                     
                     const pesoFormatado = formatarPesoSeguro(pesoUn).replace(/g/g, '').trim();
                     
@@ -832,7 +835,6 @@
 
             const t = calcularTotais();
 
-            // Salva o pedido no banco de dados antes do redirecionamento
             try {
                 let pathPedidos = 'pedidos';
                 if (typeof window.getAbellaPath === 'function') {

@@ -1,386 +1,247 @@
 // ======================================================================
 // js/services/carrinhoService.js
-// Abella Joias • CarrinhoService Premium v5.1.0
-// Compatibilidade Total Checkout + Carrinho + Produtos
+// Abella Joias - CarrinhoService Premium v8.0 (Arquitetura PMA V8)
+// Motor de Vendas Blindado, Reativo e Integrado ao Ecossistema
 // ======================================================================
 
-const CarrinhoService = {
+(function () {
+    'use strict';
 
-    STORAGE_KEY: 'abella_carrinho',
-    LEGACY_KEY: 'carrinho',
+    const STORAGE_KEY = 'abella_carrinho';
+    const LEGACY_KEY = 'carrinho';
 
-    // =====================================================
-    // HELPERS
-    // =====================================================
+    const CarrinhoService = {
 
-    _safeParse(json) {
-        try {
-            return JSON.parse(json);
-        } catch (e) {
-            console.error('[Carrinho] Erro parse JSON:', e);
-            return [];
-        }
-    },
+        // =====================================================
+        // HELPERS & SANITIZAÇÃO
+        // =====================================================
 
-    _safeNumber(valor, fallback = 0) {
-        const n = Number(valor);
-        return Number.isFinite(n)
-            ? n
-            : fallback;
-    },
+        _safeParse(json) {
+            try {
+                return JSON.parse(json) || [];
+            } catch (e) {
+                console.error('[PMA V8] [Carrinho] Erro ao descriptografar dados locais:', e);
+                return [];
+            }
+        },
 
-    _normalizarTexto(valor) {
-        return (valor || '')
-            .toString()
-            .trim();
-    },
+        _safeNumber: (valor, fallback = 0) => {
+            const n = Number(valor);
+            return Number.isFinite(n) ? n : fallback;
+        },
 
-    // =====================================================
-    // ACESSO AOS DADOS
-    // =====================================================
+        _normalizarTexto: (valor) => String(valor || '').trim(),
 
-    getItens() {
+        // =====================================================
+        // ACESSO AO REPOSITÓRIO (IMUTÁVEL)
+        // =====================================================
 
-        const novo =
-            localStorage.getItem(
-                this.STORAGE_KEY
-            );
+        getItens() {
+            const novo = localStorage.getItem(STORAGE_KEY);
+            const antigo = localStorage.getItem(LEGACY_KEY);
+            const itens = this._safeParse(novo || antigo || '[]');
+            
+            // Congela profundamente os itens para evitar manipulação de preços em memória
+            return Object.freeze(itens.map(item => Object.freeze({ ...item })));
+        },
 
-        const antigo =
-            localStorage.getItem(
-                this.LEGACY_KEY
-            );
+        obterItens() {
+            return this.getItens();
+        },
 
-        return this._safeParse(
-            novo || antigo || '[]'
-        );
-    },
+        salvarTodos(itens = []) {
+            try {
+                const json = JSON.stringify(itens);
+                localStorage.setItem(STORAGE_KEY, json);
+                localStorage.setItem(LEGACY_KEY, json);
 
-    obterItens() {
-        return this.getItens();
-    },
+                this.notificarMudanca(itens);
+            } catch (e) {
+                console.error('[PMA V8] [Carrinho] Falha crítica na persistência do LocalStorage:', e);
+            }
+        },
 
-salvarTodos(itens = []) {
+        // =====================================================
+        // MUTADORES DE FLUXO (ADICIONAR / MODIFICAR)
+        // =====================================================
 
-    try {
+        adicionar(produto, quantidade = 1, variacao = null) {
+            if (!produto) return false;
 
-        const json =
-            JSON.stringify(itens);
-
-        localStorage.setItem(
-            'abella_carrinho',
-            json
-        );
-
-        localStorage.setItem(
-            'carrinho',
-            json
-        );
-
-        this.notificarMudanca();
-
-    } catch (e) {
-
-        console.error(
-            '[Carrinho] Erro ao salvar:',
-            e
-        );
-
-    }
-
-},
-
-    // =====================================================
-    // ADICIONAR
-    // =====================================================
-
-    adicionar(produto, quantidade = 1, variacao = null) {
-
-        if (!produto) return false;
-
-        let itens =
-            this.getItens();
-
-        const qtd =
-            Math.max(
-                1,
-                parseInt(quantidade) || 1
-            );
-
-        const sku =
-            this._normalizarTexto(
-                produto.sku ||
-                produto.id ||
-                produto.codigo
+            // Clona a lista para permitir mutação segura na transação
+            const itens = Array.from(this.getItens());
+            const qtd = Math.max(1, parseInt(quantidade) || 1);
+            
+            const sku = this._normalizarTexto(
+                produto.sku || produto.id || produto.codigo
             ).toUpperCase();
 
-        if (!sku) return false;
+            if (!sku) return false;
 
-        const preco =
-            Math.max(
-                0,
-                this._safeNumber(
-                    produto.precoFinal ??
-                    produto.price ??
-                    produto.preco ??
-                    produto.valor ??
-                    0
-                )
-            );
+            const preco = Math.max(0, this._safeNumber(
+                produto.precoFinal ?? produto.price ?? produto.preco ?? produto.valor ?? 0
+            ));
 
-        const peso =
-            this._safeNumber(
-                produto.peso ??
-                produto.weight ??
-                0
-            );
+            const peso = this._safeNumber(produto.peso ?? produto.weight ?? 0);
+            const imagem = this._normalizarTexto(produto.image || produto.imagem || produto.foto || '');
+            const index = itens.findIndex(item => String(item.sku).toUpperCase() === sku);
 
-        const imagem =
-            produto.image ||
-            produto.imagem ||
-            produto.foto ||
-            '';
-
-        const index =
-            itens.findIndex(
-                item =>
-                    String(item.sku).toUpperCase() === sku
-            );
-
-        if (index >= 0) {
-
-            itens[index].quantidade += qtd;
-
-            itens[index].precoFinal = preco;
-            itens[index].price = preco;
-
-            itens[index].peso = peso;
-            itens[index].weight = peso;
-
-            itens[index].updatedAt =
-                Date.now();
-
-        } else {
-
-            itens.push({
-
-                id:
-                    produto.id ||
-                    sku,
-
-                sku,
-
-                nome:
-                    produto.nome ||
-                    produto.name ||
-                    'Produto',
-
-                name:
-                    produto.nome ||
-                    produto.name ||
-                    'Produto',
-
-                image: imagem,
-                imagem: imagem,
-
-                precoFinal: preco,
-                price: preco,
-
-                peso: peso,
-                weight: peso,
-
-                quantidade: qtd,
-
-                variacao,
-
-                createdAt:
-                    Date.now(),
-
-                updatedAt:
-                    Date.now()
-
-            });
-        }
-
-        this.salvarTodos(itens);
-
-        return true;
-    },
-
-    adicionarItem(produto, quantidade = 1) {
-
-        return this.adicionar(
-            produto,
-            quantidade,
-            produto.variacao || null
-        );
-
-    },
-
-    // =====================================================
-    // REMOVER
-    // =====================================================
-
-    remover(index) {
-
-        const itens =
-            this.getItens();
-
-        if (
-            index >= 0 &&
-            index < itens.length
-        ) {
-
-            itens.splice(index, 1);
+            if (index >= 0) {
+                const itemMutado = { ...itens[index] };
+                itemMutado.quantidade += qtd;
+                itemMutado.precoFinal = preco;
+                itemMutado.price = preco;
+                itemMutado.peso = peso;
+                itemMutado.weight = peso;
+                itemMutado.updatedAt = Date.now();
+                itens[index] = itemMutado;
+            } else {
+                itens.push({
+                    id: produto.id || sku,
+                    sku: sku,
+                    nome: this._normalizarTexto(produto.nome || produto.name || 'Produto'),
+                    name: this._normalizarTexto(produto.nome || produto.name || 'Produto'),
+                    image: imagem,
+                    imagem: imagem,
+                    precoFinal: preco,
+                    price: preco,
+                    peso: peso,
+                    weight: peso,
+                    quantidade: qtd,
+                    variacao: variacao ? this._normalizarTexto(variacao) : null,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                });
+            }
 
             this.salvarTodos(itens);
+            return true;
+        },
 
+        adicionarItem(produto, quantidade = 1) {
+            return this.adicionar(produto, quantidade, produto.variacao || null);
+        },
+
+        remover(index) {
+            const itens = Array.from(this.getItens());
+            if (index >= 0 && index < itens.length) {
+                itens.splice(index, 1);
+                this.salvarTodos(itens);
+            }
+        },
+
+        removerItem(index) {
+            this.remover(index);
+        },
+
+        atualizarQuantidade(index, quantidade) {
+            const itens = Array.from(this.getItens());
+            if (!itens[index]) return;
+
+            const itemMutado = { ...itens[index] };
+            itemMutado.quantidade = Math.max(1, parseInt(quantidade) || 1);
+            itemMutado.updatedAt = Date.now();
+            
+            itens[index] = itemMutado;
+            this.salvarTodos(itens);
+        },
+
+        limpar() {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(LEGACY_KEY);
+            this.notificarMudanca([]);
+        },
+
+        // =====================================================
+        // MATEMÁTICA FINANCEIRA INTEGRADA (DESCONTO & PARCELAS)
+        // =====================================================
+
+        calcularTotais(descontoPixPercentual = null) {
+            const itens = this.getItens();
+            let subtotal = 0;
+            let pesoTotal = 0;
+            let totalPecas = 0;
+
+            itens.forEach(item => {
+                const preco = this._safeNumber(item.precoFinal ?? item.price ?? 0);
+                const qtd = parseInt(item.quantidade) || 1;
+
+                subtotal += preco * qtd;
+                pesoTotal += this._safeNumber(item.peso ?? item.weight ?? 0) * qtd;
+                totalPecas += qtd;
+            });
+
+            // Resgata o percentual dinâmico do ConfigService caso não seja provido por parâmetro
+            let taxaPix = descontoPixPercentual;
+            if (taxaPix === null && window.ConfigService && typeof window.ConfigService.getSettings === 'function') {
+                // Tenta ler o cache síncrono ou assume fallback seguro de 5%
+                const configs = window.ConfigService._cache;
+                taxaPix = configs ? configs.pixDesc : 5;
+            } else if (taxaPix === null) {
+                taxaPix = 5;
+            }
+
+            // Integração nativa com o DescontoService para precisão de centavos
+            let resumoPix = { subtotal, desconto: 0, totalPix: subtotal };
+            if (window.DescontoService && typeof window.DescontoService.obterResumoPix === 'function') {
+                resumoPix = window.DescontoService.obterResumoPix(subtotal, taxaPix);
+            } else {
+                const desc = subtotal * (taxaPix / 100);
+                resumoPix = {
+                    subtotal,
+                    desconto: Math.round((desc + Number.EPSILON) * 100) / 100,
+                    totalPix: Math.round((subtotal - desc + Number.EPSILON) * 100) / 100
+                };
+            }
+
+            return Object.freeze({
+                subtotal: resumoPix.subtotal,
+                pesoTotal: Math.round((pesoTotal + Number.EPSILON) * 100) / 100,
+                totalPecas,
+                descontoPix: resumoPix.desconto,
+                totalPix: resumoPix.totalPix
+            });
+        },
+
+        getResumo() {
+            return this.calcularTotais();
+        },
+
+        obterResumo() {
+            return this.getResumo();
+        },
+
+        possuiItens() {
+            return this.getItens().length > 0;
+        },
+
+        // =====================================================
+        // DISPARADORES DE REATIVIDADE
+        // =====================================================
+
+        notificarMudanca(itens Atuais = null) {
+            const lista = itensAtuais || this.getItens();
+            
+            // 1. Sincronização com o StateManager Centralizado
+            if (window.StateManager && typeof window.StateManager.setState === 'function') {
+                window.StateManager.setState('cart', lista);
+            }
+
+            // 2. Fallback de evento nativo DOM para o legado da interface
+            window.dispatchEvent(
+                new CustomEvent('carrinhoAtualizado', { detail: lista })
+            );
         }
-    },
+    };
 
-    removerItem(index) {
-        this.remover(index);
-    },
+    // VINCULAÇÃO E CONGELAMENTO DA CAMADA GLOBAL
+    Object.defineProperty(window, 'carrinhoService', {
+        value: Object.freeze(CarrinhoService),
+        writable: false,
+        configurable: false
+    });
+    
+    window.CarrinhoService = window.carrinhoService;
 
-    // =====================================================
-    // QUANTIDADE
-    // =====================================================
-
-    atualizarQuantidade(
-        index,
-        quantidade
-    ) {
-
-        const itens =
-            this.getItens();
-
-        if (!itens[index]) return;
-
-        itens[index].quantidade =
-            Math.max(
-                1,
-                parseInt(quantidade) || 1
-            );
-
-        itens[index].updatedAt =
-            Date.now();
-
-        this.salvarTodos(itens);
-    },
-
-    // =====================================================
-    // LIMPAR
-    // =====================================================
-
-   limpar() {
-
-    localStorage.removeItem(
-        'abella_carrinho'
-    );
-
-    localStorage.removeItem(
-        'carrinho'
-    );
-
-    this.notificarMudanca();
-
-},
-
-    // =====================================================
-    // RESUMO
-    // =====================================================
-
-    calcularTotais(
-        descontoPixPercentual = 5
-    ) {
-
-        const itens =
-            this.getItens();
-
-        let subtotal = 0;
-        let pesoTotal = 0;
-        let totalPecas = 0;
-
-        itens.forEach(item => {
-
-            const preco =
-                this._safeNumber(
-                    item.precoFinal ??
-                    item.price ??
-                    0
-                );
-
-            const qtd =
-                parseInt(
-                    item.quantidade
-                ) || 1;
-
-            subtotal +=
-                preco * qtd;
-
-            pesoTotal +=
-                (
-                    this._safeNumber(
-                        item.peso ??
-                        item.weight ??
-                        0
-                    ) * qtd
-                );
-
-            totalPecas += qtd;
-        });
-
-        const descontoPix =
-            subtotal *
-            (
-                descontoPixPercentual / 100
-            );
-
-        return {
-
-            subtotal,
-
-            pesoTotal,
-
-            totalPecas,
-
-            descontoPix,
-
-            totalPix:
-                subtotal -
-                descontoPix
-
-        };
-    },
-
-    getResumo() {
-        return this.calcularTotais();
-    },
-
-    obterResumo() {
-        return this.getResumo();
-    },
-
-    possuiItens() {
-        return this.getItens().length > 0;
-    },
-
-    notificarMudanca() {
-
-        window.dispatchEvent(
-            new Event(
-                'carrinhoAtualizado'
-            )
-        );
-
-    }
-
-};
-
-window.CarrinhoService =
-window.carrinhoService =
-    CarrinhoService;
-
-console.info(
-    '🛒 CarrinhoService Premium v5.1.0 carregado.'
-);
+    console.info('🛒 [PMA V8] [CarrinhoService] Motor financeiro homologado e integrado.');
+})();

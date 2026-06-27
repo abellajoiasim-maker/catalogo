@@ -125,18 +125,21 @@
             width: 44px; height: 44px;
             border-radius: 14px;
             overflow: hidden;
-            background: linear-gradient(135deg, var(--gold), #8b6a2b);
+            background: #ffffff;
             display: flex; items-center: center; justify-content: center;
             border: 1px solid rgba(202,168,92,.2);
             box-shadow: 0 4px 20px rgba(202,168,92,.12);
             flex-shrink: 0;
         }
 
+        /* Correção do Container do Banner para Casar com Desktop e Mobile */
         .hero-img-wrap {
             position: relative;
             width: 100%;
             overflow: hidden;
             border-radius: 2rem;
+            background: #ffffff;
+            border: 1px solid var(--border);
         }
 
         .hero-float {
@@ -148,11 +151,12 @@
             border: 1px solid rgba(255,255,255,.08);
             border-radius: 1.5rem;
             padding: 1.25rem 1.5rem;
+            z-index: 10;
         }
 
         @media (min-width:769px){ .hero-img-wrap{ height:520px; } }
         @media (max-width:768px){
-            .hero-img-wrap{ height:220px; border-radius:1.25rem; }
+            .hero-img-wrap{ height:250px; border-radius:1.25rem; }
             .hero-float{ position:relative; left:auto; right:auto; bottom:auto; margin-top:12px; padding:1rem; }
             .stat-card { padding: .75rem !important; border-radius:1rem !important; }
             .badge { font-size: .65rem; }
@@ -170,9 +174,9 @@
         <div class="max-w-7xl mx-auto px-4 md:px-6">
             <div class="h-14 md:h-20 flex items-center justify-between gap-2 md:gap-4">
                 <div class="flex items-center gap-4">
-                    <div id="abellaLogoContainer">
+                    <div id="abellaLogoContainer" class="flex items-center justify-center">
                         <span id="abellaLogoFallback" class="text-black font-black text-xl serif">A</span>
-                        <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
+                        <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-contain hidden">
                     </div>
                     <div>
                         <h1 id="nome" class="serif gold text-lg md:text-2xl uppercase tracking-[.25em]">Abella Joias</h1>
@@ -234,7 +238,8 @@
 
                 <div class="relative fade-up">
                     <div class="hero-img-wrap">
-                        <img id="heroBannerImg" src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20251123_210246643.jpg?alt=media" alt="Joias Abella" loading="lazy" class="w-full h-full object-cover object-center">
+                        <!-- Corrigido para contain para não cortar o texto do Banner da Loja em nenhuma tela -->
+                        <img id="heroBannerImg" src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20251123_210246643.jpg?alt=media" alt="Joias Abella" loading="lazy" class="w-full h-full object-contain object-center">
                         <div class="hero-float">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
@@ -307,21 +312,25 @@
             const noResult = document.getElementById('no-result');
 
             try {
-                const [snapSettings, snapCategories] = await Promise.all([
-                    db.ref('abella/settings').once('value'),
-                    db.ref('abella/categories').once('value')
-                ]);
+                // Modificado para carregar e isolar erros individuais evitando o travamento do Promise.all
+                const snapSettings = await db.ref('abella/settings').once('value').catch(() => null);
+                const snapCategories = await db.ref('abella/categories').once('value').catch(() => null);
 
-                if (snapSettings.exists()) {
+                if (snapSettings && snapSettings.exists()) {
                     const cfg = snapSettings.val();
-                    if (cfg.logoUrl) {
+                    
+                    // Correção estrita do tratamento e exibição da Logo sumida
+                    const logoUrlReal = cfg.logoUrl || cfg.logo;
+                    if (logoUrlReal) {
                         const img = document.getElementById('abellaLogoImg');
                         const fallback = document.getElementById('abellaLogoFallback');
                         if (img) {
-                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(cfg.logoUrl) : cfg.logoUrl;
-                            img.onload = () => { img.classList.remove('hidden'); fallback?.classList.add('hidden'); };
+                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
+                            img.classList.remove('hidden');
+                            if(fallback) fallback.classList.add('hidden');
                         }
                     }
+
                     if (cfg.heroBannerUrl) {
                         const hero = document.getElementById('heroBannerImg');
                         if (hero) hero.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(cfg.heroBannerUrl) : cfg.heroBannerUrl;
@@ -344,7 +353,7 @@
 
                 let listaCategorias = [];
 
-                if (snapCategories.exists() && snapCategories.val()) {
+                if (snapCategories && snapCategories.exists() && snapCategories.val()) {
                     const dadosCat = snapCategories.val();
                     if (Array.isArray(dadosCat)) {
                         listaCategorias = dadosCat.filter(Boolean);
@@ -356,20 +365,21 @@
                     }
                 } 
                 
-                // Fallback robusto se a lista de categorias ainda estiver vazia
+                // Fallback de Segurança caso as categorias falhem ou estejam desestruturadas
                 if (listaCategorias.length === 0) {
-                    const snapProdutos = await db.ref('abella/products').once('value');
-                    if (snapProdutos.exists() && snapProdutos.val()) {
+                    const snapProdutos = await db.ref('abella/products').once('value').catch(() => null);
+                    if (snapProdutos && snapProdutos.exists() && snapProdutos.val()) {
                         const prods = Object.values(snapProdutos.val());
                         const categoriasUnicas = [...new Set(prods.map(p => p.categoria || p.category).filter(Boolean))];
                         listaCategorias = categoriasUnicas.map(cat => ({
                             nome: cat,
                             slug: cat.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g,'-'),
-                            imagem: prods.find(p => (p.categoria || p.category) === cat)?.image || ''
+                            imagem: prods.find(p => (p.categoria || p.category) === cat)?.image || prods.find(p => (p.categoria || p.category) === cat)?.imagem || ''
                         }));
                     }
                 }
 
+                // Remove o loading do DOM de qualquer forma para não travar a tela
                 if (loading) loading.classList.add('hidden');
 
                 if (listaCategorias.length === 0) {
@@ -437,10 +447,10 @@
                 }
 
             } catch (error) {
-                console.error('Falha de Sincronização:', error);
+                console.error('Falha crítica de inicialização:', error);
                 if (loading) {
                     loading.classList.remove('hidden');
-                    loading.innerHTML = `<p class="text-xs uppercase text-rose-500 font-mono py-4">⚠️ Falha ao processar requisições na árvore do Firebase.</p>`;
+                    loading.innerHTML = `<p class="text-xs uppercase text-rose-500 font-mono py-4">⚠️ Erro técnico ao processar banco de dados local.</p>`;
                 }
             }
         });

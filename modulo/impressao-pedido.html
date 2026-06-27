@@ -118,23 +118,18 @@ const db = firebase.database();
 
                 const p = snap.val();
                 
-                // População de Metadados
-                document.getElementById('doc-id').innerText = p.idPedido || pedidoId;
-                document.getElementById('doc-data').innerText = p.data || new Date(p.timestamp).toLocaleString('pt-BR');
-                document.getElementById('cli-nome').innerText = p.cliente || p.nome || 'Não Identificado';
-                document.getElementById('cli-whats').innerText = "Contato: " + (p.whats || p.contato || p.whatsapp || 'N/I');
-                document.getElementById('cli-destino').innerText = "Destino: " + (p.cidade || p.entrega || 'Limeira/SP').toUpperCase();
-                document.getElementById('cli-pagamento').innerText = "Forma de Pagto: " + (p.formaPagamento || 'Não Informada');
+               // População de Metadados corrigida para a estrutura do PedidoService
+document.getElementById('doc-id').innerText = p.numeroPedido || pedidoId; // Usa numeroPedido oficial
+document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
+document.getElementById('cli-nome').innerText = p.cliente || 'Não Identificado';
+document.getElementById('cli-whats').innerText = "Contato: " + (p.whats || 'N/I');
+document.getElementById('cli-destino').innerText = "Destino: " + (p.cidade || 'Limeira/SP').toUpperCase();
+document.getElementById('cli-pagamento').innerText = "Forma de Pagto: " + (p.formaPagamento || 'Não Informada');
 
-                document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
-                document.getElementById('resumo-peso').innerText = `${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g`;
-                document.getElementById('resumo-financeiro').innerText =
-    formatarMoedaLocal(
-        p.total ??
-        p.valorTotal ??
-        0
-    );
-
+document.getElementById('resumo-qtd').innerText = `${p.totalPecas || 0} pçs`;
+document.getElementById('resumo-weight').innerText = `${parseFloat(p.pesoTotal || 0).toFixed(2)}g`;
+document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total ?? 0);
+                
                 // Oculta os preços se o romaneio for restrito à Conferência de Fábrica
                 if (tipo === 'conferencia') {
                     document.getElementById('bloco-financeiro-total').classList.add('invisible');
@@ -199,36 +194,29 @@ if (!itens) itens = [];
     `;
 }
 
-                function renderListaConferencia(p, itens) {
-
-return `
-    <table class="w-full border-collapse text-xs">
-
+               function renderListaConferencia(p, itens) {
+    return `
+        <table class="w-full border-collapse text-xs">
             <thead>
-                <tr>
-                    <th class="border-b py-2 text-left">SKU</th>
-<th class="border-b py-2 text-left">Produto</th>
-<th class="border-b py-2 text-center">Qtd</th>
                 <tr class="border-b border-zinc-200">
-            </thead>
-
-            <tbody>
-
-            ${itens.map(item => `
-                <tr>
-                
-                    <td>${item.sku || '-'}</td>
-                    <td>${item.nome || item.name}</td>
-                    <td>${item.quantidade || 1}</td>
+                    <th class="py-2 text-left font-semibold text-zinc-700">SKU</th>
+                    <th class="py-2 text-left font-semibold text-zinc-700">Produto</th>
+                    <th class="py-2 text-center font-semibold text-zinc-700 w-16">Qtd</th>
                 </tr>
-            `).join('')}
-
+            </thead>
+            <tbody class="divide-y divide-zinc-100">
+                ${itens.map(item => `
+                    <tr class="hover:bg-zinc-50/50">
+                        <td class="py-2 text-left font-mono text-zinc-600">${item.sku || '-'}</td>
+                        <td class="py-2 text-left text-zinc-800">${item.nome || item.name || '-'}</td>
+                        <td class="py-2 text-center text-zinc-900 font-medium">${item.quantidade || 1}</td>
+                    </tr>
+                `).join('')}
             </tbody>
-
         </table>
     `;
 }
-
+                
                 function renderListaCompleto(p, itens) {
 
     return `

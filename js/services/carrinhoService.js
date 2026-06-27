@@ -1,7 +1,7 @@
 /**
  * Abella Joias - PMA V8
  * Service: carrinhoService
- * Descrição: Gerenciamento unificado e seguro do carrinho de compras.
+ * Descrição: Gerenciamento unificado, seguro e reativo do carrinho de compras integrado ao sistema de descontos.
  */
 
 (function () {
@@ -40,10 +40,30 @@
     const carrinhoService = {
         
         /**
-         * Retorna todos os itens do carrinho
+         * Retorna todos os itens do carrinho com os cálculos de desconto atualizados dinamicamente
          */
         listar: function () {
-            return obterItens();
+            const itens = obterItens();
+            
+            // Injeta em tempo real os descontos vigentes do ecossistema para cada item
+            return itens.map(item => {
+                if (window.descontoService && typeof window.descontoService.calcularDesconto === 'function') {
+                    const infoDesconto = window.descontoService.calcularDesconto(item);
+                    return {
+                        ...item,
+                        precoVendaUnitario: infoDesconto.precoFinal,
+                        possuiDesconto: infoDesconto.descontoAplicado > 0,
+                        badgePromocional: infoDesconto.badge
+                    };
+                }
+                // Fallback de segurança caso o descontoService falhe ou não tenha carregado
+                return {
+                    ...item,
+                    precoVendaUnitario: parseFloat(item.preco) || 0,
+                    possuiDesconto: false,
+                    badgePromocional: null
+                };
+            });
         },
 
         /**
@@ -63,8 +83,15 @@
             if (index !== -1) {
                 itens[index].quantidade += quantidade;
             } else {
+                // Guarda apenas os dados brutos essenciais estruturais no storage
                 itens.push({
-                    ...produto,
+                    id: produto.id,
+                    name: produto.name,
+                    preco: parseFloat(produto.preco) || 0,
+                    category: produto.category,
+                    subcategory: produto.subcategory || '',
+                    image: produto.image || '',
+                    peso: produto.peso || 0,
                     quantidade: quantidade
                 });
             }
@@ -132,21 +159,31 @@
          * Calcula o total de itens (soma das quantidades) presentes no carrinho
          */
         obterContagem: function () {
-            return obterItens().reduce((total, item) => total + (item.quantidade || 0), 0);
+            return obterItens().reduce((total, item) => total + (parseInt(item.quantidade) || 0), 0);
         },
 
         /**
-         * Calcula o valor bruto total dos produtos no carrinho
+         * Calcula o valor BRUTO total acumulado (sem qualquer tipo de desconto)
+         */
+        obterTotalBruto: function () {
+            return obterItens().reduce((total, item) => {
+                const precoOriginal = parseFloat(item.preco) || 0;
+                return total + (precoOriginal * (parseInt(item.quantidade) || 0));
+            }, 0);
+        },
+
+        /**
+         * Calcula o valor LÍQUIDO total real de cobrança aplicando as regras do descontoService
          */
         obterTotal: function () {
-            return obterItens().reduce((total, item) => {
-                const preco = parseFloat(item.preco) || 0;
-                return total + (preco * (item.quantidade || 0));
+            const itensComDesconto = this.listar();
+            return itensComDesconto.reduce((total, item) => {
+                return total + (item.precoVendaUnitario * (parseInt(item.quantidade) || 0));
             }, 0);
         }
     };
 
-    // Aplicação do congelamento estrito (Imutabilidade de Runtime) idêntico ao configService
+    // Aplicação do congelamento estrito (Imutabilidade de Runtime)
     Object.freeze(carrinhoService);
 
     // Exposição segura no escopo global (window)

@@ -231,7 +231,7 @@
         </div>
     </main>
 
-    <script src="js/firebase/firebase-config.js"></script>
+<script src="js/firebase/firebase-config.js"></script>
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
     <script src="js/utils/storage.js"></script>
@@ -308,12 +308,13 @@
             const containerConteudo = document.getElementById('carrinho-conteudo');
             const listaProdutos = document.getElementById('lista-produtos-carrinho');
 
-            if (typeof carrinhoService === 'undefined' || !carrinhoService.obterItens) {
+            if (typeof carrinhoService === 'undefined' || !carrinhoService.listar) {
                 console.error("carrinhoService não está acessível.");
                 return;
             }
 
-            const itens = carrinhoService.obterItens() || [];
+            // Alinhado para usar a listagem reativa com descontos injetados
+            const itens = carrinhoService.listar() || [];
 
             if (itens.length === 0) {
                 containerConteudo.classList.add('hidden');
@@ -328,7 +329,9 @@
             itens.forEach((item) => {
                 const imgUrl = resolverImagemFirebase(item.image || item.imagem);
                 const pesoTotalItem = formatarPeso((parseFloat(item.peso || item.pesoUnitario || 0)) * item.quantidade);
-                const precoUnitario = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
+                
+                // Consome a propriedade tratada de venda em lote do carrinhoService
+                const precoUnitario = item.precoVendaUnitario;
                 const subtotalItem = precoUnitario * item.quantidade;
 
                 const txtUnitario = typeof money !== 'undefined' ? money.formatar(precoUnitario) : `R$ ${precoUnitario.toFixed(2)}`;
@@ -337,6 +340,11 @@
                 const limpoNome = String(item.name || item.titulo || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 const limpoId = String(item.id || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+                // Badge promocional dinâmica baseada no painel de ofertas
+                const badgeHtml = item.possuiDesconto && item.badgePromocional
+                    ? `<span class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">${item.badgePromocional}</span>`
+                    : '';
+
                 listaProdutos.innerHTML += `
                     <div class="carrinho-item bg-card rounded-[1.4rem] md:rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 border border-zinc-900 transition-all min-w-0 w-full overflow-hidden">
                         <div class="w-20 h-20 rounded-xl overflow-hidden bg-black border border-zinc-800 flex-shrink-0">
@@ -344,7 +352,10 @@
                         </div>
                         
                         <div class="flex-1 text-center sm:text-left min-w-0">
-                            <h3 class="font-bold text-sm md:text-base uppercase tracking-wide text-white leading-tight truncate">${limpoNome}</h3>
+                            <div class="flex items-center justify-center sm:justify-start flex-wrap gap-1">
+                                <h3 class="font-bold text-sm md:text-base uppercase tracking-wide text-white leading-tight truncate">${limpoNome}</h3>
+                                ${badgeHtml}
+                            </div>
                             <p class="text-zinc-500 text-xs mt-1">Ref: ${limpoId} | Unitário: ${txtUnitario}</p>
                             <p class="text-zinc-400 text-xs mt-1">🔋 Peso total: <span class="text-zinc-300 font-medium">${pesoTotalItem}g</span></p>
                         </div>
@@ -370,17 +381,17 @@
         }
 
         function alterarQtd(id, delta) {
-            const itens = carrinhoService.obterItens();
-            const index = itens.findIndex(i => String(i.id) === String(id));
-            if(index === -1) return;
+            const itens = carrinhoService.listar();
+            const item = itens.find(i => String(i.id) === String(id));
+            if(!item) return;
 
-            const item = itens[index];
             const novaQtd = (parseInt(item.quantidade) || 0) + delta;
 
+            // Uso correto passando o ID do produto
             if(novaQtd <= 0){
                 removerItemCarrinho(id);
             }else{
-                carrinhoService.atualizarQuantidade(index, novaQtd);
+                carrinhoService.atualizarQuantidade(id, novaQtd);
                 renderizarCarrinho();
             }
 
@@ -391,24 +402,20 @@
 
         function removerItemCarrinho(id) {
             if (!confirm('Deseja remover este item do carrinho?')) return;
-            const itens = carrinhoService.obterItens() || [];
-            const index = itens.findIndex(item => String(item.id) === String(id));
-            if (index === -1) return;
-
-            carrinhoService.removerItem(index);
-            renderizarCarrinho();
-            if (typeof atualizarMiniCarrinho === 'function') {
-                atualizarMiniCarrinho();
+            
+            // Uso correto do método unificado passando o ID
+            const sucesso = carrinhoService.remover(id);
+            if (sucesso) {
+                renderizarCarrinho();
+                if (typeof atualizarMiniCarrinho === 'function') {
+                    atualizarMiniCarrinho();
+                }
             }
         }
 
         function alterarQtdInput(id, valor) {
-            const itens = carrinhoService.obterItens();
-            const index = itens.findIndex(i => String(i.id) === String(id));
-            if (index === -1) return;
-
             const novaQuantidade = Math.max(1, parseInt(valor, 10) || 1);
-            carrinhoService.atualizarQuantidade(index, novaQuantidade);
+            carrinhoService.atualizarQuantidade(id, novaQuantidade);
             renderizarCarrinho();
         }
 
@@ -421,24 +428,19 @@
         }
 
         function atualizarTotaisResumo(itens) {
-            let totalItens = 0;
+            // Conta as quantidades de peças direto da lista segura
+            const totalItens = carrinhoService.obterContagem();
+            
+            // Calcula o peso
             let totalPeso = 0;
-            let subtotalBruto = 0;
-            let descontoTotal = 0;
-
             itens.forEach(item => {
-                totalItens += item.quantidade;
                 totalPeso += (parseFloat(item.peso || item.pesoUnitario || 0) * item.quantidade);
-                const preco = parseFloat(item.precoFinal ?? item.price ?? item.preco ?? item.precoUnitario ?? 0);
-                const brutoItem = preco * item.quantidade;
-                subtotalBruto += brutoItem;
-
-                if (item.descontoPorcentagem && parseFloat(item.descontoPorcentagem) > 0) {
-                    descontoTotal += (brutoItem * (parseFloat(item.descontoPorcentagem) / 100));
-                }
             });
 
-            const totalFinal = subtotalBruto - descontoTotal;
+            // Extrai os totais calculados de forma limpa direto do carrinhoService
+            const subtotalBruto = carrinhoService.obterTotalBruto();
+            const totalFinal = carrinhoService.obterTotal();
+            const descontoTotal = subtotalBruto - totalFinal;
 
             document.getElementById('resumo-itens').innerText = totalItens;
             document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso);
@@ -485,11 +487,11 @@
 
         function prosseguirParaCheckout() {
             try {
-                if (typeof carrinhoService === 'undefined' || !carrinhoService.obterItens) {
+                if (typeof carrinhoService === 'undefined' || !carrinhoService.listar) {
                     alert('Erro Crítico: O serviço de carrinho não foi carregado corretamente.');
                     return;
                 }
-                const itens = carrinhoService.obterItens() || [];
+                const itens = carrinhoService.listar() || [];
                 if (itens.length === 0) {
                     alert('Seu carrinho está vazio. Adicione produtos antes de prosseguir.');
                     return;

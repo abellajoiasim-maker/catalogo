@@ -1,89 +1,98 @@
-/**
- * =====================================================
- * PESO UTILS v1.0
- * Abella Joias
- * =====================================================
- */
+// ======================================================================
+// js/utils/peso.js
+// Abella Joias - PesoUtils v2.0 (Versão Final de Produção)
+// Compatível com GitHub Pages • Proteção Contra Ponto Flutuante IEEE 754
+// Arquitetura Homologada PMA V8 - Arquivo Completo e Selado
+// ======================================================================
 
-(function () {
+const PesoUtils = (() => {
+    'use strict';
 
-    /**
-     * Formata peso automaticamente:
-     *
-     * 999.99   => 999,99 g
-     * 1000     => 1,00 kg
-     * 1250     => 1,25 kg
-     * 99999.99 => 100,00 kg
-     */
+    const LOCALE = 'pt-BR';
 
-    function formatarPeso(valor) {
-
-        valor = Number(valor || 0);
-
-        if (isNaN(valor)) {
-            valor = 0;
+    // ==========================================================
+    // HELPERS DE SANITIZAÇÃO
+    // ==========================================================
+    function safeNumber(valor, fallback = 0) {
+        if (typeof valor === 'string') {
+            // Remove espaços, substitui vírgula por ponto para parser seguro
+            valor = valor.trim().replace(/,/g, '.');
         }
+        const numero = Number(valor);
+        return Number.isFinite(numero) ? numero : fallback;
+    }
 
-        if (valor >= 1000) {
+    // Evita erros matemáticos de precisão decimal inerentes ao JS
+    function ajustarPrecisao(valor) {
+        return Math.round((valor + Number.EPSILON) * 1000) / 1000;
+    }
 
-            return new Intl.NumberFormat(
-                'pt-BR',
-                {
+    // ==========================================================
+    // MÉTODOS PÚBLICOS
+    // ==========================================================
+    function formatarPeso(valor) {
+        try {
+            const numero = safeNumber(valor);
+
+            if (numero >= 1000) {
+                const kg = ajustarPrecisao(numero / 1000);
+                return new Intl.NumberFormat(LOCALE, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
-                }
-            ).format(valor / 1000) + ' kg';
-        }
+                }).format(kg) + ' kg';
+            }
 
-        return new Intl.NumberFormat(
-            'pt-BR',
-            {
+            return new Intl.NumberFormat(LOCALE, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
-            }
-        ).format(valor) + ' g';
-    }
+            }).format(numero) + ' g';
 
-    /**
-     * Retorna peso somente numérico
-     * Ex:
-     * 1250 => 1,25
-     */
+        } catch (error) {
+            console.error('[PMA V8] [PesoUtils:formatarPeso]', error);
+            return '0,00 g';
+        }
+    }
 
     function pesoNumero(valor) {
-
-        valor = Number(valor || 0);
-
-        if (valor >= 1000) {
-            return valor / 1000;
+        try {
+            const numero = safeNumber(valor);
+            if (numero >= 1000) {
+                return ajustarPrecisao(numero / 1000);
+            }
+            return numero;
+        } catch (error) {
+            console.error('[PMA V8] [PesoUtils:pesoNumero]', error);
+            return 0;
         }
-
-        return valor;
     }
-
-    /**
-     * Retorna unidade automaticamente
-     */
 
     function unidadePeso(valor) {
-
-        valor = Number(valor || 0);
-
-        return valor >= 1000
-            ? 'kg'
-            : 'g';
+        try {
+            const numero = safeNumber(valor);
+            return numero >= 1000 ? 'kg' : 'g';
+        } catch (error) {
+            console.error('[PMA V8] [PesoUtils:unidadePeso]', error);
+            return 'g';
+        }
     }
 
-    /**
-     * Disponibiliza globalmente
-     */
-
-    window.formatarPeso = formatarPeso;
-    window.pesoNumero = pesoNumero;
-    window.unidadePeso = unidadePeso;
-
-    console.log(
-        '⚖️ PesoUtils v1.0 carregado.'
-    );
-
+    // ==========================================================
+    // EXPORT
+    // ==========================================================
+    return Object.freeze({
+        formatarPeso,
+        pesoNumero,
+        unidadePeso,
+        safeNumber
+    });
 })();
+
+// ==========================================================
+// FIXAÇÃO PROTETIVA NO ESCOPO GLOBAL
+// ==========================================================
+Object.defineProperty(window, 'PesoUtils', { value: PesoUtils, writable: false, configurable: false });
+Object.defineProperty(window, 'formatarPeso', { value: PesoUtils.formatarPeso, writable: false, configurable: false });
+Object.defineProperty(window, 'pesoNumero', { value: PesoUtils.pesoNumero, writable: false, configurable: false });
+Object.defineProperty(window, 'unidadePeso', { value: PesoUtils.unidadePeso, writable: false, configurable: false });
+
+console.info('[PMA V8] ⚖️ PesoUtils v2.0 fixado e congelado com sucesso.');

@@ -85,8 +85,9 @@
     Object.defineProperty(window, 'storage', { value: storage, writable: false, configurable: false });
     Object.defineProperty(window, 'auth', { value: auth, writable: false, configurable: false });
 
-    // DEFINIÇÃO DO ROOT DIRECTORY DO BANCO EM PRODUÇÃO
+    // DEFINIÇÃO DO ROOT DIRECTORY DO BANCO EM PRODUÇÃO (EXCLUSIVO ABELLA)
     Object.defineProperty(window, 'ABELLA_DB_ROOT', { value: 'abella', writable: false, configurable: false });
+    Object.defineProperty(window, 'STORE_NAME', { value: 'Abella Joias', writable: false, configurable: false });
 
     // HELPER COMPATÍVEL DE DIRECIONAMENTO DE PATHS
     const getAbellaPath = function (path = '') {
@@ -124,5 +125,5 @@
 
     // MARCAÇÃO DA CONCLUSÃO DA INICIALIZAÇÃO DO ARQUIVO DE BASE
     window.__ABELLA_FIREBASE_INITIALIZED__ = true;
-    console.info('[PMA V8] [Firebase] Configuração de infraestrutura de dados fixada com sucesso.');
+    console.info('[PMA V8] [Firebase] Infraestrutura de dados da Abella Joias fixada com sucesso.');
 })();

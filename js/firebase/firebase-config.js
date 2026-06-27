@@ -3,253 +3,126 @@
 // Firebase Config Global • Abella Joias
 // Compatível com GitHub Pages + Firebase Compat SDK
 // Estrutura Oficial: abella/*
+// Arquitetura Homologada PMA V8 - Arquivo Completo
 // ======================================================================
 
 (function () {
-
     'use strict';
 
-    // ==========================================================
-    // VERIFICAÇÃO FIREBASE SDK
-    // ==========================================================
+    // VERIFICAÇÃO INTEGRAL DO FIREBASE SDK
     if (typeof window.firebase === 'undefined') {
-
-        console.error(
-            '[Firebase] SDK principal não carregado.'
-        );
-
+        console.error('[PMA V8] [Firebase] SDK principal não foi localizado no escopo global.');
         return;
     }
 
-    // ==========================================================
-    // EVITA REINICIALIZAÇÃO DUPLICADA
-    // ==========================================================
+    // CONTROLE DE REINICIALIZAÇÃO DO CONTEXTO
     if (window.__ABELLA_FIREBASE_INITIALIZED__ === true) {
-
-        console.warn(
-            '[Firebase] Instância global já inicializada.'
-        );
-
+        console.warn('[PMA V8] [Firebase] Contexto de conexão global já instanciado anteriormente.');
         return;
     }
 
-    // ==========================================================
-    // CONFIGURAÇÃO OFICIAL FIREBASE
-    // ==========================================================
+    // CONFIGURAÇÃO OFICIAL DA CONTA INSTITUCIONAL (IMUTÁVEL)
     const firebaseConfig = Object.freeze({
-
-        apiKey:
-            'AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY',
-
-        authDomain:
-            'catalogo-abella-joias.firebaseapp.com',
-
-        databaseURL:
-            'https://catalogo-abella-joias-default-rtdb.firebaseio.com',
-
-        projectId:
-            'catalogo-abella-joias',
-
-        storageBucket:
-            'catalogo-abella-joias.firebasestorage.app',
-
-        messagingSenderId:
-            '727568435294',
-
-        appId:
-            '1:727568435294:web:442c0179ecf0686dff4ccf'
-
+        apiKey: 'AIzaSyDPBZSxW8XjtQmDMUknzAyIlFda51MvMJY',
+        authDomain: 'catalogo-abella-joias.firebaseapp.com',
+        databaseURL: 'https://catalogo-abella-joias-default-rtdb.firebaseio.com',
+        projectId: 'catalogo-abella-joias',
+        storageBucket: 'catalogo-abella-joias.firebasestorage.app',
+        messagingSenderId: '727568435294',
+        appId: '1:727568435294:web:442c0179ecf0686dff4ccf'
     });
 
-    // ==========================================================
-    // INICIALIZAÇÃO SEGURA
-    // ==========================================================
+    // INICIALIZAÇÃO DO CORE APPLICATION INTERFACE
     let app = null;
-
     try {
-
         app = firebase.apps.length > 0
             ? firebase.app()
             : firebase.initializeApp(firebaseConfig);
-
     } catch (error) {
-
-        console.error(
-            '[Firebase] Falha crítica ao inicializar aplicação:',
-            error
-        );
-
+        console.error('[PMA V8] [Firebase] Falha crítica durante a inicialização do Core App:', error);
         return;
     }
 
-    // ==========================================================
-    // INSTÂNCIAS GLOBAIS
-    // ==========================================================
+    // INSTÂNCIAS DE MÓDULOS ESPECÍFICOS
     let db = null;
     let storage = null;
     let auth = null;
 
-    // ==========================================================
-    // DATABASE
-    // ==========================================================
+    // INICIALIZAÇÃO COMPAT REALTIME DATABASE
     try {
-
-        if (
-            typeof firebase.database === 'function'
-        ) {
-
+        if (typeof firebase.database === 'function') {
             db = firebase.database();
-
         } else {
-
-            console.error(
-                '[Firebase Database] SDK não carregado.'
-            );
-
+            console.error('[PMA V8] [Firebase Database] Módulo RTDB não disponível.');
         }
-
     } catch (error) {
-
-        console.error(
-            '[Firebase Database] Erro ao instanciar:',
-            error
-        );
-
+        console.error('[PMA V8] [Firebase Database] Erro de instância:', error);
     }
 
-    // ==========================================================
-    // STORAGE
-    // ==========================================================
+    // INICIALIZAÇÃO COMPAT FIREBASE STORAGE
     try {
-
-        if (
-            typeof firebase.storage === 'function'
-        ) {
-
+        if (typeof firebase.storage === 'function') {
             storage = firebase.storage();
-
         } else {
-
-            console.warn(
-                '[Firebase Storage] SDK não carregado.'
-            );
-
+            console.warn('[PMA V8] [Firebase Storage] Módulo Storage não disponível.');
         }
-
     } catch (error) {
-
-        console.error(
-            '[Firebase Storage] Erro ao instanciar:',
-            error
-        );
-
+        console.error('[PMA V8] [Firebase Storage] Erro de instância:', error);
     }
 
-    // ==========================================================
-    // AUTH
-    // ==========================================================
+    // INICIALIZAÇÃO COMPAT FIREBASE AUTHENTICATION
     try {
-
-        if (
-            typeof firebase.auth === 'function'
-        ) {
-
+        if (typeof firebase.auth === 'function') {
             auth = firebase.auth();
-
         }
-
     } catch (error) {
-
-        console.error(
-            '[Firebase Auth] Erro ao instanciar:',
-            error
-        );
-
+        console.error('[PMA V8] [Firebase Auth] Erro de instância:', error);
     }
 
-    // ==========================================================
-    // EXPORTAÇÃO GLOBAL
-    // ==========================================================
-    window.firebaseApp = app;
+    // EXPORTAÇÃO COMPATÍVEL PROTEGIDA CONTRA ESCALABILIDADE DE ESCRITA
+    Object.defineProperty(window, 'firebaseApp', { value: app, writable: false, configurable: false });
+    Object.defineProperty(window, 'db', { value: db, writable: false, configurable: false });
+    Object.defineProperty(window, 'storage', { value: storage, writable: false, configurable: false });
+    Object.defineProperty(window, 'auth', { value: auth, writable: false, configurable: false });
 
-    window.db = db;
+    // DEFINIÇÃO DO ROOT DIRECTORY DO BANCO EM PRODUÇÃO
+    Object.defineProperty(window, 'ABELLA_DB_ROOT', { value: 'abella', writable: false, configurable: false });
 
-    window.storage = storage;
-
-    window.auth = auth;
-
-    // ==========================================================
-    // RAIZ OFICIAL DO PROJETO
-    // ==========================================================
-    window.ABELLA_DB_ROOT = 'abella';
-
-    // ==========================================================
-    // HELPER OFICIAL
-    // ==========================================================
-    window.getAbellaPath = function (path = '') {
-
-        const cleanPath = String(
-            path || ''
-        ).replace(/^\/+/, '');
-
-        return cleanPath
-            ? `${window.ABELLA_DB_ROOT}/${cleanPath}`
-            : window.ABELLA_DB_ROOT;
+    // HELPER COMPATÍVEL DE DIRECIONAMENTO DE PATHS
+    const getAbellaPath = function (path = '') {
+        const serialized = String(path || '').trim();
+        const cleanPath = serialized.replace(/^\/+/, '').replace(/\/+$/, '');
+        
+        if (!cleanPath) {
+            return window.ABELLA_DB_ROOT;
+        }
+        return `${window.ABELLA_DB_ROOT}/${cleanPath}`;
     };
 
-    // ==========================================================
-    // MONITOR DE CONEXÃO
-    // ==========================================================
-    if (
-        db &&
-        typeof db.ref === 'function'
-    ) {
+    Object.defineProperty(window, 'getAbellaPath', { value: getAbellaPath, writable: false, configurable: false });
 
+    // ESTADO PADRÃO DE CONEXÃO ANTES DO LISTENER
+    window.__ABELLA_FIREBASE_CONNECTED__ = false;
+
+    // PROVIMENTO DO MONITOR INTEGRADO DE CONEXÃO
+    if (db && typeof db.ref === 'function') {
         try {
+            db.ref('.info/connected').on('value', (snapshot) => {
+                const connected = snapshot.val() === true;
+                window.__ABELLA_FIREBASE_CONNECTED__ = connected;
 
-            db.ref('.info/connected')
-                .on('value', (snapshot) => {
-
-                    const connected =
-                        snapshot.val() === true;
-
-                    window.__ABELLA_FIREBASE_CONNECTED__ =
-                        connected;
-
-                    window.dispatchEvent(
-                        new CustomEvent(
-                            'abella-connection',
-                            {
-                                detail: {
-                                    connected
-                                }
-                            }
-                        )
-                    );
-
-                });
-
+                window.dispatchEvent(
+                    new CustomEvent('abella-connection', {
+                        detail: { connected }
+                    })
+                );
+            });
         } catch (error) {
-
-            console.error(
-                '[Firebase] Falha monitor conexão:',
-                error
-            );
-
+            console.error('[PMA V8] [Firebase] Monitoramento em tempo real falhou:', error);
         }
     }
 
-    // ==========================================================
-    // FLAGS GLOBAIS
-    // ==========================================================
-    window.__ABELLA_FIREBASE_CONNECTED__ =
-        false;
-
-    window.__ABELLA_FIREBASE_INITIALIZED__ =
-        true;
-
-    console.info(
-        '[Firebase] Inicialização concluída com sucesso.'
-    );
-
+    // MARCAÇÃO DA CONCLUSÃO DA INICIALIZAÇÃO DO ARQUIVO DE BASE
+    window.__ABELLA_FIREBASE_INITIALIZED__ = true;
+    console.info('[PMA V8] [Firebase] Configuração de infraestrutura de dados fixada com sucesso.');
 })();

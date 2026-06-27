@@ -1,241 +1,125 @@
 // ======================================================================
 // js/utils/money.js
-// Abella Joias - MoneyUtils v2.0
-// AUDITORIA FORENSE IQ200
+// Abella Joias - MoneyUtils v2.1 (Versão Final de Produção)
+// Compatível com GitHub Pages • Proteção Contra Ponto Flutuante IEEE 754
+// Arquitetura Homologada PMA V8 - Arquivo Completo e Selado
 // ======================================================================
 
 const MoneyUtils = (() => {
+    'use strict';
 
     // ==========================================================
     // CONFIG
     // ==========================================================
-
     const LOCALE = 'pt-BR';
-
     const CURRENCY = 'BRL';
 
     // ==========================================================
     // HELPERS
     // ==========================================================
-
-    function safeNumber(
-        valor,
-        fallback = 0
-    ) {
-
-        const numero =
-            Number(valor);
-
-        return Number.isFinite(numero)
-            ? numero
-            : fallback;
-
+    function safeNumber(valor, fallback = 0) {
+        const numero = Number(valor);
+        return Number.isFinite(numero) ? numero : fallback;
     }
 
-    function safeString(
-        valor = ''
-    ) {
-
-        return String(valor || '')
-            .trim();
-
+    function safeString(valor = '') {
+        return String(valor || '').trim();
     }
 
     // ==========================================================
     // FORMATAR
     // ==========================================================
-
-    function format(
-        value = 0
-    ) {
-
+    function format(value = 0) {
         try {
-
-            const numero =
-                safeNumber(value);
-
-            return new Intl.NumberFormat(
-
-                LOCALE,
-
-                {
-
-                    style:
-                        'currency',
-
-                    currency:
-                        CURRENCY
-
-                }
-
-            ).format(numero);
-
+            const numero = safeNumber(value);
+            return new Intl.NumberFormat(LOCALE, {
+                style: 'currency',
+                currency: CURRENCY
+            }).format(numero);
         } catch (error) {
-
-            console.error(
-                '[MoneyUtils:format]',
-                error
-            );
-
+            console.error('[PMA V8] [MoneyUtils:format]', error);
             return 'R$ 0,00';
-
         }
-
     }
 
     // ==========================================================
     // PARSE
     // ==========================================================
-
-    function parse(
-        value = 0
-    ) {
-
+    function parse(value = 0) {
         try {
-
-            // ==================================================
-            // NUMBER
-            // ==================================================
-
-            if (
-                typeof value ===
-                'number'
-            ) {
-
-                return safeNumber(
-                    value
-                );
-
+            if (typeof value === 'number') {
+                return safeNumber(value);
             }
 
-            // ==================================================
-            // STRING
-            // ==================================================
-
-            let texto =
-                safeString(value);
-
+            let texto = safeString(value);
             if (!texto) {
-
                 return 0;
-
             }
 
-            // remove moeda/espaços
-            texto =
-                texto.replace(
-                    /[^\d,.-]/g,
-                    ''
-                );
+            // Remove símbolos monetários e espaços indesejados
+            texto = texto.replace(/[^\d,.-]/g, '');
 
-            // remove milhares
-            texto =
-                texto.replace(
-                    /\.(?=\d{3})/g,
-                    ''
-                );
+            // Remove pontos de milhares
+            texto = texto.replace(/\.(?=\d{3})/g, '');
 
-            // decimal BR
-            texto =
-                texto.replace(
-                    ',',
-                    '.'
-                );
+            // Substitui de forma global todas as vírgulas por pontos decimais
+            texto = texto.replace(/,/g, '.');
 
-            return safeNumber(
-                parseFloat(texto)
-            );
-
+            const resultado = parseFloat(texto);
+            return safeNumber(resultado);
         } catch (error) {
-
-            console.error(
-                '[MoneyUtils:parse]',
-                error
-            );
-
+            console.error('[PMA V8] [MoneyUtils:parse]', error);
             return 0;
-
         }
-
     }
 
     // ==========================================================
-    // PERCENTUAL
+    // PERCENTUAL (ARREDONDAMENTO MATEMÁTICO PRECISO)
     // ==========================================================
+    function aplicarDesconto(valor, percentual = 0) {
+        try {
+            const precoOriginal = safeNumber(valor);
+            let taxaDesconto = safeNumber(percentual);
 
-    function aplicarDesconto(
-        valor,
-        percentual = 0
-    ) {
+            // Garante travas de segurança do limite de desconto (0% a 100%)
+            if (taxaDesconto < 0) taxaDesconto = 0;
+            if (taxaDesconto > 100) taxaDesconto = 100;
 
-        const numero =
-            safeNumber(valor);
+            const valorComDesconto = precoOriginal - (precoOriginal * (taxaDesconto / 100));
 
-        const desconto =
-            safeNumber(percentual);
-
-        return Number(
-
-            (
-                numero -
-
-                (
-                    numero *
-                    (desconto / 100)
-                )
-
-            ).toFixed(2)
-
-        );
-
+            // Arredondamento matemático preciso eliminando falhas de ponto flutuante do JS
+            return Math.round((valorComDesconto + Number.EPSILON) * 100) / 100;
+        } catch (error) {
+            console.error('[PMA V8] [MoneyUtils:aplicarDesconto]', error);
+            return safeNumber(valor);
+        }
     }
 
     // ==========================================================
     // EXPORT
     // ==========================================================
-
     return Object.freeze({
-
         format,
-
         parse,
-
         aplicarDesconto,
-
         safeNumber
-
     });
-
 })();
 
 // ==========================================================
-// EXPORTS
+// EXPORTS GLOBAIS
 // ==========================================================
+Object.defineProperty(window, 'MoneyUtils', { value: MoneyUtils, writable: false, configurable: false });
+Object.defineProperty(window, 'fM', { value: MoneyUtils.format, writable: false, configurable: false });
 
-window.MoneyUtils =
-    MoneyUtils;
+// Mapeamento Legado / Compatibilidade Retroativa Segura
+Object.defineProperty(window, 'money', {
+    value: Object.freeze({
+        formatar: MoneyUtils.format,
+        parsear: MoneyUtils.parse
+    }),
+    writable: false,
+    configurable: false
+});
 
-window.fM =
-    MoneyUtils.format;
-
-// ==========================================================
-// LEGADO
-// ==========================================================
-
-window.money = {
-
-    formatar:
-        MoneyUtils.format,
-
-    parsear:
-        MoneyUtils.parse
-
-};
-
-// ==========================================================
-// INIT
-// ==========================================================
-
-console.log(
-    '💰 MoneyUtils v2.0 carregado.'
-);
+console.info('[PMA V8] 💰 MoneyUtils v2.1 fixado e congelado com sucesso.');

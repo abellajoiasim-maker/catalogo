@@ -1,380 +1,248 @@
 // ======================================================================
 // js/services/configService.js
-// Abella Joias - ConfigService v4.0
+// Abella Joias - ConfigService v8.0 (Arquitetura PMA V8)
+// Autoridade Suprema Exclusiva sobre: abella/settings e dados corporativos
 // ======================================================================
 
 (function () {
-
     'use strict';
 
-    const SETTINGS_PATH =
-        getAbellaPath('settings');
+    // ROTA REQUISITADA PELA ARQUITETURA OFICIAL PMA V8
+    const SETTINGS_PATH = typeof window.getAbellaPath === 'function' 
+        ? window.getAbellaPath('settings') 
+        : 'abella/settings';
 
-    const DEFAULT_SETTINGS =
-        Object.freeze({
-
-            pixDesc: 5,
-
-            parcelasMax: 6,
-
-            whatsEmpresa:
-                '5519988207658',
-
-            nomeEmpresa:
-                'Abella Joias',
-
-            instagram: '',
-
-            endereco: '',
-
-            email: ''
-
-        });
+    // FALLBACKS OPERACIONAIS INSTITUCIONAIS DEFENSIVOS
+    const DEFAULT_SETTINGS = Object.freeze({
+        nomeEmpresa: 'Abella Joias',
+        slogan: 'Atacado de Joias no Bruto e Semi-joias',
+        logo: '',
+        banner: '',
+        whatsEmpresa: '5519988207658',
+        email: '',
+        instagram: '',
+        endereco: '',
+        parcelasMax: 6,
+        pixDesc: 5,
+        descontos: Object.freeze({
+            ativo: false,
+            porcentagem: 0,
+            regrasCategoria: {}
+        }),
+        cores: Object.freeze({
+            primaria: '#caa85c',
+            secundaria: '#000000',
+            fundo: '#000000',
+            texto: '#ffffff'
+        })
+    });
 
     const ConfigService = {
-
         _cache: null,
-
         _cacheTimestamp: 0,
-
         _cacheTTL: 60000,
 
-        // ======================================================
-        // DATABASE
-        // ======================================================
-
+        // CONEXÃO COM A ABSTRAÇÃO DE BASE DE DADOS
         _db() {
-
             if (!window.db) {
-
-                throw new Error(
-                    'Firebase Database não inicializado.'
-                );
+                throw new Error('[PMA V8] [ConfigService] Infraestrutura Firebase Realtime Database indisponível.');
             }
-
             return window.db;
         },
 
-        // ======================================================
-        // REF
-        // ======================================================
-
+        // ATALHO EXCLUSIVO DE ACESSO AO NÓ DE SETTINGS
         _ref() {
-
-            return this
-                ._db()
-                .ref(SETTINGS_PATH);
+            return this._db().ref(SETTINGS_PATH);
         },
 
-        // ======================================================
-        // CACHE
-        // ======================================================
-
+        // VALIDAÇÃO CRONOLÓGICA DO CACHE EM MEMÓRIA
         _isCacheValid() {
-
             return Boolean(
-                this._cache &&
-                (Date.now() - this._cacheTimestamp)
-                < this._cacheTTL
+                this._cache && 
+                (Date.now() - this._cacheTimestamp) < this._cacheTTL
             );
         },
 
+        // INVALIDAÇÃO FORÇADA DE INFRAESTRUTURA DE DADOS
         invalidateCache() {
-
             this._cache = null;
-
             this._cacheTimestamp = 0;
         },
 
-        // ======================================================
-        // NORMALIZAÇÃO
-        // ======================================================
-
-        normalizarConfiguracoes(
-            raw = {}
-        ) {
-
-            const empresa =
-                raw.empresa || {};
+        // MONITOR DE COMPATIBILIDADE E SANEAMENTO DE ENTRADAS
+        normalizarConfiguracoes(raw = {}) {
+            const empresa = raw.empresa || {};
+            const coresCruas = raw.cores || empresa.cores || {};
+            const descontosCruos = raw.descontos || empresa.descontos || {};
 
             return Object.freeze({
-
-                pixDesc: Number(
-                    raw.pix ??
-                    empresa.pix ??
-                    DEFAULT_SETTINGS.pixDesc
-                ),
-
-                parcelasMax: Number(
-                    raw.parcelas ??
-                    empresa.parcelas ??
-                    DEFAULT_SETTINGS.parcelasMax
-                ),
-
-                whatsEmpresa: String(
-                    raw.whatsapp ??
-                    empresa.whatsapp ??
-                    DEFAULT_SETTINGS.whatsEmpresa
-                ).replace(/\D/g, ''),
-
                 nomeEmpresa: String(
-                    raw.nomeEmpresa ??
-                    empresa.nomeEmpresa ??
-                    DEFAULT_SETTINGS.nomeEmpresa
-                ),
-
-                instagram: String(
-                    raw.instagram ??
-                    empresa.instagram ??
-                    DEFAULT_SETTINGS.instagram
-                ),
-
-                endereco: String(
-                    raw.endereco ??
-                    empresa.endereco ??
-                    DEFAULT_SETTINGS.endereco
-                ),
-
+                    raw.nomeEmpresa ?? raw.nome ?? empresa.nomeEmpresa ?? empresa.nome ?? DEFAULT_SETTINGS.nomeEmpresa
+                ).trim(),
+                
+                slogan: String(
+                    raw.slogan ?? empresa.slogan ?? DEFAULT_SETTINGS.slogan
+                ).trim(),
+                
+                logo: String(
+                    raw.logo ?? empresa.logo ?? DEFAULT_SETTINGS.logo
+                ).trim(),
+                
+                banner: String(
+                    raw.banner ?? empresa.banner ?? DEFAULT_SETTINGS.banner
+                ).trim(),
+                
+                whatsEmpresa: String(
+                    raw.whatsEmpresa ?? raw.whatsapp ?? empresa.whatsEmpresa ?? empresa.whatsapp ?? DEFAULT_SETTINGS.whatsEmpresa
+                ).replace(/\D/g, ''),
+                
                 email: String(
-                    raw.email ??
-                    empresa.email ??
-                    DEFAULT_SETTINGS.email
-                )
+                    raw.email ?? empresa.email ?? DEFAULT_SETTINGS.email
+                ).trim(),
+                
+                instagram: String(
+                    raw.instagram ?? empresa.instagram ?? DEFAULT_SETTINGS.instagram
+                ).trim(),
+                
+                endereco: String(
+                    raw.endereco ?? empresa.endereco ?? DEFAULT_SETTINGS.endereco
+                ).trim(),
+                
+                parcelasMax: Number(
+                    raw.parcelasMax ?? raw.parcelas ?? empresa.parcelasMax ?? empresa.parcelas ?? DEFAULT_SETTINGS.parcelasMax
+                ),
+                
+                pixDesc: Number(
+                    raw.pixDesc ?? raw.pix ?? empresa.pixDesc ?? empresa.pix ?? DEFAULT_SETTINGS.pixDesc
+                ),
+
+                descontos: Object.freeze({
+                    ativo: Boolean(descontosCruos.ativo ?? DEFAULT_SETTINGS.descontos.ativo),
+                    porcentagem: Number(descontosCruos.porcentagem ?? descontosCruos.valor ?? 0),
+                    regrasCategoria: descontosCruos.regrasCategoria || {}
+                }),
+
+                cores: Object.freeze({
+                    primaria: String(coresCruas.primaria ?? coresCruas.primary ?? DEFAULT_SETTINGS.cores.primaria),
+                    secundaria: String(coresCruas.secundaria ?? coresCruas.secondary ?? DEFAULT_SETTINGS.cores.secundaria),
+                    fundo: String(coresCruas.fundo ?? coresCruas.background ?? DEFAULT_SETTINGS.cores.fundo),
+                    texto: String(coresCruas.texto ?? coresCruas.text ?? DEFAULT_SETTINGS.cores.texto)
+                })
             });
         },
 
-        // ======================================================
-        // GET SETTINGS
-        // ======================================================
-
-        async getSettings(
-            forceRefresh = false
-        ) {
-
+        // RESOLUÇÃO DE LEITURA COM EXPULSÃO DE PARALELISMO DE REFERÊNCIAS
+        async getSettings(forceRefresh = false) {
             try {
-
-                if (
-                    !forceRefresh &&
-                    this._isCacheValid()
-                ) {
-
-                    return structuredClone(
-                        this._cache
-                    );
+                if (!forceRefresh && this._isCacheValid()) {
+                    return structuredClone(this._cache);
                 }
 
-                const snapshot =
-                    await this
-                        ._ref()
-                        .once('value');
+                const snapshot = await this._ref().once('value');
+                const data = snapshot.val() || {};
 
-                const data =
-                    snapshot.val() || {};
+                this._cache = this.normalizarConfiguracoes(data);
+                this._cacheTimestamp = Date.now();
 
-                this._cache =
-                    this.normalizarConfiguracoes(
-                        data
-                    );
-
-                this._cacheTimestamp =
-                    Date.now();
-
-                return structuredClone(
-                    this._cache
-                );
-
+                return structuredClone(this._cache);
             } catch (error) {
-
-                console.error(
-                    '[ConfigService:getSettings]',
-                    error
-                );
-
-                return structuredClone(
-                    DEFAULT_SETTINGS
-                );
+                console.error('[PMA V8] [ConfigService] Falha ao recuperar parametrização global:', error);
+                return structuredClone(DEFAULT_SETTINGS);
             }
         },
 
-        // ======================================================
-        // SAVE SETTINGS
-        // ======================================================
-
-        async saveSettings(
-            settingsData = {}
-        ) {
-
+        // ESCRITA ATÔMICA CENTRALIZADA EM ESPELHO
+        async saveSettings(settingsData = {}) {
             try {
-
-                const normalized =
-                    this.normalizarConfiguracoes(
-                        settingsData
-                    );
+                const normalized = this.normalizarConfiguracoes(settingsData);
 
                 const payload = {
-
-                    pix:
-                        normalized.pixDesc,
-
-                    parcelas:
-                        normalized.parcelasMax,
-
-                    whatsapp:
-                        normalized.whatsEmpresa,
-
-                    nomeEmpresa:
-                        normalized.nomeEmpresa,
-
-                    instagram:
-                        normalized.instagram,
-
-                    endereco:
-                        normalized.endereco,
-
-                    email:
-                        normalized.email
+                    nomeEmpresa: normalized.nomeEmpresa,
+                    slogan: normalized.slogan,
+                    logo: normalized.logo,
+                    banner: normalized.banner,
+                    whatsapp: normalized.whatsEmpresa,
+                    email: normalized.email,
+                    instagram: normalized.instagram,
+                    endereco: normalized.endereco,
+                    parcelas: normalized.parcelasMax,
+                    pix: normalized.pixDesc,
+                    descontos: normalized.descontos,
+                    cores: normalized.cores
                 };
 
-                await this
-                    ._ref()
-                    .update(payload);
+                await this._ref().update(payload);
 
-                this._cache =
-                    this.normalizarConfiguracoes(
-                        payload
-                    );
-
-                this._cacheTimestamp =
-                    Date.now();
-
+                this._cache = normalized;
+                this._cacheTimestamp = Date.now();
                 return true;
-
             } catch (error) {
-
-                console.error(
-                    '[ConfigService:saveSettings]',
-                    error
-                );
-
+                console.error('[PMA V8] [ConfigService] Falha ao gravar parametrização global:', error);
                 return false;
             }
         },
 
-        // ======================================================
-        // UPDATE PARCIAL
-        // ======================================================
-
-        async update(
-            partialData = {}
-        ) {
-
+        // ATUALIZAÇÃO PARCIAL PARADIGMÁTICA
+        async update(partialData = {}) {
             try {
-
-                const current =
-                    await this.getSettings();
-
+                const current = await this.getSettings(true);
+                
+                // Realiza união rasa das propriedades gerais
                 const merged = {
-
                     ...current,
-
-                    ...partialData
+                    ...partialData,
+                    // Garante união profunda em objetos internos caso fornecidos parcialmente
+                    descontos: partialData.descontos ? { ...current.descontos, ...partialData.descontos } : current.descontos,
+                    cores: partialData.cores ? { ...current.cores, ...partialData.cores } : current.cores
                 };
 
-                return await this
-                    .saveSettings(merged);
-
+                return await this.saveSettings(merged);
             } catch (error) {
-
-                console.error(
-                    '[ConfigService:update]',
-                    error
-                );
-
+                console.error('[PMA V8] [ConfigService] Escrita parcial abortada por inconsistência:', error);
                 return false;
             }
         },
 
-        // ======================================================
-        // SUBSCRIBE
-        // ======================================================
-
+        // ASSINATURA REATIVA PÚBLICA EM STREAM DE DADOS
         subscribe(callback) {
-
             try {
+                const ref = this._ref();
+                
+                ref.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    this._cache = this.normalizarConfiguracoes(data);
+                    this._cacheTimestamp = Date.now();
 
-                const ref =
-                    this._ref();
-
-                ref.on(
-                    'value',
-                    snapshot => {
-
-                        const data =
-                            snapshot.val() || {};
-
-                        this._cache =
-                            this.normalizarConfiguracoes(
-                                data
-                            );
-
-                        this._cacheTimestamp =
-                            Date.now();
-
-                        if (
-                            typeof callback ===
-                            'function'
-                        ) {
-
-                            callback(
-                                structuredClone(
-                                    this._cache
-                                )
-                            );
-                        }
+                    if (typeof callback === 'function') {
+                        callback(structuredClone(this._cache));
                     }
-                );
+                });
 
                 return ref;
-
             } catch (error) {
-
-                console.error(
-                    '[ConfigService:subscribe]',
-                    error
-                );
+                console.error('[PMA V8] [ConfigService] Assinatura reativa falhou:', error);
+                return null;
             }
         },
 
-        // ======================================================
-        // UNSUBSCRIBE
-        // ======================================================
-
+        // REMOÇÃO DESACOPLADA DE ASSINATURA EM TEMPO REAL
         unsubscribe(ref) {
-
             try {
-
-                if (
-                    ref &&
-                    typeof ref.off ===
-                    'function'
-                ) {
-
-                    ref.off();
+                if (ref && typeof ref.off === 'function') {
+                    ref.off('value');
                 }
-
             } catch (error) {
-
-                console.error(
-                    '[ConfigService:unsubscribe]',
-                    error
-                );
+                console.error('[PMA V8] [ConfigService] Desconexão de listener interceptada:', error);
             }
         }
     };
 
-    window.ConfigService =
-        Object.freeze(
-            ConfigService
-        );
+    // CONGELAMENTO FINAL PARA PROTEÇÃO E ISOLAMENTO DA ARQUITETURA
+    Object.defineProperty(window, 'ConfigService', {
+        value: Object.freeze(ConfigService),
+        writable: false,
+        configurable: false
+    });
 
+    console.info('[PMA V8] [ConfigService] Camada oficial de parametrização blindada com sucesso.');
 })();

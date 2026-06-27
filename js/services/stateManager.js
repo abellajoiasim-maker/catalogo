@@ -9,6 +9,7 @@
 
     // Repositório privado de dados em tempo de execução
     const _state = {
+        store: { id: 'abella', nome: 'Abella Joias' },
         catalog: { produtos: [], categorias: [], configuracoes: {} },
         cart: [],
         filters: { categoriaAtiva: null, subcategoriaAtiva: null, busca: '', ordenacao: 'padrao' },
@@ -139,7 +140,7 @@
             this.setState('cart', []);
             this.setState('filters', { categoriaAtiva: null, subcategoriaAtiva: null, busca: '', ordenacao: 'padrao' });
             this.setState('ui', { loadingGlobal: false, painelEditorAtivo: false });
-            console.info('[PMA V8] [StateManager] Estado operacional limpo para os padrões de fábrica.');
+            console.info('[PMA V8] [StateManager] Estado operacional limpo para os padrões de fábrica da Abella Joias.');
         }
     };
 
@@ -150,5 +151,5 @@
         configurable: false
     });
 
-    console.info('[PMA V8] [StateManager] Orquestrador reativo de estados globais ativado.');
+    console.info('[PMA V8] [StateManager] Orquestrador reativo de estados globais ativado para Abella Joias.');
 })();

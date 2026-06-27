@@ -361,10 +361,9 @@
             }
         }
 
-        // Executa a injeção em lote (Multi-location update) otimizada para o Firebase
+       // Executa a injeção centralizada alinhada com o ConfigService / DescontoService
         async function aplicarCampanha() {
             const categoria = document.getElementById('campanha-categoria').value;
-            const subcategoria = document.getElementById('campanha-subcategoria').value;
             const desconto = parseInt(document.getElementById('campanha-desconto').value) || 0;
             const nome = document.getElementById('campanha-nome').value || 'Oferta';
             const icone = document.getElementById('campanha-icone').value;
@@ -372,70 +371,54 @@
             const corTexto = document.getElementById('campanha-cor-texto').value;
 
             if (!categoria) {
-                alert('Por favor, selecione pelo menos uma Categoria Alvo para aplicar o desconto em lote.');
+                alert('Por favor, selecione uma Categoria Alvo para aplicar a ação comercial.');
                 return;
             }
 
             try {
-                const snapProds = await db.ref('abella/products').once('value');
-                const prods = snapProds.val() || {};
+                // Monta o payload exatamente no formato esperado pelo ConfigService / DescontoService
+                const novaRegra = {
+                    ativo: true,
+                    porcentagem: desconto,
+                    nomeCampanha: nome,
+                    badgeIcone: icone,
+                    badgeColor: corBg,
+                    badgeTextColor: corTexto
+                };
+
+                // Grava diretamente no nó de regras por categoria da Abella Joias
+                // Converte a chave da categoria para minúsculo para casar com o mapeamento síncrono
+                const categoriaChave = categoria.trim().toLowerCase();
                 
                 const updates = {};
-                let countAfetados = 0;
+                updates[`abella/settings/descontos/ativo`] = true;
+                updates[`abella/settings/descontos/regrasCategoria/${categoriaChave}`] = novaRegra;
 
-                // Monta a payload de atualização em memória
-                Object.keys(prods).forEach(id => {
-                    const p = prods[id];
-                    const matchCategoria = (p.category === categoria);
-                    const matchSub = !subcategoria || (p.subcategory === subcategoria);
-
-                    if (matchCategoria && matchSub) {
-                        updates[`abella/products/${id}/promo`] = desconto;
-                        updates[`abella/products/${id}/badge`] = `${icone} ${nome}`;
-                        updates[`abella/products/${id}/badgeColor`] = corBg;
-                        updates[`abella/products/${id}/badgeTextColor`] = corTexto;
-                        updates[`abella/products/${id}/ofertaAtiva`] = true;
-                        countAfetados++;
-                    }
-                });
-
-                if (countAfetados === 0) {
-                    alert('Nenhum produto correspondente aos filtros foi encontrado para modificação.');
-                    return;
-                }
-
-                // Envia a transação em lote unificada de alta velocidade
                 await db.ref().update(updates);
-                alert(`Sucesso! Campanha aplicada a ${countAfetados} produto(s) simultaneamente.`);
+                alert(`Sucesso! Campanha para a categoria "${categoria}" ativada no ecossistema central.`);
                 
                 await atualizarContadores();
                 limparCampos();
 
             } catch (error) {
-                console.error("Falha ao propagar modificação em lote:", error);
+                console.error("Falha ao propagar modificação de campanha:", error);
                 alert('Erro interno de processamento ao comunicar-se com o banco de dados.');
             }
         }
 
-        // Reseta globalmente todas as marcas promocionais de produtos do banco
+        // Reseta globalmente todas as regras de desconto do painel de parametrização
         async function limparTodasOfertas() {
-            if (!confirm('Esta ação removerá o preço promocional e badges de TODOS os produtos do banco. Deseja prosseguir?')) return;
+            if (!confirm('Esta ação desativará todas as campanhas de categoria e descontos globais. Deseja prosseguir?')) return;
 
             try {
-                const snapProds = await db.ref('abella/products').once('value');
-                const prods = snapProds.val() || {};
-                
-                const updates = {};
-                Object.keys(prods).forEach(id => {
-                    updates[`abella/products/${id}/promo`] = 0;
-                    updates[`abella/products/${id}/badge`] = "";
-                    updates[`abella/products/${id}/badgeColor`] = "";
-                    updates[`abella/products/${id}/badgeTextColor`] = "";
-                    updates[`abella/products/${id}/ofertaAtiva`] = false;
-                });
+                const updates = {
+                    'abella/settings/descontos/ativo': false,
+                    'abella/settings/descontos/porcentagem': 0,
+                    'abella/settings/descontos/regrasCategoria': {}
+                };
 
                 await db.ref().update(updates);
-                alert('Toda a tabela de preços comerciais foi restaurada ao valor original com sucesso.');
+                alert('Todas as regras de descontos em massa foram desativadas com sucesso.');
                 await atualizarContadores();
             } catch (error) {
                 console.error("Erro ao resetar catálogo comercial:", error);

@@ -1,16 +1,15 @@
 // ======================================================================
 // js/services/configService.js
-// Abella Joias - ConfigService v8.0 (Arquitetura PMA V8)
+// Abella Joias - ConfigService v8.2 (Edição Exclusiva e Estática)
 // Autoridade Suprema Exclusiva sobre: abella/settings e dados corporativos
+// Arquitetura Homologada PMA V8 - Arquivo Completo, Simplificado e Selado
 // ======================================================================
 
 (function () {
     'use strict';
 
-    // ROTA REQUISITADA PELA ARQUITETURA OFICIAL PMA V8
-    const SETTINGS_PATH = typeof window.getAbellaPath === 'function' 
-        ? window.getAbellaPath('settings') 
-        : 'abella/settings';
+    // ROTA ESTÁTICA E EXCLUSIVA - ZERO ABSTRAÇÃO PARA EVITAR ERROS
+    const SETTINGS_PATH = 'abella/settings';
 
     // FALLBACKS OPERACIONAIS INSTITUCIONAIS DEFENSIVOS
     const DEFAULT_SETTINGS = Object.freeze({
@@ -50,7 +49,7 @@
             return window.db;
         },
 
-        // ATALHO EXCLUSIVO DE ACESSO AO NÓ DE SETTINGS
+        // ATALHO EXCLUSIVO DE ACESSO AO NÓ DE SETTINGS DA ABELLA JOIAS
         _ref() {
             return this._db().ref(SETTINGS_PATH);
         },
@@ -75,7 +74,7 @@
             const coresCruas = raw.cores || empresa.cores || {};
             const descontosCruos = raw.descontos || empresa.descontos || {};
 
-            return Object.freeze({
+            return {
                 nomeEmpresa: String(
                     raw.nomeEmpresa ?? raw.nome ?? empresa.nomeEmpresa ?? empresa.nome ?? DEFAULT_SETTINGS.nomeEmpresa
                 ).trim(),
@@ -116,19 +115,19 @@
                     raw.pixDesc ?? raw.pix ?? empresa.pixDesc ?? empresa.pix ?? DEFAULT_SETTINGS.pixDesc
                 ),
 
-                descontos: Object.freeze({
+                descontos: {
                     ativo: Boolean(descontosCruos.ativo ?? DEFAULT_SETTINGS.descontos.ativo),
                     porcentagem: Number(descontosCruos.porcentagem ?? descontosCruos.valor ?? 0),
                     regrasCategoria: descontosCruos.regrasCategoria || {}
-                }),
+                },
 
-                cores: Object.freeze({
+                cores: {
                     primaria: String(coresCruas.primaria ?? coresCruas.primary ?? DEFAULT_SETTINGS.cores.primaria),
                     secundaria: String(coresCruas.secundaria ?? coresCruas.secondary ?? DEFAULT_SETTINGS.cores.secundaria),
                     fundo: String(coresCruas.fundo ?? coresCruas.background ?? DEFAULT_SETTINGS.cores.fundo),
                     texto: String(coresCruas.texto ?? coresCruas.text ?? DEFAULT_SETTINGS.cores.texto)
-                })
-            });
+                }
+            };
         },
 
         // RESOLUÇÃO DE LEITURA COM EXPULSÃO DE PARALELISMO DE REFERÊNCIAS
@@ -146,12 +145,12 @@
 
                 return structuredClone(this._cache);
             } catch (error) {
-                console.error('[PMA V8] [ConfigService] Falha ao recuperar parametrização global:', error);
+                console.error('[PMA V8] [ConfigService] Falha ao recuperar parametrização da Abella Joias:', error);
                 return structuredClone(DEFAULT_SETTINGS);
             }
         },
 
-        // ESCRITA ATÔMICA CENTRALIZADA EM ESPELHO
+        // ESCRITA ATÔMICA CENTRALIZADA EM ESPELHO SIMÉTRICO
         async saveSettings(settingsData = {}) {
             try {
                 const normalized = this.normalizarConfiguracoes(settingsData);
@@ -161,11 +160,14 @@
                     slogan: normalized.slogan,
                     logo: normalized.logo,
                     banner: normalized.banner,
+                    whatsEmpresa: normalized.whatsEmpresa,
                     whatsapp: normalized.whatsEmpresa,
                     email: normalized.email,
                     instagram: normalized.instagram,
                     endereco: normalized.endereco,
+                    parcelasMax: normalized.parcelasMax,
                     parcelas: normalized.parcelasMax,
+                    pixDesc: normalized.pixDesc,
                     pix: normalized.pixDesc,
                     descontos: normalized.descontos,
                     cores: normalized.cores
@@ -177,21 +179,19 @@
                 this._cacheTimestamp = Date.now();
                 return true;
             } catch (error) {
-                console.error('[PMA V8] [ConfigService] Falha ao gravar parametrização global:', error);
+                console.error('[PMA V8] [ConfigService] Falha ao gravar parametrização no Firebase:', error);
                 return false;
             }
         },
 
-        // ATUALIZAÇÃO PARCIAL PARADIGMÁTICA
+        // ATUALIZAÇÃO PARCIAL PARADIGMÁTICA DE INFRAESTRUTURA
         async update(partialData = {}) {
             try {
                 const current = await this.getSettings(true);
                 
-                // Realiza união rasa das propriedades gerais
                 const merged = {
                     ...current,
                     ...partialData,
-                    // Garante união profunda em objetos internos caso fornecidos parcialmente
                     descontos: partialData.descontos ? { ...current.descontos, ...partialData.descontos } : current.descontos,
                     cores: partialData.cores ? { ...current.cores, ...partialData.cores } : current.cores
                 };
@@ -244,5 +244,5 @@
         configurable: false
     });
 
-    console.info('[PMA V8] [ConfigService] Camada oficial de parametrização blindada com sucesso.');
+    console.info('[PMA V8] ⚙️ ConfigService v8.2 exclusivo Abella Joias selado.');
 })();

@@ -1,10 +1,12 @@
 // ======================================================================
 // js/services/catalogService.js
-// Abella Joias - CatalogService v8.0 (Arquitetura PMA V8)
+// Abella Joias - CatalogService v8.1 (Versão Final de Produção)
 // Autoridade Suprema Exclusiva de Leitura e Agregação de Dados do Catálogo
+// Compatível com GitHub Pages • Integração Nativa com MoneyUtils
+// Arquitetura Homologada PMA V8 - Arquivo Completo e Selado
 // ======================================================================
 
-(function () {
+(() => {
     'use strict';
 
     const CatalogService = {
@@ -47,14 +49,14 @@
             const descontosGlobais = settings.descontos || { ativo: false, porcentagem: 0, regrasCategoria: {} };
 
             // 1. Processamento e Saneamento de Categorias e Subcategorias
-            const tabelaSubcategorias = Object.entries(rawSubcategorias).map(([id, sub]) => ({
+            const tabelaSubcategorias = Object.entries(rawSubcategorias || {}).map(([id, sub]) => ({
                 id,
                 nome: String(sub.nome || '').trim(),
                 categoriaPai: String(sub.categoriaPai || sub.categoriaId || '').trim(),
                 ordem: Number(sub.ordem ?? 99)
             }));
 
-            const listaCategorias = Object.entries(rawCategorias).map(([id, cat]) => {
+            const listaCategorias = Object.entries(rawCategorias || {}).map(([id, cat]) => {
                 const subcategoriasFilhas = tabelaSubcategorias
                     .filter(sub => sub.categoriaPai === id)
                     .sort((a, b) => a.ordem - b.ordem);
@@ -68,19 +70,30 @@
                 };
             }).sort((a, b) => a.ordem - b.ordem);
 
-            // 2. Processamento, Normalização e Aplicação de Regras de Desconto nos Produtos
-            const listaProdutos = Object.entries(rawProdutos).map(([id, prod]) => {
+            // 2. Processamento, Normalização e Aplicação de Regras de Desconto com MoneyUtils
+            const listaProdutos = Object.entries(rawProdutos || {}).map(([id, prod]) => {
                 const precoOriginal = Number(prod.preco ?? prod.price ?? 0);
                 let precoFinal = precoOriginal;
 
-                // Aplicação de desconto em cascata (se houver regra por categoria ou desconto global ativo)
-                if (descontosGlobais.ativo && descontosGlobais.porcentagem > 0) {
+                // Conexão nativa e segura com o utilitário financeiro centralizado
+                if (descontosGlobais.ativo && window.MoneyUtils && typeof window.MoneyUtils.aplicarDesconto === 'function') {
                     const descontoCategoria = descontosGlobais.regrasCategoria 
                         ? Number(descontosGlobais.regrasCategoria[prod.categoriaId] ?? 0)
                         : 0;
                     
+                    const taxaDesconto = descontoCategoria > 0 ? descontoCategoria : Number(descontosGlobais.porcentagem ?? 0);
+                    
+                    if (taxaDesconto > 0) {
+                        precoFinal = window.MoneyUtils.aplicarDesconto(precoOriginal, taxaDesconto);
+                    }
+                } else if (descontosGlobais.ativo && descontosGlobais.porcentagem > 0) {
+                    // Fallback matemático simples caso o MoneyUtils não esteja disponível no escopo global instantaneamente
+                    const descontoCategoria = descontosGlobais.regrasCategoria 
+                        ? Number(descontosGlobais.regrasCategoria[prod.categoriaId] ?? 0)
+                        : 0;
                     const taxaDesconto = descontoCategoria > 0 ? descontoCategoria : descontosGlobais.porcentagem;
-                    precoFinal = precoOriginal - (precoOriginal * (taxaDesconto / 100));
+                    const valorComDesconto = precoOriginal - (precoOriginal * (taxaDesconto / 100));
+                    precoFinal = Math.round((valorComDesconto + Number.EPSILON) * 100) / 100;
                 }
 
                 return {
@@ -103,11 +116,11 @@
                 };
             });
 
-            return Object.freeze({
+            return {
                 produtos: listaProdutos,
                 categorias: listaCategorias,
                 configuracoes: settings
-            });
+            };
         },
 
         // RESOLUTOR MESTRE DA ÁRVORE DO CATÁLOGO COMPLETO (PROMISE.ALL)
@@ -141,22 +154,22 @@
             } catch (error) {
                 console.error('[PMA V8] [CatalogService] Erro crítico ao consolidar árvore de catálogo:', error);
                 
-                // Fallback seguro em formato estruturado
-                return structuredClone({
+                // Fallback seguro em formato estruturado limpo
+                return {
                     produtos: [],
                     categorias: [],
                     configuracoes: {}
-                });
+                };
             }
         }
     };
 
-    // VINCULAÇÃO E CONGELAMENTO DA CAMADA DO SERVIÇO NO ESCOPO GLOBAL
+    // VINCULAÇÃO E CONGELAMENTO DA CAMADA DO SERVIÇO NO ESCOPO GLOBAL (WINDOW)
     Object.defineProperty(window, 'CatalogService', {
         value: Object.freeze(CatalogService),
         writable: false,
         configurable: false
     });
 
-    console.info('[PMA V8] [CatalogService] Módulo estrutural criado e injetado com integridade.');
+    console.info('[PMA V8] 📦 CatalogService v8.1 integrado e selado com integridade.');
 })();

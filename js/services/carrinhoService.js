@@ -67,75 +67,89 @@
         },
 
         /**
-         * Adiciona um produto ou incrementa sua quantidade caso já exista
+         * Retorna a lista de itens brutos (utilizado por componentes externos)
+         */
+        obterItens: function() {
+            return obterItens();
+        },
+
+        /**
+         * Adiciona um produto ou incrementa sua quantidade caso já exista (considerando a variação)
          * @param {Object} produto - Objeto do produto a ser adicionado
          * @param {number} quantidade - Quantidade desejada (padrão 1)
+         * @param {string} variacao - String contendo o nome da variação/grade (opcional)
          */
-        adicionar: function (produto, quantidade = 1) {
-            if (!produto || !produto.id) {
+        adicionar: function (produto, quantidade = 1, variacao = '') {
+            if (!produto || (!produto.id && !produto.codigo && !produto.sku)) {
                 console.error('[carrinhoService] Produto inválido para adição.');
                 return false;
             }
 
+            const pId = produto.id || produto.codigo || produto.sku;
+            const labelVariacao = variacao ? variacao.trim() : '';
             const itens = obterItens();
-            const index = itens.findIndex(item => item.id === produto.id);
+
+            // Busca por ID E pela variação exata para não somar itens de grades diferentes na mesma linha
+            const index = itens.findIndex(item => item.id === pId && (item.variacao || '') === labelVariacao);
 
             if (index !== -1) {
                 itens[index].quantidade += quantidade;
             } else {
                 // Guarda apenas os dados brutos essenciais estruturais no storage
                 itens.push({
-                    id: produto.id,
-                    name: produto.name,
+                    id: pId,
+                    name: produto.nome || produto.name,
                     preco: parseFloat(produto.preco) || 0,
-                    category: produto.category,
-                    subcategory: produto.subcategory || '',
-                    image: produto.image || '',
-                    peso: produto.peso || 0,
-                    quantidade: quantidade
+                    category: produto.categoriaId || produto.category || produto.categoria || '',
+                    subcategory: produto.subcategoriaId || produto.subcategory || produto.subcategoria || '',
+                    image: produto.imagem || produto.image || '',
+                    peso: parseFloat(produto.peso || 0),
+                    quantidade: quantidade,
+                    variacao: labelVariacao // Persistência estável da grade escolhida
                 });
             }
 
             salvarItens(itens);
-            console.info(`[carrinhoService] Produto ID ${produto.id} adicionado/atualizado.`);
+            console.info(`[carrinhoService] Produto ID ${pId} (${labelVariacao || 'Sem Variação'}) adicionado/atualizado.`);
             return true;
         },
 
         /**
-         * Remove completamente um item do carrinho pelo ID
+         * Remove completamente um item do carrinho pelo ID e sua variação específica
          * @param {string|number} produtoId - ID do produto
+         * @param {string} variacao - Nome da variação para diferenciação
          */
-        remover: function (produtoId) {
+        remover: function (produtoId, variacao = '') {
             let itens = obterItens();
             const tamanhoOriginal = itens.length;
+            const labelVariacao = variacao ? variacao.trim() : '';
             
-            itens = itens.filter(item => item.id !== produtoId);
+            itens = itens.filter(item => !(item.id === produtoId && (item.variacao || '') === labelVariacao));
 
             if (itens.length < tamanhoOriginal) {
                 salvarItens(itens);
-                console.info(`[carrinhoService] Produto ID ${produtoId} removido do carrinho.`);
+                console.info(`[carrinhoService] Produto ID ${produtoId} (${labelVariacao}) removido do carrinho.`);
                 return true;
             }
             return false;
         },
 
         /**
-         * Atualiza diretamente a quantidade de um item específico
-         * @param {string|number} produtoId - ID do produto
-         * @param {number} novaQuantidade - Nova quantidade (deve ser maior que 0)
+         * Atualiza diretamente a quantidade de um item específico filtrado por variação
          */
-        atualizarQuantidade: function (produtoId, novaQuantidade) {
+        atualizarQuantidade: function (produtoId, novaQuantidade, variacao = '') {
             if (novaQuantidade <= 0) {
-                return this.remover(produtoId);
+                return this.remover(produtoId, variacao);
             }
 
             const itens = obterItens();
-            const item = itens.find(item => item.id === produtoId);
+            const labelVariacao = variacao ? variacao.trim() : '';
+            const item = itens.find(item => item.id === produtoId && (item.variacao || '') === labelVariacao);
 
             if (item) {
                 item.quantidade = novaQuantidade;
                 salvarItens(itens);
-                console.info(`[carrinhoService] Quantidade do produto ID ${produtoId} atualizada para ${novaQuantidade}.`);
+                console.info(`[carrinhoService] Quantidade do produto ID ${produtoId} (${labelVariacao}) atualizada para ${novaQuantidade}.`);
                 return true;
             }
             return false;

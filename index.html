@@ -126,13 +126,13 @@
             border-radius: 14px;
             overflow: hidden;
             background: #ffffff;
-            display: flex; items-center: center; justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             border: 1px solid rgba(202,168,92,.2);
             box-shadow: 0 4px 20px rgba(202,168,92,.12);
             flex-shrink: 0;
         }
 
-        /* Correção do Container do Banner para Casar com Desktop e Mobile */
+        /* Otimização do Container do Banner para ser responsivo de verdade */
         .hero-img-wrap {
             position: relative;
             width: 100%;
@@ -140,6 +140,9 @@
             border-radius: 2rem;
             background: #ffffff;
             border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .hero-float {
@@ -154,9 +157,9 @@
             z-index: 10;
         }
 
-        @media (min-width:769px){ .hero-img-wrap{ height:520px; } }
+        @media (min-width:769px){ .hero-img-wrap{ height:480px; } }
         @media (max-width:768px){
-            .hero-img-wrap{ height:250px; border-radius:1.25rem; }
+            .hero-img-wrap{ height:auto; aspect-ratio: 1/1; border-radius:1.25rem; }
             .hero-float{ position:relative; left:auto; right:auto; bottom:auto; margin-top:12px; padding:1rem; }
             .stat-card { padding: .75rem !important; border-radius:1rem !important; }
             .badge { font-size: .65rem; }
@@ -238,8 +241,7 @@
 
                 <div class="relative fade-up">
                     <div class="hero-img-wrap">
-                        <!-- Corrigido para contain para não cortar o texto do Banner da Loja em nenhuma tela -->
-                        <img id="heroBannerImg" src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20251123_210246643.jpg?alt=media" alt="Joias Abella" loading="lazy" class="w-full h-full object-contain object-center">
+                        <img id="heroBannerImg" src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20251123_210246643.jpg?alt=media" alt="Joias Abella" loading="lazy" class="w-full h-full object-cover object-center">
                         <div class="hero-float">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
@@ -304,7 +306,10 @@
     <script src="js/utils/imagens.js"></script>
     
     <script>
-        const db = firebase.database();
+        // REMOVIDO: const db = firebase.database(); 
+        // A constante 'db' já foi declarada e inicializada globalmente no script firebase-config.js.
+        // Se o seu firebase-config usar outro nome (ex: database), descomente a linha abaixo e mude para:
+        // const db = firebase.database(); -> mas use um nome diferente ou apenas use a variável que já veio de lá.
 
         document.addEventListener('DOMContentLoaded', async () => {
             const grid = document.getElementById('grid-categorias');
@@ -312,14 +317,14 @@
             const noResult = document.getElementById('no-result');
 
             try {
-                // Modificado para carregar e isolar erros individuais evitando o travamento do Promise.all
+                // Executa as chamadas ao nó correto já instanciado
                 const snapSettings = await db.ref('abella/settings').once('value').catch(() => null);
                 const snapCategories = await db.ref('abella/categories').once('value').catch(() => null);
 
                 if (snapSettings && snapSettings.exists()) {
                     const cfg = snapSettings.val();
                     
-                    // Correção estrita do tratamento e exibição da Logo sumida
+                    // Tratamento e exibição da Logo cadastrada pelo módulo config.html
                     const logoUrlReal = cfg.logoUrl || cfg.logo;
                     if (logoUrlReal) {
                         const img = document.getElementById('abellaLogoImg');
@@ -365,7 +370,6 @@
                     }
                 } 
                 
-                // Fallback de Segurança caso as categorias falhem ou estejam desestruturadas
                 if (listaCategorias.length === 0) {
                     const snapProdutos = await db.ref('abella/products').once('value').catch(() => null);
                     if (snapProdutos && snapProdutos.exists() && snapProdutos.val()) {
@@ -379,7 +383,6 @@
                     }
                 }
 
-                // Remove o loading do DOM de qualquer forma para não travar a tela
                 if (loading) loading.classList.add('hidden');
 
                 if (listaCategorias.length === 0) {

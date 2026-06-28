@@ -151,7 +151,7 @@
                         🛒 Carrinho
                     </span>
                     <div class="hidden lg:flex items-center gap-2">
-                        <span class="text-zinc-500 text-sm">Ambiente Seguro</span>
+                        <span class="text-zinc-500 text-sm">Ambiente Secure</span>
                         <span class="text-emerald-400">🔒</span>
                     </div>
                 </div>
@@ -231,18 +231,25 @@
         </div>
     </main>
 
-<script src="js/firebase/firebase-config.js"></script>
+    <!-- DEPENDÊNCIAS DO ECOSSISTEMA INJETADAS -->
+    <script src="js/firebase/firebase-config.js"></script>
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
     <script src="js/utils/storage.js"></script>
     <script src="js/services/carrinhoService.js"></script>
 
     <script>
-        const db = firebase.database();
+        // Inicialização resiliente e segura do banco
+        const db = typeof firebase !== 'undefined' ? firebase.database() : null;
         let configGlobal = {};
+        const INSTANCE_FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
 
+        // Mapeamento polimórfico de formatação de peso utilizando PesoUtils ou Fallback Nativo
         window.formatarPeso = function(peso) {
             const p = parseFloat(peso) || 0;
+            if (typeof PesoUtils !== 'undefined' && typeof PesoUtils.formatar === 'function') {
+                return PesoUtils.formatar(p);
+            }
             return new Intl.NumberFormat('pt-BR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
@@ -251,7 +258,7 @@
 
         function resolverImagemFirebase(url) {
             try {
-                if (!url) return 'https://via.placeholder.com/150/111111/caa85c?text=Joia';
+                if (!url) return INSTANCE_FALLBACK_IMG;
                 url = String(url).trim();
                 if (url.startsWith('http://') || url.startsWith('https://')) return url;
                 if (url.startsWith('gs://')) {
@@ -264,43 +271,44 @@
                 }
                 return url;
             } catch (err) {
-                console.error("Erro resolver imagem:", err);
-                return 'https://via.placeholder.com/150/111111/caa85c?text=Joia';
+                console.error("Erro ao processar mapeamento de mídia:", err);
+                return INSTANCE_FALLBACK_IMG;
             }
         }
 
         async function inicializarPagina() {
             try {
-                if (typeof window.getAbellaPath === 'function') {
-                    const snap = await db.ref(window.getAbellaPath('settings')).once('value');
+                if (db) {
+                    // Força a leitura capturando possíveis exceções assíncronas do barramento de configurações
+                    const snap = await db.ref('abella/settings').once('value');
                     if (snap.exists()) {
                         configGlobal = snap.val() || {};
                         processarLogo(configGlobal.logo || configGlobal.logoUrl);
                     }
                 }
-                renderizarCarrinho();
             } catch (err) {
-                console.error("Erro na inicialização da página:", err);
+                console.warn("[PMA V8] Falha ao recuperar definições dinâmicas de marca. Rodando layout nativo.", err);
+            } finally {
                 renderizarCarrinho();
             }
         }
 
         function processarLogo(logoPath) {
-            if (!logoPath) return;
-            const imgs = document.querySelectorAll('#abellaLogoImg');
-            const fallbacks = document.querySelectorAll('#abellaLogoFallback');
+            const logoImg = document.getElementById('abellaLogoImg');
+            const fallback = document.getElementById('abellaLogoFallback');
+            let logoFinal = (logoPath || '').trim();
+            if (!logoFinal) logoFinal = INSTANCE_FALLBACK_IMG;
             
-            imgs.forEach((img, idx) => {
-                img.src = resolverImagemFirebase(logoPath);
-                img.onload = () => {
-                    img.classList.remove('hidden');
-                    fallbacks[idx]?.classList.add('hidden');
+            if (logoImg) {
+                logoImg.src = resolverImagemFirebase(logoFinal);
+                logoImg.onload = () => {
+                    logoImg.classList.remove('hidden');
+                    if (fallback) fallback.classList.add('hidden');
                 };
-                img.onerror = () => {
-                    img.classList.add('hidden');
-                    fallbacks[idx]?.classList.remove('hidden');
+                logoImg.onerror = () => {
+                    logoImg.src = INSTANCE_FALLBACK_IMG;
                 };
-            });
+            }
         }
 
         function renderizarCarrinho() {
@@ -308,198 +316,243 @@
             const containerConteudo = document.getElementById('carrinho-conteudo');
             const listaProdutos = document.getElementById('lista-produtos-carrinho');
 
-            if (typeof carrinhoService === 'undefined' || !carrinhoService.listar) {
-                console.error("carrinhoService não está acessível.");
+            if (typeof carrinhoService === 'undefined') {
+                console.error("[PMA V8] CarrinhoService indisponível no escopo global.");
                 return;
             }
 
-            // Alinhado para usar a listagem reativa com descontos injetados
-            const itens = carrinhoService.listar() || [];
+            // Consome a API estável de leitura estruturada de itens do microsserviço
+            let itens = [];
+            if (typeof carrinhoService.listar === 'function') {
+                itens = carrinhoService.listar() || [];
+            } else if (typeof carrinhoService.obterItens === 'function') {
+                itens = carrinhoService.obterItens() || [];
+            }
 
             if (itens.length === 0) {
-                containerConteudo.classList.add('hidden');
-                containerVazio.classList.remove('hidden');
+                if (containerConteudo) containerConteudo.classList.add('hidden');
+                if (containerVazio) containerVazio.classList.remove('hidden');
                 return;
             }
 
-            containerVazio.classList.add('hidden');
-            containerConteudo.classList.remove('hidden');
-            listaProdutos.innerHTML = '';
+            if (containerVazio) containerVazio.classList.add('hidden');
+            if (containerConteudo) containerConteudo.classList.remove('hidden');
+            if (listaProdutos) listaProdutos.innerHTML = '';
 
             itens.forEach((item) => {
                 const imgUrl = resolverImagemFirebase(item.image || item.imagem);
-                const pesoTotalItem = formatarPeso((parseFloat(item.peso || item.pesoUnitario || 0)) * item.quantidade);
+                const qtdSegura = parseInt(item.quantidade || item.qtd || 1);
+                const pesoUnitario = parseFloat(item.peso || item.pesoUnitario || 0);
+                const pesoTotalItem = formatarPeso(pesoUnitario * qtdSegura);
                 
-                // Consome a propriedade tratada de venda em lote do carrinhoService
-                const precoUnitario = item.precoVendaUnitario;
-                const subtotalItem = precoUnitario * item.quantidade;
+                // Extração polimórfica e segura de preços de venda unificados no lote
+                const precoUnitario = parseFloat(item.precoVendaUnitario || item.price || item.preco || 0);
+                const subtotalItem = precoUnitario * qtdSegura;
 
                 const txtUnitario = typeof money !== 'undefined' ? money.formatar(precoUnitario) : `R$ ${precoUnitario.toFixed(2)}`;
                 const txtSubtotal = typeof money !== 'undefined' ? money.formatar(subtotalItem) : `R$ ${subtotalItem.toFixed(2)}`;
 
-                const limpoNome = String(item.name || item.titulo || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                const limpoId = String(item.id || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const limpoNome = String(item.name || item.nome || item.titulo || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const limpoId = String(item.id || item.sku || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-                // Badge promocional dinâmica baseada no painel de ofertas
                 const badgeHtml = item.possuiDesconto && item.badgePromocional
                     ? `<span class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">${item.badgePromocional}</span>`
                     : '';
 
-                listaProdutos.innerHTML += `
-                    <div class="carrinho-item bg-card rounded-[1.4rem] md:rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 border border-zinc-900 transition-all min-w-0 w-full overflow-hidden">
-                        <div class="w-20 h-20 rounded-xl overflow-hidden bg-black border border-zinc-800 flex-shrink-0">
-                            <img src="${imgUrl}" class="w-full h-full object-cover" alt="${limpoNome}">
-                        </div>
-                        
-                        <div class="flex-1 text-center sm:text-left min-w-0">
-                            <div class="flex items-center justify-center sm:justify-start flex-wrap gap-1">
-                                <h3 class="font-bold text-sm md:text-base uppercase tracking-wide text-white leading-tight truncate">${limpoNome}</h3>
-                                ${badgeHtml}
+                // Suporte completo a tags/variações na exibição do card do carrinho
+                const labelVariacao = item.variacao || item.combinacao || '';
+                const variacaoHtml = labelVariacao ? `<p class="text-[11px] text-amber-400 font-medium mt-0.5">🔹 Grade: ${labelVariacao}</p>` : '';
+
+                if (listaProdutos) {
+                    listaProdutos.innerHTML += `
+                        <div class="carrinho-item bg-card rounded-[1.4rem] md:rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 border border-zinc-900 transition-all min-w-0 w-full overflow-hidden">
+                            <div class="w-20 h-20 rounded-xl overflow-hidden bg-black border border-zinc-800 flex-shrink-0">
+                                <img src="${imgUrl}" class="w-full h-full object-cover" alt="${limpoNome}" onerror="this.src='${INSTANCE_FALLBACK_IMG}'">
                             </div>
-                            <p class="text-zinc-500 text-xs mt-1">Ref: ${limpoId} | Unitário: ${txtUnitario}</p>
-                            <p class="text-zinc-400 text-xs mt-1">🔋 Peso total: <span class="text-zinc-300 font-medium">${pesoTotalItem}g</span></p>
-                        </div>
+                            
+                            <div class="flex-1 text-center sm:text-left min-w-0">
+                                <div class="flex items-center justify-center sm:justify-start flex-wrap gap-1">
+                                    <h3 class="font-bold text-sm md:text-base uppercase tracking-wide text-white leading-tight truncate">${limpoNome}</h3>
+                                    ${badgeHtml}
+                                </div>
+                                ${variacaoHtml}
+                                <p class="text-zinc-500 text-xs mt-1">Ref: ${limpoId} | Unitário: ${txtUnitario}</p>
+                                <p class="text-zinc-400 text-xs mt-1">⚖️ Peso Total: <span class="text-zinc-300 font-medium">${pesoTotalItem}g</span></p>
+                            </div>
 
-                        <div class="flex items-center bg-zinc-950 rounded-xl border border-zinc-800 p-1 flex-shrink-0 gap-1 my-2 sm:my-0">
-                            <button onclick="alterarQtd('${limpoId}', -1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Diminuir">-</button>
-                            <input type="number" min="1" step="1" inputmode="numeric" value="${item.quantidade}" onchange="alterarQtdInput('${limpoId}', this.value)" class="w-14 h-9 bg-black text-center text-white font-bold rounded-lg border border-zinc-800 focus:outline-none focus:border-[#caa85c] text-sm"/>
-                            <button onclick="alterarQtd('${limpoId}', 1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Aumentar">+</button>
-                        </div>
+                            <div class="flex items-center bg-zinc-950 rounded-xl border border-zinc-800 p-1 flex-shrink-0 gap-1 my-2 sm:my-0">
+                                <button onclick="alterarQtd('${limpoId}', -1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Diminuir">-</button>
+                                <input type="number" min="1" step="1" inputmode="numeric" value="${qtdSegura}" onchange="alterarQtdInput('${limpoId}', this.value)" class="w-14 h-9 bg-black text-center text-white font-bold rounded-lg border border-zinc-800 focus:outline-none focus:border-[#caa85c] text-sm"/>
+                                <button onclick="alterarQtd('${limpoId}', 1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Aumentar">+</button>
+                            </div>
 
-                        <div class="text-center sm:text-right flex-shrink-0 min-w-[120px] flex flex-col items-center sm:items-end justify-center">
-                            <p class="text-xs text-zinc-500 uppercase tracking-wider hidden sm:block">Subtotal</p>
-                            <p class="font-black text-[#caa85c] mt-1 text-base">${txtSubtotal}</p>
-                            <button onclick="removerItemCarrinho('${limpoId}')" class="mt-2 px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition text-xs flex items-center gap-1">
-                                <span>🗑 Remove</span>
-                            </button>
+                            <div class="text-center sm:text-right flex-shrink-0 min-w-[120px] flex flex-col items-center sm:items-end justify-center">
+                                <p class="text-xs text-zinc-500 uppercase tracking-wider hidden sm:block">Subtotal</p>
+                                <p class="font-black text-[#caa85c] mt-1 text-base">${txtSubtotal}</p>
+                                <button onclick="removerItemCarrinho('${limpoId}')" class="mt-2 px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition text-xs flex items-center gap-1">
+                                    <span>🗑 Remover</span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             });
 
             atualizarTotaisResumo(itens);
         }
 
         function alterarQtd(id, delta) {
-            const itens = carrinhoService.listar();
-            const item = itens.find(i => String(i.id) === String(id));
+            if (typeof carrinhoService === 'undefined') return;
+            
+            // Tratamento polimórfico de listagem de segurança
+            const itens = (typeof carrinhoService.listar === 'function' ? carrinhoService.listar() : carrinhoService.obterItens()) || [];
+            const item = itens.find(i => String(i.id || i.sku) === String(id));
             if(!item) return;
 
-            const novaQtd = (parseInt(item.quantidade) || 0) + delta;
+            const qtdAtual = parseInt(item.quantidade || item.qtd || 0);
+            const novaQtd = qtdAtual + delta;
 
-            // Uso correto passando o ID do produto
             if(novaQtd <= 0){
                 removerItemCarrinho(id);
             }else{
-                carrinhoService.atualizarQuantidade(id, novaQtd);
+                if (typeof carrinhoService.atualizarQuantidade === 'function') {
+                    carrinhoService.atualizarQuantidade(id, novaQtd);
+                } else if (typeof carrinhoService.adicionar === 'function') {
+                    // Fallback adaptativo de mutação controlada
+                    carrinhoService.adicionar(item, delta, item.variacao || '');
+                }
                 renderizarCarrinho();
-            }
-
-            if(typeof atualizarMiniCarrinho === 'function'){
-                atualizarMiniCarrinho();
             }
         }
 
         function removerItemCarrinho(id) {
             if (!confirm('Deseja remover este item do carrinho?')) return;
             
-            // Uso correto do método unificado passando o ID
-            const sucesso = carrinhoService.remover(id);
-            if (sucesso) {
-                renderizarCarrinho();
-                if (typeof atualizarMiniCarrinho === 'function') {
-                    atualizarMiniCarrinho();
+            if (typeof carrinhoService !== 'undefined' && typeof carrinhoService.remover === 'function') {
+                const sucesso = carrinhoService.remover(id);
+                if (sucesso) {
+                    renderizarCarrinho();
                 }
             }
         }
 
         function alterarQtdInput(id, valor) {
             const novaQuantidade = Math.max(1, parseInt(valor, 10) || 1);
-            carrinhoService.atualizarQuantidade(id, novaQuantidade);
-            renderizarCarrinho();
+            if (typeof carrinhoService !== 'undefined' && typeof carrinhoService.atualizarQuantidade === 'function') {
+                carrinhoService.atualizarQuantidade(id, novaQuantidade);
+                renderizarCarrinho();
+            }
         }
 
         function limparCarrinhoCompleto() {
             if (confirm("Deseja realmente esvaziar seu carrinho?")) {
-                carrinhoService.limpar();
-                renderizarCarrinho();
-                if (typeof atualizarMiniCarrinho === 'function') atualizarMiniCarrinho();
+                if (typeof carrinhoService !== 'undefined' && typeof carrinhoService.limpar === 'function') {
+                    carrinhoService.limpar();
+                    renderizarCarrinho();
+                }
             }
         }
 
         function atualizarTotaisResumo(itens) {
-            // Conta as quantidades de peças direto da lista segura
-            const totalItens = carrinhoService.obterContagem();
-            
-            // Calcula o peso
+            let totalItens = 0;
             let totalPeso = 0;
+            let subtotalBruto = 0;
+            let totalFinal = 0;
+
+            // Interface reativa com tratamento de fallbacks do barramento de microsserviços congelados
+            if (typeof carrinhoService !== 'undefined') {
+                if (typeof carrinhoService.obterContagem === 'function') {
+                    totalItens = carrinhoService.obterContagem();
+                } else {
+                    totalItens = itens.reduce((acc, curr) => acc + (parseInt(curr.quantidade || curr.qtd) || 0), 0);
+                }
+
+                if (typeof carrinhoService.obterTotalBruto === 'function') {
+                    subtotalBruto = carrinhoService.obterTotalBruto();
+                } else {
+                    subtotalBruto = itens.reduce((acc, curr) => acc + ((parseFloat(curr.precoVendaUnitario || curr.preco || 0)) * (parseInt(curr.quantidade || curr.qtd) || 1)), 0);
+                }
+
+                if (typeof carrinhoService.obterTotal === 'function') {
+                    totalFinal = carrinhoService.obterTotal();
+                } else {
+                    totalFinal = subtotalBruto;
+                }
+            }
+
+            // Processamento do peso bruto somado do lote
             itens.forEach(item => {
-                totalPeso += (parseFloat(item.peso || item.pesoUnitario || 0) * item.quantidade);
+                const q = parseInt(item.quantidade || item.qtd || 1);
+                const p = parseFloat(item.peso || item.pesoUnitario || 0);
+                totalPeso += (p * q);
             });
 
-            // Extrai os totais calculados de forma limpa direto do carrinhoService
-            const subtotalBruto = carrinhoService.obterTotalBruto();
-            const totalFinal = carrinhoService.obterTotal();
-            const descontoTotal = subtotalBruto - totalFinal;
+            const descontoTotal = Math.max(0, subtotalBruto - totalFinal);
 
-            document.getElementById('resumo-itens').innerText = totalItens;
-            document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso);
+            if(document.getElementById('resumo-itens')) document.getElementById('resumo-itens').innerText = totalItens;
+            if(document.getElementById('resumo-peso')) document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso) + 'g';
             
             if (typeof money !== 'undefined') {
-                document.getElementById('resumo-subtotal').innerText = money.formatar(subtotalBruto);
-                document.getElementById('resumo-total').innerText = money.formatar(totalFinal);
+                if(document.getElementById('resumo-subtotal')) document.getElementById('resumo-subtotal').innerText = money.formatar(subtotalBruto);
+                if(document.getElementById('resumo-total')) document.getElementById('resumo-total').innerText = money.formatar(totalFinal);
             } else {
-                document.getElementById('resumo-subtotal').innerText = `R$ ${subtotalBruto.toFixed(2)}`;
-                document.getElementById('resumo-total').innerText = `R$ ${totalFinal.toFixed(2)}`;
+                if(document.getElementById('resumo-subtotal')) document.getElementById('resumo-subtotal').innerText = `R$ ${subtotalBruto.toFixed(2)}`;
+                if(document.getElementById('resumo-total')) document.getElementById('resumo-total').innerText = `R$ ${totalFinal.toFixed(2)}`;
             }
 
             const blocoDesc = document.getElementById('bloco-desconto');
-            if (descontoTotal > 0) {
-                document.getElementById('desconto-valor').innerText = typeof money !== 'undefined' ? `- ${money.formatar(descontoTotal)}` : `- R$ ${descontoTotal.toFixed(2)}`;
+            if (descontoTotal > 0 && blocoDesc) {
+                const elVal = document.getElementById('desconto-valor');
+                if (elVal) elVal.innerText = typeof money !== 'undefined' ? `- ${money.formatar(descontoTotal)}` : `- R$ ${descontoTotal.toFixed(2)}`;
                 blocoDesc.classList.remove('hidden');
-            } else {
+            } else if (blocoDesc) {
                 blocoDesc.classList.add('hidden');
             }
 
+            // Regra Comercial Dinâmica de Limeira
             const limiteFrete = 100.00;
             const barraFrete = document.getElementById('barra-frete');
             const freteAviso = document.getElementById('frete-aviso');
 
-            if (subtotalBruto >= limiteFrete) {
-                barraFrete.style.width = '100%';
-                barraFrete.className = "bg-emerald-500 h-full transition-all duration-500";
-                freteAviso.innerText = "🎉 Parabéns! Sua entrega na galvânica parceira é grátis!";
-                freteAviso.className = "text-[11px] font-bold text-emerald-400 mt-1";
-            } else {
-                const faltam = limiteFrete - subtotalBruto;
-                const pct = (subtotalBruto / limiteFrete) * 100;
-                barraFrete.style.width = `${pct}%`;
-                barraFrete.className = "bg-[#caa85c] h-full transition-all duration-500";
-                
-                const txtFaltam = typeof money !== 'undefined' ? money.formatar(faltam) : `R$ ${faltam.toFixed(2)}`;
-                freteAviso.innerText = `Faltam apenas ${txtFaltam} para garantir o frete grátis em Limeira.`;
-                freteAviso.className = "text-[11px] text-zinc-400 mt-1";
+            if (barraFrete && freteAviso) {
+                if (subtotalBruto >= limiteFrete) {
+                    barraFrete.style.width = '100%';
+                    barraFrete.className = "bg-emerald-500 h-full transition-all duration-500";
+                    freteAviso.innerText = "🎉 Parabéns! Sua entrega na galvânica parceira é grátis!";
+                    freteAviso.className = "text-[11px] font-bold text-emerald-400 mt-1";
+                } else {
+                    const faltam = limiteFrete - subtotalBruto;
+                    const pct = (subtotalBruto / limiteFrete) * 100;
+                    barraFrete.style.width = `${pct}%`;
+                    barraFrete.className = "bg-[#caa85c] h-full transition-all duration-500";
+                    
+                    const txtFaltam = typeof money !== 'undefined' ? money.formatar(faltam) : `R$ ${faltam.toFixed(2)}`;
+                    freteAviso.innerText = `Faltam apenas ${txtFaltam} para garantir o frete grátis em Limeira.`;
+                    freteAviso.className = "text-[11px] text-zinc-400 mt-1";
+                }
             }
 
             const maxParcelas = configGlobal.parcelas || configGlobal.parcelasMax || 6;
-            document.getElementById('info-condicoes').innerText = `Ou em até ${maxParcelas}x no cartão de crédito`;
+            if(document.getElementById('info-condicoes')) {
+                document.getElementById('info-condicoes').innerText = `Ou em até ${maxParcelas}x no cartão de crédito`;
+            }
         }
 
         function prosseguirParaCheckout() {
             try {
-                if (typeof carrinhoService === 'undefined' || !carrinhoService.listar) {
-                    alert('Erro Crítico: O serviço de carrinho não foi carregado corretamente.');
+                if (typeof carrinhoService === 'undefined') {
+                    alert('Erro Crítico: O serviço de carrinho não foi localizado no servidor.');
                     return;
                 }
-                const itens = carrinhoService.listar() || [];
+                const itens = (typeof carrinhoService.listar === 'function' ? carrinhoService.listar() : carrinhoService.obterItens()) || [];
                 if (itens.length === 0) {
-                    alert('Seu carrinho está vazio. Adicione produtos antes de prosseguir.');
+                    alert('Seu carrinho está vazio. Adicione produtos premium antes de prosseguir.');
                     return;
                 }
                 window.location.href = 'checkout.html';
             } catch (error) {
-                console.error('Erro na transição para o checkout:', error);
-                alert('Não foi possível abrir a tela de finalização. Tente novamente.');
+                console.error('Erro na transição estrutural de checkout:', error);
+                alert('Não foi possível processar a abertura da tela de checkout.');
             }
         }
 

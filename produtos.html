@@ -57,11 +57,11 @@
             <a href="index.html" class="flex items-center gap-3 min-w-0 group">
                 <div id="abellaLogoContainer" class="relative w-12 h-12 md:w-14 md:h-14 shrink-0 bg-white rounded-2xl border border-[#caa85c]/20 flex items-center justify-center overflow-hidden">
                     <div id="abellaLogoFallback" class="absolute inset-0 bg-white text-black font-black text-xl font-serif flex items-center justify-center rounded-2xl select-none">A</div>
-                    <img id="abellaLogoImg" src="" alt="Logo" class="absolute inset-0 w-full h-full object-cover rounded-2xl hidden">
+                    <img id="abellaLogoImg" src="" alt="Logo Abella" class="absolute inset-0 w-full h-full object-cover rounded-2xl hidden">
                 </div>
                 <div class="min-w-0 flex flex-col justify-center">
-                    <h1 id="nome" class="font-serif text-[#caa85c] text-sm md:text-xl font-bold uppercase tracking-[0.18em] leading-tight whitespace-nowrap">Carregando...</h1>
-                    <p id="slogan" class="text-zinc-400 text-[9px] md:text-[11px] uppercase tracking-[0.12em] font-bold leading-tight mt-0.5 whitespace-nowrap">Painel Atacado</p>
+                    <h1 id="nome" class="font-serif text-[#caa85c] text-sm md:text-xl font-bold uppercase tracking-[0.18em] leading-tight whitespace-nowrap">Abella Joias</h1>
+                    <p id="slogan" class="text-zinc-400 text-[9px] md:text-[11px] uppercase tracking-[0.12em] font-bold leading-tight mt-0.5 whitespace-nowrap">Painel Atacado no Bruto</p>
                 </div>
             </a>
 
@@ -203,7 +203,7 @@
                     <p id="modalDescricao" class="text-zinc-400 text-xs leading-relaxed mt-1.5 max-h-20 overflow-y-auto custom-scroll"></p>
                 </div>
 
-                <!-- ── MÓDULO MATRICIAL DE COMPRA / VARIAÇÕES DO EDITOR ── -->
+                <!-- ── MÓDULO MATRICIAL DE COMPRA ── -->
                 <div id="moduloVariacoesMatriz" class="space-y-3"></div>
 
                 <!-- Painel de Quantidade Total Dinâmica -->
@@ -277,7 +277,7 @@ function getProduto(p) {
 }
 
 // ================================================================
-// SETTINGS GLOBAL SYNCHRONIZATION
+// CONFIGURAÇÕES DO BANCO DA ABELLA JOIAS
 // ================================================================
 async function carregarConfiguracoes() {
     try {
@@ -293,13 +293,13 @@ async function carregarConfiguracoes() {
             if (document.getElementById('nome')) document.getElementById('nome').innerText = lojaNome;
             if (cfg.slogan && document.getElementById('slogan')) document.getElementById('slogan').innerText = cfg.slogan;
 
-            if (cfg.pix !== undefined) {
-                descontoPixGlobal = parseFloat(cfg.pix) || 0;
-                if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
-                if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
-            }
-            if (cfg.parcelas && document.getElementById('parcelasBadgeValue')) {
-                document.getElementById('parcelasBadgeValue').innerText = `${cfg.parcelas}x`;
+            // Sincroniza os descontos reais do nó da Abella Joias
+            descontoPixGlobal = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
+            if (document.getElementById('pixBadgeValue')) document.getElementById('pixBadgeValue').innerText = `${descontoPixGlobal}% OFF`;
+            if (document.getElementById('modalPixLabel')) document.getElementById('modalPixLabel').innerText = `PIX ${descontoPixGlobal}% OFF`;
+            
+            if ((cfg.maxInstallments || cfg.parcelas) && document.getElementById('parcelasBadgeValue')) {
+                document.getElementById('parcelasBadgeValue').innerText = `${cfg.maxInstallments || cfg.parcelas}x`;
             }
 
             const banner = document.getElementById('banner');
@@ -325,13 +325,18 @@ async function carregarConfiguracoes() {
         } else {
             if (document.getElementById('nome')) document.getElementById('nome').innerText = lojaNome;
         }
+
+        const imgHero = document.getElementById('heroImagem');
+        if (imgHero && (!imgHero.src || imgHero.src.includes('fallback.jpg'))) {
+            imgHero.src = INSTANCE_FALLBACK_IMG;
+        }
     } catch(e) {
         console.error('Erro ao carregar configurações de cabeçalho:', e);
     }
 }
 
 // ================================================================
-// CARREGAR PRODUTOS DO CATÁLOGO (FILTRAGEM RIGOROSA CORRIGIDA)
+// CARREGAR PRODUTOS (FILTRAGEM POR CATEGORIA/SUBCATEGORIA)
 // ================================================================
 async function carregarProdutos() {
     try {
@@ -356,7 +361,7 @@ async function carregarProdutos() {
                 todos = await produtoService.listarTodos();
             }
         } catch (cacheErr) {
-            console.warn('[PMA V8] Falha ao ler cache do produtoService. Ativando contingência direta.');
+            console.warn('[PMA V8] Falha ao ler cache do produtoService. Usando contingência direta do Realtime.');
         }
 
         if (!todos || !Array.isArray(todos) || Object.keys(todos).length === 0) {
@@ -378,15 +383,12 @@ async function carregarProdutos() {
         produtos = todos.map(p => getProduto(p)).filter(p => {
             if (!p || p.paused === true) return false;
             
-            // 1. Validação Estrita de Categoria
             const catProd = normalizarTexto(p.categoriaId || '');
             if (categoria && catProd !== categoria) return false;
             
-            // 2. Validação Estrita de Subcategoria (Evita vazamentos)
             if (subcategoria) {
                 const subProd = normalizarTexto(p.subcategoriaId || '');
-                if (!subProd) return false; // Se o produto não tem subcategoria, esconde
-                
+                if (!subProd) return false; 
                 return subProd === subcategoria || subProd.replace(/-/g, '').includes(subcategoria.replace(/-/g, ''));
             }
             
@@ -401,13 +403,14 @@ async function carregarProdutos() {
         if (loading) loading.classList.add('hidden');
         renderizarProdutos();
     } catch(err) {
-        console.error('Erro crítico ao processar o carregamento do catálogo:', err);
+        console.error('Erro crítico no carregamento do catálogo:', err);
         const loading = document.getElementById('loading');
-        if (loading) loading.innerHTML = 'Erro ao carregar catálogo. Por favor, recarregue a página.';
+        if (loading) loading.innerHTML = 'Erro ao carregar catálogo. Por favor, recarregue.';
     }
 }
+
 // ================================================================
-// RENDERIZAR GRID DE PRODUTOS (CORRIGIDO 10/10)
+// RENDERIZAR GRID DE PRODUTOS
 // ================================================================
 function renderizarProdutos() {
     const container = document.getElementById('grid-produtos');
@@ -457,23 +460,9 @@ function renderizarProdutos() {
         container.appendChild(card);
     });
 }
-// ================================================================
-// INICIALIZAÇÃO DA BUSCA
-// ================================================================
-function iniciarBusca() {
-    const input = document.getElementById('busca');
-    if (!input) return;
-    input.addEventListener('input', (e) => {
-        const termo = normalizarTexto(e.target.value);
-        produtosFiltrados = !termo ? [...produtos] : produtos.filter(p => {
-            return normalizarTexto(p.nome).includes(termo) || normalizarTexto(p.sku).includes(termo);
-        });
-        renderizarProdutos();
-    });
-}
 
 // ================================================================
-// MINI CARRINHO RESILIENTE
+// MINI CARRINHO
 // ================================================================
 function atualizarMiniCarrinho() {
     try {
@@ -484,29 +473,31 @@ function atualizarMiniCarrinho() {
             el.innerText = carrinhoService.obterContagem() || 0;
         }
     } catch(e) { 
-        console.warn('Metadados do mini carrinho em processamento local:', e); 
+        console.warn('Contagem do carrinho indisponível no momento:', e); 
     }
 }
 
 // ================================================================
-// MODAL DE PRODUTO MÓDULO MATRICIAL INDIVIDUAL
+// MODAL MATRICIAL DE PRODUTOS
 // ================================================================
 function abrirModalProduto(index) {
     const produto = produtosFiltrados[index];
     if (!produto) return;
     produtoAtual = produto;
-    window.produtoAtual = produto; // Mantém sincronizado no escopo global para o modalProduto.js
+    window.produtoAtual = produto; 
 
     const imgSrc     = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(produto.imagem) : (produto.imagem || INSTANCE_FALLBACK_IMG);
     const precoFmt   = typeof money !== 'undefined' ? money.formatar(produto.preco) : 'R$ ' + produto.preco.toFixed(2);
-    const valorPix   = produto.preco - (produto.preco * (descontoPixGlobal || 0) / 100);
+    
+    const fatorDesconto = (100 - descontoPixGlobal) / 100;
+    const valorPix   = produto.preco * falarDesconto;
     const pixFmt     = typeof money !== 'undefined' ? money.formatar(valorPix) : 'R$ ' + valorPix.toFixed(2);
 
     document.getElementById('modalNome').innerText = produto.nome;
     document.getElementById('modalSku').innerText = 'Ref: ' + (produto.sku || '-');
     document.getElementById('modalPreco').innerText = precoFmt;
-    document.getElementById('modalPeso').innerText = produto.peso + ' g';
-    document.getElementById('modalDescricao').innerText = produto.descricao || 'Sem descrição adicional disponível.';
+    document.getElementById('modalPeso').innerText = typeof peso !== 'undefined' ? peso.formatar(produto.peso) : `${produto.peso}g`;
+    document.getElementById('modalDescricao').innerText = produto.descricao || 'Nenhuma especificação técnica adicional fornecida.';
     
     const mImg = document.getElementById('modalImagem');
     if (mImg) {
@@ -517,10 +508,17 @@ function abrirModalProduto(index) {
     const modalPix = document.getElementById('modalPix');
     if (modalPix) modalPix.innerText = pixFmt;
 
-    _construirGradeDeCompra(produto);
+    if (typeof inicializarMatrizVenda === 'function') {
+        inicializarMatrizVenda(produto);
+    } else {
+        _construirGradeDeCompra(produto);
+    }
 
     const modal = document.getElementById('modalProduto');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 function _construirGradeDeCompra(dados) {
@@ -608,28 +606,85 @@ function calcularTotalGeralMatriz() {
 
 function fecharModalProduto() {
     const modal = document.getElementById('modalProduto');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
     produtoAtual = null;
     window.produtoAtual = null;
 }
 
-// Exõe a função matricial globalmente para conformidade estável com modalProduto.js
+// ================================================================
+// PERSISTÊNCIA NO CARRINHO
+// ================================================================
+async function adicionarGradeAoCarrinho() {
+    if (!produtoAtual) return;
+
+    try {
+        let itensParaAdicionar = [];
+
+        if (typeof obterDadosDaMatriz === 'function') {
+            itensParaAdicionar = obterDadosDaMatriz();
+        } else {
+            const inputs = document.querySelectorAll('.input-grade-qtd');
+            inputs.forEach(input => {
+                const qtd = parseInt(input.value) || 0;
+                if (qtd > 0) {
+                    itensParaAdicionar.push({
+                        variacao: input.getAttribute('data-variacao-nome') || '',
+                        qtd: qtd
+                    });
+                }
+            });
+        }
+
+        if (itensParaAdicionar.length === 0) {
+            alert('Por favor, informe a quantidade desejada antes de adicionar.');
+            return;
+        }
+
+        for (const item of itensParaAdicionar) {
+            await carrinhoService.adicionar({
+                ...produtoAtual,
+                variacaoSelecionada: item.variacao,
+                quantidade: item.qtd
+            });
+        }
+
+        fecharModalProduto();
+        atualizarMiniCarrinho();
+        if (typeof renderizarProdutos === 'function') renderizarProdutos();
+    } catch (err) {
+        console.error('Erro ao injetar item no carrinho:', err);
+    }
+}
+
+// Escuta em tempo real da barra de pesquisa por SKU ou Nome
+document.getElementById('busca')?.addEventListener('input', (e) => {
+    const termo = normalizarTexto(e.target.value);
+    produtosFiltrados = !termo ? [...produtos] : produtos.filter(p => {
+        return normalizarTexto(p.nome).includes(termo) || normalizarTexto(p.sku).includes(termo);
+    });
+    renderizarProdutos();
+});
+
+// Escopo global
 window._construirGradeDeCompra = _construirGradeDeCompra;
 window.abrirModalProduto = abrirModalProduto;
 window.fecharModalProduto = fecharModalProduto;
 window.atualizarMiniCarrinho = atualizarMiniCarrinho;
+window.adicionarGradeAoCarrinho = adicionarGradeAoCarrinho;
 
 // ================================================================
-// DOM READY INITIALIZATION
+// INICIALIZAÇÃO
 // ================================================================
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await carregarConfiguracoes();
         atualizarMiniCarrinho();
         await carregarProdutos();
-        iniciarBusca();
     } catch(e) {
-        console.error('Falha crítica na inicialização da página de produtos:', e);
+        console.error('Erro fatal na inicialização:', e);
         const loading = document.getElementById('loading');
         if (loading) loading.classList.add('hidden');
     }

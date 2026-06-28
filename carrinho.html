@@ -314,7 +314,7 @@
             }
         }
 
-        function renderizarCarrinho() {
+       function renderizarCarrinho() {
             const containerVazio = document.getElementById('carrinho-vazio');
             const containerConteudo = document.getElementById('carrinho-conteudo');
             const listaProdutos = document.getElementById('lista-produtos-carrinho');
@@ -360,28 +360,29 @@
                     ? `<span class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">${item.badgePromocional}</span>`
                     : '';
 
-                // --- DETECÇÃO MÁXIMA DE VARIAÇÃO (PENTE FINO PMA V8) ---
-                let labelVariacao = '';
+                // --- VARREDURA AVANÇADA DE MAPA DE VARIANTES (PMA V8) ---
+                let variacaoHtml = '';
                 
-                // 1. Tenta extrair de propriedades string diretas
-                if (item.variacao && typeof item.variacao === 'string') labelVariacao = item.variacao;
-                else if (item.combinacao && typeof item.combinacao === 'string') labelVariacao = item.combinacao;
-                else if (item.selectedVariation && typeof item.selectedVariation === 'string') labelVariacao = item.selectedVariation;
-                else if (item.grade && typeof item.grade === 'string') labelVariacao = item.grade;
-                
-                // 2. Tenta extrair se for um objeto complexo (ex: item.variacao.nome ou item.variacaoSelecionada.nome)
-                else if (item.variacao && typeof item.variacao === 'object' && (item.variacao.nome || item.variacao.titulo)) labelVariacao = item.variacao.nome || item.variacao.titulo;
-                else if (item.variacaoSelecionada && typeof item.variacaoSelecionada === 'object' && item.variacaoSelecionada.nome) labelVariacao = item.variacaoSelecionada.nome;
-                else if (item.opcaoSelecionada && typeof item.opcaoSelecionada === 'string') labelVariacao = item.opcaoSelecionada;
-                
-                // 3. Fallback inteligente: se o ID contiver um hífen ou underline (ex: GLC-91-A-LETRA-B ou GLC-91-A_OURO), tenta pescar o sufixo como a variação
-                if (!labelVariacao && limpoId.includes('-') && limpoId.split('-').length > 3) {
-                    const partes = limpoId.split('-');
-                    labelVariacao = partes.slice(3).join(' '); // Pega o que sobrou do SKU composto
+                // 1. Verifica se as variações vieram como um objeto/dicionário mapeado (comum em seleções múltiplas)
+                if (item.variacoes Selecionadas && typeof item.variacoesSelecionadas === 'object') {
+                    let subGrades = Object.entries(item.variacoesSelecionadas)
+                        .filter(([_, q]) => parseInt(q) > 0)
+                        .map(([nome, q]) => `<span class="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 text-[10px]">${nome} (${q}pçs)</span>`);
+                    
+                    if (subGrades.length > 0) {
+                        variacaoHtml = `<div class="text-[11px] text-amber-400 font-medium mt-1.5 flex flex-wrap gap-1 justify-center sm:justify-start items-center">🔹 Grades: ${subGrades.join(' ')}</div>`;
+                    }
+                } 
+                // 2. Fallback para propriedades de string única
+                if (!variacaoHtml) {
+                    let labelStr = item.variacao || item.combinacao || item.selectedVariation || item.grade || '';
+                    if (labelStr && typeof labelStr === 'object') {
+                        labelStr = labelStr.nome || labelStr.titulo || '';
+                    }
+                    if (labelStr) {
+                        variacaoHtml = `<p class="text-[11px] text-amber-400 font-medium mt-1.5 flex items-center gap-1 justify-center sm:justify-start">🔹 Grade: <span class="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase">${labelStr}</span></p>`;
+                    }
                 }
-
-                const variacaoHtml = labelVariacao ? `<p class="text-[11px] text-amber-400 font-medium mt-1.5 flex items-center gap-1 justify-center sm:justify-start">🔹 Grade: <span class="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase">${labelVariacao}</span></p>` : '';
-                // --------------------------------------------------------
 
                 if (listaProdutos) {
                     listaProdutos.innerHTML += `

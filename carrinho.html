@@ -346,7 +346,7 @@
                 const qtdSegura = parseInt(item.quantidade || item.qtd || 1);
                 const pesoUnitario = parseFloat(item.peso || item.pesoUnitario || 0);
                 const pesoTotalItem = formatarPeso(pesoUnitario * qtdSegura);
-                
+
                 const precoUnitario = parseFloat(item.precoVendaUnitario || item.price || item.preco || 0);
                 const subtotalItem = precoUnitario * qtdSegura;
 
@@ -354,47 +354,46 @@
                 const txtSubtotal = typeof money !== 'undefined' ? money.formatar(subtotalItem) : `R$ ${subtotalItem.toFixed(2)}`;
 
                 const limpoNome = String(item.name || item.nome || item.titulo || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                const limpoId = String(item.id || item.sku || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                const limpoId   = String(item.id  || item.sku  || '').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+                // Captura a variação e escapa aspas simples para não quebrar o onclick
+                const limpoVariacao = String(item.variacao || '').replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
                 const badgeHtml = item.possuiDesconto && item.badgePromocional
                     ? `<span class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">${item.badgePromocional}</span>`
                     : '';
 
-                // --- CAPTURA AVANÇADA DE CUSTOMIZAÇÕES DE PRODUTO (DIZERES / INICIAIS) ---
-                let customizacoesHtml = '';
-                const dizeresEscolhido = item.dizeresEscolhido || item.sayingSelected || item.dizeres || '';
-                const iniciaisEscolhida = item.iniciaisEscolhida || item.initialSelected || item.iniciais || '';
-
-                if (dizeresEscolhido || iniciaisEscolhida) {
-                    customizacoesHtml = `<div class="text-[11px] text-zinc-400 mt-2 bg-zinc-950/80 p-2 rounded-lg border border-zinc-900 flex flex-col gap-1 w-full max-w-xs font-mono">`;
-                    if (dizeresEscolhido) {
-                        customizacoesHtml += `<div class="truncate"><span class="text-[#caa85c] font-bold">✍️ Dizeres:</span> ${dizeresEscolhido}</div>`;
-                    }
-                    if (iniciaisEscolhida) {
-                        customizacoesHtml += `<div class="truncate"><span class="text-[#caa85c] font-bold">🔤 Iniciais:</span> ${iniciaisEscolhida}</div>`;
-                    }
-                    customizacoesHtml += `</div>`;
-                }
-
-                // --- VARREDURA DE MAPA DE VARIANTES DE GRADE (SUPORTE LEGADO) ---
+                // --- VARIAÇÃO PRINCIPAL (dizer + inicial juntos, salvo como item.variacao) ---
                 let variacaoHtml = '';
-                if (item.variacoesSelecionadas && typeof item.variacoesSelecionadas === 'object') {
-                    let subGrades = Object.entries(item.variacoesSelecionadas)
+
+                // Tenta ler a variação unificada (ex: "DEUS + A") salva pelo carrinhoService
+                const variacaoPrincipal = item.variacao || item.combinacao || item.selectedVariation || item.grade || '';
+
+                if (variacaoPrincipal && typeof variacaoPrincipal === 'string' && variacaoPrincipal.trim()) {
+                    // Separa dizer e inicial se vier no formato "DIZER + INICIAL"
+                    const partes = variacaoPrincipal.split('+').map(s => s.trim()).filter(Boolean);
+                    let linhasHtml = '';
+
+                    if (partes.length >= 2) {
+                        linhasHtml += `<div class="truncate"><span class="text-[#caa85c] font-bold">✍️ Dizer:</span> ${partes[0]}</div>`;
+                        linhasHtml += `<div class="truncate"><span class="text-[#caa85c] font-bold">🔤 Inicial:</span> ${partes[1]}</div>`;
+                    } else {
+                        // Variação simples (só dizer OU só inicial)
+                        linhasHtml += `<div class="truncate"><span class="text-[#caa85c] font-bold">🔹 Variação:</span> ${partes[0]}</div>`;
+                    }
+
+                    variacaoHtml = `
+                        <div class="text-[11px] text-zinc-300 mt-2 bg-zinc-950/80 p-2 rounded-lg border border-zinc-800 flex flex-col gap-1 w-full max-w-xs font-mono">
+                            ${linhasHtml}
+                        </div>`;
+
+                } else if (item.variacoesSelecionadas && typeof item.variacoesSelecionadas === 'object') {
+                    // Suporte legado: grade com múltiplas variações em objeto
+                    const subGrades = Object.entries(item.variacoesSelecionadas)
                         .filter(([_, q]) => parseInt(q) > 0)
                         .map(([nome, q]) => `<span class="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 text-[10px] uppercase font-semibold">${nome} (${q}pçs)</span>`);
-                    
                     if (subGrades.length > 0) {
                         variacaoHtml = `<div class="text-[11px] text-amber-400 font-medium mt-1.5 flex flex-wrap gap-1 justify-center sm:justify-start items-center">🔹 Grades: ${subGrades.join(' ')}</div>`;
-                    }
-                } 
-                
-                if (!variacaoHtml) {
-                    let labelStr = item.variacao || item.combinacao || item.selectedVariation || item.grade || '';
-                    if (labelStr && typeof labelStr === 'object') {
-                        labelStr = labelStr.nome || labelStr.titulo || '';
-                    }
-                    if (labelStr) {
-                        variacaoHtml = `<p class="text-[11px] text-amber-400 font-medium mt-1.5 flex items-center gap-1 justify-center sm:justify-start">🔹 Grade: <span class="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 uppercase">${labelStr}</span></p>`;
                     }
                 }
 
@@ -404,28 +403,27 @@
                             <div class="w-20 h-20 rounded-xl overflow-hidden bg-black border border-zinc-800 flex-shrink-0">
                                 <img src="${imgUrl}" class="w-full h-full object-cover" alt="${limpoNome}" onerror="this.src='${INSTANCE_FALLBACK_IMG}'">
                             </div>
-                            
+
                             <div class="flex-1 text-center sm:text-left min-w-0 w-full">
                                 <div class="flex items-center justify-center sm:justify-start flex-wrap gap-1">
                                     <h3 class="font-bold text-sm md:text-base uppercase tracking-wide text-white leading-tight truncate">${limpoNome}</h3>
                                     ${badgeHtml}
                                 </div>
                                 ${variacaoHtml}
-                                ${customizacoesHtml}
                                 <p class="text-zinc-500 text-xs mt-1.5">Ref: ${limpoId} | Unitário: ${txtUnitario}</p>
                                 <p class="text-zinc-400 text-xs mt-1">⚖️ Peso Total: <span class="text-zinc-300 font-medium">${pesoTotalItem}</span></p>
                             </div>
 
                             <div class="flex items-center bg-zinc-950 rounded-xl border border-zinc-800 p-1 flex-shrink-0 gap-1 my-2 sm:my-0">
-                                <button onclick="alterarQtd('${limpoId}', -1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Diminuir">-</button>
-                                <input type="number" min="1" step="1" inputmode="numeric" value="${qtdSegura}" onchange="alterarQtdInput('${limpoId}', this.value)" class="w-14 h-9 bg-black text-center text-white font-bold rounded-lg border border-zinc-800 focus:outline-none focus:border-[#caa85c] text-sm"/>
-                                <button onclick="alterarQtd('${limpoId}', 1)" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Aumentar">+</button>
+                                <button onclick="alterarQtd('${limpoId}', -1, '${limpoVariacao}')" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Diminuir">-</button>
+                                <input type="number" min="1" step="1" inputmode="numeric" value="${qtdSegura}" onchange="alterarQtdInput('${limpoId}', this.value, '${limpoVariacao}')" class="w-14 h-9 bg-black text-center text-white font-bold rounded-lg border border-zinc-800 focus:outline-none focus:border-[#caa85c] text-sm"/>
+                                <button onclick="alterarQtd('${limpoId}', 1, '${limpoVariacao}')" class="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-zinc-900 font-bold text-zinc-400 hover:text-white transition-colors text-base" aria-label="Aumentar">+</button>
                             </div>
 
                             <div class="text-center sm:text-right flex-shrink-0 min-w-[120px] flex flex-col items-center sm:items-end justify-center">
                                 <p class="text-xs text-zinc-500 uppercase tracking-wider hidden sm:block">Subtotal</p>
                                 <p class="font-black text-[#caa85c] mt-1 text-base">${txtSubtotal}</p>
-                                <button onclick="removerItemCarrinho('${limpoId}')" class="mt-2 px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition text-xs flex items-center gap-1">
+                                <button onclick="removerItemCarrinho('${limpoId}', '${limpoVariacao}')" class="mt-2 px-3 py-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition text-xs flex items-center gap-1">
                                     <span>🗑 Remover</span>
                                 </button>
                             </div>
@@ -436,40 +434,41 @@
 
             atualizarTotaisResumo(itens);
         }
+        // DEPOIS
+function alterarQtd(id, delta, variacao) {
+    if (typeof carrinhoService === 'undefined') return;
 
-        function alterarQtd(id, delta) {
-            if (typeof carrinhoService === 'undefined') return;
-            
-            const itens = (typeof carrinhoService.listar === 'function' ? carrinhoService.listar() : carrinhoService.obterItens()) || [];
-            const item = itens.find(i => String(i.id || i.sku) === String(id));
-            if(!item) return;
+    const itens = (typeof carrinhoService.listar === 'function' ? carrinhoService.listar() : carrinhoService.obterItens()) || [];
+    // Busca pelo id E pela variação para não confundir itens do mesmo produto com variações diferentes
+    const item = itens.find(i =>
+        String(i.id || i.sku) === String(id) &&
+        (i.variacao || '') === (variacao || '')
+    );
+    if (!item) return;
 
-            const qtdAtual = parseInt(item.quantidade || item.qtd || 0);
-            const novaQtd = qtdAtual + delta;
+    const qtdAtual = parseInt(item.quantidade || item.qtd || 0);
+    const novaQtd  = qtdAtual + delta;
+    const labelVariacao = item.variacao || '';
 
-            if(novaQtd <= 0){
-                removerItemCarrinho(id);
-            }else{
-                if (typeof carrinhoService.atualizarQuantidade === 'function') {
-                    carrinhoService.atualizarQuantidade(id, novaQtd);
-                } else if (typeof carrinhoService.adicionar === 'function') {
-                    carrinhoService.adicionar(item, delta, item.variacao || item.combinacao || '');
-                }
-                renderizarCarrinho();
-            }
+    if (novaQtd <= 0) {
+        removerItemCarrinho(id, labelVariacao);
+    } else {
+        if (typeof carrinhoService.atualizarQuantidade === 'function') {
+            carrinhoService.atualizarQuantidade(id, novaQtd, labelVariacao);
         }
+        renderizarCarrinho();
+    }
+}
 
-        function removerItemCarrinho(id) {
-            if (!confirm('Deseja remover este item do carrinho?')) return;
-            
-            if (typeof carrinhoService !== 'undefined' && typeof carrinhoService.remover === 'function') {
-                const sucesso = carrinhoService.remover(id);
-                if (sucesso) {
-                    renderizarCarrinho();
-                }
-            }
-        }
+       // DEPOIS
+function removerItemCarrinho(id, variacao) {
+    if (!confirm('Deseja remover este item do carrinho?')) return;
 
+    if (typeof carrinhoService !== 'undefined' && typeof carrinhoService.remover === 'function') {
+        const sucesso = carrinhoService.remover(id, variacao || '');
+        if (sucesso) renderizarCarrinho();
+    }
+}
         function alterarQtdInput(id, valor) {
             const novaQuantidade = Math.max(1, parseInt(valor, 10) || 1);
             if (typeof carrinhoService !== 'undefined' && typeof carrinhoService.atualizarQuantidade === 'function') {

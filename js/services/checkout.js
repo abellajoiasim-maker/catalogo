@@ -1,160 +1,269 @@
 /**
- * PMA V8 - Checkout & Romaneio Service (Versão Dinâmica via Firebase Settings)
- * Centraliza as regras de finalização de pedido, integração com Firebase, PDF e WhatsApp.
+ * PMA V8 - Checkout & Romaneio Service
+ * Abella Joias — Alinhado ao carrinhoService e produtoService
  */
 (() => {
     'use strict';
 
-    // ==========================================
-    // 1. CONFIGURAÇÕES E ESTADO LOCAL
-    // ==========================================
+    // =====================================================
+    // 1. CONFIGURAÇÕES E ESTADO
+    // =====================================================
     const CONFIG = {
-        CHAVE_CARRINHO: 'pma_v8_carrinho_itens',
-        WHATSAPP_FALLBACK: '5519999999999' // Usado apenas se o Firebase falhar ou estiver vazio
+        CHAVE_CARRINHO:    'pma_v8_carrinho_itens',
+        WHATSAPP_FALLBACK: '5519999999999'
     };
 
-    // Referência ao banco de dados Firebase
-    const db = window.db || firebase.database();
+    const FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
 
-    // Função utilitária para obter o caminho respeitando o barramento de múltiplas lojas
+    // Cache de configurações do Firebase
+    let _configCache = null;
+
     function _obterCaminhoDB(node) {
-        if (typeof window.getAbellaPath === 'function') {
-            return window.getAbellaPath(node);
-        }
-        const root = window.ABELLA_DB_ROOT || 'abella';
-        return node ? `${root}/${node}` : root;
+        if (typeof window.getAbellaPath === 'function') return window.getAbellaPath(node);
+        return node ? `abella/${node}` : 'abella';
     }
 
-    // ==========================================
-    // 2. FUNÇÕES AUXILIARES / INTERNAS
-    // ==========================================
-    function _recuperarDadosCarrinho() {
+    function _db() {
+        return window.db || (typeof firebase !== 'undefined' ? firebase.database() : null);
+    }
+
+    // =====================================================
+    // 2. UTILITÁRIOS
+    // =====================================================
+    function _fmtMoeda(valor) {
+        const v = parseFloat(valor) || 0;
+        if (typeof money !== 'undefined' && typeof money.formatar === 'function') return money.formatar(v);
+        if (typeof formatarMoeda === 'function') return formatarMoeda(v);
+        return 'R$ ' + v.toFixed(2).replace('.', ',');
+    }
+
+    function _fmtPeso(gramas) {
+        const g = parseFloat(gramas) || 0;
+        if (typeof PesoUtils !== 'undefined' && typeof PesoUtils.formatarPeso === 'function') return PesoUtils.formatarPeso(g);
+        if (typeof formatarPeso === 'function') return formatarPeso(g);
+        if (g >= 1000) return (g / 1000).toFixed(2).replace('.', ',') + ' Kg.';
+        return g.toFixed(2).replace('.', ',') + ' grs.';
+    }
+
+    function _resolverImagem(url) {
+        if (!url) return FALLBACK_IMG;
+        const s = String(url).trim();
+        if (s.startsWith('http://') || s.startsWith('https://')) return s;
+        if (s.startsWith('gs://')) {
+            const sem = s.replace('gs://', '');
+            const idx = sem.indexOf('/');
+            if (idx === -1) return FALLBACK_IMG;
+            return `https://firebasestorage.googleapis.com/v0/b/${sem.substring(0, idx)}/o/${encodeURIComponent(sem.substring(idx + 1))}?alt=media`;
+        }
+        if (typeof resolverImagemFirebase === 'function') return resolverImagemFirebase(s);
+        return s || FALLBACK_IMG;
+    }
+
+    // =====================================================
+    // 3. LEITURA DO CARRINHO
+    //    Lê os campos exatos que o carrinhoService.adicionar salva:
+    //    id, name, preco, image, peso, quantidade, variacao
+    // =====================================================
+    function _recuperarItens() {
         try {
-            const itens = localStorage.getItem(CONFIG.CHAVE_CARRINHO);
-            return itens ? JSON.parse(itens) : [];
-        } catch (error) {
-            console.error("Erro ao ler dados do carrinho:", error);
+            const raw = localStorage.getItem(CONFIG.CHAVE_CARRINHO);
+            return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            console.error('[checkout.js] Erro ao ler carrinho:', e);
             return [];
         }
     }
 
-    function _limparCarrinhoLocal() {
+    function _limparCarrinho() {
         localStorage.removeItem(CONFIG.CHAVE_CARRINHO);
     }
 
-    function _formatarMoeda(valor) {
-        return typeof formatarMoeda === 'function' ? formatarMoeda(valor) : `R$ ${valor.toFixed(2).replace('.', ',')}`;
+    // Normaliza um item do carrinho para os campos que o checkout usa
+    function _normalizarItem(item) {
+        const qtd    = parseInt(item.quantidade || item.qtd || 0);
+        const preco  = parseFloat(item.preco || item.price || item.precoVendaUnitario || 0);
+        const peso   = parseFloat(item.peso || item.pesoUnitario || 0);
+        return {
+            id:        item.id     || item.codigo || item.sku || '',
+            nome:      item.name   || item.nome   || 'Produto',
+            sku:       item.sku    || item.codigo || item.id  || '',
+            imagem:    item.image  || item.imagem || '',
+            preco,
+            peso,
+            quantidade: qtd,
+            subtotal:   preco * qtd,
+            pesoTotal:  peso  * qtd,
+            variacao:   item.variacao || item.combinacao || ''
+        };
     }
 
-    function _formatarPeso(valor) {
-        return typeof formatarPeso === 'function' ? formatarPeso(valor) : `${valor.toFixed(2).replace('.', ',')} grs.`;
+    // =====================================================
+    // 4. CARREGAR CONFIGURAÇÕES DO FIREBASE
+    // =====================================================
+    async function _carregarConfig() {
+        if (_configCache) return _configCache;
+        try {
+            const db = _db();
+            if (!db) return {};
+            const snap = await db.ref(_obterCaminhoDB('settings')).once('value');
+            _configCache = snap.exists() ? snap.val() : {};
+            return _configCache;
+        } catch (e) {
+            console.warn('[checkout.js] Falha ao carregar settings:', e);
+            return {};
+        }
     }
 
-    // ==========================================
-    // 3. MÉTODOS CORE (LÓGICA DO CHECKOUT)
-    // ==========================================
+    async function _aplicarConfigHeader(cfg) {
+        // Nome e slogan
+        if (cfg.name   && document.getElementById('nomeLojaHeader'))   document.getElementById('nomeLojaHeader').innerText   = cfg.name;
+        if (cfg.slogan && document.getElementById('sloganHeader'))     document.getElementById('sloganHeader').innerText     = cfg.slogan;
 
-    /**
-     * Calcula os totais do carrinho e atualiza os elementos do HTML
-     */
-    function atualizarResumo() {
-        const itens = _recuperarDadosCarrinho();
-        
-        let qtdTotal = 0;
-        let pesoTotal = 0;
-        let subtotal = 0;
+        // Banner
+        const banner = document.getElementById('banner');
+        if (banner && cfg.bannerAtivo && cfg.bannerTexto) {
+            const bt = document.getElementById('bannerTexto');
+            if (bt) bt.innerText = cfg.bannerTexto;
+            banner.classList.remove('hidden');
+        }
 
+        // Labels de pagamento
+        const pix = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
+        const parc = cfg.maxInstallments || cfg.parcelas || 6;
+        const lblPix = document.getElementById('labelDescontoPix');
+        const lblParc = document.getElementById('labelParcelasCartao');
+        if (lblPix)  lblPix.innerText  = `${pix}% de desconto`;
+        if (lblParc) lblParc.innerText = `Em até ${parc}x`;
+
+        // Logo
+        const logoImg  = document.getElementById('abellaLogoImg');
+        const fallback = document.getElementById('abellaLogoFallback');
+        let logoFinal  = (cfg.logoUrl || cfg.logo || '').trim() || FALLBACK_IMG;
+        if (logoImg) {
+            logoImg.src    = _resolverImagem(logoFinal);
+            logoImg.onload = () => { logoImg.classList.remove('hidden'); if (fallback) fallback.classList.add('hidden'); };
+            logoImg.onerror = () => { logoImg.src = FALLBACK_IMG; };
+        }
+    }
+
+    // =====================================================
+    // 5. RESUMO DO CHECKOUT (lista + totais)
+    // =====================================================
+    async function atualizarResumo() {
+        const cfg = await _carregarConfig();
+        const descontoPix = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
+        const freteFixo   = parseFloat(cfg.freteFixo || cfg.frete || 0);
+        const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
+
+        const itensRaw = _recuperarItens();
+        const itens    = itensRaw.map(_normalizarItem);
+
+        // ── Lista de itens ──
         const listaContainer = document.getElementById('lista-itens-checkout');
         if (listaContainer) {
             listaContainer.innerHTML = '';
-            
-            itens.forEach(item => {
-                qtdTotal += parseInt(item.quantidade || 0);
-                pesoTotal += parseFloat(item.pesoTotal || 0);
-                subtotal += parseFloat(item.subtotal || 0);
-
-                listaContainer.innerHTML += `
-                    <div class="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl">
-                        <img src="${item.imagem || 'img/sem-foto.jpg'}" class="w-12 h-12 rounded-xl object-cover shrink-0 border border-white/10">
-                        <div class="flex-1 min-w-0">
-                            <h4 class="text-xs font-bold text-zinc-200 truncate">${item.nome || 'Produto'}</h4>
-                            <p class="text-[10px] text-zinc-500 mt-0.5">${item.quantidade} pçs • ${_formatarPeso(parseFloat(item.pesoTotal))}</p>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="text-xs font-black text-[#caa85c]">${_formatarMoeda(parseFloat(item.subtotal))}</span>
-                        </div>
-                    </div>
-                `;
-            });
+            if (itens.length === 0) {
+                listaContainer.innerHTML = `<p class="text-zinc-500 text-xs text-center py-4">Nenhum item no carrinho.</p>`;
+            } else {
+                itens.forEach(item => {
+                    const variacaoHtml = item.variacao
+                        ? `<p class="text-[10px] text-[#caa85c] mt-0.5 font-semibold truncate">🔹 ${item.variacao}</p>`
+                        : '';
+                    listaContainer.innerHTML += `
+                        <div class="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl">
+                            <img src="${_resolverImagem(item.imagem)}"
+                                 class="w-12 h-12 rounded-xl object-cover shrink-0 border border-white/10"
+                                 onerror="this.src='${FALLBACK_IMG}'">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-xs font-bold text-zinc-200 truncate">${item.nome}</h4>
+                                ${variacaoHtml}
+                                <p class="text-[10px] text-zinc-500 mt-0.5">${item.quantidade} pçs • ${_fmtPeso(item.pesoTotal)}</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="text-xs font-black text-[#caa85c]">${_fmtMoeda(item.subtotal)}</span>
+                            </div>
+                        </div>`;
+                });
+            }
         }
 
-        const formaPagamentoInput = document.querySelector('input[name="formaPagamento"]:checked');
-        const formaPagamento = formaPagamentoInput ? formaPagamentoInput.value : 'PIX';
-        
-        let desconto = 0;
-        const boxDesconto = document.getElementById('box-desconto');
-        
-        if (formaPagamento === 'PIX') {
-            desconto = subtotal * 0.05; 
-            if (boxDesconto) boxDesconto.classList.remove('hidden');
-        } else {
-            if (boxDesconto) boxDesconto.classList.add('hidden');
-        }
+        // ── Totais ──
+        const qtdTotal    = itens.reduce((a, i) => a + i.quantidade, 0);
+        const pesoTotal   = itens.reduce((a, i) => a + i.pesoTotal,  0);
+        const subtotal    = itens.reduce((a, i) => a + i.subtotal,   0);
 
-        let frete = 0;
-        const resFrete = document.getElementById('res-frete');
-        if (resFrete) resFrete.innerText = frete === 0 ? "Grátis" : _formatarMoeda(frete);
+        const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
+        const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
 
-        const totalGeral = subtotal - desconto + frete;
+        const frete = subtotal >= freteGratis ? 0 : freteFixo;
+        const total = subtotal - desconto + frete;
 
-        if (document.getElementById('res-qtd')) document.getElementById('res-qtd').innerText = `${qtdTotal} pçs`;
-        if (document.getElementById('res-peso')) document.getElementById('res-peso').innerText = _formatarPeso(pesoTotal);
-        if (document.getElementById('res-subtotal')) document.getElementById('res-subtotal').innerText = _formatarMoeda(subtotal);
-        if (document.getElementById('res-desconto')) document.getElementById('res-desconto').innerText = `- ${_formatarMoeda(desconto)}`;
-        if (document.getElementById('res-total')) document.getElementById('res-total').innerText = _formatarMoeda(totalGeral);
+        // Box desconto PIX
+        const boxDesc = document.getElementById('box-desconto');
+        if (boxDesc) boxDesc.classList.toggle('hidden', desconto === 0);
+
+        // Label desconto dinâmico
+        const lblPixEl = document.getElementById('labelDescontoPix');
+        if (lblPixEl) lblPixEl.innerText = `${descontoPix}% de desconto`;
+
+        _setEl('res-qtd',      `${qtdTotal} pçs`);
+        _setEl('res-peso',     _fmtPeso(pesoTotal));
+        _setEl('res-subtotal', _fmtMoeda(subtotal));
+        _setEl('res-desconto', `- ${_fmtMoeda(desconto)}`);
+        _setEl('res-frete',    frete === 0 ? 'Grátis' : _fmtMoeda(frete));
+        _setEl('res-total',    _fmtMoeda(total));
     }
 
-    /**
-     * Gera e aciona a impressão da página preparada para o Romaneio
-     */
-    function gerarPDF() {
-        const itens = _recuperarDadosCarrinho();
-        if (itens.length === 0) {
-            alert("O carrinho está vazio. Não é possível imprimir.");
-            return;
-        }
-        window.print();
+    function _setEl(id, val) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
     }
 
-    /**
-     * Abre o modal interno injetando a lista de produtos em formato de texto/romaneio
-     */
+    // =====================================================
+    // 6. ROMANEIO
+    // =====================================================
     function visualizarRomaneio() {
-        const itens = _recuperarDadosCarrinho();
-        if (itens.length === 0) {
-            alert("Nenhum item no carrinho para gerar romaneio.");
-            return;
-        }
+        const itens = _recuperarItens().map(_normalizarItem);
+        if (!itens.length) { alert('Nenhum item no carrinho para gerar romaneio.'); return; }
 
-        const modal = document.getElementById('modal-romaneio');
+        const modal    = document.getElementById('modal-romaneio');
         const conteudo = document.getElementById('conteudo-romaneio');
         if (!modal || !conteudo) return;
 
-        let htmlRomaneio = `<div class="space-y-2 border-b border-white/10 pb-4 mb-4">
-            <p class="font-bold text-[#caa85c] text-base">ROMANEIO DE PEDIDO</p>
-            <p>Data: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
-        </div>`;
+        const agora = new Date();
+        const data  = agora.toLocaleDateString('pt-BR');
+        const hora  = agora.toLocaleTimeString('pt-BR');
 
-        itens.forEach((item, index) => {
-            htmlRomaneio += `
-                <div class="flex justify-between py-1 border-b border-white/5 text-xs">
-                    <span>${String(index + 1).padStart(2, '0')}. ${item.nome} (x${item.quantidade})</span>
-                    <span class="text-[#caa85c]">${_formatarMoeda(parseFloat(item.subtotal))}</span>
-                </div>
-            `;
+        const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+        const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
+        const qtdTotal  = itens.reduce((a, i) => a + i.quantidade, 0);
+
+        let html = `
+            <div class="space-y-1 border-b border-white/10 pb-4 mb-4">
+                <p class="font-bold text-[#caa85c] text-base tracking-widest uppercase">Romaneio de Pedido</p>
+                <p class="text-zinc-400 text-xs">Data: ${data} às ${hora}</p>
+            </div>`;
+
+        itens.forEach((item, idx) => {
+            const variacaoStr = item.variacao ? ` — ${item.variacao}` : '';
+            html += `
+                <div class="flex justify-between py-2 border-b border-white/5 text-xs gap-4">
+                    <span class="text-zinc-300 flex-1 min-w-0 truncate">
+                        ${String(idx + 1).padStart(2, '0')}. ${item.nome}${variacaoStr}
+                        <span class="text-zinc-500 ml-1">(x${item.quantidade})</span>
+                    </span>
+                    <span class="text-[#caa85c] font-bold shrink-0">${_fmtMoeda(item.subtotal)}</span>
+                </div>`;
         });
 
-        conteudo.innerHTML = htmlRomaneio;
+        html += `
+            <div class="mt-4 pt-4 border-t border-white/10 space-y-1 text-xs">
+                <div class="flex justify-between"><span class="text-zinc-500">Total de Peças:</span><span class="font-bold">${qtdTotal} pçs</span></div>
+                <div class="flex justify-between"><span class="text-zinc-500">Peso Total:</span><span class="font-bold">${_fmtPeso(pesoTotal)}</span></div>
+                <div class="flex justify-between text-base mt-2"><span class="font-black text-white">Subtotal:</span><span class="font-black text-[#caa85c]">${_fmtMoeda(subtotal)}</span></div>
+            </div>`;
+
+        conteudo.innerHTML = html;
         modal.classList.remove('hidden');
     }
 
@@ -163,118 +272,152 @@
         if (modal) modal.classList.add('hidden');
     }
 
-    /**
-     * Finaliza o pedido buscando dinamicamente as configurações salvas no painel admin
-     */
+    // =====================================================
+    // 7. PDF / IMPRESSÃO
+    // =====================================================
+    function gerarPDF(imprimir = false) {
+        const itens = _recuperarItens().map(_normalizarItem);
+        if (!itens.length) { alert('O carrinho está vazio. Não é possível gerar o documento.'); return; }
+        window.print();
+    }
+
+    // =====================================================
+    // 8. FINALIZAR PEDIDO
+    // =====================================================
     async function finalizarPedido(event) {
         if (event) event.preventDefault();
-        
-        const itens = _recuperarDadosCarrinho();
-        if (itens.length === 0) {
-            alert("Seu carrinho está vazio!");
-            return;
-        }
 
-        const nome = document.getElementById('cli-nome')?.value.trim();
-        const whats = document.getElementById('cli-whats')?.value.trim();
+        const itens = _recuperarItens().map(_normalizarItem);
+        if (!itens.length) { alert('Seu carrinho está vazio!'); return; }
+
+        const nome     = document.getElementById('cli-nome')?.value.trim();
+        const whats    = document.getElementById('cli-whats')?.value.trim();
         const cidadeCli = document.getElementById('cli-cidade')?.value.trim();
-        
-        const localEnt = document.getElementById('ent-local')?.value.trim();
-        const ruaEnt = document.getElementById('ent-rua')?.value.trim();
-        const numEnt = document.getElementById('ent-numero')?.value.trim();
+        const localEnt  = document.getElementById('ent-local')?.value.trim();
+        const ruaEnt    = document.getElementById('ent-rua')?.value.trim();
+        const numEnt    = document.getElementById('ent-numero')?.value.trim();
         const bairroEnt = document.getElementById('ent-bairro')?.value.trim();
         const cidadeEnt = document.getElementById('ent-cidade')?.value.trim();
-        
-        const formaPagamento = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
-        const observacoes = document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma';
+        const formaPag  = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
+        const obs       = document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma';
 
         if (!nome || !whats || !cidadeCli || !localEnt || !ruaEnt || !numEnt || !bairroEnt || !cidadeEnt) {
-            alert("Por favor, preencha todos os campos obrigatórios marcados com *");
+            alert('Por favor, preencha todos os campos obrigatórios (*).');
             return;
         }
 
-        // Alteração Anti-Looping / Dinâmica: Desativa o botão temporariamente para evitar cliques duplos
-        const btnFinalizar = document.querySelector('button[type="submit"]');
-        if (btnFinalizar) btnFinalizar.disabled = true;
+        const btnFinalizar = document.querySelector('button[onclick="finalizarPedido()"]');
+        if (btnFinalizar) { btnFinalizar.disabled = true; btnFinalizar.innerText = '⏳ Processando...'; }
 
         try {
-            // 1. Puxa dinamicamente as definições comerciais salvas pelo Painel Config
-            const configPath = _obterCaminhoDB('settings');
-            const configSnap = await db.ref(configPath).once('value');
-            
-            let whatsappDestino = CONFIG.WHATSAPP_FALLBACK;
-            let nomeLoja = "Minha Loja";
+            const cfg = await _carregarConfig();
+            const descontoPix  = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
+            const freteFixo    = parseFloat(cfg.freteFixo || cfg.frete || 0);
+            const freteGratis  = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
+            const whatsDestino = cfg.whatsapp || CONFIG.WHATSAPP_FALLBACK;
+            const nomeLoja     = cfg.name || 'Abella Joias';
 
-            if (configSnap.exists()) {
-                const configData = configSnap.val();
-                if (configData.whatsapp) whatsappDestino = configData.whatsapp;
-                if (configData.name) nomeLoja = configData.name;
-            }
+            const subtotal  = itens.reduce((a, i) => a + i.subtotal,  0);
+            const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
+            const qtdTotal  = itens.reduce((a, i) => a + i.quantidade, 0);
+            const desconto  = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+            const frete     = subtotal >= freteGratis ? 0 : freteFixo;
+            const total     = subtotal - desconto + frete;
 
             const pedidoId = 'PED-' + Date.now();
-            const ramificacaoPedidos = _obterCaminhoDB(`pedidos/${pedidoId}`);
-            
-            const dadosPedido = {
-                id: pedidoId,
-                cliente: { nome, whatsapp: whats, cidade: cidadeCli },
-                entrega: { local: localEnt, rua: ruaEnt, numero: numEnt, bairro: bairroEnt, cidade: cidadeEnt },
-                pagamento: formaPagamento,
-                observacoes: observacoes,
-                itens: itens,
-                dataCriacao: new Date().toISOString()
-            };
 
-            // 2. Grava no Firebase
-            await db.ref(ramificacaoPedidos).set(dadosPedido);
+            // Salvar no Firebase
+            const db = _db();
+            if (db) {
+                const dadosPedido = {
+                    id:        pedidoId,
+                    cliente:   { nome, whatsapp: whats, cidade: cidadeCli },
+                    entrega:   { local: localEnt, rua: ruaEnt, numero: numEnt, bairro: bairroEnt, cidade: cidadeEnt },
+                    pagamento: formaPag,
+                    observacoes: obs,
+                    subtotal,
+                    desconto,
+                    frete,
+                    total,
+                    pesoTotal,
+                    totalPecas: qtdTotal,
+                    itens: itens.map(i => ({
+                        id:        i.id,
+                        sku:       i.sku,
+                        nome:      i.nome,
+                        variacao:  i.variacao,
+                        preco:     i.preco,
+                        quantidade: i.quantidade,
+                        subtotal:  i.subtotal,
+                        peso:      i.peso,
+                        pesoTotal: i.pesoTotal,
+                        imagem:    i.imagem
+                    })),
+                    status:     'Novo',
+                    dataCriacao: new Date().toISOString()
+                };
+                await db.ref(_obterCaminhoDB(`orders/${pedidoId}`)).set(dadosPedido);
+            }
 
-            // 3. Montagem do texto estruturado para envio do WhatsApp
-            let quebra = "\n";
-            let msgWhats = `*Novo Pedido - ${nomeLoja}*${quebra}${quebra}`;
-            msgWhats += `*ID:* ${pedidoId}${quebra}`;
-            msgWhats += `*Cliente:* ${nome}${quebra}`;
-            msgWhats += `*WhatsApp:* ${whats}${quebra}${quebra}`;
-            msgWhats += `*--- ITENS DO PEDIDO ---*${quebra}`;
-            
+            // Montar mensagem WhatsApp
+            const Q = '\n';
+            let msg = `*Novo Pedido — ${nomeLoja}*${Q}${Q}`;
+            msg += `*ID:* ${pedidoId}${Q}`;
+            msg += `*Cliente:* ${nome}${Q}`;
+            msg += `*WhatsApp:* ${whats}${Q}`;
+            msg += `*Cidade:* ${cidadeCli}${Q}${Q}`;
+            msg += `*─── ITENS ───*${Q}`;
+
             itens.forEach(item => {
-                msgWhats += `- ${item.quantidade}x ${item.nome} | ${_formatarMoeda(parseFloat(item.subtotal))}${quebra}`;
+                const varStr = item.variacao ? ` (${item.variacao})` : '';
+                msg += `▪ ${item.quantidade}x ${item.nome}${varStr} → ${_fmtMoeda(item.subtotal)}${Q}`;
             });
 
-            msgWhats += `${quebra}*Forma de Pagto:* ${formaPagamento}${quebra}`;
-            msgWhats += `*Local de Entrega:* ${localEnt} (${cidadeEnt})${quebra}`;
-            msgWhats += `*Obs:* ${observacoes}`;
+            msg += `${Q}*─── VALORES ───*${Q}`;
+            msg += `Subtotal: ${_fmtMoeda(subtotal)}${Q}`;
+            if (desconto > 0) msg += `Desconto PIX (${descontoPix}%): -${_fmtMoeda(desconto)}${Q}`;
+            msg += `Frete: ${frete === 0 ? 'Grátis' : _fmtMoeda(frete)}${Q}`;
+            msg += `*Total: ${_fmtMoeda(total)}*${Q}${Q}`;
+            msg += `*─── ENTREGA ───*${Q}`;
+            msg += `${localEnt}${Q}${ruaEnt}, ${numEnt} — ${bairroEnt}${Q}${cidadeEnt}${Q}${Q}`;
+            msg += `*Pagamento:* ${formaPag}${Q}`;
+            msg += `*Obs:* ${obs}`;
 
-            let urlWhats = `https://api.whatsapp.com/send?phone=${whatsappDestino}&text=${encodeURIComponent(msgWhats)}`;
+            const urlWhats = `https://api.whatsapp.com/send?phone=${whatsDestino}&text=${encodeURIComponent(msg)}`;
 
-            _limparCarrinhoLocal();
+            _limparCarrinho();
             window.open(urlWhats, '_blank');
-            window.location.reload();
+            window.location.href = 'index.html';
 
-        } catch (error) {
-            console.error("Erro ao salvar ou finalizar o pedido:", error);
-            alert("Ocorreu um erro técnico ao processar seu pedido. Tente novamente.");
-            if (btnFinalizar) btnFinalizar.disabled = false;
+        } catch (err) {
+            console.error('[checkout.js] Erro ao finalizar pedido:', err);
+            alert('Erro técnico ao processar o pedido. Tente novamente.');
+            if (btnFinalizar) { btnFinalizar.disabled = false; btnFinalizar.innerText = '🚀 Finalizar Pedido via WhatsApp'; }
         }
     }
 
-    // ==========================================
-    // 4. EXPOSIÇÃO SEGURA PARA O ESCOPO GLOBAL
-    // ==========================================
-    window.checkoutService = Object.freeze({
-        atualizarResumo,
-        finalizarPedido,
-        gerarPDF,
-        visualizarRomaneio,
-        fecharModal
-    });
+    // =====================================================
+    // 9. INICIALIZAÇÃO
+    // =====================================================
+    async function _init() {
+        const cfg = await _carregarConfig();
+        await _aplicarConfigHeader(cfg);
+        await atualizarResumo();
+    }
 
-    window.atualizarResumo = atualizarResumo;
-    window.finalizarPedido = finalizarPedido;
-    window.gerarPDF = gerarPDF;
+    // =====================================================
+    // 10. EXPOSIÇÃO GLOBAL
+    // =====================================================
+    window.atualizarResumo    = atualizarResumo;
+    window.finalizarPedido    = finalizarPedido;
+    window.gerarPDF           = gerarPDF;
     window.visualizarRomaneio = visualizarRomaneio;
-    window.fecharModal = fecharModal;
+    window.fecharModal        = fecharModal;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        atualizarResumo();
+    window.checkoutService = Object.freeze({
+        atualizarResumo, finalizarPedido, gerarPDF, visualizarRomaneio, fecharModal
     });
+
+    document.addEventListener('DOMContentLoaded', _init);
 
 })();

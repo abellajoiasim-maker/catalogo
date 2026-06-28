@@ -74,28 +74,40 @@
                 listaVariacoesLimpa = Object.values(produto.variacoes);
             }
 
-            return {
-                id: this._safeString(id),
-                codigo: this._safeString(produto.codigo || produto.sku || id),
-                nome: nome,
-                descricao: this._safeString(produto.descricao || produto.description || ''),
-                precoOriginal: precoOriginal || precoVenda,
-                preco: precoVenda,
-                imagem: this._safeString(produto.imagem || produto.image || produto.img || ''),
-                categoriaId: this._safeString(produto.categoriaId || produto.categoria || produto.category || ''),
-                subcategoriaId: this._safeString(produto.subcategoriaId || produto.subcategoria || produto.subcategory || ''),
-                ativo: produto.ativo !== false,
-                estoque: parseInt(produto.estoque ?? 1) || 0,
-                destaque: Boolean(produto.destaque ?? false),
-                variacoes: listaVariacoesLimpa,
-                peso: parseFloat(produto.peso || produto.weight || 0),
-                metadados: {
-                    finish: this._safeString(produto.metadados?.finish || produto.acabamento || ''),
-                    loop: this._safeString(produto.metadados?.loop || produto.passador || '')
-                },
-                createdAt: produto.createdAt || Date.now()
-            };
-        },
+           return {
+    id: this._safeString(id),
+    codigo: this._safeString(produto.codigo || produto.sku || id),
+    sku: this._safeString(produto.sku || produto.codigo || id),
+    nome: nome,
+    name: nome,
+    descricao: this._safeString(produto.descricao || produto.description || ''),
+    precoOriginal: precoOriginal || precoVenda,
+    preco: precoVenda,
+    price: precoVenda,
+    precoFinal: precoVenda,
+    imagem: this._safeString(produto.imagem || produto.image || produto.img || ''),
+    image: this._safeString(produto.imagem || produto.image || produto.img || ''),
+    categoriaId: this._safeString(produto.categoriaId || produto.categoria || produto.category || ''),
+    category: this._safeString(produto.categoriaId || produto.categoria || produto.category || ''),
+    subcategoriaId: this._safeString(produto.subcategoriaId || produto.subcategoria || produto.subcategory || produto.subCategory || ''),
+    subcategory: this._safeString(produto.subcategoriaId || produto.subcategoria || produto.subcategory || produto.subCategory || ''),
+    ativo: produto.ativo !== false && produto.paused !== true,
+    paused: produto.paused === true || produto.ativo === false,
+    estoque: parseInt(produto.estoque ?? 1) || 0,
+    destaque: Boolean(produto.destaque ?? false),
+    variacoes: listaVariacoesLimpa,
+    dizeres:  Array.isArray(produto.dizeres)  ? produto.dizeres  : (Array.isArray(produto.sayings)  ? produto.sayings  : []),
+    iniciais: Array.isArray(produto.iniciais) ? produto.iniciais : (Array.isArray(produto.initials) ? produto.initials : []),
+    sayings:  Array.isArray(produto.sayings)  ? produto.sayings  : (Array.isArray(produto.dizeres)  ? produto.dizeres  : []),
+    initials: Array.isArray(produto.initials) ? produto.initials : (Array.isArray(produto.iniciais) ? produto.iniciais : []),
+    peso: parseFloat(produto.peso || produto.weight || 0),
+    weight: parseFloat(produto.peso || produto.weight || 0),
+    metadados: {
+        finish: this._safeString(produto.metadados?.finish || produto.acabamento || ''),
+        loop: this._safeString(produto.metadados?.loop || produto.passador || '')
+    },
+    createdAt: produto.createdAt || Date.now()
+};
 
         // ======================================================
         // OPERAÇÕES DE LEITURA (READ)

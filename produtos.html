@@ -10,7 +10,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
@@ -255,27 +255,22 @@ const INSTANCE_FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catal
 // ================================================================
 function normalizarTexto(texto) {
     return (texto || '').toString().normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-        .toLowerCase()
-        .replace(/-/g, ' ') // Transforma hífens da URL em espaços para bater com o banco
-        .replace(/\s+/g, ' ') // Normaliza múltiplos espaços em um só
-        .trim();
+        .replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, '-');
 }
+
 function getProduto(p) {
     return {
-        nome:         p.name || p.nome || 'Produto',
-        sku:          p.sku || p.codigo || '',
-        codigo:       p.codigo || p.sku || '',
-        descricao:    p.description || p.descricao || '',
-        preco:        parseFloat(p.precoFinal || p.price || p.preco || 0),
-        peso:         p.peso || p.weight || 0,
-        imagem:       p.image || p.imagem || '',
-        categoria:    p.category || p.categoria || '',
+        nome:        p.name        || p.nome        || 'Produto',
+        sku:         p.sku         || '',
+        descricao:   p.description || p.descricao   || '',
+        preco:       parseFloat(p.precoFinal || p.price || p.preco || 0),
+        peso:        p.peso        || p.weight       || 0,
+        imagem:      p.image       || p.imagem       || '',
+        categoria:   p.category    || p.categoria    || '',
         subcategoria: p.subcategory || p.subCategory || p.subcategoria || '',
-        variacoes:    Array.isArray(p.variacoes) ? p.variacoes : (Array.isArray(p.grades) ? p.grades : []),
-        dizeres:      Array.isArray(p.dizeres) ? p.dizeres : (Array.isArray(p.sayings) ? p.sayings : []),
-        iniciais:     Array.isArray(p.iniciais) ? p.iniciais : (Array.isArray(p.initials) ? p.initials : []),
-        paused:       p.paused === true
+        dizeres:     Array.isArray(p.dizeres)  ? p.dizeres  : (Array.isArray(p.sayings)  ? p.sayings  : []),
+        iniciais:    Array.isArray(p.iniciais) ? p.iniciais : (Array.isArray(p.initials) ? p.initials : []),
+        paused:      p.paused === true
     };
 }
 
@@ -345,26 +340,29 @@ async function carregarProdutos() {
         const categoryParam = params.get('categoria') || params.get('cat')      || '';
         const subcatParam   = params.get('subcategoria') || params.get('sub')   || '';
 
-        // Decodifica e normaliza transformando hífens em espaços internamente para a comparação
-        const categoria    = normalizarTexto(decodeURIComponent(categoryParam));
+        const categoria   = normalizarTexto(categoryParam);
         const subcategoria = normalizarTexto(decodeURIComponent(subcatParam));
 
-        // Título estético do topo (mantém o visual da URL amigável se quiser)
-        const nomeFiltro = subcatParam ? decodeURIComponent(subcatParam).replace(/-/g, ' ') : (categoryParam ? decodeURIComponent(categoryParam) : 'Coleção Premium');
+        const nomeFiltro = subcatParam ? subcatParam : (categoryParam ? categoryParam : 'Coleção Premium');
         const elHero = document.getElementById('heroTitulo');
-        if (elHero) elHero.innerText = nomeFiltro.toUpperCase();
+        if (elHero) elHero.innerText = nomeFiltro;
 
         let todos = null;
 
+        // 1ª TENTATIVA: Invocar o serviço de forma isolada e segura
         try {
             if (typeof produtoService !== 'undefined' && typeof produtoService.listarTodos === 'function') {
+                // Força a execução isolando o escopo do microsserviço
                 todos = await produtoService.listarTodos();
             }
         } catch (cacheErr) {
-            console.warn('[PMA V8] Falha ao ler do produtoService. Ativando contingência direta.');
+            console.warn('[PMA V8] Falha ao gravar no cache interno do produtoService. Ativando contingência.');
         }
 
+        // 2ª TENTATIVA (FALLBACK): Se o método falhou ou retornou vazio por causa do freeze
         if (!todos || !Array.isArray(todos) || Object.keys(todos).length === 0) {
+            console.log('[PMA V8] Buscando dados diretamente da referência estável do Firebase Realtime DB...');
+            // Acessa diretamente o nó do Firebase para garantir que a página não fique em branco
             const snapProds = await db.ref('abella/products').once('value');
             if (snapProds.exists()) {
                 const dadosBrutos = snapProds.val() || {};
@@ -372,21 +370,18 @@ async function carregarProdutos() {
             }
         }
 
+        // Garantia estrutural de que temos uma lista válida
         if (!todos) todos = [];
         if (!Array.isArray(todos)) todos = Object.values(todos);
 
+        // Processamento e Filtragem dos produtos ativos
         produtos = todos.filter(p => {
             if (!p || p.paused === true) return false;
             if (!categoria) return true;
-
-            // Normaliza os dados vindos do Firebase da mesma forma
             const catProd = normalizarTexto(p.category || p.categoria || p.categorySlug || '');
-            if (catProd !== categoria && !catProd.includes(categoria)) return false;
-
+            if (catProd !== categoria) return false;
             if (!subcategoria) return true;
             const subProd = normalizarTexto(p.subcategory || p.subCategory || p.subcategoria || p.subcategorySlug || '');
-            
-            // Checagem mútua resiliente para pegar qualquer variação de digitação
             return subProd === subcategoria || subProd.includes(subcategoria) || subcategoria.includes(subProd);
         });
 
@@ -403,9 +398,8 @@ async function carregarProdutos() {
         if (loading) loading.innerHTML = 'Erro ao carregar catálogo. Por favor, recarregue a página.';
     }
 }
-
 // ================================================================
-// RENDERIZAR GRID DE PRODUTOS
+// RENDERIZAR GRID DE PRODUTOS (CORRIGIDO PARA PMA V8)
 // ================================================================
 function renderizarProdutos() {
     const container = document.getElementById('grid-produtos');
@@ -417,14 +411,17 @@ function renderizarProdutos() {
         return;
     }
 
+    // Pega a imagem padrão segura direto do ImageHelper homologado
     const fallbackSeguro = typeof window.ImageHelper !== 'undefined' 
         ? window.ImageHelper.obterImagemFallback() 
-        : INSTANCE_FALLBACK_IMG;
+        : 'https://via.placeholder.com/800x800/111111/caa85c?text=ABELLA';
 
     produtosFiltrados.forEach((prod, index) => {
-        const dados = getProduto(prod);
+        // Garante que estamos pegando o objeto normalizado e seguro do ProdutoService
+        const dados = typeof getProduto === 'function' ? getProduto(prod) : prod;
         if (!dados) return;
 
+        // Resolve dinamicamente a URL da imagem usando a engine unificada do ImageHelper
         let imgUrl = fallbackSeguro;
         if (typeof window.ImageHelper !== 'undefined') {
             imgUrl = window.ImageHelper.obterImagemProduto(dados.imagem);
@@ -434,13 +431,18 @@ function renderizarProdutos() {
             imgUrl = dados.imagem;
         }
 
+        // Formatação de Preço de forma resiliente
         const precoFmt = typeof window.money !== 'undefined' && typeof window.money.formatar === 'function'
             ? window.money.formatar(dados.preco) 
             : 'R$ ' + (parseFloat(dados.preco) || 0).toFixed(2);
 
-        const temVariacoes = dados.variacoes.length > 0;
-        const temDizeres   = temVariacoes || dados.dizeres.length > 0;
-        const temIniciais  = dados.iniciais.length > 0;
+        // Mapeamento seguro das variações/grades para evitar quebras por propriedade indefinida
+        const listaVariacoes = Array.isArray(dados.variacoes) ? dados.variacoes : [];
+        const temVariacoes   = listaVariacoes.length > 0;
+        
+        // Mantém suporte caso ainda use propriedades legadas na página
+        const temDizeres  = temVariacoes || (Array.isArray(dados.dizeres) && dados.dizeres.length > 0);
+        const temIniciais = Array.isArray(dados.iniciais) && dados.iniciais.length > 0;
 
         const badgesHtml = (temDizeres || temIniciais) ? `
             <div class="flex gap-1 mt-1 flex-wrap">
@@ -457,7 +459,7 @@ function renderizarProdutos() {
                          onerror="this.onerror=null; this.src='${fallbackSeguro}';">
                 </div>
                 <div class="pt-2 px-1">
-                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-mono truncate">${dados.codigo || 'Premium'}</p>
+                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-mono truncate">${dados.codigo || dados.sku || 'Premium'}</p>
                     <h3 class="text-zinc-200 font-medium tracking-tight text-xs md:text-sm mt-0.5 line-clamp-2 min-h-[2rem] md:min-h-[2.5rem] leading-snug">${dados.nome || 'Produto Sem Nome'}</h3>
                     ${badgesHtml}
                 </div>
@@ -475,7 +477,6 @@ function renderizarProdutos() {
         container.appendChild(card);
     });
 }
-
 // ================================================================
 // INICIALIZAÇÃO DA BUSCA
 // ================================================================
@@ -485,7 +486,7 @@ function iniciarBusca() {
     input.addEventListener('input', (e) => {
         const termo = normalizarTexto(e.target.value);
         produtosFiltrados = !termo ? [...produtos] : produtos.filter(p => {
-            return normalizarTexto(p.name || p.nome).includes(termo) || normalizarTexto(p.sku || p.codigo).includes(termo);
+            return normalizarTexto(p.name || p.nome).includes(termo) || normalizarTexto(p.sku).includes(termo);
         });
         renderizarProdutos();
     });
@@ -500,6 +501,7 @@ function atualizarMiniCarrinho() {
         if (!el) return;
 
         if (typeof carrinhoService !== 'undefined') {
+            // CORREÇÃO: Tratamento polimórfico adaptado para mapear métodos alternativos do barramento do carrinho
             if (typeof carrinhoService.obterResumo === 'function') {
                 el.innerText = carrinhoService.obterResumo().totalPecas || 0;
             } else if (typeof carrinhoService.obterItens === 'function') {
@@ -557,36 +559,9 @@ function _construirGradeDeCompra(dados) {
     if (!container) return;
     container.innerHTML = '';
 
-    const variacoesDiretas = dados.variacoes.filter(Boolean);
-    const dizeres          = dados.dizeres.filter(Boolean);
-    const iniciais         = dados.iniciais.filter(Boolean);
+    const dizeres  = dados.dizeres.filter(Boolean);
+    const iniciais = dados.iniciais.filter(Boolean);
 
-    // Se já possuir variações estruturadas salvas pelo editor
-    if (variacoesDiretas.length > 0) {
-        let html = `<div class="bg-zinc-900/40 border border-zinc-900 p-3 rounded-xl space-y-2.5 max-h-48 overflow-y-auto custom-scroll">
-                        <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-1">Selecione as Variações</p>`;
-        
-        variacoesDiretas.forEach((comb, idx) => {
-            const idInput = `grade_idx_${idx}`;
-            html += `
-                <div class="flex items-center justify-between gap-3 bg-zinc-950/60 p-2 rounded-lg border border-zinc-900">
-                    <span class="text-xs font-medium text-zinc-300 truncate">${comb}</span>
-                    <div class="flex items-center gap-1.5 shrink-0">
-                        <button onclick="alterarInputMatriz('${idInput}', -1)" type="button" class="w-7 h-7 rounded bg-zinc-900 border border-zinc-800 text-xs font-bold hover:border-zinc-700 flex items-center justify-center select-none">-</button>
-                        <input type="number" id="${idInput}" value="0" min="0" oninput="calcularTotalGeralMatriz()"
-                               class="input-grade-qtd w-12 h-7 bg-zinc-900 border border-zinc-800 rounded text-center font-mono text-xs text-white focus:outline-none focus:border-[#caa85c]" data-variacao-nome="${comb}">
-                        <button onclick="alterarInputMatriz('${idInput}', 1)" type="button" class="w-7 h-7 rounded bg-zinc-900 border border-zinc-800 text-xs font-bold hover:border-zinc-700 flex items-center justify-center select-none">+</button>
-                    </div>
-                </div>
-            `;
-        });
-        html += `</div>`;
-        container.innerHTML = html;
-        calcularTotalGeralMatriz();
-        return;
-    }
-
-    // Fallback: Se não tem nada configurado
     if (dizeres.length === 0 && iniciais.length === 0) {
         container.innerHTML = `
             <div class="bg-zinc-900/40 border border-zinc-900 p-4 rounded-xl space-y-2">
@@ -603,11 +578,13 @@ function _construirGradeDeCompra(dados) {
         return;
     }
 
-    // Fallback combinatório legada
     let combinacoes = [];
+
     if (dizeres.length > 0 && iniciais.length > 0) {
         dizeres.forEach(d => {
-            iniciais.forEach(i => { combinacoes.push(`${d} • Letra ${i}`); });
+            iniciais.forEach(i => {
+                combinacoes.push(`${d} • Letra ${i}`);
+            });
         });
     } else if (dizeres.length > 0) {
         combinacoes = [...dizeres];
@@ -674,14 +651,14 @@ function adicionarGradeAoCarrinho() {
         const qtd = parseInt(input.value) || 0;
         if (qtd > 0) {
             const variacaoNome = input.getAttribute('data-variacao-nome') || '';
-            const dadosProd = getProduto(produtoAtual);
             
+            // Monta o payload seguro para o microsserviço
             const itemCarrinho = {
-                sku: dadosProd.sku,
-                nome: dadosProd.nome,
-                preco: dadosProd.preco,
-                peso: dadosProd.peso,
-                imagem: dadosProd.imagem,
+                sku: produtoAtual.sku || '',
+                nome: produtoAtual.name || produtoAtual.nome || 'Produto',
+                preco: parseFloat(produtoAtual.precoFinal || produtoAtual.price || produtoAtual.preco || 0),
+                peso: parseFloat(produtoAtual.peso || produtoAtual.weight || 0),
+                imagem: produtoAtual.image || produtoAtual.imagem || '',
                 variacao: variacaoNome,
                 quantidade: qtd
             };
@@ -708,6 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     iniciarBusca();
     atualizarMiniCarrinho();
     
+    // Engine de sincronização paralela resiliente
     await carregarConfiguracoes();
     await carregarProdutos();
 });

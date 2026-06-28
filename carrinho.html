@@ -231,7 +231,7 @@
         </div>
     </main>
 
-    <!-- DEPENDÊNCIAS DO ECOSSISTEMA INJETADAS -->
+<!-- DEPENDÊNCIAS DO ECOSSISTEMA INJETADAS -->
     <script src="js/firebase/firebase-config.js"></script>
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
@@ -239,8 +239,13 @@
     <script src="js/services/carrinhoService.js"></script>
 
     <script>
-        // Inicialização resiliente e segura do banco
-        const db = typeof firebase !== 'undefined' ? firebase.database() : null;
+        // SOLUÇÃO DO CONFLITO: Reutiliza o 'db' existente se já declarado no escopo global ou inicializa com segurança
+        if (typeof db === 'undefined') {
+            window.db = typeof firebase !== 'undefined' ? firebase.database() : null;
+        } else {
+            window.db = db;
+        }
+
         let configGlobal = {};
         const INSTANCE_FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
 
@@ -278,9 +283,9 @@
 
         async function inicializarPagina() {
             try {
-                if (db) {
-                    // Força a leitura capturando possíveis exceções assíncronas do barramento de configurações
-                    const snap = await db.ref('abella/settings').once('value');
+                // Utiliza a referência global segura mapeada acima
+                if (window.db) {
+                    const snap = await window.db.ref('abella/settings').once('value');
                     if (snap.exists()) {
                         configGlobal = snap.val() || {};
                         processarLogo(configGlobal.logo || configGlobal.logoUrl);
@@ -321,7 +326,6 @@
                 return;
             }
 
-            // Consome a API estável de leitura estruturada de itens do microsserviço
             let itens = [];
             if (typeof carrinhoService.listar === 'function') {
                 itens = carrinhoService.listar() || [];
@@ -345,7 +349,6 @@
                 const pesoUnitario = parseFloat(item.peso || item.pesoUnitario || 0);
                 const pesoTotalItem = formatarPeso(pesoUnitario * qtdSegura);
                 
-                // Extração polimórfica e segura de preços de venda unificados no lote
                 const precoUnitario = parseFloat(item.precoVendaUnitario || item.price || item.preco || 0);
                 const subtotalItem = precoUnitario * qtdSegura;
 
@@ -359,7 +362,6 @@
                     ? `<span class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">${item.badgePromocional}</span>`
                     : '';
 
-                // Suporte completo a tags/variações na exibição do card do carrinho
                 const labelVariacao = item.variacao || item.combinacao || '';
                 const variacaoHtml = labelVariacao ? `<p class="text-[11px] text-amber-400 font-medium mt-0.5">🔹 Grade: ${labelVariacao}</p>` : '';
 
@@ -404,7 +406,6 @@
         function alterarQtd(id, delta) {
             if (typeof carrinhoService === 'undefined') return;
             
-            // Tratamento polimórfico de listagem de segurança
             const itens = (typeof carrinhoService.listar === 'function' ? carrinhoService.listar() : carrinhoService.obterItens()) || [];
             const item = itens.find(i => String(i.id || i.sku) === String(id));
             if(!item) return;
@@ -418,7 +419,6 @@
                 if (typeof carrinhoService.atualizarQuantidade === 'function') {
                     carrinhoService.atualizarQuantidade(id, novaQtd);
                 } else if (typeof carrinhoService.adicionar === 'function') {
-                    // Fallback adaptativo de mutação controlada
                     carrinhoService.adicionar(item, delta, item.variacao || '');
                 }
                 renderizarCarrinho();
@@ -459,7 +459,6 @@
             let subtotalBruto = 0;
             let totalFinal = 0;
 
-            // Interface reativa com tratamento de fallbacks do barramento de microsserviços congelados
             if (typeof carrinhoService !== 'undefined') {
                 if (typeof carrinhoService.obterContagem === 'function') {
                     totalItens = carrinhoService.obterContagem();
@@ -480,14 +479,13 @@
                 }
             }
 
-            // Processamento do peso bruto somado do lote
             itens.forEach(item => {
                 const q = parseInt(item.quantidade || item.qtd || 1);
                 const p = parseFloat(item.peso || item.pesoUnitario || 0);
                 totalPeso += (p * q);
             });
 
-            const descontoTotal = Math.max(0, subtotalBruto - totalFinal);
+            const descuentoTotal = Math.max(0, subtotalBruto - totalFinal);
 
             if(document.getElementById('resumo-itens')) document.getElementById('resumo-itens').innerText = totalItens;
             if(document.getElementById('resumo-peso')) document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso) + 'g';
@@ -501,9 +499,9 @@
             }
 
             const blocoDesc = document.getElementById('bloco-desconto');
-            if (descontoTotal > 0 && blocoDesc) {
+            if (descuentoTotal > 0 && blocoDesc) {
                 const elVal = document.getElementById('desconto-valor');
-                if (elVal) elVal.innerText = typeof money !== 'undefined' ? `- ${money.formatar(descontoTotal)}` : `- R$ ${descontoTotal.toFixed(2)}`;
+                if (elVal) elVal.innerText = typeof money !== 'undefined' ? `- ${money.formatar(descuentoTotal)}` : `- R$ ${descuentoTotal.toFixed(2)}`;
                 blocoDesc.classList.remove('hidden');
             } else if (blocoDesc) {
                 blocoDesc.classList.add('hidden');

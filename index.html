@@ -132,7 +132,6 @@
             flex-shrink: 0;
         }
 
-        /* Otimização do Container do Banner para ser responsivo de verdade */
         .hero-img-wrap {
             position: relative;
             width: 100%;
@@ -211,7 +210,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div class="fade-up">
                     <div class="badge">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                         <span class="text-[11px] uppercase tracking-[.25em] gold font-black">Catálogo Corporativo Online</span>
                     </div>
                     <h2 class="serif text-3xl md:text-6xl leading-tight mt-4 md:mt-6">Sua próxima coleção<br>começa aqui.</h2>
@@ -306,25 +305,31 @@
     <script src="js/utils/imagens.js"></script>
     
     <script>
-        // REMOVIDO: const db = firebase.database(); 
-        // A constante 'db' já foi declarada e inicializada globalmente no script firebase-config.js.
-        // Se o seu firebase-config usar outro nome (ex: database), descomente a linha abaixo e mude para:
-        // const db = firebase.database(); -> mas use um nome diferente ou apenas use a variável que já veio de lá.
-
         document.addEventListener('DOMContentLoaded', async () => {
             const grid = document.getElementById('grid-categorias');
             const loading = document.getElementById('loading');
             const noResult = document.getElementById('no-result');
 
-            try {
-                // Executa as chamadas ao nó correto já instanciado
-                const snapSettings = await db.ref('abella/settings').once('value').catch(() => null);
-                const snapCategories = await db.ref('abella/categories').once('value').catch(() => null);
+            // Proteção defensiva inicial caso o script de configuração falhe
+            if (typeof db === 'undefined') {
+                console.error('Instância global "db" do Firebase não encontrada. Verifique o arquivo firebase-config.js');
+                if (loading) {
+                    loading.innerHTML = `<p class="text-xs uppercase text-rose-500 font-mono py-4">⚠️ Conexão com o banco de dados não configurada.</p>`;
+                }
+                return;
+            }
 
+            try {
+                // Executa chamadas assíncronas em paralelo para acelerar o carregamento
+                const [snapSettings, snapCategories] = await Promise.all([
+                    db.ref('abella/settings').once('value').catch(err => { console.warn('Erro ao carregar settings:', err); return null; }),
+                    db.ref('abella/categories').once('value').catch(err => { console.warn('Erro ao carregar categories:', err); return null; })
+                ]);
+
+                // Renderização de Configurações / Identidade Visual
                 if (snapSettings && snapSettings.exists()) {
                     const cfg = snapSettings.val();
                     
-                    // Tratamento e exibição da Logo cadastrada pelo módulo config.html
                     const logoUrlReal = cfg.logoUrl || cfg.logo;
                     if (logoUrlReal) {
                         const img = document.getElementById('abellaLogoImg');
@@ -340,22 +345,35 @@
                         const hero = document.getElementById('heroBannerImg');
                         if (hero) hero.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(cfg.heroBannerUrl) : cfg.heroBannerUrl;
                     }
-                    if (cfg.name) document.getElementById('nome').innerText = cfg.name;
-                    if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;
+                    
+                    if (cfg.name) {
+                        const elemNome = document.getElementById('nome');
+                        if (elemNome) elemNome.innerText = cfg.name;
+                    }
+                    if (cfg.slogan) {
+                        const elemSlogan = document.getElementById('slogan');
+                        if (elemSlogan) elemSlogan.innerText = cfg.slogan;
+                    }
                     if (cfg.parcelas) {
-                        document.getElementById('parcelamento').innerText = `${cfg.parcelas}x sem juros`;
-                        if(document.getElementById('float-parcelas')) document.getElementById('float-parcelas').innerText = `Até ${cfg.parcelas}x sem juros`;
+                        const elemParc = document.getElementById('parcelamento');
+                        const elemFloatParc = document.getElementById('float-parcelas');
+                        if (elemParc) elemParc.innerText = `${cfg.parcelas}x sem juros`;
+                        if (elemFloatParc) elemFloatParc.innerText = `Até ${cfg.parcelas}x sem juros`;
                     }
                     if (cfg.pix) {
-                        document.getElementById('pix').innerText = `${cfg.pix}% OFF`;
-                        if(document.getElementById('float-pix')) document.getElementById('float-pix').innerText = `PIX ${cfg.pix}% OFF`;
+                        const elemPix = document.getElementById('pix');
+                        const elemFloatPix = document.getElementById('float-pix');
+                        if (elemPix) elemPix.innerText = `${cfg.pix}% OFF`;
+                        if (elemFloatPix) elemFloatPix.innerText = `PIX ${cfg.pix}% OFF`;
                     }
                     if (cfg.whatsapp) {
                         const linkWhats = `https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}`;
-                        if (document.getElementById('whats')) document.getElementById('whats').href = linkWhats;
+                        const elemWhats = document.getElementById('whats');
+                        if (elemWhats) elemWhats.href = linkWhats;
                     }
                 }
 
+                // Processamento de Categorias
                 let listaCategorias = [];
 
                 if (snapCategories && snapCategories.exists() && snapCategories.val()) {
@@ -370,6 +388,7 @@
                     }
                 } 
                 
+                // Fallback dinâmico se a árvore de categorias estiver vazia (varre produtos)
                 if (listaCategorias.length === 0) {
                     const snapProdutos = await db.ref('abella/products').once('value').catch(() => null);
                     if (snapProdutos && snapProdutos.exists() && snapProdutos.val()) {
@@ -427,6 +446,7 @@
 
                 grid.appendChild(fragmento);
 
+                // Mecanismo de Busca em Tempo Real
                 const inputBusca = document.getElementById('busca');
                 if (inputBusca) {
                     inputBusca.addEventListener('input', (e) => {
@@ -435,17 +455,23 @@
                         let encontrouAlgum = false;
 
                         cards.forEach(card => {
-                            const textoCard = card.querySelector('h3').innerText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                            if (textoCard.includes(termo)) {
-                                card.classList.remove('hidden');
-                                encontrouAlgum = true;
-                            } else {
-                                card.classList.add('hidden');
+                            const elemH3 = card.querySelector('h3');
+                            if (elemH3) {
+                                const textoCard = elemH3.innerText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                if (textoCard.includes(termo)) {
+                                    card.classList.remove('hidden');
+                                    encontrouAlgum = true;
+                                } else {
+                                    card.classList.add('hidden');
+                                }
                             }
                         });
 
-                        if (encontrouAlgum) noResult.classList.add('hidden');
-                        else noResult.classList.remove('hidden');
+                        if (encontrouAlgum) {
+                            if (noResult) noResult.classList.add('hidden');
+                        } else {
+                            if (noResult) noResult.classList.remove('hidden');
+                        }
                     });
                 }
 

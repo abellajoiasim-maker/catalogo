@@ -270,22 +270,26 @@
         </div>
     </footer>
 
+<!-- Mantemos a mobile-bar e fechamos a estrutura principal -->
     <div class="mobile-bar lg:hidden">
         <a href="carrinho.html" class="w-full h-14 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] flex items-center justify-center gap-3">
             🛒 <span>Finalizar Pedido</span>
         </a>
     </div>
 
+    <!-- 1. Scripts de Infraestrutura Globais (PMA V8) -->
     <script src="js/firebase/firebase-config.js"></script>
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
     <script src="js/utils/storage.js"></script>
     <script src="js/services/carrinhoService.js"></script>
     <script src="js/utils/image-helper.js"></script>
-    <script src="js/utils/imagens.js"></script>
+    <!-- REMOVIDO: js/utils/imagens.js (Evita o erro 404, processado pelo image-helper) -->
 
+    <!-- 2. Lógica de Renderização Dinâmica e Sincronização -->
     <script>
-        const db = firebase.database();
+        // CORREÇÃO: Removido 'const db = firebase.database()' para evitar o SyntaxError, 
+        // já que o 'db' é fornecido pronto pelo firebase-config.js do PMA V8.
         let categoriaSlug = '';
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -302,7 +306,7 @@
             }
 
             try {
-                // Sincronização Dinâmica com a Aba de Configurações Globais (PMA V8)
+                // Utiliza a referência global 'db' com segurança
                 const snapSettings = await db.ref('abella/settings').once('value');
                 let lojaNome = 'Abella Joias';
 

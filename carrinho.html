@@ -360,10 +360,24 @@
                     ? `<span class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">${item.badgePromocional}</span>`
                     : '';
 
-                // --- VARREDURA AVANÇADA DE MAPA DE VARIANTES (CORRIGIDO PARA PMA V8) ---
+                // --- CAPTURA AVANÇADA DE CUSTOMIZAÇÕES DE PRODUTO (DIZERES / INICIAIS) ---
+                let customizacoesHtml = '';
+                const dizeresEscolhido = item.dizeresEscolhido || item.sayingSelected || item.dizeres || '';
+                const iniciaisEscolhida = item.iniciaisEscolhida || item.initialSelected || item.iniciais || '';
+
+                if (dizeresEscolhido || iniciaisEscolhida) {
+                    customizacoesHtml = `<div class="text-[11px] text-zinc-400 mt-2 bg-zinc-950/80 p-2 rounded-lg border border-zinc-900 flex flex-col gap-1 w-full max-w-xs font-mono">`;
+                    if (dizeresEscolhido) {
+                        customizacoesHtml += `<div class="truncate"><span class="text-[#caa85c] font-bold">✍️ Dizeres:</span> ${dizeresEscolhido}</div>`;
+                    }
+                    if (iniciaisEscolhida) {
+                        customizacoesHtml += `<div class="truncate"><span class="text-[#caa85c] font-bold">🔤 Iniciais:</span> ${iniciaisEscolhida}</div>`;
+                    }
+                    customizacoesHtml += `</div>`;
+                }
+
+                // --- VARREDURA DE MAPA DE VARIANTES DE GRADE (SUPORTE LEGADO) ---
                 let variacaoHtml = '';
-                
-                // 1. Verifica se as variações vieram como um mapa/objeto (Corrigido o espaço acidental)
                 if (item.variacoesSelecionadas && typeof item.variacoesSelecionadas === 'object') {
                     let subGrades = Object.entries(item.variacoesSelecionadas)
                         .filter(([_, q]) => parseInt(q) > 0)
@@ -374,7 +388,6 @@
                     }
                 } 
                 
-                // 2. Fallback para propriedades de string única ou objetos simples
                 if (!variacaoHtml) {
                     let labelStr = item.variacao || item.combinacao || item.selectedVariation || item.grade || '';
                     if (labelStr && typeof labelStr === 'object') {
@@ -392,12 +405,13 @@
                                 <img src="${imgUrl}" class="w-full h-full object-cover" alt="${limpoNome}" onerror="this.src='${INSTANCE_FALLBACK_IMG}'">
                             </div>
                             
-                            <div class="flex-1 text-center sm:text-left min-w-0">
+                            <div class="flex-1 text-center sm:text-left min-w-0 w-full">
                                 <div class="flex items-center justify-center sm:justify-start flex-wrap gap-1">
                                     <h3 class="font-bold text-sm md:text-base uppercase tracking-wide text-white leading-tight truncate">${limpoNome}</h3>
                                     ${badgeHtml}
                                 </div>
                                 ${variacaoHtml}
+                                ${customizacoesHtml}
                                 <p class="text-zinc-500 text-xs mt-1.5">Ref: ${limpoId} | Unitário: ${txtUnitario}</p>
                                 <p class="text-zinc-400 text-xs mt-1">⚖️ Peso Total: <span class="text-zinc-300 font-medium">${pesoTotalItem}</span></p>
                             </div>
@@ -422,6 +436,7 @@
 
             atualizarTotaisResumo(itens);
         }
+
         function alterarQtd(id, delta) {
             if (typeof carrinhoService === 'undefined') return;
             

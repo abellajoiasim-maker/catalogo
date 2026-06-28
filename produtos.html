@@ -248,6 +248,7 @@ let produtos         = [];
 let produtosFiltrados = [];
 let produtoAtual     = null;
 let descontoPixGlobal = 5;
+const INSTANCE_FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
 
 // ================================================================
 // UTILITÁRIOS
@@ -287,7 +288,7 @@ async function carregarConfiguracoes() {
             const cfg = snap.val() || {};
             lojaNome = cfg.name || lojaNome;
 
-            if (cfg.name && document.getElementById('nome')) document.getElementById('nome').innerText = cfg.name;
+            if (document.getElementById('nome')) document.getElementById('nome').innerText = lojaNome;
             if (cfg.slogan && document.getElementById('slogan')) document.getElementById('slogan').innerText = cfg.slogan;
 
             if (cfg.pix !== undefined) {
@@ -307,11 +308,16 @@ async function carregarConfiguracoes() {
             }
 
             let logoFinal = (cfg.logoUrl || cfg.logo || '').trim();
-            if (logoFinal && logoImg) {
+            if (!logoFinal) logoFinal = INSTANCE_FALLBACK_IMG;
+            
+            if (logoImg) {
                 logoImg.src = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(logoFinal) : logoFinal;
                 logoImg.onload = () => {
                     logoImg.classList.remove('hidden');
                     if (fallback) fallback.classList.add('hidden');
+                };
+                logoImg.onerror = () => {
+                    logoImg.src = INSTANCE_FALLBACK_IMG;
                 };
             }
         } else {
@@ -344,11 +350,26 @@ async function carregarProdutos() {
         if (typeof produtoService === 'undefined' || typeof produtoService.listarTodos !== 'function')
             throw new Error('Serviço de produto indisponível.');
 
-        const todos = await produtoService.listarTodos();
-        if (!Array.isArray(todos)) throw new Error('Formato inválido retornado por produtoService.');
+        let todos = [];
+        try {
+            // CORREÇÃO: Tratado escopo isolado para capturar a exceção de congelamento de cache do produtoService
+            todos = await produtoService.listarTodos();
+        } catch (cacheErr) {
+            console.warn('[PMA V8] Capturada mutação estrita de cache do produtoService, processando dados da referência primária.');
+            // Fallback resiliente de leitura caso o método de cache do microsserviço retorne congelado
+            const snapProds = await db.ref('abella/products').once('value');
+            if (snapProds.exists()) {
+                todos = Object.values(snapProds.val() || {});
+            }
+        }
+
+        if (!Array.isArray(todos)) {
+            // Tentativa estendida se os produtos vierem mapeados como Objeto no nó pai
+            todos = todos ? Object.values(todos) : [];
+        }
 
         produtos = todos.filter(p => {
-            if (p.paused === true) return false;
+            if (!p || p.paused === true) return false;
             if (!categoria) return true;
             const catProd = normalizarTexto(p.category || p.categoria || p.categorySlug || '');
             if (catProd !== categoria) return false;
@@ -384,11 +405,9 @@ function renderizarProdutos() {
         return;
     }
 
-    const fallbackImg = 'images/fallback.jpg';
-
     produtosFiltrados.forEach((prod, index) => {
         const dados    = getProduto(prod);
-        const imgUrl   = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(dados.imagem) : (dados.imagem || fallbackImg);
+        const imgUrl   = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(dados.imagem) : (dados.imagem || INSTANCE_FALLBACK_IMG);
         const precoFmt = typeof money !== 'undefined' ? money.formatar(dados.preco) : 'R$ ' + dados.preco.toFixed(2);
 
         const temDizeres  = dados.dizeres.length  > 0;
@@ -404,7 +423,7 @@ function renderizarProdutos() {
         card.innerHTML = `
             <div class="cursor-pointer" onclick="abrirModalProduto(${index})">
                 <div class="aspect-square w-full overflow-hidden bg-zinc-950 rounded-xl relative">
-                    <img src="${imgUrl}" class="w-full h-full object-cover" alt="${dados.nome}" loading="lazy" onerror="this.src='https://placehold.co/600x600/111111/caa85c?text=ABELLA'">
+                    <img src="${imgUrl}" class="w-full h-full object-cover" alt="${dados.nome}" loading="lazy" onerror="this.src='${INSTANCE_FALLBACK_IMG}'">
                 </div>
                 <div class="pt-2 px-1">
                     <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-mono truncate">${dados.sku || 'Premium'}</p>
@@ -441,14 +460,31 @@ function iniciarBusca() {
     });
 }
 
+// ================================================================
+// MINI CARRINHO RESILIENTE
+// ================================================================
 function atualizarMiniCarrinho() {
     try {
+        const el = document.getElementById('cart-count');
+        if (!el) return;
+
         if (typeof carrinhoService !== 'undefined') {
-            const resumo = carrinhoService.obterResumo();
-            const el = document.getElementById('cart-count');
-            if (el) el.innerText = resumo.totalPecas || 0;
+            // CORREÇÃO: Tratamento polimórfico adaptado para mapear métodos alternativos do barramento do carrinho
+            if (typeof carrinhoService.obterResumo === 'function') {
+                el.innerText = carrinhoService.obterResumo().totalPecas || 0;
+            } else if (typeof carrinhoService.obterItens === 'function') {
+                const itens = carrinhoService.obterItens() || [];
+                const total = itens.reduce((acc, curr) => acc + (parseInt(curr.quantidade || curr.qtd) || 0), 0);
+                el.innerText = total;
+            } else if (typeof carrinhoService.obterCarrinho === 'function') {
+                const carrinhoData = carrinhoService.obterCarrinho() || {};
+                const itens = carrinhoData.itens || [];
+                el.innerText = itens.reduce((acc, curr) => acc + (parseInt(curr.quantidade || curr.qtd) || 0), 0);
+            }
         }
-    } catch(e) { console.error('Erro mini carrinho:', e); }
+    } catch(e) { 
+        console.warn('Metadados do mini carrinho em processamento local:', e); 
+    }
 }
 
 // ================================================================
@@ -460,8 +496,7 @@ function abrirModalProduto(index) {
     produtoAtual = produto;
 
     const dados      = getProduto(produto);
-    const fallbackImg = 'images/fallback.jpg';
-    const imgSrc     = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(dados.imagem) : (dados.imagem || fallbackImg);
+    const imgSrc     = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(dados.imagem) : (dados.imagem || INSTANCE_FALLBACK_IMG);
     const precoFmt   = typeof money !== 'undefined' ? money.formatar(dados.preco) : 'R$ ' + dados.preco.toFixed(2);
     const valorPix   = dados.preco - (dados.preco * (descontoPixGlobal || 0) / 100);
     const pixFmt     = typeof money !== 'undefined' ? money.formatar(valorPix) : 'R$ ' + valorPix.toFixed(2);
@@ -471,12 +506,16 @@ function abrirModalProduto(index) {
     document.getElementById('modalPreco').innerText     = precoFmt;
     document.getElementById('modalPeso').innerText      = dados.peso + ' g';
     document.getElementById('modalDescricao').innerText = dados.descricao || 'Sem descrição adicional disponível.';
-    document.getElementById('modalImagem').src          = imgSrc;
+    
+    const mImg = document.getElementById('modalImagem');
+    if (mImg) {
+        mImg.src = imgSrc;
+        mImg.onerror = () => { mImg.src = INSTANCE_FALLBACK_IMG; };
+    }
 
     const modalPix = document.getElementById('modalPix');
     if (modalPix) modalPix.innerText = pixFmt;
 
-    // Constrói a Matriz Combinatória ou Campo Padrão
     _construirGradeDeCompra(dados);
 
     const modal = document.getElementById('modalProduto');
@@ -491,7 +530,6 @@ function _construirGradeDeCompra(dados) {
     const dizeres  = dados.dizeres.filter(Boolean);
     const iniciais = dados.iniciais.filter(Boolean);
 
-    // CASO 1: Produto Simples (Sem nenhuma variação cadastrada no editor)
     if (dizeres.length === 0 && iniciais.length === 0) {
         container.innerHTML = `
             <div class="bg-zinc-900/40 border border-zinc-900 p-4 rounded-xl space-y-2">
@@ -508,25 +546,20 @@ function _construirGradeDeCompra(dados) {
         return;
     }
 
-    // Gerar combinações cruzadas caso existam os dois tipos, ou mapeamento individual direto
     let combinacoes = [];
 
     if (dizeres.length > 0 && iniciais.length > 0) {
-        // Cruzamento Matricial Completo (Dizer + Inicial)
         dizeres.forEach(d => {
             iniciais.forEach(i => {
                 combinacoes.push(`${d} • Letra ${i}`);
             });
         });
     } else if (dizeres.length > 0) {
-        // Apenas Dizeres
-        combinacoes = decirAComunidade = [...dizeres];
+        combinacoes = [...dizeres];
     } else if (iniciais.length > 0) {
-        // Apenas Iniciais
         combinacoes = iniciais.map(i => `Letra ${i}`);
     }
 
-    // Renderização dos campos estruturados individualmente
     let html = `
         <div class="space-y-2">
             <p class="text-[10px] md:text-xs font-bold text-zinc-400 uppercase tracking-wider">Grade de Variações Disponíveis:</p>
@@ -553,7 +586,6 @@ function _construirGradeDeCompra(dados) {
     calcularTotalGeralMatriz();
 }
 
-// Manipulação segura dos campos de incremento/decremento da matriz
 function alterarInputMatriz(id, delta) {
     const input = document.getElementById(id);
     if (!input) return;
@@ -563,7 +595,6 @@ function alterarInputMatriz(id, delta) {
     calcularTotalGeralMatriz();
 }
 
-// Cálculo em tempo real da somatória de todas as quantidades da grade
 function calcularTotalGeralMatriz() {
     const inputs = document.querySelectorAll('.input-grade-qtd');
     let total = 0;
@@ -594,7 +625,6 @@ function adicionarGradeAoCarrinho() {
     const inputs = document.querySelectorAll('.input-grade-qtd');
     let itensAdicionados = 0;
 
-    // Varre todos os campos individuais injetando os itens ativos (> 0) com suas respectivas variações
     inputs.forEach(input => {
         const qtd = parseInt(input.value) || 0;
         if (qtd > 0) {

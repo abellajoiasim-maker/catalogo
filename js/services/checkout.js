@@ -1,5 +1,5 @@
 /**
- * PMA V8 - Checkout & Romaneio Service
+ * PMA V8 - Checkout & Romaneio Service (Versão Dinâmica via Firebase Settings)
  * Centraliza as regras de finalização de pedido, integração com Firebase, PDF e WhatsApp.
  */
 (() => {
@@ -10,11 +10,20 @@
     // ==========================================
     const CONFIG = {
         CHAVE_CARRINHO: 'pma_v8_carrinho_itens',
-        WHATSAPP_PADRAO: '5519999999999' // Substitua pelo seu WhatsApp comercial real
+        WHATSAPP_FALLBACK: '5519999999999' // Usado apenas se o Firebase falhar ou estiver vazio
     };
 
     // Referência ao banco de dados Firebase
-    const db = firebase.database();
+    const db = window.db || firebase.database();
+
+    // Função utilitária para obter o caminho respeitando o barramento de múltiplas lojas
+    function _obterCaminhoDB(node) {
+        if (typeof window.getAbellaPath === 'function') {
+            return window.getAbellaPath(node);
+        }
+        const root = window.ABELLA_DB_ROOT || 'abella';
+        return node ? `${root}/${node}` : root;
+    }
 
     // ==========================================
     // 2. FUNÇÕES AUXILIARES / INTERNAS
@@ -33,7 +42,6 @@
         localStorage.removeItem(CONFIG.CHAVE_CARRINHO);
     }
 
-    // Formatações utilitárias locais usando os scripts globais de ajuda (money.js, peso.js) se disponíveis
     function _formatarMoeda(valor) {
         return typeof formatarMoeda === 'function' ? formatarMoeda(valor) : `R$ ${valor.toFixed(2).replace('.', ',')}`;
     }
@@ -56,7 +64,6 @@
         let pesoTotal = 0;
         let subtotal = 0;
 
-        // Limpa e renderiza os itens na barra lateral
         const listaContainer = document.getElementById('lista-itens-checkout');
         if (listaContainer) {
             listaContainer.innerHTML = '';
@@ -81,7 +88,6 @@
             });
         }
 
-        // Verifica a forma de pagamento selecionada para aplicar desconto
         const formaPagamentoInput = document.querySelector('input[name="formaPagamento"]:checked');
         const formaPagamento = formaPagamentoInput ? formaPagamentoInput.value : 'PIX';
         
@@ -89,20 +95,18 @@
         const boxDesconto = document.getElementById('box-desconto');
         
         if (formaPagamento === 'PIX') {
-            desconto = subtotal * 0.05; // Exemplo: 5% de desconto no PIX
+            desconto = subtotal * 0.05; 
             if (boxDesconto) boxDesconto.classList.remove('hidden');
         } else {
             if (boxDesconto) boxDesconto.classList.add('hidden');
         }
 
-        // Regra de frete (Exemplo: Grátis acima de R$100)
         let frete = 0;
         const resFrete = document.getElementById('res-frete');
         if (resFrete) resFrete.innerText = frete === 0 ? "Grátis" : _formatarMoeda(frete);
 
         const totalGeral = subtotal - desconto + frete;
 
-        // Injeta os valores calculados nas etiquetas do HTML
         if (document.getElementById('res-qtd')) document.getElementById('res-qtd').innerText = `${qtdTotal} pçs`;
         if (document.getElementById('res-peso')) document.getElementById('res-peso').innerText = _formatarPeso(pesoTotal);
         if (document.getElementById('res-subtotal')) document.getElementById('res-subtotal').innerText = _formatarMoeda(subtotal);
@@ -114,14 +118,11 @@
      * Gera e aciona a impressão da página preparada para o Romaneio
      */
     function gerarPDF() {
-        console.log("Iniciando geração do Romaneio/Impressão...");
         const itens = _recuperarDadosCarrinho();
-        
         if (itens.length === 0) {
             alert("O carrinho está vazio. Não é possível imprimir.");
             return;
         }
-
         window.print();
     }
 
@@ -129,9 +130,7 @@
      * Abre o modal interno injetando a lista de produtos em formato de texto/romaneio
      */
     function visualizarRomaneio() {
-        console.log("Abrindo visualização do romaneio...");
         const itens = _recuperarDadosCarrinho();
-        
         if (itens.length === 0) {
             alert("Nenhum item no carrinho para gerar romaneio.");
             return;
@@ -139,12 +138,10 @@
 
         const modal = document.getElementById('modal-romaneio');
         const conteudo = document.getElementById('conteudo-romaneio');
-        
         if (!modal || !conteudo) return;
 
-        // Montagem do layout de texto limpo para o romaneio
         let htmlRomaneio = `<div class="space-y-2 border-b border-white/10 pb-4 mb-4">
-            <p class="font-bold text-[#caa85c] text-base">ABELLA JOIAS - ROMANEIO</p>
+            <p class="font-bold text-[#caa85c] text-base">ROMANEIO DE PEDIDO</p>
             <p>Data: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
         </div>`;
 
@@ -161,33 +158,27 @@
         modal.classList.remove('hidden');
     }
 
-    /**
-     * Fecha o modal de visualização do Romaneio
-     */
     function fecharModal() {
         const modal = document.getElementById('modal-romaneio');
         if (modal) modal.classList.add('hidden');
     }
 
     /**
-     * Finaliza o pedido: Captura formulários, salva no Firebase e envia ao WhatsApp
+     * Finaliza o pedido buscando dinamicamente as configurações salvas no painel admin
      */
     async function finalizarPedido(event) {
         if (event) event.preventDefault();
-        console.log("Processando finalização do pedido...");
-
+        
         const itens = _recuperarDadosCarrinho();
         if (itens.length === 0) {
             alert("Seu carrinho está vazio!");
             return;
         }
 
-        // Captura de inputs obrigações do cliente
         const nome = document.getElementById('cli-nome')?.value.trim();
         const whats = document.getElementById('cli-whats')?.value.trim();
         const cidadeCli = document.getElementById('cli-cidade')?.value.trim();
         
-        // Dados de Entrega
         const localEnt = document.getElementById('ent-local')?.value.trim();
         const ruaEnt = document.getElementById('ent-rua')?.value.trim();
         const numEnt = document.getElementById('ent-numero')?.value.trim();
@@ -202,10 +193,27 @@
             return;
         }
 
+        // Alteração Anti-Looping / Dinâmica: Desativa o botão temporariamente para evitar cliques duplos
+        const btnFinalizar = document.querySelector('button[type="submit"]');
+        if (btnFinalizar) btnFinalizar.disabled = true;
+
         try {
-            const pedidoId = 'PED-' + Date.now();
+            // 1. Puxa dinamicamente as definições comerciais salvas pelo Painel Config
+            const configPath = _obterCaminhoDB('settings');
+            const configSnap = await db.ref(configPath).once('value');
             
-            // Estrutura do objeto para o banco do Firebase
+            let whatsappDestino = CONFIG.WHATSAPP_FALLBACK;
+            let nomeLoja = "Minha Loja";
+
+            if (configSnap.exists()) {
+                const configData = configSnap.val();
+                if (configData.whatsapp) whatsappDestino = configData.whatsapp;
+                if (configData.name) nomeLoja = configData.name;
+            }
+
+            const pedidoId = 'PED-' + Date.now();
+            const ramificacaoPedidos = _obterCaminhoDB(`pedidos/${pedidoId}`);
+            
             const dadosPedido = {
                 id: pedidoId,
                 cliente: { nome, whatsapp: whats, cidade: cidadeCli },
@@ -216,12 +224,12 @@
                 dataCriacao: new Date().toISOString()
             };
 
-            // Salva no Firebase Database sob a ramificação estruturada de pedidos
-            await db.ref(`pedidos/${pedidoId}`).set(dadosPedido);
+            // 2. Grava no Firebase
+            await db.ref(ramificacaoPedidos).set(dadosPedido);
 
-            // Montagem do texto estruturado para envio do WhatsApp
+            // 3. Montagem do texto estruturado para envio do WhatsApp
             let quebra = "\n";
-            let msgWhats = `*Novo Pedido - Abella Joias*${quebra}${quebra}`;
+            let msgWhats = `*Novo Pedido - ${nomeLoja}*${quebra}${quebra}`;
             msgWhats += `*ID:* ${pedidoId}${quebra}`;
             msgWhats += `*Cliente:* ${nome}${quebra}`;
             msgWhats += `*WhatsApp:* ${whats}${quebra}${quebra}`;
@@ -235,18 +243,16 @@
             msgWhats += `*Local de Entrega:* ${localEnt} (${cidadeEnt})${quebra}`;
             msgWhats += `*Obs:* ${observacoes}`;
 
-            let urlWhats = `https://api.whatsapp.com/send?phone=${CONFIG.WHATSAPP_PADRAO}&text=${encodeURIComponent(msgWhats)}`;
+            let urlWhats = `https://api.whatsapp.com/send?phone=${whatsappDestino}&text=${encodeURIComponent(msgWhats)}`;
 
-            // Sucesso completo: Limpa carrinho e redireciona
             _limparCarrinhoLocal();
             window.open(urlWhats, '_blank');
-            
-            // Recarrega ou redireciona a página para zerar o estado do checkout
             window.location.reload();
 
         } catch (error) {
             console.error("Erro ao salvar ou finalizar o pedido:", error);
-            alert("Ocorreu um erro técnico ao processar seu pedido no banco de dados. Tente novamente.");
+            alert("Ocorreu um erro técnico ao processar seu pedido. Tente novamente.");
+            if (btnFinalizar) btnFinalizar.disabled = false;
         }
     }
 
@@ -261,14 +267,12 @@
         fecharModal
     });
 
-    // Atalhos globais diretos para compatibilidade nativa com os seletores do seu HTML
     window.atualizarResumo = atualizarResumo;
     window.finalizarPedido = finalizarPedido;
     window.gerarPDF = gerarPDF;
     window.visualizarRomaneio = visualizarRomaneio;
     window.fecharModal = fecharModal;
 
-    // Executa a primeira renderização assim que o script carregar na tela
     document.addEventListener('DOMContentLoaded', () => {
         atualizarResumo();
     });

@@ -10,8 +10,11 @@
     // ==========================================
     const CONFIG = {
         CHAVE_CARRINHO: 'pma_v8_carrinho_itens',
-        WHATSAPP_PADRAO: '5519XXXXXXXXX' // Substitua pelo número da loja ou galvânica
+        WHATSAPP_PADRAO: '5519999999999' // Substitua pelo seu WhatsApp comercial real
     };
+
+    // Referência ao banco de dados Firebase
+    const db = firebase.database();
 
     // ==========================================
     // 2. FUNÇÕES AUXILIARES / INTERNAS
@@ -30,38 +33,144 @@
         localStorage.removeItem(CONFIG.CHAVE_CARRINHO);
     }
 
+    // Formatações utilitárias locais usando os scripts globais de ajuda (money.js, peso.js) se disponíveis
+    function _formatarMoeda(valor) {
+        return typeof formatarMoeda === 'function' ? formatarMoeda(valor) : `R$ ${valor.toFixed(2).replace('.', ',')}`;
+    }
+
+    function _formatarPeso(valor) {
+        return typeof formatarPeso === 'function' ? formatarPeso(valor) : `${valor.toFixed(2).replace('.', ',')} grs.`;
+    }
+
     // ==========================================
-    // 3. MÉTODOS CORE (LÓGICA QUE ESTAVA NO HTML)
+    // 3. MÉTODOS CORE (LÓGICA DO CHECKOUT)
     // ==========================================
-    
+
     /**
-     * Gera o PDF do Romaneio baseado nos dados atuais do checkout
+     * Calcula os totais do carrinho e atualiza os elementos do HTML
+     */
+    function atualizarResumo() {
+        const itens = _recuperarDadosCarrinho();
+        
+        let qtdTotal = 0;
+        let pesoTotal = 0;
+        let subtotal = 0;
+
+        // Limpa e renderiza os itens na barra lateral
+        const listaContainer = document.getElementById('lista-itens-checkout');
+        if (listaContainer) {
+            listaContainer.innerHTML = '';
+            
+            itens.forEach(item => {
+                qtdTotal += parseInt(item.quantidade || 0);
+                pesoTotal += parseFloat(item.pesoTotal || 0);
+                subtotal += parseFloat(item.subtotal || 0);
+
+                listaContainer.innerHTML += `
+                    <div class="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl">
+                        <img src="${item.imagem || 'img/sem-foto.jpg'}" class="w-12 h-12 rounded-xl object-cover shrink-0 border border-white/10">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-xs font-bold text-zinc-200 truncate">${item.nome || 'Produto'}</h4>
+                            <p class="text-[10px] text-zinc-500 mt-0.5">${item.quantidade} pçs • ${_formatarPeso(parseFloat(item.pesoTotal))}</p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-xs font-black text-[#caa85c]">${_formatarMoeda(parseFloat(item.subtotal))}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Verifica a forma de pagamento selecionada para aplicar desconto
+        const formaPagamentoInput = document.querySelector('input[name="formaPagamento"]:checked');
+        const formaPagamento = formaPagamentoInput ? formaPagamentoInput.value : 'PIX';
+        
+        let desconto = 0;
+        const boxDesconto = document.getElementById('box-desconto');
+        
+        if (formaPagamento === 'PIX') {
+            desconto = subtotal * 0.05; // Exemplo: 5% de desconto no PIX
+            if (boxDesconto) boxDesconto.classList.remove('hidden');
+        } else {
+            if (boxDesconto) boxDesconto.classList.add('hidden');
+        }
+
+        // Regra de frete (Exemplo: Grátis acima de R$100)
+        let frete = 0;
+        const resFrete = document.getElementById('res-frete');
+        if (resFrete) resFrete.innerText = frete === 0 ? "Grátis" : _formatarMoeda(frete);
+
+        const totalGeral = subtotal - desconto + frete;
+
+        // Injeta os valores calculados nas etiquetas do HTML
+        if (document.getElementById('res-qtd')) document.getElementById('res-qtd').innerText = `${qtdTotal} pçs`;
+        if (document.getElementById('res-peso')) document.getElementById('res-peso').innerText = _formatarPeso(pesoTotal);
+        if (document.getElementById('res-subtotal')) document.getElementById('res-subtotal').innerText = _formatarMoeda(subtotal);
+        if (document.getElementById('res-desconto')) document.getElementById('res-desconto').innerText = `- ${_formatarMoeda(desconto)}`;
+        if (document.getElementById('res-total')) document.getElementById('res-total').innerText = _formatarMoeda(totalGeral);
+    }
+
+    /**
+     * Gera e aciona a impressão da página preparada para o Romaneio
      */
     function gerarPDF() {
-        console.log("Iniciando geração do PDF do Romaneio...");
+        console.log("Iniciando geração do Romaneio/Impressão...");
         const itens = _recuperarDadosCarrinho();
         
         if (itens.length === 0) {
-            alert("O carrinho está vazio. Não é possível gerar o PDF.");
+            alert("O carrinho está vazio. Não é possível imprimir.");
             return;
         }
 
-        // TODO: Insira aqui a sua lógica de montagem do PDF/Layout de impressão 
-        // (Ajuste do layout de impressão que evita cortes no botão e formata moedas BR)
-        
-        window.print(); // Executa a impressão do layout preparado
+        window.print();
     }
 
     /**
-     * Abre a janela ou modal de visualização prévia do Romaneio impresso
+     * Abre o modal interno injetando a lista de produtos em formato de texto/romaneio
      */
     function visualizarRomaneio() {
         console.log("Abrindo visualização do romaneio...");
-        // TODO: Lógica para abrir o modal ou a janela de impressão com os dados injetados
+        const itens = _recuperarDadosCarrinho();
+        
+        if (itens.length === 0) {
+            alert("Nenhum item no carrinho para gerar romaneio.");
+            return;
+        }
+
+        const modal = document.getElementById('modal-romaneio');
+        const conteudo = document.getElementById('conteudo-romaneio');
+        
+        if (!modal || !conteudo) return;
+
+        // Montagem do layout de texto limpo para o romaneio
+        let htmlRomaneio = `<div class="space-y-2 border-b border-white/10 pb-4 mb-4">
+            <p class="font-bold text-[#caa85c] text-base">ABELLA JOIAS - ROMANEIO</p>
+            <p>Data: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        </div>`;
+
+        itens.forEach((item, index) => {
+            htmlRomaneio += `
+                <div class="flex justify-between py-1 border-b border-white/5 text-xs">
+                    <span>${String(index + 1).padStart(2, '0')}. ${item.nome} (x${item.quantidade})</span>
+                    <span class="text-[#caa85c]">${_formatarMoeda(parseFloat(item.subtotal))}</span>
+                </div>
+            `;
+        });
+
+        conteudo.innerHTML = htmlRomaneio;
+        modal.classList.remove('hidden');
     }
 
     /**
-     * Finaliza o pedido: Salva no Firebase, gera a mensagem e direciona para o WhatsApp
+     * Fecha o modal de visualização do Romaneio
+     */
+    function fecharModal() {
+        const modal = document.getElementById('modal-romaneio');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    /**
+     * Finaliza o pedido: Captura formulários, salva no Firebase e envia ao WhatsApp
      */
     async function finalizarPedido(event) {
         if (event) event.preventDefault();
@@ -73,39 +182,95 @@
             return;
         }
 
+        // Captura de inputs obrigações do cliente
+        const nome = document.getElementById('cli-nome')?.value.trim();
+        const whats = document.getElementById('cli-whats')?.value.trim();
+        const cidadeCli = document.getElementById('cli-cidade')?.value.trim();
+        
+        // Dados de Entrega
+        const localEnt = document.getElementById('ent-local')?.value.trim();
+        const ruaEnt = document.getElementById('ent-rua')?.value.trim();
+        const numEnt = document.getElementById('ent-numero')?.value.trim();
+        const bairroEnt = document.getElementById('ent-bairro')?.value.trim();
+        const cidadeEnt = document.getElementById('ent-cidade')?.value.trim();
+        
+        const formaPagamento = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
+        const observacoes = document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma';
+
+        if (!nome || !whats || !cidadeCli || !localEnt || !ruaEnt || !numEnt || !bairroEnt || !cidadeEnt) {
+            alert("Por favor, preencha todos os campos obrigatórios marcados com *");
+            return;
+        }
+
         try {
-            // 1. Capturar dados do formulário de checkout (Nome, Galvanica, Frete, etc.)
-            // 2. Salvar o nó do pedido no Firebase isolado da loja correspondente
-            // 3. Construir o texto formatado para o WhatsApp
+            const pedidoId = 'PED-' + Date.now();
             
-            let textoWhats = encodeURIComponent("Olá! Segue meu pedido gerado pelo catálogo...");
-            let urlWhats = `https://api.whatsapp.com/send?phone=${CONFIG.WHATSAPP_PADRAO}&text=${textoWhats}`;
+            // Estrutura do objeto para o banco do Firebase
+            const dadosPedido = {
+                id: pedidoId,
+                cliente: { nome, whatsapp: whats, cidade: cidadeCli },
+                entrega: { local: localEnt, rua: ruaEnt, numero: numEnt, bairro: bairroEnt, cidade: cidadeEnt },
+                pagamento: formaPagamento,
+                observacoes: observacoes,
+                itens: itens,
+                dataCriacao: new Date().toISOString()
+            };
 
-            // Limpa o carrinho após o sucesso total
+            // Salva no Firebase Database sob a ramificação estruturada de pedidos
+            await db.ref(`pedidos/${pedidoId}`).set(dadosPedido);
+
+            // Montagem do texto estruturado para envio do WhatsApp
+            let quebra = "\n";
+            let msgWhats = `*Novo Pedido - Abella Joias*${quebra}${quebra}`;
+            msgWhats += `*ID:* ${pedidoId}${quebra}`;
+            msgWhats += `*Cliente:* ${nome}${quebra}`;
+            msgWhats += `*WhatsApp:* ${whats}${quebra}${quebra}`;
+            msgWhats += `*--- ITENS DO PEDIDO ---*${quebra}`;
+            
+            itens.forEach(item => {
+                msgWhats += `- ${item.quantidade}x ${item.nome} | ${_formatarMoeda(parseFloat(item.subtotal))}${quebra}`;
+            });
+
+            msgWhats += `${quebra}*Forma de Pagto:* ${formaPagamento}${quebra}`;
+            msgWhats += `*Local de Entrega:* ${localEnt} (${cidadeEnt})${quebra}`;
+            msgWhats += `*Obs:* ${observacoes}`;
+
+            let urlWhats = `https://api.whatsapp.com/send?phone=${CONFIG.WHATSAPP_PADRAO}&text=${encodeURIComponent(msgWhats)}`;
+
+            // Sucesso completo: Limpa carrinho e redireciona
             _limparCarrinhoLocal();
-
-            // Redireciona para o WhatsApp
             window.open(urlWhats, '_blank');
+            
+            // Recarrega ou redireciona a página para zerar o estado do checkout
+            window.location.reload();
 
         } catch (error) {
             console.error("Erro ao salvar ou finalizar o pedido:", error);
-            alert("Ocorreu um erro ao processar seu pedido. Tente novamente.");
+            alert("Ocorreu um erro técnico ao processar seu pedido no banco de dados. Tente novamente.");
         }
     }
 
     // ==========================================
     // 4. EXPOSIÇÃO SEGURA PARA O ESCOPO GLOBAL
     // ==========================================
-    // Mapeia as funções no objeto window para que os atributos `onclick` do HTML funcionem perfeitamente.
     window.checkoutService = Object.freeze({
+        atualizarResumo,
         finalizarPedido,
         gerarPDF,
-        visualizarRomaneio
+        visualizarRomaneio,
+        fecharModal
     });
 
-    // Atalhos globais diretos (opcional, para manter compatibilidade com onclick="finalizarPedido()")
+    // Atalhos globais diretos para compatibilidade nativa com os seletores do seu HTML
+    window.atualizarResumo = atualizarResumo;
     window.finalizarPedido = finalizarPedido;
     window.gerarPDF = gerarPDF;
     window.visualizarRomaneio = visualizarRomaneio;
+    window.fecharModal = fecharModal;
+
+    // Executa a primeira renderização assim que o script carregar na tela
+    document.addEventListener('DOMContentLoaded', () => {
+        atualizarResumo();
+    });
 
 })();

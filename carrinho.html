@@ -249,18 +249,31 @@
         let configGlobal = {};
         const INSTANCE_FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
 
-        // Mapeamento polimórfico de formatação de peso utilizando PesoUtils ou Fallback Nativo
+       // Mapeamento polimórfico e inteligente de formatação de peso (Abaixo de 1000g = grs | Acima = Kg)
         window.formatarPeso = function(peso) {
             const p = parseFloat(peso) || 0;
+            
+            // Se o PesoUtils global existir e tiver uma regra própria, tentamos usá-lo primeiro
             if (typeof PesoUtils !== 'undefined' && typeof PesoUtils.formatar === 'function') {
                 return PesoUtils.formatar(p);
             }
-            return new Intl.NumberFormat('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(p);
+            
+            // Regra de segurança PMA V8 (Garante o comportamento caso o peso.js não aplique o sufixo)
+            if (p < 1000) {
+                const pesoFormatado = new Intl.NumberFormat('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(p);
+                return `${pesoFormatado} grs.`;
+            } else {
+                const pesoEmKg = p / 1000;
+                const pesoFormatado = new Intl.NumberFormat('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(pesoEmKg);
+                return `${pesoFormatado} Kg.`;
+            }
         };
-
         function resolverImagemFirebase(url) {
             try {
                 if (!url) return INSTANCE_FALLBACK_IMG;
@@ -379,7 +392,7 @@
                                 </div>
                                 ${variacaoHtml}
                                 <p class="text-zinc-500 text-xs mt-1">Ref: ${limpoId} | Unitário: ${txtUnitario}</p>
-                                <p class="text-zinc-400 text-xs mt-1">⚖️ Peso Total: <span class="text-zinc-300 font-medium">${pesoTotalItem}g</span></p>
+                                <p class="text-zinc-400 text-xs mt-1">⚖️ Peso Total: <span class="text-zinc-300 font-medium">${pesoTotalItem}</span></p>
                             </div>
 
                             <div class="flex items-center bg-zinc-950 rounded-xl border border-zinc-800 p-1 flex-shrink-0 gap-1 my-2 sm:my-0">
@@ -488,7 +501,9 @@
             const descuentoTotal = Math.max(0, subtotalBruto - totalFinal);
 
             if(document.getElementById('resumo-itens')) document.getElementById('resumo-itens').innerText = totalItens;
-            if(document.getElementById('resumo-peso')) document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso) + 'g';
+            if(document.getElementById('resumo-peso')) {
+    document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso);
+}
             
             if (typeof money !== 'undefined') {
                 if(document.getElementById('resumo-subtotal')) document.getElementById('resumo-subtotal').innerText = money.formatar(subtotalBruto);

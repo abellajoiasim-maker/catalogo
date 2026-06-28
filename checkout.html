@@ -780,8 +780,8 @@
             window.print();
         }
 
-     // =====================================================
-        // SALVAMENTO NO FIREBASE E ENVIO DE MENSAGEM VIA WHATSAPP
+    // =====================================================
+        // SALVAMENTO NO FIREBASE E ENVIO DE MENSAGEM VIA WHATSAPP (CORRIGIDO)
         // =====================================================
         async function finalizarPedido() {
             const dados = carregarDadosEstruturados();
@@ -798,28 +798,43 @@
             }
 
             try {
-                // 1. Construção do Payload para salvar no Banco de Dados
+                // Captura os valores limpos dos inputs
+                const nomeCliente = document.getElementById('cli-nome').value.trim();
+                const whatsCliente = document.getElementById('cli-whats').value.trim();
+                const cidadeCliente = document.getElementById('cli-cidade')?.value.trim() || 'Limeira - SP';
+                const localEntrega = document.getElementById('ent-local')?.value.trim() || '';
+
+                // 1. Construção do Payload Normalizado para o painel de pedidos ler sem erros
                 const payload = {
-                    cliente: document.getElementById('cli-nome').value.trim(),
-                    whatsapp: document.getElementById('cli-whats').value.trim(),
-                    documento: document.getElementById('cli-documento')?.value.trim() || '',
-                    
-                    entrega: {
-                        cep: document.getElementById('ent-cep')?.value.trim() || '',
-                        rua: document.getElementById('ent-rua').value.trim(),
-                        numero: document.getElementById('ent-numero').value.trim(),
-                        bairro: document.getElementById('ent-bairro').value.trim(),
-                        cidade: document.getElementById('ent-cidade').value.trim(),
-                        uf: document.getElementById('ent-uf')?.value || ''
+                    // Propriedades na raiz mapeadas pelo pedidos.html
+                    cliente: nomeCliente,
+                    nome: nomeCliente,
+                    whats: whatsCliente,
+                    whatsapp: whatsCliente,
+                    contato: whatsCliente,
+                    cidade: cidadeCliente,
+                    entrega: localEntrega, // Vincula o local à propriedade mapeada no modal
+
+                    // Detalhes estruturados do endereço físico
+                    enderecoCompleto: {
+                        rua: document.getElementById('ent-rua')?.value.trim() || '',
+                        numero: document.getElementById('ent-numero')?.value.trim() || '',
+                        bairro: document.getElementById('ent-bairro')?.value.trim() || '',
+                        cidade: document.getElementById('ent-cidade')?.value.trim() || ''
                     },
 
-                    observacoes: document.getElementById('obs-pedido').value.trim(),
+                    observacoes: document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma',
                     formaPagamento: dados.form.formaPag,
+                    
+                    // Salva as duas variações de array esperadas pelo painel
                     itens: dados.itens, 
+                    produtos: dados.itens,
 
+                    // Financeiro e Metadados
                     subtotal: dados.calculos.subtotal,
                     desconto: dados.calculos.desconto,
                     total: dados.calculos.total,
+                    valorTotal: dados.calculos.total, // Duplicado para compatibilidade de fallback
                     totalPecas: dados.calculos.pecas,
                     pesoTotal: parseFloat(dados.calculos.peso.toFixed(2)),
                     
@@ -828,31 +843,40 @@
                     timestamp: Date.now()
                 };
 
-                // 2. Gravação no Firebase Realtime Database
-                const ref = await db.ref('abella/orders').push(payload);
+                // 2. Gravação no nó correto do Firebase Realtime Database
+                if (!window.db) {
+                    throw new Error("Instância global do Firebase (window.db) não inicializada.");
+                }
+                const ref = await window.db.ref('abella/orders').push(payload);
 
-                // 3. Limpeza do Carrinho local após persistência com sucesso
+                // Adiciona o ID gerado para consistência interna no painel legado
+                const orderKey = ref.key;
+                await window.db.ref(`abella/orders/${orderKey}`).update({
+                    idPedido: 'PED-' + orderKey.slice(-6)
+                });
+
+                // 3. Limpeza do Carrinho local
                 if (typeof carrinhoService !== 'undefined' && carrinhoService.limpar) {
                     carrinhoService.limpar();
                 } else {
                     localStorage.removeItem('pma_v8_carrinho_itens');
                 }
 
-                // 4. Montagem da mensagem compacta exatamente como solicitado
-                const numeroWhatsSuporte = "5519999999999"; // Substitua pelo número da loja
+                // 4. Montagem da mensagem compacta para o WhatsApp
+                const numeroWhatsSuporte = "5519999999999"; // Insira o número do suporte da Abella Joias aqui
                 
                 let txt = `Olá! Meu pedido foi realizado na *Abella Joias*\n`;
-                txt += `*ID do Pedido:* ${ref.key}\n\n`;
+                txt += `*ID do Pedido:* ${orderKey}\n\n`;
 
                 txt += `👤 *Cliente*\n`;
                 txt += `• ${payload.cliente}\n`;
                 txt += `• ${payload.whatsapp}\n`;
-                txt += `• ${dados.form.clienteCidade}\n\n`;
+                txt += `• ${payload.cidade}\n\n`;
 
                 txt += `📍 *Entrega*\n`;
-                txt += `• Local: ${dados.form.entregaLocal}\n`;
-                if(payload.entrega.rua) {
-                    txt += `• Endereço: ${payload.entrega.rua}, Nº ${payload.entrega.numero} - ${payload.entrega.bairro}, ${payload.entrega.cidade}\n\n`;
+                txt += `• Local: ${payload.entrega}\n`;
+                if(payload.enderecoCompleto.rua) {
+                    txt += `• Endereço: ${payload.enderecoCompleto.rua}, Nº ${payload.enderecoCompleto.numero} - ${payload.enderecoCompleto.bairro}, ${payload.enderecoCompleto.cidade}\n\n`;
                 } else {
                     txt += `\n`;
                 }

@@ -617,46 +617,61 @@ function fecharModalProduto() {
 // ================================================================
 // PERSISTÊNCIA NO CARRINHO
 // ================================================================
-async function adicionarGradeAoCarrinho() {
+function adicionarGradeAoCarrinho() {
     if (!produtoAtual) return;
 
-    try {
-        let itensParaAdicionar = [];
-
-        if (typeof obterDadosDaMatriz === 'function') {
-            itensParaAdicionar = obterDadosDaMatriz();
-        } else {
-            const inputs = document.querySelectorAll('.input-grade-qtd');
-            inputs.forEach(input => {
-                const qtd = parseInt(input.value) || 0;
-                if (qtd > 0) {
-                    itensParaAdicionar.push({
-                        variacao: input.getAttribute('data-variacao-nome') || '',
-                        qtd: qtd
-                    });
-                }
-            });
-        }
-
-        if (itensParaAdicionar.length === 0) {
-            alert('Por favor, informe a quantidade desejada antes de adicionar.');
-            return;
-        }
-
-        for (const item of itensParaAdicionar) {
-            await carrinhoService.adicionar({
-                ...produtoAtual,
-                variacaoSelecionada: item.variacao,
-                quantidade: item.qtd
-            });
-        }
-
-        fecharModalProduto();
-        atualizarMiniCarrinho();
-        if (typeof renderizarProdutos === 'function') renderizarProdutos();
-    } catch (err) {
-        console.error('Erro ao injetar item no carrinho:', err);
+    if (typeof carrinhoService === 'undefined' || typeof carrinhoService.adicionar !== 'function') {
+        alert('Serviço de carrinho não disponível.');
+        return;
     }
+
+    // Coleta todos os inputs da grade com quantidade > 0
+    const inputs = document.querySelectorAll('.input-grade-qtd');
+    const itensParaAdicionar = [];
+
+    inputs.forEach(input => {
+        const qtd = parseInt(input.value) || 0;
+        if (qtd > 0) {
+            itensParaAdicionar.push({
+                variacao: input.getAttribute('data-variacao-nome') || '',
+                qtd: qtd
+            });
+        }
+    });
+
+    if (itensParaAdicionar.length === 0) {
+        alert('Por favor, informe a quantidade desejada em pelo menos uma variação.');
+        return;
+    }
+
+    // Monta o objeto produto com todos os campos que o carrinhoService precisa
+    const produtoParaCarrinho = {
+        id:          produtoAtual.id          || produtoAtual.codigo || produtoAtual.sku || '',
+        codigo:      produtoAtual.codigo      || produtoAtual.sku    || produtoAtual.id  || '',
+        sku:         produtoAtual.sku         || produtoAtual.codigo || produtoAtual.id  || '',
+        nome:        produtoAtual.nome        || produtoAtual.name   || '',
+        name:        produtoAtual.nome        || produtoAtual.name   || '',
+        preco:       parseFloat(produtoAtual.preco  || produtoAtual.price      || produtoAtual.precoFinal || 0),
+        peso:        parseFloat(produtoAtual.peso   || produtoAtual.weight     || 0),
+        image:       produtoAtual.image       || produtoAtual.imagem || '',
+        imagem:      produtoAtual.imagem      || produtoAtual.image  || '',
+        category:    produtoAtual.categoriaId || produtoAtual.category    || produtoAtual.categoria    || '',
+        subcategory: produtoAtual.subcategoriaId || produtoAtual.subcategory || produtoAtual.subcategoria || ''
+    };
+
+    if (!produtoParaCarrinho.id) {
+        console.error('[PMA V8] Produto sem ID válido, cancelando adição.', produtoAtual);
+        alert('Erro: produto sem identificador. Recarregue a página e tente novamente.');
+        return;
+    }
+
+    // Adiciona cada variação como linha separada — carrinhoService.adicionar(produto, qtd, variacao)
+    itensParaAdicionar.forEach(item => {
+        carrinhoService.adicionar(produtoParaCarrinho, item.qtd, item.variacao);
+    });
+
+    atualizarMiniCarrinho();
+    fecharModalProduto();
 }
 
 // Escuta em tempo real da barra de pesquisa por SKU ou Nome

@@ -239,6 +239,7 @@
 <script src="js/services/carrinhoService.js"></script>
 <script src="js/services/produtoService.js"></script>
 <script src="js/utils/image-helper.js"></script>
+<script src="js/components/modalProduto.js"></script>
 
 <script>
 // ================================================================
@@ -260,17 +261,18 @@ function normalizarTexto(texto) {
 
 function getProduto(p) {
     return {
+        id:          p.id          || p.codigo      || p.sku        || '',
         nome:        p.name        || p.nome        || 'Produto',
-        sku:         p.sku         || '',
+        sku:         p.sku         || p.codigo      || '',
         descricao:   p.description || p.descricao   || '',
         preco:       parseFloat(p.precoFinal || p.price || p.preco || 0),
         peso:        p.peso        || p.weight       || 0,
         imagem:      p.image       || p.imagem       || '',
-        categoria:   p.category    || p.categoria    || '',
-        subcategoria: p.subcategory || p.subCategory || p.subcategoria || '',
+        categoriaId: p.category    || p.categoria    || p.categoriaId || '',
+        subcategoriaId: p.subcategory || p.subCategory || p.subcategoria || '',
         dizeres:     Array.isArray(p.dizeres)  ? p.dizeres  : (Array.isArray(p.sayings)  ? p.sayings  : []),
         iniciais:    Array.isArray(p.iniciais) ? p.iniciais : (Array.isArray(p.initials) ? p.initials : []),
-        paused:      p.paused === true
+        paused:      p.paused === true || p.ativo === false
     };
 }
 
@@ -349,39 +351,39 @@ async function carregarProdutos() {
 
         let todos = null;
 
-        // 1ª TENTATIVA: Invocar o serviço de forma isolada e segura
         try {
             if (typeof produtoService !== 'undefined' && typeof produtoService.listarTodos === 'function') {
-                // Força a execução isolando o escopo do microsserviço
                 todos = await produtoService.listarTodos();
             }
         } catch (cacheErr) {
             console.warn('[PMA V8] Falha ao gravar no cache interno do produtoService. Ativando contingência.');
         }
 
-        // 2ª TENTATIVA (FALLBACK): Se o método falhou ou retornou vazio por causa do freeze
         if (!todos || !Array.isArray(todos) || Object.keys(todos).length === 0) {
             console.log('[PMA V8] Buscando dados diretamente da referência estável do Firebase Realtime DB...');
-            // Acessa diretamente o nó do Firebase para garantir que a página não fique em branco
             const snapProds = await db.ref('abella/products').once('value');
             if (snapProds.exists()) {
                 const dadosBrutos = snapProds.val() || {};
-                todos = Object.values(dadosBrutos);
+                // Preserva as chaves do Firebase injetando como ID caso venha em formato de Objeto Map
+                todos = Object.keys(dadosBrutos).map(key => {
+                    if (typeof dadosBrutos[key] === 'object') {
+                        dadosBrutos[key].id = key;
+                    }
+                    return dadosBrutos[key];
+                });
             }
         }
 
-        // Garantia estrutural de que temos uma lista válida
         if (!todos) todos = [];
         if (!Array.isArray(todos)) todos = Object.values(todos);
 
-        // Processamento e Filtragem dos produtos ativos
-        produtos = todos.filter(p => {
+        produtos = todos.map(p => getProduto(p)).filter(p => {
             if (!p || p.paused === true) return false;
             if (!categoria) return true;
-            const catProd = normalizarTexto(p.category || p.categoria || p.categorySlug || '');
+            const catProd = normalizarTexto(p.categoriaId || '');
             if (catProd !== categoria) return false;
             if (!subcategoria) return true;
-            const subProd = normalizarTexto(p.subcategory || p.subCategory || p.subcategoria || p.subcategorySlug || '');
+            const subProd = normalizarTexto(p.subcategoriaId || '');
             return subProd === subcategoria || subProd.includes(subcategoria) || subcategoria.includes(subProd);
         });
 
@@ -398,6 +400,7 @@ async function carregarProdutos() {
         if (loading) loading.innerHTML = 'Erro ao carregar catálogo. Por favor, recarregue a página.';
     }
 }
+
 // ================================================================
 // RENDERIZAR GRID DE PRODUTOS
 // ================================================================
@@ -412,12 +415,11 @@ function renderizarProdutos() {
     }
 
     produtosFiltrados.forEach((prod, index) => {
-        const dados    = getProduto(prod);
-        const imgUrl   = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(dados.imagem) : (dados.imagem || INSTANCE_FALLBACK_IMG);
-        const precoFmt = typeof money !== 'undefined' ? money.formatar(dados.preco) : 'R$ ' + dados.preco.toFixed(2);
+        const imgUrl   = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(prod.imagem) : (prod.imagem || INSTANCE_FALLBACK_IMG);
+        const precoFmt = typeof money !== 'undefined' ? money.formatar(prod.preco) : 'R$ ' + prod.preco.toFixed(2);
 
-        const temDizeres  = dados.dizeres.length  > 0;
-        const temIniciais = dados.iniciais.length > 0;
+        const temDizeres  = prod.dizeres.length  > 0;
+        const temIniciais = prod.iniciais.length > 0;
         const badgesHtml  = (temDizeres || temIniciais) ? `
             <div class="flex gap-1 mt-1 flex-wrap">
                 ${temDizeres  ? `<span class="text-[8px] bg-zinc-900 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-800">✍️ Variações</span>`  : ''}
@@ -429,11 +431,11 @@ function renderizarProdutos() {
         card.innerHTML = `
             <div class="cursor-pointer" onclick="abrirModalProduto(${index})">
                 <div class="aspect-square w-full overflow-hidden bg-zinc-950 rounded-xl relative">
-                    <img src="${imgUrl}" class="w-full h-full object-cover" alt="${dados.nome}" loading="lazy" onerror="this.src='${INSTANCE_FALLBACK_IMG}'">
+                    <img src="${imgUrl}" class="w-full h-full object-cover" alt="${prod.nome}" loading="lazy" onerror="this.src='${INSTANCE_FALLBACK_IMG}'">
                 </div>
                 <div class="pt-2 px-1">
-                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-mono truncate">${dados.sku || 'Premium'}</p>
-                    <h3 class="text-zinc-200 font-medium tracking-tight text-xs md:text-sm mt-0.5 line-clamp-2 min-h-[2rem] md:min-h-[2.5rem] leading-snug">${dados.nome}</h3>
+                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-mono truncate">${prod.sku || 'Premium'}</p>
+                    h3 class="text-zinc-200 font-medium tracking-tight text-xs md:text-sm mt-0.5 line-clamp-2 min-h-[2rem] md:min-h-[2.5rem] leading-snug">${prod.nome}</h3>
                     ${badgesHtml}
                 </div>
             </div>
@@ -460,7 +462,7 @@ function iniciarBusca() {
     input.addEventListener('input', (e) => {
         const termo = normalizarTexto(e.target.value);
         produtosFiltrados = !termo ? [...produtos] : produtos.filter(p => {
-            return normalizarTexto(p.name || p.nome).includes(termo) || normalizarTexto(p.sku).includes(termo);
+            return normalizarTexto(p.nome).includes(termo) || normalizarTexto(p.sku).includes(termo);
         });
         renderizarProdutos();
     });
@@ -474,19 +476,8 @@ function atualizarMiniCarrinho() {
         const el = document.getElementById('cart-count');
         if (!el) return;
 
-        if (typeof carrinhoService !== 'undefined') {
-            // CORREÇÃO: Tratamento polimórfico adaptado para mapear métodos alternativos do barramento do carrinho
-            if (typeof carrinhoService.obterResumo === 'function') {
-                el.innerText = carrinhoService.obterResumo().totalPecas || 0;
-            } else if (typeof carrinhoService.obterItens === 'function') {
-                const itens = carrinhoService.obterItens() || [];
-                const total = itens.reduce((acc, curr) => acc + (parseInt(curr.quantidade || curr.qtd) || 0), 0);
-                el.innerText = total;
-            } else if (typeof carrinhoService.obterCarrinho === 'function') {
-                const carrinhoData = carrinhoService.obterCarrinho() || {};
-                const itens = carrinhoData.itens || [];
-                el.innerText = itens.reduce((acc, curr) => acc + (parseInt(curr.quantidade || curr.qtd) || 0), 0);
-            }
+        if (typeof carrinhoService !== 'undefined' && typeof carrinhoService.obterContagem === 'function') {
+            el.innerText = carrinhoService.obterContagem() || 0;
         }
     } catch(e) { 
         console.warn('Metadados do mini carrinho em processamento local:', e); 
@@ -500,18 +491,18 @@ function abrirModalProduto(index) {
     const produto = produtosFiltrados[index];
     if (!produto) return;
     produtoAtual = produto;
+    window.produtoAtual = produto; // Mantém sincronizado no escopo global para o modalProduto.js
 
-    const dados      = getProduto(produto);
-    const imgSrc     = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(dados.imagem) : (dados.imagem || INSTANCE_FALLBACK_IMG);
-    const precoFmt   = typeof money !== 'undefined' ? money.formatar(dados.preco) : 'R$ ' + dados.preco.toFixed(2);
-    const valorPix   = dados.preco - (dados.preco * (descontoPixGlobal || 0) / 100);
+    const imgSrc     = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(produto.imagem) : (produto.imagem || INSTANCE_FALLBACK_IMG);
+    const precoFmt   = typeof money !== 'undefined' ? money.formatar(produto.preco) : 'R$ ' + produto.preco.toFixed(2);
+    const valorPix   = produto.preco - (produto.preco * (descontoPixGlobal || 0) / 100);
     const pixFmt     = typeof money !== 'undefined' ? money.formatar(valorPix) : 'R$ ' + valorPix.toFixed(2);
 
-    document.getElementById('modalNome').innerText      = dados.nome;
-    document.getElementById('modalSku').innerText       = 'Ref: ' + (dados.sku || '-');
-    document.getElementById('modalPreco').innerText     = precoFmt;
-    document.getElementById('modalPeso').innerText      = dados.peso + ' g';
-    document.getElementById('modalDescricao').innerText = dados.descricao || 'Sem descrição adicional disponível.';
+    document.getElementById('modalNome').innerText = produto.nome;
+    document.getElementById('modalSku').innerText = 'Ref: ' + (produto.sku || '-');
+    document.getElementById('modalPreco').innerText = precoFmt;
+    document.getElementById('modalPeso').innerText = produto.peso + ' g';
+    document.getElementById('modalDescricao').innerText = produto.descricao || 'Sem descrição adicional disponível.';
     
     const mImg = document.getElementById('modalImagem');
     if (mImg) {
@@ -522,7 +513,7 @@ function abrirModalProduto(index) {
     const modalPix = document.getElementById('modalPix');
     if (modalPix) modalPix.innerText = pixFmt;
 
-    _construirGradeDeCompra(dados);
+    _construirGradeDeCompra(produto);
 
     const modal = document.getElementById('modalProduto');
     if (modal) modal.classList.remove('hidden');
@@ -615,39 +606,14 @@ function fecharModalProduto() {
     const modal = document.getElementById('modalProduto');
     if (modal) modal.classList.add('hidden');
     produtoAtual = null;
+    window.produtoAtual = null;
 }
 
-// ================================================================
-// INJEÇÃO DA GRADE NO CARRINHO COMPATÍVEL
-// ================================================================
-function adicionarGradeAoCarrinho() {
-    if (!produtoAtual) return;
-
-    if (typeof carrinhoService === 'undefined' || typeof carrinhoService.adicionar !== 'function') {
-        alert('Infraestrutura de carrinho não identificada no escopo local.');
-        return;
-    }
-
-    const inputs = document.querySelectorAll('.input-grade-qtd');
-    let itensAdicionados = 0;
-
-    inputs.forEach(input => {
-        const qtd = parseInt(input.value) || 0;
-        if (qtd > 0) {
-            const labelVariacao = input.getAttribute('data-variacao-nome') || '';
-            carrinhoService.adicionar(produtoAtual, qtd, labelVariacao);
-            itensAdicionados++;
-        }
-    });
-
-    if (itensAdicionados === 0) {
-        alert('Por favor, insira a quantidade desejada em pelo menos um item da grade.');
-        return;
-    }
-
-    atualizarMiniCarrinho();
-    fecharModalProduto();
-}
+// Exõe a função matricial globalmente para conformidade estável com modalProduto.js
+window._construirGradeDeCompra = _construirGradeDeCompra;
+window.abrirModalProduto = abrirModalProduto;
+window.fecharModalProduto = fecharModalProduto;
+window.atualizarMiniCarrinho = atualizarMiniCarrinho;
 
 // ================================================================
 // DOM READY INITIALIZATION

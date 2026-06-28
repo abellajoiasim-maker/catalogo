@@ -251,6 +251,9 @@ async function salvarConfiguracoesGlobais() {
   }
 }
     
+// ============================================================
+  // UTILITÁRIOS GLOBAIS E CONFIGURAÇÃO (ABELLA JOIAS)
+  // ============================================================
   function resolverDB() {
     if (window.db) return window.db;
     if (window.firebase && window.firebase.apps && window.firebase.apps.length > 0)
@@ -273,7 +276,7 @@ async function salvarConfiguracoesGlobais() {
     firebaseRetryDelay: 100
   };
 
-  // Camada de compatibilidade de campos do banco
+  // Camada unificada de compatibilidade de campos da Abella Joias
   const DataService = {
     getSubcategory(obj) { return obj?.subcategory ?? obj?.subCategory ?? ''; },
     getImage(obj)       { return obj?.imagem ?? obj?.image ?? obj?.img ?? ''; },
@@ -283,6 +286,11 @@ async function salvarConfiguracoesGlobais() {
     getDizeres(obj)     { return Array.isArray(obj?.dizeres) ? obj.dizeres : (Array.isArray(obj?.sayings) ? obj.sayings : []); },
     getIniciais(obj)    { return Array.isArray(obj?.iniciais) ? obj.iniciais : (Array.isArray(obj?.initials) ? obj.initials : []); }
   };
+
+  // Força o caminho fixo da Abella Joias eliminando conflitos de rotas multifrontend
+  function obterCaminhoBanco(no) {
+    return 'abella/' + no;
+  }
 
   function setStatus(msg, type = 'info') {
     const color = type === 'error' ? 'text-red-400' : type === 'ok' ? 'text-green-400' : 'text-zinc-500';
@@ -341,14 +349,8 @@ async function salvarConfiguracoesGlobais() {
     if (preview) { preview.src = valor; preview.style.opacity = '1'; }
   }
 
-  function handleImageError(img) {
-    img.style.opacity = '0';
-    const fallback = img.parentNode?.querySelector('.fallback-container');
-    if (fallback) fallback.style.display = 'flex';
-  }
-
   // ============================================================
-  // DRAWER
+  // DRAWER LATERAL
   // ============================================================
   function abrirDrawer(titulo, html) {
     document.getElementById('drawerTitle').textContent = titulo;
@@ -361,6 +363,12 @@ async function salvarConfiguracoesGlobais() {
     document.getElementById('drawerContent').innerHTML = '';
   }
 
+  function handleImageError(img) {
+    img.style.opacity = '0';
+    const fallback = img.parentNode?.querySelector('.fallback-container');
+    if (fallback) fallback.style.display = 'flex';
+  }
+
   // ============================================================
   // TAGS DE VARIAÇÕES (Dizeres / Iniciais)
   // ============================================================
@@ -368,17 +376,15 @@ async function salvarConfiguracoesGlobais() {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Se o valor tiver vírgula, expande em múltiplos itens
     const valores = String(valor).includes(',')
       ? valor.split(',').map(v => v.trim()).filter(Boolean)
       : [String(valor).trim()].filter(Boolean);
 
     if (valores.length === 0) {
-      // Chamado pelo botão ➕ sem valor — cria input vazio
       const wrapper = document.createElement('div');
       wrapper.className = 'flex gap-2 mb-1 items-center tag-item-row';
       wrapper.innerHTML = `
-        <input type="text" class="input-dark !mb-0 flex-1 tag-value-input" value="" placeholder="Ex: DEUS, AMOR ou A, B...">
+        <input type="text" class="input-dark !mb-0 flex-1 tag-value-input" value="" placeholder="Ex: DEUS, AMOR...">
         <button type="button" onclick="this.parentNode.remove()"
                 class="shrink-0 bg-zinc-900 border border-zinc-800 text-red-400 px-3 py-2 rounded-lg hover:bg-zinc-800 text-xs font-bold">✕</button>
       `;
@@ -390,7 +396,7 @@ async function salvarConfiguracoesGlobais() {
       const wrapper = document.createElement('div');
       wrapper.className = 'flex gap-2 mb-1 items-center tag-item-row';
       wrapper.innerHTML = `
-        <input type="text" class="input-dark !mb-0 flex-1 tag-value-input" value="${escapeHtml(v)}" placeholder="Ex: DEUS ou A">
+        <input type="text" class="input-dark !mb-0 flex-1 tag-value-input" value="${escapeHtml(v)}" placeholder="Ex: DEUS">
         <button type="button" onclick="this.parentNode.remove()"
                 class="shrink-0 bg-zinc-900 border border-zinc-800 text-red-400 px-3 py-2 rounded-lg hover:bg-zinc-800 text-xs font-bold">✕</button>
       `;
@@ -399,7 +405,7 @@ async function salvarConfiguracoesGlobais() {
   }
 
   function importarVariacoes(containerId) {
-    const raw = prompt('Cole os valores separados por vírgula:\nEx: A, B, C, D   ou   DEUS, JESUS, AMOR, FÉ');
+    const raw = prompt('Cole os valores separados por vírgula:\nEx: A, B, C, D ou DEUS, AMOR, FÉ');
     if (!raw) return;
     raw.split(',').map(v => v.trim()).filter(Boolean).forEach(v => adicionarTagInput(containerId, v));
   }
@@ -411,57 +417,58 @@ async function salvarConfiguracoesGlobais() {
       .map(inp => inp.value.trim()).filter(Boolean);
   }
 
-  // HTML reutilizável das seções de variação
+  // Retorna a estrutura visual de variação para o formulário
   function htmlVariacoes(prefixo) {
     const idDiz = `${prefixo}DizeresContainer`;
     const idIni = `${prefixo}IniciaisContainer`;
     return `
       <div class="mb-3 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">✍️ Variações de Dizeres (Frases)</label>
+          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">✍️ Variações de Dizeres</label>
           <div class="flex gap-1">
-            <button type="button" onclick="importarVariacoes('${idDiz}')"
-                    class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
-            <button type="button" onclick="adicionarTagInput('${idDiz}')"
-                    class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add</button>
+            <button type="button" onclick="importarVariacoes('${idDiz}')" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
+            <button type="button" onclick="adicionarTagInput('${idDiz}')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add</button>
           </div>
         </div>
         <div id="${idDiz}" class="flex flex-col gap-1 min-h-[4px]"></div>
-        <p class="text-[10px] text-zinc-600 mt-1">Use "Importar" para colar vários de uma vez (ex: DEUS, JESUS, AMOR)</p>
       </div>
       <div class="mb-3 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">🔤 Variações de Iniciais (Letras)</label>
+          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">🔤 Variações de Iniciais</label>
           <div class="flex gap-1">
-            <button type="button" onclick="importarVariacoes('${idIni}')"
-                    class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
-            <button type="button" onclick="adicionarTagInput('${idIni}')"
-                    class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add</button>
+            <button type="button" onclick="importarVariacoes('${idIni}')" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
+            <button type="button" onclick="adicionarTagInput('${idIni}')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-800 font-bold">➕ Add</button>
           </div>
         </div>
         <div id="${idIni}" class="flex flex-col gap-1 min-h-[4px]"></div>
-        <p class="text-[10px] text-zinc-600 mt-1">Use "Importar" para colar o alfabeto (ex: A, B, C, D, E...)</p>
       </div>
     `;
   }
 
   // ============================================================
-  // CARREGAR DADOS
+  // SINCRONIZAÇÃO E CONTROLE DE DADOS
   // ============================================================
   async function carregarTudo() {
     try {
-      const snapCat = await STATE.db.ref(window.getAbellaPath('categories')).once('value');
+      setStatus('Sincronizando dados...');
+      
+      const caminhoCategorias = obterCaminhoBanco('categories');
+      const caminhoProdutos = obterCaminhoBanco('products');
+
+      const snapCat = await STATE.db.ref(caminhoCategorias).once('value');
       STATE.categorias = snapCat.val() || {};
 
-      const snapProd = await STATE.db.ref(window.getAbellaPath('products')).once('value');
+      const snapProd = await STATE.db.ref(caminhoProdutos).once('value');
       const dados = snapProd.val() || {};
+      
       STATE.produtos = Object.entries(dados).map(([id, p]) => ({ id, ...p }));
 
       popularFiltros();
       renderAll();
-      setStatus('✅ Catálogo sincronizado com as páginas de venda', 'ok');
+      setStatus('✅ Catálogo da Abella Joias sincronizado com sucesso!', 'ok');
     } catch(err) {
-      setStatus('❌ Erro de conexão com o Firebase', 'error');
+      console.error(err);
+      setStatus('❌ Erro de conexão com o Firebase Realtime DB', 'error');
     }
   }
 
@@ -491,7 +498,7 @@ async function salvarConfiguracoesGlobais() {
   }
 
   // ============================================================
-  // TABS E RENDER
+  // RENDERIZAÇÃO DAS ABAS
   // ============================================================
   function getActiveTab() {
     return document.querySelector('.tab-btn.active')?.dataset?.tab || 'produtos';
@@ -500,14 +507,22 @@ async function salvarConfiguracoesGlobais() {
   function renderCurrentTab() {
     const t = getActiveTab();
     const btn = document.getElementById('btnCriarNovo');
+    
     if (btn) {
-      if (t === 'produtos')       btn.innerText = '➕ Novo Produto';
-      else if (t === 'categorias')    btn.innerText = '➕ Nova Categoria';
-      else if (t === 'subcategorias') btn.innerText = '➕ Nova Subcategoria';
+      if (t === 'configuracoes') {
+        btn.style.display = 'none';
+      } else {
+        btn.style.display = 'block';
+        if (t === 'produtos')       btn.innerText = '➕ Novo Produto';
+        else if (t === 'categorias')    btn.innerText = '➕ Nova Categoria';
+        else if (t === 'subcategories' || t === 'subcategorias') btn.innerText = '➕ Nova Subcategoria';
+      }
     }
+
     if (t === 'produtos')       renderProdutos();
     else if (t === 'categorias')    renderCategorias();
-    else if (t === 'subcategorias') renderSubcategorias();
+    else if (t === 'subcategories' || t === 'subcategorias') renderSubcategorias();
+    else if (t === 'configuracoes') renderPainelConfiguracoes();
   }
 
   function renderAll() {
@@ -515,7 +530,6 @@ async function salvarConfiguracoesGlobais() {
     renderCurrentTab();
   }
 
-  // ── Produtos ────────────────────────────────────────────────
   function renderProdutos() {
     const container = document.getElementById('tab-produtos');
     if (!container) return;
@@ -532,7 +546,7 @@ async function salvarConfiguracoesGlobais() {
     });
 
     if (!filtrados.length) {
-      container.innerHTML = `<div class="text-sm text-zinc-500 p-4 text-center">Nenhum produto correspondente.</div>`;
+      container.innerHTML = `<div class="text-sm text-zinc-500 p-8 text-center bg-zinc-950/40 rounded-xl border border-zinc-900">Nenhum produto cadastrado no nó 'abella/products'.</div>`;
       return;
     }
 
@@ -589,22 +603,21 @@ async function salvarConfiguracoesGlobais() {
 
             <div class="flex gap-2 w-full lg:w-auto justify-end border-t border-zinc-900 lg:border-none pt-3 lg:pt-0">
               <button onclick="editarProduto('${escapeAttr(p.id)}')"   class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors text-sm">✏️ Editar</button>
-              <button onclick="duplicarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors text-sm" title="Duplicar">📄</button>
-              <button onclick="pausarProduto('${escapeAttr(p.id)}')"   class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors text-sm" title="${isPaused ? 'Ativar' : 'Pausar'}">${isPaused ? '▶️' : '⏸️'}</button>
-              <button onclick="deletarProduto('${escapeAttr(p.id)}')"  class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:border-red-950 text-red-400 transition-colors text-sm" title="Excluir">🗑️</button>
+              <button onclick="duplicarProduto('${escapeAttr(p.id)}')" class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors text-sm">📄</button>
+              <button onclick="pausarProduto('${escapeAttr(p.id)}')"   class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors text-sm">${isPaused ? '▶️' : '⏸️'}</button>
+              <button onclick="deletarProduto('${escapeAttr(p.id)}')"  class="bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl hover:border-red-950 text-red-400 transition-colors text-sm">🗑️</button>
             </div>
           </div>
         </div>`;
     }).join('');
   }
 
-  // ── Categorias ───────────────────────────────────────────────
   function renderCategorias() {
     const el = document.getElementById('tab-categorias');
     if (!el) return;
     const entries = Object.entries(STATE.categorias);
     if (!entries.length) {
-      el.innerHTML = `<div class="text-sm text-zinc-500 p-4 text-center">Nenhuma categoria cadastrada.</div>`;
+      el.innerHTML = `<div class="text-sm text-zinc-500 p-4 text-center">Nenhuma categoria cadastrada na Abella Joias.</div>`;
       return;
     }
     el.innerHTML = entries.map(([slug, cat]) => {
@@ -632,7 +645,6 @@ async function salvarConfiguracoesGlobais() {
     }).join('');
   }
 
-  // ── Subcategorias ────────────────────────────────────────────
   function renderSubcategorias() {
     const el = document.getElementById('tab-subcategorias');
     if (!el) return;
@@ -661,26 +673,98 @@ async function salvarConfiguracoesGlobais() {
           </div>`;
       });
     });
-    el.innerHTML = html || `<div class="text-sm text-zinc-500 p-4 text-center">Nenhuma subcategoria cadastrada.</div>`;
+    el.innerHTML = html || `<div class="text-sm text-zinc-500 p-4 text-center">Nenhuma subcategoria cadastrada na Abella Joias.</div>`;
+  }
+
+  async function renderPainelConfiguracoes() {
+    const container = document.getElementById('tab-configuracoes');
+    if (!container) return;
+
+    try {
+      const snap = await STATE.db.ref(obterCaminhoBanco('settings')).once('value');
+      const cfg = snap.val() || {};
+
+      container.innerHTML = `
+        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-6">
+          <h3 class="text-base font-bold text-[#caa85c] mb-4">⚙️ Configurações Institucionais - Abella Joias</h3>
+          
+          <label class="text-xs text-zinc-400 block mb-1">Nome da Loja</label>
+          <input id="cfgName" class="input-dark" value="${escapeHtml(cfg.name || 'Abella Joias')}">
+
+          <label class="text-xs text-zinc-400 block mb-1">Slogan Principal</label>
+          <input id="cfgSlogan" class="input-dark" value="${escapeHtml(cfg.slogan || '')}">
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-zinc-400 block mb-1">Parcelas Sem Juros</label>
+              <input id="cfgParcelas" type="number" class="input-dark" value="${Number(cfg.parcelas || 1)}">
+            </div>
+            <div>
+              <label class="text-xs text-zinc-400 block mb-1">Desconto PIX (%)</label>
+              <input id="cfgPix" type="number" class="input-dark" value="${Number(cfg.pix || 0)}">
+            </div>
+          </div>
+
+          <label class="text-xs text-zinc-400 block mb-1">WhatsApp de Atendimento</label>
+          <input id="cfgWhatsapp" class="input-dark" value="${escapeHtml(cfg.whatsapp || '')}">
+
+          <label class="text-xs text-zinc-400 block mb-1">URL do Logotipo</label>
+          <input id="cfgLogoUrl" class="input-dark" value="${escapeHtml(cfg.logoUrl || cfg.logo || '')}">
+
+          <label class="text-xs text-zinc-400 block mb-1">URL do Banner Principal</label>
+          <input id="cfgHeroBannerUrl" class="input-dark" value="${escapeHtml(cfg.heroBannerUrl || '')}">
+
+          <button onclick="salvarConfiguracoesGlobais()" 
+                  class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90 transition-all">
+            💾 Salvar Configurações da Vitrine
+          </button>
+        </div>
+      `;
+    } catch(err) {
+      container.innerHTML = `<div class="text-sm text-red-400 p-4">Erro ao carregar dados institucionais de 'abella/settings'.</div>`;
+    }
+  }
+
+  async function salvarConfiguracoesGlobais() {
+    try {
+      const dados = {
+        name: document.getElementById('cfgName').value.trim(),
+        slogan: document.getElementById('cfgSlogan').value.trim(),
+        parcelas: Number(document.getElementById('cfgParcelas').value),
+        pix: Number(document.getElementById('cfgPix').value),
+        whatsapp: document.getElementById('cfgWhatsapp').value.replace(/\D/g, ''),
+        logoUrl: document.getElementById('cfgLogoUrl').value.trim(),
+        heroBannerUrl: document.getElementById('cfgHeroBannerUrl').value.trim()
+      };
+
+      if(!dados.name || !dados.whatsapp) {
+        alert('Nome da loja e WhatsApp são obrigatórios!');
+        return;
+      }
+
+      await STATE.db.ref(obterCaminhoBanco('settings')).update(dados);
+      setStatus('✅ Configurações salvas no nó da Abella!', 'ok');
+    } catch(err) {
+      setStatus('❌ Falha ao gravar configurações no banco', 'error');
+    }
   }
 
   // ============================================================
-  // CRIAÇÃO — Roteador por aba ativa
+  // OPERAÇÕES DE ESCRITA (PRODUTOS / CATEGORIAS / SUBS)
   // ============================================================
   function abrirCriacaoPorAba() {
     const tab = getActiveTab();
     if (tab === 'produtos')       criarProdutoForm();
     else if (tab === 'categorias')    criarCategoriaForm();
-    else if (tab === 'subcategorias') criarSubcategoriaForm();
+    else if (tab === 'subcategories' || tab === 'subcategorias') criarSubcategoriaForm();
   }
 
-  // ── Criar Produto ────────────────────────────────────────────
   function criarProdutoForm() {
     let catsHtml = '<option value="">Selecione uma categoria...</option>';
     Object.keys(STATE.categorias).forEach(cat => catsHtml += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`);
     const skuSugerido = 'AB-' + Date.now().toString().substring(8);
 
-    abrirDrawer('➕ Cadastrar Novo Produto', `
+    abrirDrawer('➕ Cadastrar Novo Produto (Abella Joias)', `
       <label class="text-xs text-zinc-400 block mb-1">Nome do Item</label>
       <input id="newNome" class="input-dark" placeholder="Ex: Gargantilha Elos Longos">
 
@@ -688,7 +772,7 @@ async function salvarConfiguracoesGlobais() {
       <input id="newSku" class="input-dark" value="${skuSugerido}">
 
       <label class="text-xs text-zinc-400 block mb-1">Descrição Comercial</label>
-      <textarea id="newDescricao" class="input-dark h-20" placeholder="Ex: Banho de 10 milésimos de Ouro 18k..."></textarea>
+      <textarea id="newDescricao" class="input-dark h-20" placeholder="Ex: Banho de Ouro 18k..."></textarea>
 
       <div class="grid grid-cols-2 gap-2">
         <div>
@@ -718,8 +802,7 @@ async function salvarConfiguracoesGlobais() {
       </div>
       <input id="newImagem" class="input-dark" placeholder="Cole a URL ou link gs://" oninput="tratarInputImagem(this, 'previewProdutoNovo')">
 
-      <button onclick="salvarNovoProduto()"
-              class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90 transition-all">
+      <button onclick="salvarNovoProduto()" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90">
         ➕ Inserir Novo Item no Catálogo
       </button>
     `);
@@ -750,7 +833,7 @@ async function salvarConfiguracoesGlobais() {
       const listaDizeres  = extrairValoresTags('newDizeresContainer');
       const listaIniciais = extrairValoresTags('newIniciaisContainer');
 
-      await STATE.db.ref(window.getAbellaPath('products')).push({
+      await STATE.db.ref(obterCaminhoBanco('products')).push({
         name: nome, sku, category: cat,
         subcategory: subcat, subCategory: subcat,
         price: preco, preco,
@@ -767,27 +850,25 @@ async function salvarConfiguracoesGlobais() {
     } catch(e) { setStatus('❌ Erro ao criar novo produto', 'error'); }
   }
 
-  // ── Criar Categoria ──────────────────────────────────────────
   function criarCategoriaForm() {
-    abrirDrawer('➕ Nova Categoria', `
+    abrirDrawer('➕ Nova Categoria (Abella)', `
       <label class="text-xs text-zinc-400 block mb-1">Nome da Categoria</label>
       <input id="newCatNome" class="input-dark" placeholder="Ex: Anéis">
 
-      <label class="text-xs text-zinc-400 block mb-1">Slug (deixe em branco para gerar automático)</label>
+      <label class="text-xs text-zinc-400 block mb-1">Slug</label>
       <input id="newCatSlug" class="input-dark" placeholder="Ex: aneis">
 
-      <label class="text-xs text-zinc-400 block mb-1">Descrição (opcional)</label>
-      <textarea id="newCatDesc" class="input-dark h-20" placeholder="Descrição da categoria..."></textarea>
+      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
+      <textarea id="newCatDesc" class="input-dark h-20"></textarea>
 
-      <label class="text-xs text-zinc-400 block mb-1">Imagem da Categoria (URL ou gs://)</label>
+      <label class="text-xs text-zinc-400 block mb-1">Imagem da Categoria</label>
       <div class="w-full h-32 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
         <div class="absolute text-xs text-zinc-600">Preview</div>
         <img id="previewCatNova" src="" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
       </div>
-      <input id="newCatImagem" class="input-dark" placeholder="Cole a URL da imagem" oninput="tratarInputImagem(this, 'previewCatNova')">
+      <input id="newCatImagem" class="input-dark" oninput="tratarInputImagem(this, 'previewCatNova')">
 
-      <button onclick="salvarNovaCategoria()"
-              class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90 transition-all">
+      <button onclick="salvarNovaCategoria()" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90">
         ➕ Criar Categoria
       </button>
     `);
@@ -797,12 +878,11 @@ async function salvarConfiguracoesGlobais() {
     try {
       const nome = document.getElementById('newCatNome').value.trim();
       if (!nome) { alert('Informe o nome da categoria.'); return; }
-
       const slugDigitado = document.getElementById('newCatSlug').value.trim();
       const slug = slugDigitado || gerarSlug(nome);
       const img  = document.getElementById('newCatImagem').value.trim();
 
-      await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).set({
+      await STATE.db.ref(obterCaminhoBanco(`categories/${slug}`)).set({
         name: nome,
         description: document.getElementById('newCatDesc').value,
         imagem: img, image: img,
@@ -813,46 +893,26 @@ async function salvarConfiguracoesGlobais() {
     } catch(e) { setStatus('❌ Erro ao criar categoria', 'error'); }
   }
 
-  // ── Criar Subcategoria ───────────────────────────────────────
   function criarSubcategoriaForm() {
     let catsHtml = '<option value="">Selecione uma categoria pai...</option>';
     Object.entries(STATE.categorias).forEach(([slug, cat]) => {
       catsHtml += `<option value="${escapeHtml(slug)}">${escapeHtml(cat.name || slug)}</option>`;
     });
 
-    abrirDrawer('➕ Nova Subcategoria', `
+    abrirDrawer('➕ Nova Subcategoria (Abella)', `
       <label class="text-xs text-zinc-400 block mb-1">Categoria Pai</label>
       <select id="newSubCatPai" class="input-dark">${catsHtml}</select>
-
       <label class="text-xs text-zinc-400 block mb-1">Nome da Subcategoria</label>
-      <input id="newSubNome" class="input-dark" placeholder="Ex: Letra Tranversal com Cristal">
+      <input id="newSubNome" class="input-dark">
+      <label class="text-xs text-zinc-400 block mb-1">Slug</label>
+      <input id="newSubSlug" class="input-dark">
+      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
+      <textarea id="newSubDesc" class="input-dark h-20"></textarea>
 
-      <label class="text-xs text-zinc-400 block mb-1">Slug (deixe em branco para gerar automático)</label>
-      <input id="newSubSlug" class="input-dark" placeholder="Ex: letra-tranversal-com-cristal">
+      <input id="newSubGrid" class="input-dark" placeholder="URL imagem grid">
+      <input id="newSubHero" class="input-dark" placeholder="URL imagem hero">
 
-      <label class="text-xs text-zinc-400 block mb-1">Descrição (opcional)</label>
-      <textarea id="newSubDesc" class="input-dark h-20" placeholder="Descrição..."></textarea>
-
-      <div class="mb-3 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem do Grid (Listagem)</label>
-        <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
-          <div class="absolute text-[10px] text-zinc-600">Sem Imagem</div>
-          <img id="previewSubGrid" src="" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-        </div>
-        <input id="newSubGrid" class="input-dark" placeholder="URL imagem grid" oninput="tratarInputImagem(this, 'previewSubGrid')">
-      </div>
-
-      <div class="mb-3 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem Hero (Capa Superior)</label>
-        <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
-          <div class="absolute text-[10px] text-zinc-600">Sem Imagem</div>
-          <img id="previewSubHero" src="" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-        </div>
-        <input id="newSubHero" class="input-dark" placeholder="URL imagem hero" oninput="tratarInputImagem(this, 'previewSubHero')">
-      </div>
-
-      <button onclick="salvarNovaSubcategoria()"
-              class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90">
+      <button onclick="salvarNovaSubcategoria()" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-2">
         ➕ Criar Subcategoria
       </button>
     `);
@@ -862,15 +922,14 @@ async function salvarConfiguracoesGlobais() {
     try {
       const catPai = document.getElementById('newSubCatPai').value;
       const nome   = document.getElementById('newSubNome').value.trim();
-      if (!catPai) { alert('Selecione a categoria pai.'); return; }
-      if (!nome)   { alert('Informe o nome da subcategoria.'); return; }
+      if (!catPai || !nome) { alert('Preencha os campos obrigatórios.'); return; }
 
       const slugDig = document.getElementById('newSubSlug').value.trim();
       const slug    = slugDig || gerarSlug(nome);
       const grid    = document.getElementById('newSubGrid').value.trim();
       const hero    = document.getElementById('newSubHero').value.trim();
 
-      await STATE.db.ref(window.getAbellaPath(`categories/${catPai}/subcategories/${slug}`)).set({
+      await STATE.db.ref(obterCaminhoBanco(`categories/${catPai}/subcategories/${slug}`)).set({
         name: nome,
         description: document.getElementById('newSubDesc').value,
         imagem: grid, grid, gridImage: grid,
@@ -882,11 +941,6 @@ async function salvarConfiguracoesGlobais() {
     } catch(e) { setStatus('❌ Erro ao criar subcategoria', 'error'); }
   }
 
-  // ============================================================
-  // EDIÇÃO
-  // ============================================================
-
-  // ── Editar Produto ───────────────────────────────────────────
   function editarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
     if (!p) return;
@@ -899,48 +953,34 @@ async function salvarConfiguracoesGlobais() {
     abrirDrawer('✏️ Editar Produto', `
       <label class="text-xs text-zinc-400 block mb-1">Nome do Item</label>
       <input id="editNome" class="input-dark" value="${escapeHtml(p.name || '')}">
-
-      <label class="text-xs text-zinc-400 block mb-1">SKU do Produto</label>
+      <label class="text-xs text-zinc-400 block mb-1">SKU</label>
       <input id="editSku" class="input-dark" value="${escapeHtml(p.sku || '')}">
-
-      <label class="text-xs text-zinc-400 block mb-1">Descrição Comercial</label>
+      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
       <textarea id="editDescricao" class="input-dark h-20">${escapeHtml(DataService.getDesc(p))}</textarea>
 
       <div class="grid grid-cols-2 gap-2">
         <div>
-          <label class="text-xs text-zinc-400 block mb-1">Preço (R$)</label>
           <input id="editPreco" type="number" step="0.01" class="input-dark" value="${DataService.getPrice(p)}">
         </div>
         <div>
-          <label class="text-xs text-zinc-400 block mb-1">Peso (Gramas)</label>
           <input id="editPeso" type="number" step="0.01" class="input-dark" value="${DataService.getWeight(p)}">
         </div>
       </div>
 
-      <label class="text-xs text-zinc-400 block mb-1">Categoria Principal</label>
       <select id="editCategoria" class="input-dark" onchange="carregarSubcategoriasProduto()">${catsHtml}</select>
-
-      <label class="text-xs text-zinc-400 block mb-1">Subcategoria Vinculada</label>
       <select id="editSubcategoria" class="input-dark"></select>
 
       ${htmlVariacoes('edit')}
 
-      <label class="text-xs text-zinc-400 block mb-1">Link de Imagem</label>
-      <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
-        <div class="absolute text-xs text-zinc-600">Preview Indisponível</div>
-        <img id="previewProduto" src="${escapeHtml(converterGsUrl(DataService.getImage(p)))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-      </div>
       <input id="editImagem" class="input-dark" value="${escapeHtml(DataService.getImage(p))}" oninput="tratarInputImagem(this, 'previewProduto')">
-
-      <label class="text-xs text-zinc-400 block mb-1">Status</label>
+      
       <div class="flex items-center gap-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl mb-3">
-        <input type="checkbox" id="editPaused" ${p.paused ? 'checked' : ''} class="w-4 h-4 accent-red-500">
-        <label for="editPaused" class="text-xs text-zinc-400 cursor-pointer">Produto pausado (não aparece na loja)</label>
+        <input type="checkbox" id="editPaused" ${p.paused ? 'checked' : ''}>
+        <label for="editPaused" class="text-xs text-zinc-400">Pausar produto</label>
       </div>
 
-      <button onclick="salvarProduto('${escapeAttr(id)}')"
-              class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90 transition-all">
-        💾 Salvar Alterações em Espelho
+      <button onclick="salvarProduto('${escapeAttr(id)}')" class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-2">
+        💾 Salvar Alterações
       </button>
     `);
 
@@ -969,7 +1009,7 @@ async function salvarConfiguracoesGlobais() {
       const listaIniciais = extrairValoresTags('editIniciaisContainer');
       const paused = document.getElementById('editPaused')?.checked || false;
 
-      await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({
+      await STATE.db.ref(obterCaminhoBanco(`products/${id}`)).update({
         name: document.getElementById('editNome').value,
         sku:  document.getElementById('editSku').value,
         category:    document.getElementById('editCategoria').value,
@@ -988,144 +1028,31 @@ async function salvarConfiguracoesGlobais() {
     } catch(e) { setStatus('❌ Erro ao salvar dados no Firebase', 'error'); }
   }
 
-  // ── Editar Categoria ─────────────────────────────────────────
-  function editarCategoria(slug) {
-    const cat = STATE.categorias[slug];
-    if (!cat) return;
-    const catImg = cat.imagem || cat.image || '';
-
-    abrirDrawer('✏️ Editar Categoria', `
-      <label class="text-xs text-zinc-400 block mb-1">Nome da Categoria</label>
-      <input id="editCatName" class="input-dark" value="${escapeHtml(cat.name || '')}">
-
-      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
-      <textarea id="editCatDesc" class="input-dark h-20">${escapeHtml(cat.description || '')}</textarea>
-
-      <label class="text-xs text-zinc-400 block mb-1">Link de Imagem</label>
-      <div class="w-full h-32 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
-        <div class="absolute text-xs text-zinc-600">Sem Imagem Definida</div>
-        <img id="previewCatEdicao" src="${escapeHtml(converterGsUrl(catImg))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-      </div>
-      <input id="editCatImagem" class="input-dark" value="${escapeHtml(catImg)}" oninput="tratarInputImagem(this, 'previewCatEdicao')">
-
-      <button onclick="salvarCategoria('${escapeAttr(slug)}')"
-              class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90">
-        💾 Salvar Alterações
-      </button>
-    `);
-  }
-
-  async function salvarCategoria(slug) {
-    try {
-      const imgVal = document.getElementById('editCatImagem').value.trim();
-      await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({
-        name:        document.getElementById('editCatName').value,
-        description: document.getElementById('editCatDesc').value,
-        imagem: imgVal, image: imgVal,
-        updatedAt: Date.now()
-      });
-      fecharDrawer();
-      await carregarTudo();
-    } catch(e) { setStatus('❌ Erro ao atualizar categoria', 'error'); }
-  }
-
-  // ── Editar Subcategoria ──────────────────────────────────────
-  function editarSubcategoria(catSlug, subSlug) {
-    const sub = STATE.categorias[catSlug]?.subcategories?.[subSlug];
-    if (!sub) return;
-    const imgGrid = sub.grid || sub.gridImage || sub.imagem || '';
-    const imgHero = sub.hero || sub.heroImage || sub.imagem || '';
-
-    abrirDrawer('✏️ Editar Subcategoria', `
-      <label class="text-xs text-zinc-400 block mb-1">Nome da Subcategoria</label>
-      <input id="subName" class="input-dark" value="${escapeHtml(sub.name || sub.title || '')}">
-
-      <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
-      <textarea id="subDesc" class="input-dark h-20">${escapeHtml(sub.description || '')}</textarea>
-
-      <div class="mb-3 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem do Grid (Listagem)</label>
-        <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
-          <div class="absolute text-[10px] text-zinc-600">Sem Imagem</div>
-          <img id="previewGrid" src="${escapeHtml(converterGsUrl(imgGrid))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-        </div>
-        <input id="subGrid" class="input-dark" value="${escapeHtml(imgGrid)}" oninput="tratarInputImagem(this, 'previewGrid')">
-      </div>
-
-      <div class="mb-3 p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
-        <label class="text-xs text-zinc-400 block mb-1 font-bold text-[#caa85c]">Imagem Hero (Capa Superior)</label>
-        <div class="w-full h-24 bg-black border border-zinc-800 rounded mb-2 overflow-hidden flex items-center justify-center relative">
-          <div class="absolute text-[10px] text-zinc-600">Sem Imagem</div>
-          <img id="previewHero" src="${escapeHtml(converterGsUrl(imgHero))}" class="w-full h-full object-cover relative z-10" onerror="this.style.opacity='0'">
-        </div>
-        <input id="subHero" class="input-dark" value="${escapeHtml(imgHero)}" oninput="tratarInputImagem(this, 'previewHero')">
-      </div>
-
-      <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')"
-              class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90">
-        💾 Salvar Subcategoria
-      </button>
-    `);
-  }
-
-  async function salvarSubcategoria(catSlug, subSlug) {
-    try {
-      const gridVal = document.getElementById('subGrid').value.trim();
-      const heroVal = document.getElementById('subHero').value.trim();
-      await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
-        name:        document.getElementById('subName').value,
-        description: document.getElementById('subDesc').value,
-        imagem: gridVal, grid: gridVal, gridImage: gridVal,
-        hero: heroVal, heroImage: heroVal,
-        updatedAt: Date.now()
-      });
-      fecharDrawer();
-      await carregarTudo();
-    } catch(e) { setStatus('❌ Erro ao salvar subcategoria', 'error'); }
-  }
-
-  // ============================================================
-  // AÇÕES RÁPIDAS
-  // ============================================================
   async function duplicarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
     if (!p) return;
     const copia = { ...p, sku: (p.sku || '') + '-COPY', createdAt: Date.now(), updatedAt: Date.now() };
     delete copia.id;
-    await STATE.db.ref(window.getAbellaPath('products')).push(copia);
+    await STATE.db.ref(obterCaminhoBanco('products')).push(copia);
     await carregarTudo();
   }
 
   async function pausarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
     if (!p) return;
-    await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({ paused: !p.paused, updatedAt: Date.now() });
+    await STATE.db.ref(obterCaminhoBanco(`products/${id}`)).update({ paused: !p.paused, updatedAt: Date.now() });
     await carregarTudo();
   }
 
   async function deletarProduto(id) {
     if (confirm('Deseja realmente excluir permanentemente este produto?')) {
-      await STATE.db.ref(window.getAbellaPath('products')).child(id).remove();
-      await carregarTudo();
-    }
-  }
-
-  async function deletarCategoria(slug) {
-    if (confirm(`Excluir a categoria [${slug}]? Os produtos perderão o vínculo de menu.`)) {
-      await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).remove();
-      await carregarTudo();
-    }
-  }
-
-  async function deletarSubcategoria(catSlug, subSlug) {
-    if (confirm(`Excluir a subcategoria [${subSlug}] da categoria [${catSlug}]?`)) {
-      await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).remove();
+      await STATE.db.ref(obterCaminhoBanco('products')).child(id).remove();
       await carregarTudo();
     }
   }
 
   // ============================================================
-  // BUSCA E TABS
+  // EVENTOS, ESCUTAS E BOOTSTRAP
   // ============================================================
   function wireSearch() {
     document.getElementById('buscaGlobal').addEventListener('input', () => {
@@ -1142,19 +1069,20 @@ async function salvarConfiguracoesGlobais() {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-      // Inclua 'configuracoes' no array de ocultação
-['produtos', 'categorias', 'subcategorias', 'configuracoes'].forEach(t => {
-  document.getElementById('tab-' + t)?.classList.add('hidden');
-});
-        document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
+        
+        ['produtos', 'categorias', 'subcategorias', 'configuracoes'].forEach(t => {
+          const el = document.getElementById('tab-' + t);
+          if(el) el.classList.add('hidden');
+        });
+        
+        const targetEl = document.getElementById('tab-' + btn.dataset.tab);
+        if(targetEl) targetEl.classList.remove('hidden');
+        
         renderCurrentTab();
       });
     });
   }
 
-  // ============================================================
-  // INIT
-  // ============================================================
   (async function init() {
     let t = 0;
     while (!STATE.db && t < CONFIG.firebaseRetries) {
@@ -1163,46 +1091,30 @@ async function salvarConfiguracoesGlobais() {
     }
     if (!STATE.db) return setStatus('❌ Falha ao carregar o Firebase SDK', 'error');
 
-    let tPath = 0;
-    while (typeof window.getAbellaPath !== 'function' && tPath < CONFIG.firebaseRetries) {
-      await new Promise(r => setTimeout(r, CONFIG.firebaseRetryDelay));
-      tPath++;
-    }
-    if (typeof window.getAbellaPath !== 'function') {
-      console.warn('getAbellaPath não encontrada. Usando caminhos padrão.');
-      window.getAbellaPath = function(p) { return 'abella/' + p; };
-    }
-
     wireTabs();
     wireSearch();
+    
     document.getElementById('btnRefresh').addEventListener('click', () => carregarTudo());
     await carregarTudo();
   })();
 
-  // Expõe no escopo global (necessário para os onclick no innerHTML)
-  window.editarProduto    = editarProduto;
-  window.salvarProduto    = salvarProduto;
-  window.duplicarProduto  = duplicarProduto;
-  window.pausarProduto    = pausarProduto;
-  window.deletarProduto   = deletarProduto;
-  window.editarCategoria  = editarCategoria;
-  window.salvarCategoria  = salvarCategoria;
-  window.editarSubcategoria  = editarSubcategoria;
-  window.salvarSubcategoria  = salvarSubcategoria;
-  window.fecharDrawer        = fecharDrawer;
-  window.tratarInputImagem   = tratarInputImagem;
-  window.handleImageError    = handleImageError;
-  window.carregarSubcategoriasProduto         = carregarSubcategoriasProduto;
-  window.carregarSubcategoriasProdutoCriacao  = carregarSubcategoriasProdutoCriacao;
-  window.abrirCriacaoPorAba   = abrirCriacaoPorAba;
-  window.salvarNovoProduto     = salvarNovoProduto;
-  window.salvarNovaCategoria   = salvarNovaCategoria;
+  // Declaração de Escopo Global para Eventos inline HTML
+  window.editarProduto = editarProduto;
+  window.salvarProduto = salvarProduto;
+  window.duplicarProduto = duplicarProduto;
+  window.pausarProduto = pausarProduto;
+  window.deletarProduto = deletarProduto;
+  window.fecharDrawer = fecharDrawer;
+  window.tratarInputImagem = tratarInputImagem;
+  window.handleImageError = handleImageError;
+  window.carregarSubcategoriasProduto = carregarSubcategoriasProduto;
+  window.carregarSubcategoriasProdutoCriacao = carregarSubcategoriasProdutoCriacao;
+  window.abrirCriacaoPorAba = abrirCriacaoPorAba;
+  window.salvarNovoProduto = salvarNovoProduto;
+  window.salvarNovaCategoria = salvarNovaCategoria;
   window.salvarNovaSubcategoria = salvarNovaSubcategoria;
- // ... resto do código acima ...
-  window.deletarCategoria      = deletarCategoria;
-  window.deletarSubcategoria   = deletarSubcategoria;
-  window.adicionarTagInput     = adicionarTagInput;
-  window.importarVariacoes     = importarVariacoes;
+  window.adicionarTagInput = adicionarTagInput;
+  window.importarVariacoes = importarVariacoes;
   window.renderPainelConfiguracoes = renderPainelConfiguracoes;
   window.salvarConfiguracoesGlobais = salvarConfiguracoesGlobais;
   </script>

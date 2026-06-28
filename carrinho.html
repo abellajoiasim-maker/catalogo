@@ -360,20 +360,21 @@
                     ? `<span class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">${item.badgePromocional}</span>`
                     : '';
 
-                // --- VARREDURA AVANÇADA DE MAPA DE VARIANTES (PMA V8) ---
+                // --- VARREDURA AVANÇADA DE MAPA DE VARIANTES (CORRIGIDO PARA PMA V8) ---
                 let variacaoHtml = '';
                 
-                // 1. Verifica se as variações vieram como um objeto/dicionário mapeado (comum em seleções múltiplas)
-                if (item.variacoes Selecionadas && typeof item.variacoesSelecionadas === 'object') {
+                // 1. Verifica se as variações vieram como um mapa/objeto (Corrigido o espaço acidental)
+                if (item.variacoesSelecionadas && typeof item.variacoesSelecionadas === 'object') {
                     let subGrades = Object.entries(item.variacoesSelecionadas)
                         .filter(([_, q]) => parseInt(q) > 0)
-                        .map(([nome, q]) => `<span class="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 text-[10px]">${nome} (${q}pçs)</span>`);
+                        .map(([nome, q]) => `<span class="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 text-[10px] uppercase font-semibold">${nome} (${q}pçs)</span>`);
                     
                     if (subGrades.length > 0) {
                         variacaoHtml = `<div class="text-[11px] text-amber-400 font-medium mt-1.5 flex flex-wrap gap-1 justify-center sm:justify-start items-center">🔹 Grades: ${subGrades.join(' ')}</div>`;
                     }
                 } 
-                // 2. Fallback para propriedades de string única
+                
+                // 2. Fallback para propriedades de string única ou objetos simples
                 if (!variacaoHtml) {
                     let labelStr = item.variacao || item.combinacao || item.selectedVariation || item.grade || '';
                     if (labelStr && typeof labelStr === 'object') {
@@ -421,7 +422,6 @@
 
             atualizarTotaisResumo(itens);
         }
-
         function alterarQtd(id, delta) {
             if (typeof carrinhoService === 'undefined') return;
             

@@ -34,22 +34,24 @@ const PesoUtils = (() => {
         try {
             const numero = safeNumber(valor);
 
+            // Regra Comercial: >= 1000g muda a escala para Kg.
             if (numero >= 1000) {
                 const kg = ajustarPrecisao(numero / 1000);
                 return new Intl.NumberFormat(LOCALE, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
-                }).format(kg) + ' kg';
+                }).format(kg) + ' Kg.';
             }
 
+            // Regra Comercial: < 1000g mantém em grs.
             return new Intl.NumberFormat(LOCALE, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
-            }).format(numero) + ' g';
+            }).format(numero) + ' grs.';
 
         } catch (error) {
             console.error('[PMA V8] [PesoUtils:formatarPeso]', error);
-            return '0,00 g';
+            return '0,00 grs.';
         }
     }
 
@@ -69,10 +71,10 @@ const PesoUtils = (() => {
     function unidadePeso(valor) {
         try {
             const numero = safeNumber(valor);
-            return numero >= 1000 ? 'kg' : 'g';
+            return numero >= 1000 ? 'Kg.' : 'grs.';
         } catch (error) {
             console.error('[PMA V8] [PesoUtils:unidadePeso]', error);
-            return 'g';
+            return 'grs.';
         }
     }
 
@@ -95,4 +97,4 @@ Object.defineProperty(window, 'formatarPeso', { value: PesoUtils.formatarPeso, w
 Object.defineProperty(window, 'pesoNumero', { value: PesoUtils.pesoNumero, writable: false, configurable: false });
 Object.defineProperty(window, 'unidadePeso', { value: PesoUtils.unidadePeso, writable: false, configurable: false });
 
-console.info('[PMA V8] ⚖️ PesoUtils v2.0 fixado e congelado com sucesso.');
+console.info('[PMA V8] ⚖️ PesoUtils v2.0 ajustado, fixado e congelado com sucesso.');

@@ -1,6 +1,6 @@
 // ======================================================================
 // js/services/produtoService.js
-// Abella Joias - ProdutoService v8.0 (Arquitetura PMA V8)
+// Abella Joias - ProdutoService v8.1 (Arquitetura PMA V8 Corrigida)
 // CRUD Completo, Seguro, Reativo e Integrado ao Ecossistema Abella
 // ======================================================================
 
@@ -11,11 +11,12 @@
         ? window.getAbellaPath('products')
         : 'abella/products';
 
-    const produtoService = {
-        _cache: null,
-        _cacheTimestamp: 0,
-        _cacheTTL: 60000,
+    // MEMÓRIA VOLÁTIL DE CACHE ISOLADA DO CONGELAMENTO (SOLUÇÃO DO TYPEERROR)
+    let camadaCacheInterno = null;
+    let camadaCacheTimestamp = 0;
+    const camadaCacheTTL = 60000;
 
+    const produtoService = {
         // CONEXÃO COM A ABSTRAÇÃO DE BASE DE DADOS
         _db() {
             if (!window.db) {
@@ -32,15 +33,15 @@
         // VALIDAÇÃO CRONOLÓGICA DO CACHE EM MEMÓRIA
         _isCacheValid() {
             return Boolean(
-                this._cache &&
-                (Date.now() - this._cacheTimestamp) < this._cacheTTL
+                camadaCacheInterno &&
+                (Date.now() - camadaCacheTimestamp) < camadaCacheTTL
             );
         },
 
         // INVALIDAÇÃO FORÇADA E ATUALIZAÇÃO DO SISTEMA
         invalidateCache() {
-            this._cache = null;
-            this._cacheTimestamp = 0;
+            camadaCacheInterno = null;
+            camadaCacheTimestamp = 0;
             
             // Força o CatalogService a reconstruir a árvore reativa se estiver disponível
             if (window.CatalogService && typeof window.CatalogService.getCatalog === 'function') {
@@ -57,28 +58,21 @@
             return String(valor || '').trim();
         },
 
-        _safeNumber(valor = 0) {
-            const n = parseFloat(valor);
-            return Number.isFinite(n) ? n : 0;
-        },
-
-        _safeArray(valor) {
-            if (Array.isArray(valor)) {
-                return valor.map(v => String(v).trim()).filter(Boolean);
-            }
-            if (typeof valor === 'string') {
-                return valor.split(',').map(v => v.trim()).filter(Boolean);
-            }
-            return [];
-        },
-
         // SANEADOR DE PRODUTOS (ALINHADO COM CATALOGSERVICE)
         normalizarProduto(id, produto = {}) {
             if (!id || !produto) return null;
 
             const nome = this._safeString(produto.nome || produto.name || 'Produto Sem Nome');
-            const precoOriginal = this._safeNumber(produto.precoOriginal ?? produto.precoAntigo ?? produto.oldPrice ?? 0);
-            const precoVenda = this._safeNumber(produto.preco ?? produto.precoFinal ?? produto.price ?? produto.valor ?? 0);
+            const precoOriginal = parseFloat(produto.precoOriginal ?? produto.precoAntigo ?? produto.oldPrice ?? 0) || 0;
+            const precoVenda = parseFloat(produto.preco ?? produto.precoFinal ?? produto.price ?? produto.valor ?? 0) || 0;
+
+            // Tratamento dinâmico para garantir que variações/grades venham estruturadas
+            let listaVariacoesLimpa = [];
+            if (Array.isArray(produto.variacoes)) {
+                listaVariacoesLimpa = produto.variacoes;
+            } else if (produto.variacoes && typeof produto.variacoes === 'object') {
+                listaVariacoesLimpa = Object.values(produto.variacoes);
+            }
 
             return {
                 id: this._safeString(id),
@@ -91,9 +85,10 @@
                 categoriaId: this._safeString(produto.categoriaId || produto.categoria || produto.category || ''),
                 subcategoriaId: this._safeString(produto.subcategoriaId || produto.subcategoria || produto.subcategory || ''),
                 ativo: produto.ativo !== false,
-                estoque: this._safeNumber(produto.estoque ?? 1),
+                estoque: parseInt(produto.estoque ?? 1) || 0,
                 destaque: Boolean(produto.destaque ?? false),
-                variacoes: this._safeArray(produto.variacoes || produto.variantes),
+                variacoes: listaVariacoesLimpa,
+                peso: parseFloat(produto.peso || produto.weight || 0),
                 metadados: {
                     finish: this._safeString(produto.metadados?.finish || produto.acabamento || ''),
                     loop: this._safeString(produto.metadados?.loop || produto.passador || '')
@@ -109,20 +104,20 @@
         async listarTodos() {
             try {
                 if (this._isCacheValid()) {
-                    return Object.values(this._cache);
+                    return Object.values(camadaCacheInterno);
                 }
 
                 const snapshot = await this._ref().once('value');
                 const data = snapshot.val() || {};
                 
-                this._cache = {};
+                camadaCacheInterno = {};
                 Object.keys(data).forEach(id => {
                     const norm = this.normalizarProduto(id, data[id]);
-                    if (norm) this._cache[id] = norm;
+                    if (norm) camadaCacheInterno[id] = norm;
                 });
 
-                this._cacheTimestamp = Date.now();
-                return Object.values(this._cache);
+                camadaCacheTimestamp = Date.now();
+                return Object.values(camadaCacheInterno);
             } catch (error) {
                 console.error('[PMA V8] [ProdutoService:listarTodos]', error);
                 return [];
@@ -134,8 +129,8 @@
                 const id = this._safeString(produtoId);
                 if (!id) return null;
 
-                if (this._cache && this._cache[id]) {
-                    return this._cache[id];
+                if (camadaCacheInterno && camadaCacheInterno[id]) {
+                    return camadaCacheInterno[id];
                 }
 
                 const snapshot = await this._ref().child(id).once('value');
@@ -153,11 +148,6 @@
         // OPERAÇÕES DE ESCRITA MUTADORA (CUD + EXTENSÕES)
         // ======================================================
 
-        /**
-         * Cria ou atualiza as propriedades de um produto no banco
-         * @param {string|null} id - ID do produto (se nulo, cria um novo nó autogerado)
-         * @param {Object} produtoData - Dados brutos do produto vindo do formulário
-         */
         async salvar(id = null, produtoData = {}) {
             try {
                 const targetId = id ? this._safeString(id) : this._ref().push().key;
@@ -165,7 +155,6 @@
 
                 const norm = this.normalizarProduto(targetId, produtoData);
                 
-                // Mapeia o payload final estruturado puro para persistência direta
                 const payload = {
                     codigo: norm.codigo,
                     nome: norm.nome,
@@ -179,6 +168,7 @@
                     estoque: norm.estoque,
                     destaque: norm.destaque,
                     variacoes: norm.variacoes,
+                    peso: norm.peso,
                     metadados: norm.metadados,
                     createdAt: norm.createdAt,
                     updatedAt: Date.now()
@@ -193,10 +183,6 @@
             }
         },
 
-        /**
-         * Remove permanentemente um produto do banco de dados
-         * @param {string} produtoId - ID identificador do produto
-         */
         async remover(produtoId) {
             try {
                 const id = this._safeString(produtoId);
@@ -211,11 +197,6 @@
             }
         },
 
-        /**
-         * Alterna o estado de ativação de um produto (Pausa/Ativa na vitrine)
-         * @param {string} produtoId - ID identificador do produto
-         * @param {boolean} statusAtivo - Status booleano desejado
-         */
         async pausar(produtoId, statusAtivo = false) {
             try {
                 const id = this._safeString(produtoId);
@@ -230,10 +211,6 @@
             }
         },
 
-        /**
-         * Duplica as propriedades de um produto existente criando uma nova referência
-         * @param {string} produtoId - ID do produto a ser copiado
-         */
         async duplicarProduto(produtoId) {
             try {
                 const itemOriginal = await this.buscarPorId(produtoId);
@@ -245,7 +222,7 @@
                     codigo: `${itemOriginal.codigo}-C`,
                     createdAt: Date.now()
                 };
-                delete novoPayload.id; // Remove ID para forçar geração de nova chave pelo método salvar
+                delete novoPayload.id;
 
                 return await this.salvar(null, novoPayload);
             } catch (error) {
@@ -262,5 +239,5 @@
         configurable: false
     });
 
-    console.info('[PMA V8] [ProdutoService] Camada de persistência especializada em produtos homologada.');
+    console.info('[PMA V8] [ProdutoService] Camada de persistência especializada em produtos homologada com correção de Cache.');
 })();

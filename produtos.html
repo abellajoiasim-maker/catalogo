@@ -331,7 +331,7 @@ async function carregarConfiguracoes() {
 }
 
 // ================================================================
-// CARREGAR PRODUTOS DO CATÁLOGO (VERSÃO ULTRA RESILIENTE)
+// CARREGAR PRODUTOS DO CATÁLOGO (FILTRAGEM RIGOROSA CORRIGIDA)
 // ================================================================
 async function carregarProdutos() {
     try {
@@ -345,7 +345,7 @@ async function carregarProdutos() {
         const categoria   = normalizarTexto(categoryParam);
         const subcategoria = normalizarTexto(decodeURIComponent(subcatParam));
 
-        const nomeFiltro = subcatParam ? subcatParam : (categoryParam ? categoryParam : 'Coleção Premium');
+        const nomeFiltro = subcatParam ? subcatParam.toUpperCase().replace(/-/g, ' ') : (categoryParam ? categoryParam.toUpperCase() : 'COLEÇÃO PREMIUM');
         const elHero = document.getElementById('heroTitulo');
         if (elHero) elHero.innerText = nomeFiltro;
 
@@ -356,15 +356,13 @@ async function carregarProdutos() {
                 todos = await produtoService.listarTodos();
             }
         } catch (cacheErr) {
-            console.warn('[PMA V8] Falha ao gravar no cache interno do produtoService. Ativando contingência.');
+            console.warn('[PMA V8] Falha ao ler cache do produtoService. Ativando contingência direta.');
         }
 
         if (!todos || !Array.isArray(todos) || Object.keys(todos).length === 0) {
-            console.log('[PMA V8] Buscando dados diretamente da referência estável do Firebase Realtime DB...');
             const snapProds = await db.ref('abella/products').once('value');
             if (snapProds.exists()) {
                 const dadosBrutos = snapProds.val() || {};
-                // Preserva as chaves do Firebase injetando como ID caso venha em formato de Objeto Map
                 todos = Object.keys(dadosBrutos).map(key => {
                     if (typeof dadosBrutos[key] === 'object') {
                         dadosBrutos[key].id = key;
@@ -379,12 +377,20 @@ async function carregarProdutos() {
 
         produtos = todos.map(p => getProduto(p)).filter(p => {
             if (!p || p.paused === true) return false;
-            if (!categoria) return true;
+            
+            // 1. Validação Estrita de Categoria
             const catProd = normalizarTexto(p.categoriaId || '');
-            if (catProd !== categoria) return false;
-            if (!subcategoria) return true;
-            const subProd = normalizarTexto(p.subcategoriaId || '');
-            return subProd === subcategoria || subProd.includes(subcategoria) || subcategoria.includes(subProd);
+            if (categoria && catProd !== categoria) return false;
+            
+            // 2. Validação Estrita de Subcategoria (Evita vazamentos)
+            if (subcategoria) {
+                const subProd = normalizarTexto(p.subcategoriaId || '');
+                if (!subProd) return false; // Se o produto não tem subcategoria, esconde
+                
+                return subProd === subcategoria || subProd.replace(/-/g, '').includes(subcategoria.replace(/-/g, ''));
+            }
+            
+            return true;
         });
 
         if (document.getElementById('totalProdutos'))
@@ -400,7 +406,6 @@ async function carregarProdutos() {
         if (loading) loading.innerHTML = 'Erro ao carregar catálogo. Por favor, recarregue a página.';
     }
 }
-
 // ================================================================
 // RENDERIZAR GRID DE PRODUTOS (CORRIGIDO 10/10)
 // ================================================================

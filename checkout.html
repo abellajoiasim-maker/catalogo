@@ -125,6 +125,63 @@
             }
         }
 
+        #print-romaneio-a4 {
+            display: none;
+        }
+
+        /* =====================================================
+           ESTILOS EXCLUSIVOS PARA IMPRESSÃO COMPACTA A4
+           ===================================================== */
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                font-family: 'Inter', sans-serif;
+                font-size: 10px !important;
+                line-height: 1.2 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            header, main, .hero-glow, #modal-romaneio {
+                display: none !important;
+            }
+            #print-romaneio-a4 {
+                display: block !important;
+                width: 100% !important;
+                padding: 10mm !important;
+                color: #000000 !important;
+            }
+            .print-border {
+                border: 1px solid #000000 !important;
+            }
+            .print-bg-gray {
+                background-color: #f2f2f2 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-top: 5px !important;
+                margin-bottom: 5px !important;
+            }
+            th, td {
+                border: 1px solid #dddddd !important;
+                padding: 4px 6px !important;
+                font-size: 9px !important;
+                color: #000000 !important;
+            }
+            th {
+                background-color: #eaeded !important;
+                font-weight: bold !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .no-break {
+                page-break-inside: avoid !important;
+            }
+        }
+
         @media(max-width:768px) {
             header .h-20 {
                 height: auto;
@@ -160,11 +217,12 @@
         }
     </style>
 </head>
-<body class="pb-36 md:pb-24">[cite: 5]
+<body class="pb-36 md:pb-24">
 
     <div class="hero-glow top-[-200px] left-[-200px]"></div>
     <div class="hero-glow bottom-[-200px] right-[-200px]"></div>
 
+    <!-- HEADER SITE -->
     <header class="sticky top-0 z-50 border-b border-zinc-900 glass">
         <div class="max-w-7xl mx-auto px-4 md:px-6">
             <div class="h-20 flex items-center justify-between gap-4">
@@ -180,10 +238,10 @@
                     </div>
 
                     <div class="flex flex-col min-w-0">
-                        <h1 class="serif gold text-sm md:text-xl font-bold uppercase tracking-[0.15em] leading-none truncate">
+                        <h1 id="nomeLojaHeader" class="serif gold text-sm md:text-xl font-bold uppercase tracking-[0.15em] leading-none truncate">
                             Abella Joias
                         </h1>
-                        <p class="text-[9px] md:text-xs text-zinc-500 tracking-widest uppercase mt-1 truncate">
+                        <p id="sloganHeader" class="text-[9px] md:text-xs text-zinc-500 tracking-widest uppercase mt-1 truncate">
                             Atacado de Joias no Bruto
                         </p>
                     </div>
@@ -196,6 +254,7 @@
         </div>
     </header>
 
+    <!-- CONTEÚDO PRINCIPAL (TELA) -->
     <main class="max-w-7xl mx-auto px-4 md:px-8 py-10 fade-in">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
@@ -264,7 +323,7 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="font-black">PIX</h3>
-                                    <p class="text-zinc-500 text-xs mt-1">Desconto automático</p>
+                                    <p id="labelDescontoPix" class="text-zinc-500 text-xs mt-1">5% de desconto</p>
                                 </div>
                                 <input type="radio" name="formaPagamento" value="PIX" checked onchange="atualizarResumo()">
                             </div>
@@ -274,7 +333,7 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <h3 class="font-black">Cartão</h3>
-                                    <p class="text-zinc-500 text-xs mt-1">Parcelamento</p>
+                                    <p id="labelParcelasCartao" class="text-zinc-500 text-xs mt-1">Em até 6x</p>
                                 </div>
                                 <input type="radio" name="formaPagamento" value="Cartão" onchange="atualizarResumo()">
                             </div>
@@ -288,7 +347,7 @@
                 </section>
             </div>
 
-            <!-- RESUMO FIXO COM BOTÕES CORRIGIDOS -->
+            <!-- RESUMO FIXO -->
             <div class="lg:col-span-5">
                 <div class="glass rounded-[2rem] p-5 md:p-6 lg:sticky lg:top-24 shadow-2xl border border-white/10">
                     <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
@@ -325,21 +384,21 @@
                         </div>
                     </div>
 
-                    <!-- BOTÕES SECUNDÁRIOS DE SUPORTE -->
+                    <!-- BOTÕES DE CONTROLE DE DOCUMENTO -->
                     <div class="grid grid-cols-3 gap-2 mb-4">
-                        <button onclick="visualizarRomaneio()" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
-                            👁️ Romaneio
+                        <button onclick="acionarRomaneioTela()" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
+                            👁️ Ver Romaneio
                         </button>
-                        <button onclick="gerarPDF(false)" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
+                        <button onclick="dispararImpressaoCompacta()" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
                             📥 Baixar PDF
                         </button>
-                        <button onclick="gerarPDF(true)" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
+                        <button onclick="dispararImpressaoCompacta()" class="whitespace-nowrap px-2 py-3.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 font-bold text-[10px] rounded-xl transition-all flex items-center justify-center gap-1 tracking-wide uppercase">
                             🖨️ Imprimir
                         </button>
                     </div>
 
-                    <!-- BOTÃO PRINCIPAL: FINALIZAR PEDIDO (TOTALMENTE VISÍVEL) -->
-                    <button onclick="finalizarPedido()" class="w-full py-4 bg-[#caa85c] hover:bg-[#bfa054] text-black font-black text-xs md:text-sm rounded-xl transition-all flex items-center justify-center gap-2 tracking-widest uppercase shadow-lg shadow-[#caa85c]/20">[cite: 5]
+                    <!-- BOTÃO PRINCIPAL DE FECHAMENTO -->
+                    <button onclick="finalizarPedido()" class="w-full py-4 bg-[#caa85c] hover:bg-[#bfa054] text-black font-black text-xs md:text-sm rounded-xl transition-all flex items-center justify-center gap-2 tracking-widest uppercase shadow-lg shadow-[#caa85c]/20">
                         🚀 Finalizar Pedido via WhatsApp
                     </button>
                 </div>
@@ -348,18 +407,478 @@
         </div>
     </main>
 
-    <!-- MODAL ROMANEIO -->
-    <div id="modal-romaneio" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 p-4 flex items-center justify-center">
-        <div class="w-full max-w-3xl glass rounded-[2rem] overflow-hidden">
-            <div class="h-16 px-6 border-b border-white/5 flex items-center justify-between">
-                <h3 class="serif gold">Romaneio</h3>
-                <button onclick="fecharModal()" class="text-zinc-500 hover:text-white text-2xl">&times;</button>
+    <!-- MODAL DO ROMANEIO (VISUAL REFORMULADO EM TELA) -->
+    <div id="modal-romaneio" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden z-50 p-4 flex items-center justify-center">
+        <div class="w-full max-w-4xl glass rounded-[2rem] overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="h-16 px-6 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-[#caa85c] text-xl">📋</span>
+                    <h3 class="serif gold font-bold tracking-wide">Romaneio de Conferência Detalhado</h3>
+                </div>
+                <button onclick="fecharModal()" class="text-zinc-400 hover:text-white text-3xl transition-colors">&times;</button>
             </div>
-            <div id="conteudo-romaneio" class="p-6 max-h-[70vh] overflow-y-auto scrollbar bg-zinc-950 text-zinc-100 font-mono text-sm leading-relaxed rounded-b-[2rem]"></div>
+            
+            <div class="p-6 overflow-y-auto scrollbar bg-zinc-950/60 space-y-6 flex-1">
+                <!-- Cabeçalhos de Informação do Cliente e Local de Entrega -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-xl space-y-2">
+                        <p class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">👤 Dados do Cliente</p>
+                        <p class="text-sm font-semibold text-zinc-200" id="rom-tela-cliente-nome">-</p>
+                        <p class="text-xs text-zinc-400" id="rom-tela-cliente-whats">-</p>
+                        <p class="text-xs text-zinc-400" id="rom-tela-cliente-cidade">-</p>
+                    </div>
+                    <div class="bg-white/5 border border-white/5 p-4 rounded-xl space-y-2">
+                        <p class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">📍 Local e Endereço de Entrega</p>
+                        <p class="text-sm font-semibold text-[#caa85c]" id="rom-tela-entrega-local">-</p>
+                        <p class="text-xs text-zinc-200" id="rom-tela-entrega-endereco">-</p>
+                        <p class="text-xs text-zinc-400" id="rom-tela-entrega-cidade">-</p>
+                    </div>
+                </div>
+
+                <!-- Tabela de Produtos -->
+                <div class="border border-white/5 rounded-xl overflow-hidden bg-zinc-900/40">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-white/5 border-b border-white/5 text-[10px] uppercase tracking-wider text-zinc-400">
+                                <th class="p-3 font-semibold w-12 text-center">Item</th>
+                                <th class="p-3 font-semibold">Produto / Especificação</th>
+                                <th class="p-3 font-semibold text-center w-20">Qtd</th>
+                                <th class="p-3 font-semibold text-right w-28">Peso Total</th>
+                                <th class="p-3 font-semibold text-right w-32">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rom-tela-tbody" class="text-xs text-zinc-300 divide-y divide-white/5">
+                            <!-- Inserção Dinâmica -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bloco de Resumo Financeiro Compacto -->
+                <div class="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-white/10 p-5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-xs">
+                        <div>
+                            <span class="text-zinc-500 block">Total de Peças:</span>
+                            <span class="font-bold text-zinc-200 text-sm" id="rom-tela-resumo-pecas">0 pçs</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-500 block">Peso Geral:</span>
+                            <span class="font-bold text-zinc-200 text-sm" id="rom-tela-resumo-peso">0,00 grs.</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-500 block">Forma de Pagamento:</span>
+                            <span class="font-bold text-[#caa85c] text-sm" id="rom-tela-resumo-pagamento">PIX</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-right border-t md:border-t-0 border-white/5 pt-3 md:pt-0 w-full md:w-auto space-y-1">
+                        <div class="text-xs text-zinc-400 flex justify-between md:justify-end gap-4">
+                            <span>Subtotal Bruto:</span>
+                            <span class="font-semibold text-zinc-200" id="rom-tela-fin-subtotal">R$ 0,00</span>
+                        </div>
+                        <div class="text-xs text-emerald-400 flex justify-between md:justify-end gap-4" id="rom-tela-fin-box-desc">
+                            <span>Desconto Aplicado:</span>
+                            <span class="font-semibold" id="rom-tela-fin-desconto">- R$ 0,00</span>
+                        </div>
+                        <div class="text-xs text-zinc-400 flex justify-between md:justify-end gap-4">
+                            <span>Valor Frete:</span>
+                            <span class="font-semibold text-zinc-200" id="rom-tela-fin-frete">R$ 0,00</span>
+                        </div>
+                        <div class="text-sm flex justify-between md:justify-end gap-4 items-center pt-1">
+                            <span class="font-bold uppercase text-zinc-300 tracking-wider text-[11px]">Valor Líquido:</span>
+                            <span class="text-2xl font-black text-[#caa85c]" id="rom-tela-fin-total">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-16 px-6 border-t border-white/5 bg-zinc-900/50 flex items-center justify-end gap-2 shrink-0">
+                <button onclick="fecharModal()" class="px-5 h-10 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs uppercase tracking-wider transition-colors">
+                    Fechar Janela
+                </button>
+                <button onclick="dispararImpressaoCompacta()" class="px-6 h-10 rounded-xl bg-[#caa85c] hover:bg-[#bfa054] text-black font-black text-xs uppercase tracking-widest transition-colors shadow-md">
+                    🖨️ Gerar PDF / Imprimir
+                </button>
+            </div>
         </div>
     </div>
 
- <!-- SCRIPTS -->
+    <!-- AREA DO ESPELHO DE IMPRESSÃO COMPACTA A4 -->
+    <div id="print-romaneio-a4">
+        <table style="width:100%; border:0; margin-bottom: 8px;">
+            <tr style="border:0;">
+                <td style="border:0; padding:0; width:65%;">
+                    <h1 style="font-size:16px; font-weight:800; margin:0; text-transform:uppercase; font-family:'Cinzel',serif;" id="print-empresa-nome">ABELLA JOIAS</h1>
+                    <p style="font-size:9px; color:#555; margin:1px 0 0 0;" id="print-empresa-slogan">Atacado de Joias no Bruto</p>
+                </td>
+                <td style="border:0; padding:0; text-align:right; width:35%; font-size:9px; color:#333; line-height:1.3;">
+                    <strong>DOCUMENTO DE CONFERÊNCIA</strong><br>
+                    Data Emissão: <span id="print-doc-data">-</span><br>
+                    Controle: <span id="print-doc-id">-</span>
+                </td>
+            </tr>
+        </table>
+
+        <table style="width:100%; margin-bottom: 8px;">
+            <tr>
+                <th style="width:50%; text-align:left;">👤 DADOS DO CLIENTE</th>
+                <th style="width:50%; text-align:left;">📍 LOCAL DE ENTREGA / GALVÂNICA</th>
+            </tr>
+            <tr>
+                <td style="vertical-align:top; line-height:1.4;">
+                    <strong>Nome:</strong> <span id="print-cli-nome">-</span><br>
+                    <strong>WhatsApp:</strong> <span id="print-cli-whats">-</span><br>
+                    <strong>Cidade Base:</strong> <span id="print-cli-cidade">-</span>
+                </td>
+                <td style="vertical-align:top; line-height:1.4;">
+                    <strong>Destino:</strong> <span id="print-ent-local">-</span><br>
+                    <strong>Endereço:</strong> <span id="print-ent-endereco">-</span><br>
+                    <strong>Cidade/UF:</strong> <span id="print-ent-cidade">-</span>
+                </td>
+            </tr>
+        </table>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:5%; text-align:center;">ITEM</th>
+                    <th style="width:15%; text-align:center;">CÓDIGO / SKU</th>
+                    <th style="width:45%; text-align:left;">DESCRIÇÃO DO PRODUTO / VARIAÇÃO</th>
+                    <th style="width:10%; text-align:center;">QTD</th>
+                    <th style="width:10%; text-align:right;">PESO TOT.</th>
+                    <th style="width:15%; text-align:right;">SUBTOTAL</th>
+                </tr>
+            </thead>
+            <tbody id="print-itens-tbody">
+                <!-- Inserido dinamicamente -->
+            </tbody>
+        </table>
+
+        <div style="margin-top: 6px; border: 1px solid #dddddd; padding: 5px; font-size: 8px; line-height: 1.3;" class="no-break">
+            <strong>Observações do Pedido:</strong> <span id="print-obs-texto">Nenhuma</span>
+        </div>
+
+        <table style="width:45%; margin-left:55%; margin-top:8px;" class="no-break">
+            <tr class="print-bg-gray">
+                <td style="font-weight:bold; width:60%;">Total de Peças:</td>
+                <td style="text-align:right; font-weight:bold; width:40%;" id="print-fin-pecas">0 pçs</td>
+            </tr>
+            <tr class="print-bg-gray">
+                <td style="font-weight:bold;">Peso Bruto Total:</td>
+                <td style="text-align:right; font-weight:bold;" id="print-fin-peso">0,00 grs.</td>
+            </tr>
+            <tr>
+                <td>Subtotal Itens:</td>
+                <td style="text-align:right;" id="print-fin-subtotal">R$ 0,00</td>
+            </tr>
+            <tr id="print-fin-linha-desc">
+                <td style="color:#27ae60;">Desconto Obtido:</td>
+                <td style="text-align:right; color:#27ae60;" id="print-fin-desconto">- R$ 0,00</td>
+            </tr>
+            <tr>
+                <td>Taxa de Frete:</td>
+                <td style="text-align:right;" id="print-fin-frete">R$ 0,00</td>
+            </tr>
+            <tr style="font-size:11px; background-color:#eaeded !important;">
+                <td style="font-weight:bold;">VALOR FINAL (<span id="print-fin-forma">-</span>):</td>
+                <td style="text-align:right; font-weight:bold;" id="print-fin-total">R$ 0,00</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- FUNÇÕES DE MAPEAMENTO E OPERAÇÃO DO NOVO ROMANEIO -->
+    <script>
+        function fecharModal() {
+            document.getElementById('modal-romaneio').classList.add('hidden');
+        }
+
+        function carregarDadosEstruturados() {
+            const rawItens = localStorage.getItem('pma_v8_carrinho_itens') ? JSON.parse(localStorage.getItem('pma_v8_carrinho_itens')) : [];
+            
+            const itensTratados = rawItens.map(item => {
+                const qtd = parseInt(item.quantidade || item.qtd || 0);
+                const preco = parseFloat(item.preco || item.price || item.precoVendaUnitario || 0);
+                const peso = parseFloat(item.peso || item.pesoUnitario || 0);
+                return {
+                    id: item.id || item.codigo || item.sku || '-',
+                    nome: item.name || item.nome || 'Produto',
+                    imagem: item.image || item.imagem || '',
+                    preco: preco,
+                    quantidade: qtd,
+                    pesoTotal: peso * qtd,
+                    subtotal: preco * qtd,
+                    variacao: item.variacao || item.combinacao || ''
+                };
+            });
+
+            const dadosForm = {
+                clienteNome: document.getElementById('cli-nome')?.value.trim() || '(Não preenchido)',
+                clienteWhats: document.getElementById('cli-whats')?.value.trim() || '(Não preenchido)',
+                clienteCidade: document.getElementById('cli-cidade')?.value.trim() || '(Não preenchido)',
+                entregaLocal: document.getElementById('ent-local')?.value.trim() || '(Não preenchido)',
+                entregaRua: document.getElementById('ent-rua')?.value.trim() || '',
+                entregaNum: document.getElementById('ent-numero')?.value.trim() || '',
+                entregaBairro: document.getElementById('ent-bairro')?.value.trim() || '',
+                entregaCidade: document.getElementById('ent-cidade')?.value.trim() || '(Não preenchido)',
+                formaPag: document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX',
+                obs: document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma'
+            };
+
+            const formatMoedaLocal = (v) => 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',');
+            const formatPesoLocal = (g) => parseFloat(g || 0) >= 1000 ? (parseFloat(g || 0) / 1000).toFixed(2).replace('.', ',') + ' Kg.' : parseFloat(g || 0).toFixed(2).replace('.', ',') + ' grs.';
+
+            const subtotalGeral = itensTratados.reduce((a, b) => a + b.subtotal, 0);
+            const pesoGeral = itensTratados.reduce((a, b) => a + b.pesoTotal, 0);
+            const pecasGeral = itensTratados.reduce((a, b) => a + b.quantidade, 0);
+
+            let descontoPixPorcentagem = 5; 
+            const labelPixTexto = document.getElementById('labelDescontoPix')?.innerText;
+            if (labelPixTexto && labelPixTexto.includes('%')) {
+                const extraido = parseFloat(labelPixTexto.split('%')[0]);
+                if (!isNaN(extraido)) descontoPixPorcentagem = extraido;
+            }
+
+            const valorDesconto = dadosForm.formaPag === 'PIX' ? subtotalGeral * (descontoPixPorcentagem / 100) : 0;
+            
+            let valorFrete = 0;
+            const textFrete = document.getElementById('res-frete')?.innerText || 'R$ 0,00';
+            if (textFrete !== 'Grátis' && textFrete.includes('R$')) {
+                const limpo = textFrete.replace('R$', '').replace('.', '').replace(',', '.').trim();
+                const freteNum = parseFloat(limpo);
+                if (!isNaN(freteNum)) valorFrete = freteNum;
+            }
+            
+            const valorTotalLiquido = subtotalGeral - valorDesconto + valorFrete;
+
+            return {
+                itens: itensTratados,
+                form: dadosForm,
+                calculos: {
+                    subtotal: subtotalGeral,
+                    peso: pesoGeral,
+                    pecas: pecasGeral,
+                    desconto: valorDesconto,
+                    frete: valorFrete,
+                    total: valorTotalLiquido
+                },
+                formatadores: {
+                    moeda: formatMoedaLocal,
+                    pesoFmt: formatPesoLocal
+                }
+            };
+        }
+
+        function acionarRomaneioTela() {
+            const dados = carregarDadosEstruturados();
+            if (dados.itens.length === 0) {
+                alert('Seu carrinho está vazio. Não há itens para romaneio.');
+                return;
+            }
+
+            document.getElementById('rom-tela-cliente-nome').innerText = dados.form.clienteNome;
+            document.getElementById('rom-tela-cliente-whats').innerText = "WhatsApp: " + dados.form.clienteWhats;
+            document.getElementById('rom-tela-cliente-cidade').innerText = "Cidade Base: " + dados.form.clienteCidade;
+
+            document.getElementById('rom-tela-entrega-local').innerText = dados.form.entregaLocal;
+            document.getElementById('rom-tela-entrega-endereco').innerText = dados.form.entregaRua ? `${dados.form.entregaRua}, Nº ${dados.form.entregaNum} — Bairro ${dados.form.entregaBairro}` : 'Não informado';
+            document.getElementById('rom-tela-entrega-cidade').innerText = "Destino Final: " + dados.form.entregaCidade;
+
+            const tbody = document.getElementById('rom-tela-tbody');
+            tbody.innerHTML = '';
+            
+            dados.itens.forEach((item, index) => {
+                const specs = item.variacao ? `<span class="block text-[10px] text-[#caa85c] font-medium mt-0.5">🔹 ${item.variacao}</span>` : '';
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 text-center text-zinc-500 font-mono">${String(index + 1).padStart(2, '0')}</td>
+                        <td class="p-3">
+                            <span class="font-bold text-zinc-200 block text-xs">${item.nome}</span>
+                            <span class="text-[10px] text-zinc-500 font-mono">SKU/ID: ${item.id}</span>
+                            ${specs}
+                        </td>
+                        <td class="p-3 text-center font-bold text-zinc-100">${item.quantidade} pçs</td>
+                        <td class="p-3 text-right text-zinc-400 font-mono">${dados.formatadores.pesoFmt(item.pesoTotal)}</td>
+                        <td class="p-3 text-right font-bold text-[#caa85c] font-mono">${dados.formatadores.moeda(item.subtotal)}</td>
+                    </tr>`;
+            });
+
+            document.getElementById('rom-tela-resumo-pecas').innerText = `${dados.calculos.pecas} pçs`;
+            document.getElementById('rom-tela-resumo-peso').innerText = dados.formatadores.pesoFmt(dados.calculos.peso);
+            document.getElementById('rom-tela-resumo-pagamento').innerText = dados.form.formaPag;
+
+            document.getElementById('rom-tela-fin-subtotal').innerText = dados.formatadores.moeda(dados.calculos.subtotal);
+            document.getElementById('rom-tela-fin-frete').innerText = dados.calculos.frete === 0 ? 'Grátis' : dados.formatadores.moeda(dados.calculos.frete);
+            document.getElementById('rom-tela-fin-total').innerText = dados.formatadores.moeda(dados.calculos.total);
+
+            const boxDesc = document.getElementById('rom-tela-fin-box-desc');
+            if (dados.calculos.desconto > 0) {
+                boxDesc.classList.remove('hidden');
+                document.getElementById('rom-tela-fin-desconto').innerText = `- ${dados.formatadores.moeda(dados.calculos.desconto)}`;
+            } else {
+                boxDesc.classList.add('hidden');
+            }
+
+            document.getElementById('modal-romaneio').classList.remove('hidden');
+        }
+
+        function dispararImpressaoCompacta() {
+            const dados = carregarDadosEstruturados();
+            if (dados.itens.length === 0) {
+                alert('Seu carrinho está vazio.');
+                return;
+            }
+
+            const nomeLojaOrigem = document.getElementById('nomeLojaHeader')?.innerText || 'ABELLA JOIAS';
+            const sloganOrigem = document.getElementById('sloganHeader')?.innerText || 'Atacado de Joias no Bruto';
+            
+            document.getElementById('print-empresa-nome').innerText = nomeLojaOrigem.toUpperCase();
+            document.getElementById('print-empresa-slogan').innerText = sloganOrigem;
+
+            const agora = new Date();
+            document.getElementById('print-doc-data').innerText = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR');
+            document.getElementById('print-doc-id').innerText = 'ROM-' + Date.now().toString().substring(6);
+
+            document.getElementById('print-cli-nome').innerText = dados.form.clienteNome;
+            document.getElementById('print-cli-whats').innerText = dados.form.clienteWhats;
+            document.getElementById('print-cli-cidade').innerText = dados.form.clienteCidade;
+
+            document.getElementById('print-ent-local').innerText = dados.form.entregaLocal;
+            document.getElementById('print-ent-endereco').innerText = dados.form.entregaRua ? `${dados.form.entregaRua}, ${dados.form.entregaNum} - ${dados.form.entregaBairro}` : 'Não informado';
+            document.getElementById('print-ent-cidade').innerText = dados.form.entregaCidade;
+            document.getElementById('print-obs-texto').innerText = dados.form.obs;
+
+            const pTbody = document.getElementById('print-itens-tbody');
+            pTbody.innerHTML = '';
+
+            dados.itens.forEach((item, idx) => {
+                const varLabel = item.variacao ? ` [Var: ${item.variacao}]` : '';
+                pTbody.innerHTML += `
+                    <tr>
+                        <td style="text-align:center;">${idx + 1}</td>
+                        <td style="text-align:center; font-family:monospace;">${item.id}</td>
+                        <td><strong>${item.nome}</strong>${varLabel}</td>
+                        <td style="text-align:center;">${item.quantidade}</td>
+                        <td style="text-align:right;">${dados.formatadores.pesoFmt(item.pesoTotal)}</td>
+                        <td style="text-align:right; font-weight:bold;">${dados.formatadores.moeda(item.subtotal)}</td>
+                    </tr>`;
+            });
+
+            document.getElementById('print-fin-pecas').innerText = `${dados.calculos.pecas} pçs`;
+            document.getElementById('print-fin-peso').innerText = dados.formatadores.pesoFmt(dados.calculos.peso);
+            document.getElementById('print-fin-subtotal').innerText = dados.formatadores.moeda(dados.calculos.subtotal);
+            document.getElementById('print-fin-frete').innerText = dados.calculos.frete === 0 ? 'Grátis' : dados.formatadores.moeda(dados.calculos.frete);
+            document.getElementById('print-fin-forma').innerText = dados.form.formaPag.toUpperCase();
+            document.getElementById('print-fin-total').innerText = dados.formatadores.moeda(dados.calculos.total);
+
+            const pLinhaDesc = document.getElementById('print-fin-linha-desc');
+            if (dados.calculos.desconto > 0) {
+                pLinhaDesc.style.display = '';
+                document.getElementById('print-fin-desconto').innerText = `- ${dados.formatadores.moeda(dados.calculos.desconto)}`;
+            } else {
+                pLinhaDesc.style.display = 'none';
+            }
+
+            window.print();
+        }
+
+     // =====================================================
+        // SALVAMENTO NO FIREBASE E ENVIO DE MENSAGEM VIA WHATSAPP
+        // =====================================================
+        async function finalizarPedido() {
+            const dados = carregarDadosEstruturados();
+            
+            if (dados.itens.length === 0) {
+                alert('Seu carrinho está vazio!');
+                return;
+            }
+
+            // Validar campos obrigatórios mínimos
+            if (!document.getElementById('cli-nome')?.value.trim() || !document.getElementById('cli-whats')?.value.trim()) {
+                alert('Por favor, preencha os dados do Cliente (Nome e WhatsApp) antes de enviar.');
+                return;
+            }
+
+            try {
+                // 1. Construção do Payload para salvar no Banco de Dados
+                const payload = {
+                    cliente: document.getElementById('cli-nome').value.trim(),
+                    whatsapp: document.getElementById('cli-whats').value.trim(),
+                    documento: document.getElementById('cli-documento')?.value.trim() || '',
+                    
+                    entrega: {
+                        cep: document.getElementById('ent-cep')?.value.trim() || '',
+                        rua: document.getElementById('ent-rua').value.trim(),
+                        numero: document.getElementById('ent-numero').value.trim(),
+                        bairro: document.getElementById('ent-bairro').value.trim(),
+                        cidade: document.getElementById('ent-cidade').value.trim(),
+                        uf: document.getElementById('ent-uf')?.value || ''
+                    },
+
+                    observacoes: document.getElementById('obs-pedido').value.trim(),
+                    formaPagamento: dados.form.formaPag,
+                    itens: dados.itens, 
+
+                    subtotal: dados.calculos.subtotal,
+                    desconto: dados.calculos.desconto,
+                    total: dados.calculos.total,
+                    totalPecas: dados.calculos.pecas,
+                    pesoTotal: parseFloat(dados.calculos.peso.toFixed(2)),
+                    
+                    status: 'Novo',
+                    data: new Date().toLocaleString('pt-BR'),
+                    timestamp: Date.now()
+                };
+
+                // 2. Gravação no Firebase Realtime Database
+                const ref = await db.ref('abella/orders').push(payload);
+
+                // 3. Limpeza do Carrinho local após persistência com sucesso
+                if (typeof carrinhoService !== 'undefined' && carrinhoService.limpar) {
+                    carrinhoService.limpar();
+                } else {
+                    localStorage.removeItem('pma_v8_carrinho_itens');
+                }
+
+                // 4. Montagem da mensagem compacta exatamente como solicitado
+                const numeroWhatsSuporte = "5519999999999"; // Substitua pelo número da loja
+                
+                let txt = `Olá! Meu pedido foi realizado na *Abella Joias*\n`;
+                txt += `*ID do Pedido:* ${ref.key}\n\n`;
+
+                txt += `👤 *Cliente*\n`;
+                txt += `• ${payload.cliente}\n`;
+                txt += `• ${payload.whatsapp}\n`;
+                txt += `• ${dados.form.clienteCidade}\n\n`;
+
+                txt += `📍 *Entrega*\n`;
+                txt += `• Local: ${dados.form.entregaLocal}\n`;
+                if(payload.entrega.rua) {
+                    txt += `• Endereço: ${payload.entrega.rua}, Nº ${payload.entrega.numero} - ${payload.entrega.bairro}, ${payload.entrega.cidade}\n\n`;
+                } else {
+                    txt += `\n`;
+                }
+
+                txt += `💰 *Financeiro*\n`;
+                txt += `• Pagamento: ${payload.formaPagamento}\n`;
+                txt += `• Subtotal: ${dados.formatadores.moeda(payload.subtotal)}\n`;
+                if (payload.desconto > 0) {
+                    txt += `• Desconto: - ${dados.formatadores.moeda(payload.desconto)}\n`;
+                }
+                txt += `• Total: ${dados.formatadores.moeda(payload.total)}\n\n`;
+                
+                txt += `Aguardo o link para pagamento e a confirmação do prazo de entrega. Obrigado!`;
+
+                // 5. Redirecionamento para o WhatsApp
+                const urlFinal = `https://api.whatsapp.com/send?phone=${numeroWhatsSuporte}&text=${encodeURIComponent(txt)}`;
+                window.open(urlFinal, '_blank');
+
+            } catch (error) {
+                console.error("Erro ao salvar o pedido:", error);
+                alert("Houve um erro técnico ao processar seu pedido no banco de dados. Por favor, tente novamente.");
+            }
+        }
+    </script>
+
+    <!-- SCRIPTS DE INFRAESTRUTURA -->
     <script src="js/firebase/firebase-config.js"></script>
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
@@ -367,8 +886,6 @@
     <script src="js/utils/image-helper.js"></script>
     <script src="js/utils/imagens.js"></script>
     <script src="js/services/carrinhoService.js"></script>
-
-    <!-- SEU ARQUIVO EXTERNO REFATORADO (checkout_2.js) -->
     <script src="js/services/checkout.js"></script>
 </body>
-</html> 
+</html>

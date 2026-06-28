@@ -1,6 +1,6 @@
 // ======================================================================
 // js/utils/image-helper.js
-// Abella Joias - ImageHelper v3.0 (Versão Unificada e Final)
+// Abella Joias - ImageHelper v3.0 (Versão Unificada, Final e Corrigida)
 // Compatível com GitHub Pages • Resolução de Mapeamentos, Slugs e Storage
 // Arquitetura Homologada PMA V8 - Arquivo Completo e Selado
 // ======================================================================
@@ -15,6 +15,8 @@ const ImageHelper = (() => {
     const FIREBASE_STORAGE_HOST = 'https://firebasestorage.googleapis.com/v0/b';
     const BUCKET_NAME = 'catalogo-abella-joias.firebasestorage.app';
     const STORAGE_ROOT = `gs://${BUCKET_NAME}/images`;
+    // URL Global Absoluta para evitar Erros 404 caso o arquivo local não exista
+    const CLOUD_FALLBACK = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
 
     // ==========================================================
     // HELPERS INTERNOS DE SANITIZAÇÃO
@@ -47,7 +49,7 @@ const ImageHelper = (() => {
             let pathOriginal = safeString(url);
 
             if (!pathOriginal) {
-                return PLACEHOLDER;
+                return CLOUD_FALLBACK;
             }
 
             // 1. Caso já seja uma URL HTTP/HTTPS absoluta
@@ -70,14 +72,14 @@ const ImageHelper = (() => {
                 const primeiraBarra = semGs.indexOf('/');
 
                 if (primeiraBarra === -1) {
-                    return PLACEHOLDER;
+                    return CLOUD_FALLBACK;
                 }
 
                 const bucket = semGs.substring(0, primeiraBarra);
                 const caminho = semGs.substring(primeiraBarra + 1);
 
                 if (!bucket || !caminho) {
-                    return PLACEHOLDER;
+                    return CLOUD_FALLBACK;
                 }
 
                 return `${FIREBASE_STORAGE_HOST}/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
@@ -88,47 +90,47 @@ const ImageHelper = (() => {
 
         } catch (error) {
             console.error('[PMA V8] [ImageHelper:converterGsUrl]', error);
-            return PLACEHOLDER;
+            return CLOUD_FALLBACK;
         }
     }
 
     // ==========================================================
     // RESOLUÇÃO DE IMAGENS POR INTERPOLAÇÃO / ESTRUTURA
     // ==========================================================
-    function obterImagemFallback() {
-        return converterGsUrl(`${STORAGE_ROOT}/fallback.jpg`);
+    function obtenerImagemFallback() {
+        return CLOUD_FALLBACK;
     }
 
-    function obterLogo() {
+    function obtenerLogo() {
         return converterGsUrl(`${STORAGE_ROOT}/logo/logo.png`);
     }
 
-    function obterImagemCategoria(slug) {
+    function obtenerImagemCategoria(slug) {
         const cleanSlug = normalizarSlug(slug);
-        if (!cleanSlug) return obterImagemFallback();
+        if (!cleanSlug) return obtenerImagemFallback();
         return converterGsUrl(`${STORAGE_ROOT}/categorias/${cleanSlug}.jpg`);
     }
 
-    function obterImagemCategoriaGrid(slug) {
+    function obtenerImagemCategoriaGrid(slug) {
         const cleanSlug = normalizarSlug(slug);
-        if (!cleanSlug) return obterImagemFallback();
+        if (!cleanSlug) return obtenerImagemFallback();
         return converterGsUrl(`${STORAGE_ROOT}/categoria-grid/${cleanSlug}.jpg`);
     }
 
-    function obterImagemSubcategoria(slug) {
+    function obtenerImagemSubcategoria(slug) {
         const cleanSlug = normalizarSlug(slug);
-        if (!cleanSlug) return obterImagemFallback();
+        if (!cleanSlug) return obtenerImagemFallback();
         return converterGsUrl(`${STORAGE_ROOT}/subcategorias/${cleanSlug}.jpg`);
     }
 
-    function obterImagemSubcategoriaGrid(slug) {
+    function obtenerImagemSubcategoriaGrid(slug) {
         const cleanSlug = normalizarSlug(slug);
-        if (!cleanSlug) return obterImagemFallback();
+        if (!cleanSlug) return obtenerImagemFallback();
         return converterGsUrl(`${STORAGE_ROOT}/subcategoria-grid/${cleanSlug}.jpg`);
     }
 
-    function obterImagemProduto(nomeArquivo) {
-        if (!nomeArquivo) return obterImagemFallback();
+    function obtenerImagemProduto(nomeArquivo) {
+        if (!nomeArquivo) return obtenerImagemFallback();
         
         if (String(nomeArquivo).startsWith('gs://') || String(nomeArquivo).startsWith('http')) {
             return converterGsUrl(nomeArquivo);
@@ -140,22 +142,23 @@ const ImageHelper = (() => {
     // ==========================================================
     // INTERFACES AUXILIARES DE MANIPULAÇÃO DO DOM
     // ==========================================================
-    function obterImagem(item = {}) {
-        if (!item || typeof item !== 'object') return PLACEHOLDER;
+    function obtenerImagem(item = {}) {
+        if (!item || typeof item !== 'object') return CLOUD_FALLBACK;
 
         const imagem = item.image || item.imagem || item.foto || item.thumbnail || item.thumb || item.capa ||
             (Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null) ||
             (Array.isArray(item.imagens) && item.imagens.length > 0 ? item.imagens[0] : null) || 
-            PLACEHOLDER;
+            CLOUD_FALLBACK;
 
         return converterGsUrl(imagem);
     }
 
+    // Evita loop infinito e injeta a imagem premium de segurança caso ocorra erro no servidor do GitHub
     function aplicarFallback(img) {
         if (!img || typeof img !== 'object') return;
         img.onerror = () => {
             img.onerror = null;
-            img.src = PLACEHOLDER;
+            img.src = CLOUD_FALLBACK;
         };
     }
 
@@ -203,8 +206,9 @@ Object.defineProperty(window, 'obterImagemProduto', { value: ImageHelper.obterIm
 Object.defineProperty(window, 'obterImagemCategoria', { value: ImageHelper.obterImagemCategoria, writable: false, configurable: false });
 Object.defineProperty(window, 'obterImagemCategoriaGrid', { value: ImageHelper.obterImagemCategoriaGrid, writable: false, configurable: false });
 Object.defineProperty(window, 'obterImagemSubcategoria', { value: ImageHelper.obterImagemSubcategoria, writable: false, configurable: false });
-Object.defineProperty(window, 'obterImagemSubcategoriaGrid', { value: ImageHelper.obterImageBox || ImageHelper.obterImagemSubcategoriaGrid, writable: false, configurable: false });
+// CORREÇÃO: Removido método inexistente obterImageBox que travava o ecossistema
+Object.defineProperty(window, 'obterImagemSubcategoriaGrid', { value: ImageHelper.obterImagemSubcategoriaGrid, writable: false, configurable: false });
 Object.defineProperty(window, 'obterLogo', { value: ImageHelper.obterLogo, writable: false, configurable: false });
 Object.defineProperty(window, 'obterImagemFallback', { value: ImageHelper.obterImagemFallback, writable: false, configurable: false });
 
-console.info('[PMA V8] 🖼️ ImageHelper v3.0 unificado, fixado e congelado com sucesso.');
+console.info('[PMA V8] 🖼️ ImageHelper v3.0 unificado, corrigido e congelado com sucesso.');

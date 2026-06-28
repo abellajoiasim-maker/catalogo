@@ -231,7 +231,7 @@
         </div>
     </main>
 
-<!-- DEPENDÊNCIAS DO ECOSSISTEMA INJETADAS -->
+    <!-- DEPENDÊNCIAS DO ECOSSISTEMA INJETADAS -->
     <script src="js/firebase/firebase-config.js"></script>
     <script src="js/utils/money.js"></script>
     <script src="js/utils/peso.js"></script>
@@ -239,7 +239,6 @@
     <script src="js/services/carrinhoService.js"></script>
 
     <script>
-        // SOLUÇÃO DO CONFLITO: Reutiliza o 'db' existente se já declarado no escopo global ou inicializa com segurança
         if (typeof db === 'undefined') {
             window.db = typeof firebase !== 'undefined' ? firebase.database() : null;
         } else {
@@ -249,31 +248,18 @@
         let configGlobal = {};
         const INSTANCE_FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
 
-       // Mapeamento polimórfico e inteligente de formatação de peso (Abaixo de 1000g = grs | Acima = Kg)
         window.formatarPeso = function(peso) {
             const p = parseFloat(peso) || 0;
-            
-            // Se o PesoUtils global existir e tiver uma regra própria, tentamos usá-lo primeiro
-            if (typeof PesoUtils !== 'undefined' && typeof PesoUtils.formatar === 'function') {
-                return PesoUtils.formatar(p);
+            if (typeof PesoUtils !== 'undefined' && typeof PesoUtils.formatarPeso === 'function') {
+                return PesoUtils.formatarPeso(p);
             }
-            
-            // Regra de segurança PMA V8 (Garante o comportamento caso o peso.js não aplique o sufixo)
             if (p < 1000) {
-                const pesoFormatado = new Intl.NumberFormat('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }).format(p);
-                return `${pesoFormatado} grs.`;
+                return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(p) + ' grs.';
             } else {
-                const pesoEmKg = p / 1000;
-                const pesoFormatado = new Intl.NumberFormat('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }).format(pesoEmKg);
-                return `${pesoFormatado} Kg.`;
+                return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(p / 1000) + ' Kg.';
             }
         };
+
         function resolverImagemFirebase(url) {
             try {
                 if (!url) return INSTANCE_FALLBACK_IMG;
@@ -296,7 +282,6 @@
 
         async function inicializarPagina() {
             try {
-                // Utiliza a referência global segura mapeada acima
                 if (window.db) {
                     const snap = await window.db.ref('abella/settings').once('value');
                     if (snap.exists()) {
@@ -305,7 +290,7 @@
                     }
                 }
             } catch (err) {
-                console.warn("[PMA V8] Falha ao recuperar definições dinâmicas de marca. Rodando layout nativo.", err);
+                console.warn("[PMA V8] Falha ao recuperar definições dinâmicas de marca.", err);
             } finally {
                 renderizarCarrinho();
             }
@@ -375,8 +360,9 @@
                     ? `<span class="inline-block bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">${item.badgePromocional}</span>`
                     : '';
 
-                const labelVariacao = item.variacao || item.combinacao || '';
-                const variacaoHtml = labelVariacao ? `<p class="text-[11px] text-amber-400 font-medium mt-0.5">🔹 Grade: ${labelVariacao}</p>` : '';
+                // MAPEAMENTO ROBUSTO DE VARIAÇÃO: Varre as propriedades possíveis salvas no carrinho
+                const labelVariacao = item.variacao || item.combinacao || item.selectedVariation || item.grade || '';
+                const variacaoHtml = labelVariacao ? `<p class="text-[11px] text-amber-400 font-medium mt-1.5 flex items-center gap-1">🔹 Grade: <span class="bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">${labelVariacao}</span></p>` : '';
 
                 if (listaProdutos) {
                     listaProdutos.innerHTML += `
@@ -391,7 +377,7 @@
                                     ${badgeHtml}
                                 </div>
                                 ${variacaoHtml}
-                                <p class="text-zinc-500 text-xs mt-1">Ref: ${limpoId} | Unitário: ${txtUnitario}</p>
+                                <p class="text-zinc-500 text-xs mt-1.5">Ref: ${limpoId} | Unitário: ${txtUnitario}</p>
                                 <p class="text-zinc-400 text-xs mt-1">⚖️ Peso Total: <span class="text-zinc-300 font-medium">${pesoTotalItem}</span></p>
                             </div>
 
@@ -432,7 +418,7 @@
                 if (typeof carrinhoService.atualizarQuantidade === 'function') {
                     carrinhoService.atualizarQuantidade(id, novaQtd);
                 } else if (typeof carrinhoService.adicionar === 'function') {
-                    carrinhoService.adicionar(item, delta, item.variacao || '');
+                    carrinhoService.adicionar(item, delta, item.variacao || item.combinacao || '');
                 }
                 renderizarCarrinho();
             }
@@ -502,8 +488,8 @@
 
             if(document.getElementById('resumo-itens')) document.getElementById('resumo-itens').innerText = totalItens;
             if(document.getElementById('resumo-peso')) {
-    document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso);
-}
+                document.getElementById('resumo-peso').innerText = formatarPeso(totalPeso);
+            }
             
             if (typeof money !== 'undefined') {
                 if(document.getElementById('resumo-subtotal')) document.getElementById('resumo-subtotal').innerText = money.formatar(subtotalBruto);
@@ -522,7 +508,6 @@
                 blocoDesc.classList.add('hidden');
             }
 
-            // Regra Comercial Dinâmica de Limeira
             const limiteFrete = 100.00;
             const barraFrete = document.getElementById('barra-frete');
             const freteAviso = document.getElementById('frete-aviso');

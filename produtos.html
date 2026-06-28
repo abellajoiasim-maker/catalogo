@@ -10,7 +10,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-
+    
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
@@ -255,9 +255,12 @@ const INSTANCE_FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catal
 // ================================================================
 function normalizarTexto(texto) {
     return (texto || '').toString().normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, '-');
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .toLowerCase()
+        .replace(/-/g, ' ') // Transforma hífens da URL em espaços para bater com o banco
+        .replace(/\s+/g, ' ') // Normaliza múltiplos espaços em um só
+        .trim();
 }
-
 function getProduto(p) {
     return {
         nome:         p.name || p.nome || 'Produto',
@@ -342,12 +345,14 @@ async function carregarProdutos() {
         const categoryParam = params.get('categoria') || params.get('cat')      || '';
         const subcatParam   = params.get('subcategoria') || params.get('sub')   || '';
 
-        const categoria   = normalizarTexto(categoryParam);
+        // Decodifica e normaliza transformando hífens em espaços internamente para a comparação
+        const categoria    = normalizarTexto(decodeURIComponent(categoryParam));
         const subcategoria = normalizarTexto(decodeURIComponent(subcatParam));
 
-        const nomeFiltro = subcatParam ? subcatParam : (categoryParam ? categoryParam : 'Coleção Premium');
+        // Título estético do topo (mantém o visual da URL amigável se quiser)
+        const nomeFiltro = subcatParam ? decodeURIComponent(subcatParam).replace(/-/g, ' ') : (categoryParam ? decodeURIComponent(categoryParam) : 'Coleção Premium');
         const elHero = document.getElementById('heroTitulo');
-        if (elHero) elHero.innerText = nomeFiltro;
+        if (elHero) elHero.innerText = nomeFiltro.toUpperCase();
 
         let todos = null;
 
@@ -373,10 +378,15 @@ async function carregarProdutos() {
         produtos = todos.filter(p => {
             if (!p || p.paused === true) return false;
             if (!categoria) return true;
+
+            // Normaliza os dados vindos do Firebase da mesma forma
             const catProd = normalizarTexto(p.category || p.categoria || p.categorySlug || '');
-            if (catProd !== categoria) return false;
+            if (catProd !== categoria && !catProd.includes(categoria)) return false;
+
             if (!subcategoria) return true;
             const subProd = normalizarTexto(p.subcategory || p.subCategory || p.subcategoria || p.subcategorySlug || '');
+            
+            // Checagem mútua resiliente para pegar qualquer variação de digitação
             return subProd === subcategoria || subProd.includes(subcategoria) || subcategoria.includes(subProd);
         });
 

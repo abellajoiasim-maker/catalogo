@@ -198,7 +198,7 @@
         </div>
     </header>
 
-    <section class="hero-section border-b border-zinc-900 relative overflow-hidden">
+    <section id="heroSection" class="hero-section border-b border-zinc-900 relative overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-20 relative z-10">
             <div class="max-w-3xl">
                 <div class="badge mb-6">
@@ -254,11 +254,12 @@
         <div class="max-w-7xl mx-auto px-4 md:px-6 py-12">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
                 <div>
-                    <h3 class="serif gold text-2xl uppercase tracking-[.25em]">Abella Joias</h3>
-                    <p class="text-zinc-500 leading-relaxed mt-4 text-sm">
-                        Plataforma corporativa premium desenvolvida para proporcionar uma experiência de compra clara, elegante e profissional.
-                    </p>
-                </div>
+    <!-- Adicionado ID dinâmico no título do rodapé -->
+    <h3 id="footerNome" class="serif gold text-2xl uppercase tracking-[.25em]">Abella Joias</h3>
+    <p class="text-zinc-500 leading-relaxed mt-4 text-sm">
+        Plataforma corporativa premium desenvolvida para proporcionar uma experiência de compra clara, elegante e profissional.
+    </p>
+</div>
                 <nav aria-label="Links do rodapé">
                     <p class="text-sm font-black uppercase tracking-[.2em] mb-4">Navegação</p>
                     <ul class="space-y-3">
@@ -318,37 +319,61 @@
 
             try {
                 const snapSettings = await db.ref('abella/settings').once('value');
-                if (snapSettings.exists()) {
-                    const cfg = snapSettings.val();
+               if (snapSettings.exists()) {
+    const cfg = snapSettings.val();
 
-                    if (cfg.logoUrl) {
-                        const img = document.getElementById('abellaLogoImg');
-                        const fallback = document.getElementById('abellaLogoFallback');
-                        if (img) {
-                            img.src = typeof resolverImagemFirebase !== 'undefined' ?
-                                resolverImagemFirebase(cfg.logoUrl) : cfg.logoUrl;
-                            img.onload = () => {
-                                img.classList.remove('hidden');
-                                fallback?.classList.add('hidden');
-                            };
-                        }
-                    }
+    // 1. Renderização e Tratamento do Logotipo Dinâmico
+    const imgLogo = document.getElementById('abellaLogoImg');
+    const fallbackLogo = document.getElementById('abellaLogoFallback');
+    const logoReal = cfg.logoUrl || cfg.logo; // Compatibilidade de campos
+    
+    if (logoReal && imgLogo) {
+        // Se a função resolverImagemFirebase existir, use-a. Caso contrário, use a URL tratada
+        imgLogo.src = typeof resolverImagemFirebase !== 'undefined' ? 
+            resolverImagemFirebase(logoReal) : (typeof converterGsUrl === 'function' ? converterGsUrl(logoReal) : logoReal);
+        
+        imgLogo.onload = () => {
+            imgLogo.classList.remove('hidden');
+            fallbackLogo?.classList.add('hidden');
+        };
+    }
 
-                    if (cfg.name) document.getElementById('nome').innerText = cfg.name;
-                    if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;
+    // 2. Textos e Identidade Dinâmicos
+    if (cfg.name) {
+        document.getElementById('nome').innerText = cfg.name;
+        if (document.getElementById('footerNome')) document.getElementById('footerNome').innerText = cfg.name;
+        // Atualiza dinamicamente os direitos autorais no rodapé
+        const footerCopy = document.querySelector('footer text-center p');
+        if (footerCopy) footerCopy.innerText = `© ${cfg.name} • Plataforma Premium`;
+    }
+    if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;
 
-                    const banner = document.getElementById('banner');
-                    if (banner && cfg.bannerAtivo && cfg.bannerTexto) {
-                        document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
-                        banner.classList.remove('hidden');
-                    }
+    // 3. Aplicação do Banner Superior (Hero) vindo do Banco
+    if (cfg.heroBannerUrl) {
+        const urlBanner = typeof resolverImagemFirebase !== 'undefined' ? 
+            resolverImagemFirebase(cfg.heroBannerUrl) : cfg.heroBannerUrl;
+        const heroSec = document.getElementById('heroSection');
+        if (heroSec) {
+            heroSec.style.backgroundImage = `linear-gradient(to bottom, rgba(7,7,7,0.5) 0%, #070707 100%), url('${urlBanner}')`;
+            heroSec.style.backgroundSize = 'cover';
+            heroSec.style.backgroundPosition = 'center';
+        }
+    }
 
-                    if (cfg.whatsapp) {
-                        const linkWhats = `https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}`;
-                        document.getElementById('footerWhats').href = linkWhats;
-                    }
-                }
+    // 4. Banner promocional de avisos (Atacado)
+    const banner = document.getElementById('banner');
+    if (banner && cfg.bannerAtivo && cfg.bannerTexto) {
+        document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
+        banner.classList.remove('hidden');
+    }
 
+    // 5. Link Direto do WhatsApp Comercial
+    if (cfg.whatsapp) {
+        const linkWhats = `https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}`;
+        const btnWhats = document.getElementById('footerWhats');
+        if (btnWhats) btnWhats.href = linkWhats;
+    }
+}
                 const snapCategories = await db.ref('abella/categories').once('value');
                 let categoriaAtual = null;
 
@@ -374,7 +399,7 @@
                 document.getElementById('categoriaNome').innerText = nomeCategoria;
                 document.title = `${nomeCategoria} • Subcategorias • Abella Joias`;
                 document.getElementById('categoriaDescricao').innerText = categoriaAtual.descricao || categoriaAtual.description ||
-                    'Explore as linhas exclusivas da coleção premium Abella Joias.';
+    `Explore as linhas exclusivas da coleção premium ${cfg.name || 'Abella Joias'}.`;
 
                 const subcategoriasObj = categoriaAtual.subcategories || categoriaAtual.subcategorias || {};
                 const listaSubcategorias = Object.entries(subcategoriasObj).filter(([_, sub]) => sub && sub.paused !== true);

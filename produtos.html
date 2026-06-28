@@ -399,26 +399,52 @@ async function carregarProdutos() {
     }
 }
 // ================================================================
-// RENDERIZAR GRID DE PRODUTOS
+// RENDERIZAR GRID DE PRODUTOS (CORRIGIDO PARA PMA V8)
 // ================================================================
 function renderizarProdutos() {
     const container = document.getElementById('grid-produtos');
     if (!container) return;
     container.innerHTML = '';
 
-    if (!produtosFiltrados.length) {
+    if (!produtosFiltrados || !produtosFiltrados.length) {
         container.innerHTML = `<div class="col-span-full text-center py-12 text-zinc-500 uppercase tracking-widest text-xs">Nenhum item localizado nesta coleção.</div>`;
         return;
     }
 
-    produtosFiltrados.forEach((prod, index) => {
-        const dados    = getProduto(prod);
-        const imgUrl   = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(dados.imagem) : (dados.imagem || INSTANCE_FALLBACK_IMG);
-        const precoFmt = typeof money !== 'undefined' ? money.formatar(dados.preco) : 'R$ ' + dados.preco.toFixed(2);
+    // Pega a imagem padrão segura direto do ImageHelper homologado
+    const fallbackSeguro = typeof window.ImageHelper !== 'undefined' 
+        ? window.ImageHelper.obterImagemFallback() 
+        : 'https://via.placeholder.com/800x800/111111/caa85c?text=ABELLA';
 
-        const temDizeres  = dados.dizeres.length  > 0;
-        const temIniciais = dados.iniciais.length > 0;
-        const badgesHtml  = (temDizeres || temIniciais) ? `
+    produtosFiltrados.forEach((prod, index) => {
+        // Garante que estamos pegando o objeto normalizado e seguro do ProdutoService
+        const dados = typeof getProduto === 'function' ? getProduto(prod) : prod;
+        if (!dados) return;
+
+        // Resolve dinamicamente a URL da imagem usando a engine unificada do ImageHelper
+        let imgUrl = fallbackSeguro;
+        if (typeof window.ImageHelper !== 'undefined') {
+            imgUrl = window.ImageHelper.obterImagemProduto(dados.imagem);
+        } else if (typeof window.resolverImagemFirebase === 'function') {
+            imgUrl = window.resolverImagemFirebase(dados.imagem);
+        } else if (dados.imagem) {
+            imgUrl = dados.imagem;
+        }
+
+        // Formatação de Preço de forma resiliente
+        const precoFmt = typeof window.money !== 'undefined' && typeof window.money.formatar === 'function'
+            ? window.money.formatar(dados.preco) 
+            : 'R$ ' + (parseFloat(dados.preco) || 0).toFixed(2);
+
+        // Mapeamento seguro das variações/grades para evitar quebras por propriedade indefinida
+        const listaVariacoes = Array.isArray(dados.variacoes) ? dados.variacoes : [];
+        const temVariacoes   = listaVariacoes.length > 0;
+        
+        // Mantém suporte caso ainda use propriedades legadas na página
+        const temDizeres  = temVariacoes || (Array.isArray(dados.dizeres) && dados.dizeres.length > 0);
+        const temIniciais = Array.isArray(dados.iniciais) && dados.iniciais.length > 0;
+
+        const badgesHtml = (temDizeres || temIniciais) ? `
             <div class="flex gap-1 mt-1 flex-wrap">
                 ${temDizeres  ? `<span class="text-[8px] bg-zinc-900 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-800">✍️ Variações</span>`  : ''}
                 ${temIniciais ? `<span class="text-[8px] bg-zinc-900 text-zinc-400 px-1.5 py-0.5 rounded border border-zinc-800">🔤 Iniciais</span>` : ''}
@@ -429,11 +455,12 @@ function renderizarProdutos() {
         card.innerHTML = `
             <div class="cursor-pointer" onclick="abrirModalProduto(${index})">
                 <div class="aspect-square w-full overflow-hidden bg-zinc-950 rounded-xl relative">
-                    <img src="${imgUrl}" class="w-full h-full object-cover" alt="${dados.nome}" loading="lazy" onerror="this.src='${INSTANCE_FALLBACK_IMG}'">
+                    <img src="${imgUrl}" class="w-full h-full object-cover" alt="${dados.nome || 'Joia'}" loading="lazy" 
+                         onerror="this.onerror=null; this.src='${fallbackSeguro}';">
                 </div>
                 <div class="pt-2 px-1">
-                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-mono truncate">${dados.sku || 'Premium'}</p>
-                    <h3 class="text-zinc-200 font-medium tracking-tight text-xs md:text-sm mt-0.5 line-clamp-2 min-h-[2rem] md:min-h-[2.5rem] leading-snug">${dados.nome}</h3>
+                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-mono truncate">${dados.codigo || dados.sku || 'Premium'}</p>
+                    <h3 class="text-zinc-200 font-medium tracking-tight text-xs md:text-sm mt-0.5 line-clamp-2 min-h-[2rem] md:min-h-[2.5rem] leading-snug">${dados.nome || 'Produto Sem Nome'}</h3>
                     ${badgesHtml}
                 </div>
             </div>
@@ -450,7 +477,6 @@ function renderizarProdutos() {
         container.appendChild(card);
     });
 }
-
 // ================================================================
 // INICIALIZAÇÃO DA BUSCA
 // ================================================================

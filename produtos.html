@@ -592,49 +592,47 @@ function _construirGradeDeCompra(dados) {
         combinacoes = iniciais.map(i => `Letra ${i}`);
     }
 
-    let html = `
-        <div class="space-y-2">
-            <p class="text-[10px] md:text-xs font-bold text-zinc-400 uppercase tracking-wider">Grade de Variações Disponíveis:</p>
-            <div class="max-h-[220px] overflow-y-auto custom-scroll space-y-2 pr-1">
-    `;
+    let html = `<div class="bg-zinc-900/40 border border-zinc-900 p-3 rounded-xl space-y-2.5 max-h-48 overflow-y-auto custom-scroll">
+                    <p class="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-1">Selecione as Grades / Variações</p>`;
 
-    combinacoes.forEach((variacao, idx) => {
-        const inputId = `qtd_var_${idx}`;
+    combinacoes.forEach((comb, idx) => {
+        const idInput = `grade_idx_${idx}`;
         html += `
-            <div class="bg-zinc-900/30 border border-zinc-900/80 p-2.5 rounded-xl flex items-center justify-between gap-3">
-                <span class="text-xs font-semibold text-zinc-200 truncate pr-2">${variacao}</span>
+            <div class="flex items-center justify-between gap-3 bg-zinc-950/60 p-2 rounded-lg border border-zinc-900">
+                <span class="text-xs font-medium text-zinc-300 truncate">${comb}</span>
                 <div class="flex items-center gap-1.5 shrink-0">
-                    <button onclick="alterarInputMatriz('${inputId}', -1)" type="button" class="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 text-xs font-bold flex items-center justify-center select-none">-</button>
-                    <input type="number" id="${inputId}" value="0" min="0" oninput="calcularTotalGeralMatriz()"
-                           class="input-grade-qtd w-12 h-8 bg-zinc-950 border border-zinc-800 rounded-md text-center font-bold text-white text-xs focus:outline-none focus:border-[#caa85c]" data-variacao-nome="${variacao.replace(/"/g, '&quot;')}">
-                    <button onclick="alterarInputMatriz('${inputId}', 1)" type="button" class="w-8 h-8 rounded-md bg-zinc-950 border border-zinc-800 text-xs font-bold flex items-center justify-center select-none">+</button>
+                    <button onclick="alterarInputMatriz('${idInput}', -1)" type="button" class="w-7 h-7 rounded bg-zinc-900 border border-zinc-800 text-xs font-bold hover:border-zinc-700 flex items-center justify-center select-none">-</button>
+                    <input type="number" id="${idInput}" value="0" min="0" oninput="calcularTotalGeralMatriz()"
+                           class="input-grade-qtd w-12 h-7 bg-zinc-900 border border-zinc-800 rounded text-center font-mono text-xs text-white focus:outline-none focus:border-[#caa85c]" data-variacao-nome="${comb}">
+                    <button onclick="alterarInputMatriz('${idInput}', 1)" type="button" class="w-7 h-7 rounded bg-zinc-900 border border-zinc-800 text-xs font-bold hover:border-zinc-700 flex items-center justify-center select-none">+</button>
                 </div>
             </div>
         `;
     });
 
-    html += `</div></div>`;
+    html += `</div>`;
     container.innerHTML = html;
     calcularTotalGeralMatriz();
 }
 
-function alterarInputMatriz(id, delta) {
+function alterarInputMatriz(id, mudanca) {
     const input = document.getElementById(id);
     if (!input) return;
     let val = parseInt(input.value) || 0;
+    val += mudanca;
     const min = parseInt(input.getAttribute('min')) || 0;
-    input.value = Math.max(min, val + delta);
+    if (val < min) val = min;
+    input.value = val;
     calcularTotalGeralMatriz();
 }
 
 function calcularTotalGeralMatriz() {
-    const inputs = document.querySelectorAll('.input-grade-qtd');
     let total = 0;
-    inputs.forEach(input => {
-        total += (parseInt(input.value) || 0);
+    document.querySelectorAll('.input-grade-qtd').forEach(input => {
+        total += parseInt(input.value) || 0;
     });
-    const totalEl = document.getElementById('modalTotalGeralQtd');
-    if (totalEl) totalEl.innerText = total;
+    const el = document.getElementById('modalTotalGeralQtd');
+    if (el) el.innerText = total;
 }
 
 function fecharModalProduto() {
@@ -643,53 +641,55 @@ function fecharModalProduto() {
     produtoAtual = null;
 }
 
-// ================================================================
-// INJEÇÃO DA GRADE NO CARRINHO COMPATÍVEL
-// ================================================================
 function adicionarGradeAoCarrinho() {
-    if (!produtoAtual) return;
-
-    if (typeof carrinhoService === 'undefined' || typeof carrinhoService.adicionar !== 'function') {
-        alert('Infraestrutura de carrinho não identificada no escopo local.');
-        return;
-    }
+    if (!produtoAtual || typeof carrinhoService === 'undefined') return;
 
     const inputs = document.querySelectorAll('.input-grade-qtd');
-    let itensAdicionados = 0;
+    let adicionouAlgum = false;
 
     inputs.forEach(input => {
         const qtd = parseInt(input.value) || 0;
         if (qtd > 0) {
-            const labelVariacao = input.getAttribute('data-variacao-nome') || '';
-            carrinhoService.adicionar(produtoAtual, qtd, labelVariacao);
-            itensAdicionados++;
+            const variacaoNome = input.getAttribute('data-variacao-nome') || '';
+            
+            // Monta o payload seguro para o microsserviço
+            const itemCarrinho = {
+                sku: produtoAtual.sku || '',
+                nome: produtoAtual.name || produtoAtual.nome || 'Produto',
+                preco: parseFloat(produtoAtual.precoFinal || produtoAtual.price || produtoAtual.preco || 0),
+                peso: parseFloat(produtoAtual.peso || produtoAtual.weight || 0),
+                imagem: produtoAtual.image || produtoAtual.imagem || '',
+                variacao: variacaoNome,
+                quantidade: qtd
+            };
+
+            if (typeof carrinhoService.adicionarItem === 'function') {
+                carrinhoService.adicionarItem(itemCarrinho);
+                adicionouAlgum = true;
+            }
         }
     });
 
-    if (itensAdicionados === 0) {
-        alert('Por favor, insira a quantidade desejada em pelo menos um item da grade.');
-        return;
+    if (adicionouAlgum) {
+        atualizarMiniCarrinho();
+        fecharModalProduto();
+    } else {
+        alert('Por favor, selecione ao menos 1 unidade de alguma variação.');
     }
-
-    atualizarMiniCarrinho();
-    fecharModalProduto();
 }
 
 // ================================================================
-// DOM READY INITIALIZATION
+// INIT DISPATCHER
 // ================================================================
 document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await carregarConfiguracoes();
-        atualizarMiniCarrinho();
-        await carregarProdutos();
-        iniciarBusca();
-    } catch(e) {
-        console.error('Falha crítica na inicialização da página de produtos:', e);
-        const loading = document.getElementById('loading');
-        if (loading) loading.classList.add('hidden');
-    }
+    iniciarBusca();
+    atualizarMiniCarrinho();
+    
+    // Engine de sincronização paralela resiliente
+    await carregarConfiguracoes();
+    await carregarProdutos();
 });
 </script>
+
 </body>
 </html>

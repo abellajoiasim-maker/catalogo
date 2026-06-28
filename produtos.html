@@ -329,7 +329,7 @@ async function carregarConfiguracoes() {
 }
 
 // ================================================================
-// CARREGAR PRODUTOS DO CATÁLOGO
+// CARREGAR PRODUTOS DO CATÁLOGO (VERSÃO ULTRA RESILIENTE)
 // ================================================================
 async function carregarProdutos() {
     try {
@@ -347,27 +347,34 @@ async function carregarProdutos() {
         const elHero = document.getElementById('heroTitulo');
         if (elHero) elHero.innerText = nomeFiltro;
 
-        if (typeof produtoService === 'undefined' || typeof produtoService.listarTodos !== 'function')
-            throw new Error('Serviço de produto indisponível.');
+        let todos = null;
 
-        let todos = [];
+        // 1ª TENTATIVA: Invocar o serviço de forma isolada e segura
         try {
-            // CORREÇÃO: Tratado escopo isolado para capturar a exceção de congelamento de cache do produtoService
-            todos = await produtoService.listarTodos();
+            if (typeof produtoService !== 'undefined' && typeof produtoService.listarTodos === 'function') {
+                // Força a execução isolando o escopo do microsserviço
+                todos = await produtoService.listarTodos();
+            }
         } catch (cacheErr) {
-            console.warn('[PMA V8] Capturada mutação estrita de cache do produtoService, processando dados da referência primária.');
-            // Fallback resiliente de leitura caso o método de cache do microsserviço retorne congelado
+            console.warn('[PMA V8] Falha ao gravar no cache interno do produtoService. Ativando contingência.');
+        }
+
+        // 2ª TENTATIVA (FALLBACK): Se o método falhou ou retornou vazio por causa do freeze
+        if (!todos || !Array.isArray(todos) || Object.keys(todos).length === 0) {
+            console.log('[PMA V8] Buscando dados diretamente da referência estável do Firebase Realtime DB...');
+            // Acessa diretamente o nó do Firebase para garantir que a página não fique em branco
             const snapProds = await db.ref('abella/products').once('value');
             if (snapProds.exists()) {
-                todos = Object.values(snapProds.val() || {});
+                const dadosBrutos = snapProds.val() || {};
+                todos = Object.values(dadosBrutos);
             }
         }
 
-        if (!Array.isArray(todos)) {
-            // Tentativa estendida se os produtos vierem mapeados como Objeto no nó pai
-            todos = todos ? Object.values(todos) : [];
-        }
+        // Garantia estrutural de que temos uma lista válida
+        if (!todos) todos = [];
+        if (!Array.isArray(todos)) todos = Object.values(todos);
 
+        // Processamento e Filtragem dos produtos ativos
         produtos = todos.filter(p => {
             if (!p || p.paused === true) return false;
             if (!categoria) return true;
@@ -386,12 +393,11 @@ async function carregarProdutos() {
         if (loading) loading.classList.add('hidden');
         renderizarProdutos();
     } catch(err) {
-        console.error('Erro carregar produtos:', err);
+        console.error('Erro crítico ao processar o carregamento do catálogo:', err);
         const loading = document.getElementById('loading');
-        if (loading) loading.innerHTML = 'Erro ao processar catálogo no servidor.';
+        if (loading) loading.innerHTML = 'Erro ao carregar catálogo. Por favor, recarregue a página.';
     }
 }
-
 // ================================================================
 // RENDERIZAR GRID DE PRODUTOS
 // ================================================================

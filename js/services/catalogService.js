@@ -1,6 +1,6 @@
 // ======================================================================
 // js/services/catalogService.js
-// Abella Joias - CatalogService v8.1 (Versão Final de Produção)
+// Abella Joias - CatalogService v8.2 (Versão Final de Produção)
 // Autoridade Suprema Exclusiva de Leitura e Agregação de Dados do Catálogo
 // Compatível com GitHub Pages • Integração Nativa com MoneyUtils
 // Arquitetura Homologada PMA V8 - Arquivo Completo e Selado
@@ -123,11 +123,16 @@
             };
         },
 
-        // RESOLUTOR MESTRE DA ÁRVORE DO CATÁLOGO COMPLETO (PROMISE.ALL)
+        // RESOLUTOR MESTRE DA ÁRVORE DO CATÁLOGO COMPLETO (INTEGRADO AO STATEMANAGER)
         async getCatalog(forceRefresh = false) {
             try {
                 if (!forceRefresh && this._isCacheValid()) {
                     return structuredClone(this._cache);
+                }
+
+                // Aciona o spinner global de carregamento na UI de forma reativa
+                if (window.StateManager) {
+                    window.StateManager.setState('ui', { loadingGlobal: true });
                 }
 
                 // Resgata as configurações globais em paralelo com a infraestrutura do banco
@@ -144,22 +149,39 @@
 
                 const rawProds = snapshotProdutos.val() || {};
                 const rawCats = snapshotCategorias.val() || {};
-                const rawSubs = snapshotSubcategorias.val() || {};
+                const rawSubs = snapshotSubcategories.val() || {};
 
-                // Processa a consolidação das informações
-                this._cache = this._normalizarCatalogo(rawProds, rawCats, rawSubs, currentSettings);
+                // Processa e consolida as informações
+                const consolidatedCatalog = this._normalizarCatalogo(rawProds, rawCats, rawSubs, currentSettings);
+                
+                this._cache = consolidatedCatalog;
                 this._cacheTimestamp = Date.now();
+
+                // COMPROMISSO ATÔMICO COM O GERENCIADOR DE ESTADOS GLOBAL
+                if (window.StateManager) {
+                    window.StateManager.setState('catalog', consolidatedCatalog);
+                }
 
                 return structuredClone(this._cache);
             } catch (error) {
                 console.error('[PMA V8] [CatalogService] Erro crítico ao consolidar árvore de catálogo:', error);
                 
-                // Fallback seguro em formato estruturado limpo
-                return {
+                const fallbackCatalog = {
                     produtos: [],
                     categorias: [],
                     configuracoes: {}
                 };
+
+                if (window.StateManager) {
+                    window.StateManager.setState('catalog', fallbackCatalog);
+                }
+
+                return fallbackCatalog;
+            } finally {
+                // Desliga o spinner global na UI independentemente do sucesso ou fracasso
+                if (window.StateManager) {
+                    window.StateManager.setState('ui', { loadingGlobal: false });
+                }
             }
         }
     };
@@ -171,5 +193,5 @@
         configurable: false
     });
 
-    console.info('[PMA V8] 📦 CatalogService v8.1 integrado e selado com integridade.');
+    console.info('[PMA V8] 📦 CatalogService v8.2 integrado, sincronizado e selado.');
 })();

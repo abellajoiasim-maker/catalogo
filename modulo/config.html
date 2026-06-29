@@ -358,7 +358,9 @@
 // ================================================================
 // FIREBASE
 // ================================================================
-const db = window.db || firebase.database();
+function _db() {
+    return window.db || (typeof firebase !== 'undefined' ? firebase.database() : null);
+}
 
 if (typeof window.getAbellaPath !== 'function') {
     window.getAbellaPath = function(node) {
@@ -424,7 +426,7 @@ function _getVal(id) {
 async function carregarConfiguracoes() {
     const loader = document.getElementById('hud-loader');
     try {
-        const snap = await db.ref(window.getAbellaPath('settings')).once('value');
+        const snap = await _db().ref(window.getAbellaPath('settings')).once('value');
         const d    = snap.exists() ? (snap.val() || {}) : {};
 
         // Identidade
@@ -531,7 +533,7 @@ async function salvarConfiguracoesAdmin(e) {
     if (btn) { btn.disabled = true; btn.innerText = '⏳ Salvando...'; }
 
     try {
-        await db.ref(window.getAbellaPath('settings')).set(payload);
+        await _db().ref(window.getAbellaPath('settings')).set(payload);
         const el = document.getElementById('cfg-ultimaAtualizacao');
         if (el) el.innerText = payload.ultimaAtualizacao;
         spawnToast('Configurações salvas com sucesso!');

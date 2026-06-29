@@ -311,9 +311,9 @@ async function carregarConfiguracoes() {
                 banner.classList.remove('hidden');
             }
 
-            let logoFinal = (cfg.logoUrl || cfg.logo || '').trim();
+           let logoFinal = (cfg.logoUrl || cfg.logo || '').trim();
             if (!logoFinal) logoFinal = INSTANCE_FALLBACK_IMG;
-            
+
             if (logoImg) {
                 logoImg.src = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(logoFinal) : logoFinal;
                 logoImg.onload = () => {
@@ -324,19 +324,28 @@ async function carregarConfiguracoes() {
                     logoImg.src = INSTANCE_FALLBACK_IMG;
                 };
             }
+
+            // Banner da página de produtos
+            const imgHero = document.getElementById('heroImagem');
+            if (imgHero) {
+                const urlHero = (cfg.bannerProduto || cfg.banner_produto || cfg.bannerHeroUrl || '').trim();
+                if (urlHero) {
+                    imgHero.src = typeof resolverImagemFirebase === 'function'
+                        ? resolverImagemFirebase(urlHero)
+                        : urlHero;
+                    imgHero.onerror = () => { imgHero.parentNode.style.display = 'none'; };
+                } else {
+                    imgHero.parentNode.style.display = 'none';
+                }
+            }
+
         } else {
             if (document.getElementById('nome')) document.getElementById('nome').innerText = lojaNome;
-        }
-
-        const imgHero = document.getElementById('heroImagem');
-        if (imgHero && (!imgHero.src || imgHero.src.includes('fallback.jpg'))) {
-            imgHero.src = INSTANCE_FALLBACK_IMG;
         }
     } catch(e) {
         console.error('Erro ao carregar configurações de cabeçalho:', e);
     }
 }
-
 // ================================================================
 // CARREGAR PRODUTOS (FILTRAGEM POR CATEGORIA/SUBCATEGORIA)
 // ================================================================

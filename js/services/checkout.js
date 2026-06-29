@@ -329,33 +329,70 @@
             // Salvar no Firebase
             const db = _db();
             if (db) {
-                const dadosPedido = {
-                    id:        pedidoId,
-                    cliente:   { nome, whatsapp: whats, cidade: cidadeCli },
-                    entrega:   { local: localEnt, rua: ruaEnt, numero: numEnt, bairro: bairroEnt, cidade: cidadeEnt },
-                    pagamento: formaPag,
-                    observacoes: obs,
-                    subtotal,
-                    desconto,
-                    frete,
-                    total,
-                    pesoTotal,
-                    totalPecas: qtdTotal,
-                    itens: itens.map(i => ({
-                        id:        i.id,
-                        sku:       i.sku,
-                        nome:      i.nome,
-                        variacao:  i.variacao,
-                        preco:     i.preco,
-                        quantidade: i.quantidade,
-                        subtotal:  i.subtotal,
-                        peso:      i.peso,
-                        pesoTotal: i.pesoTotal,
-                        imagem:    i.imagem
-                    })),
-                    status:     'Novo',
-                    dataCriacao: new Date().toISOString()
-                };
+               const dadosPedido = {
+    // ── Campos de identificação ──────────────────────────
+    id:        pedidoId,
+    idPedido:  pedidoId,
+
+    // ── Cliente — objeto aninhado E campos planos ────────
+    cliente:      nome,           // pedidos.html lê p.cliente como string
+    nome:         nome,
+    whats:        whats,          // pedidos.html lê p.whats
+    whatsapp:     whats,
+    contato:      whats,
+    cidade:       cidadeCli,      // pedidos.html lê p.cidade
+    cidadeCliente: cidadeCli,
+
+    // ── Entrega — string plana E objeto aninhado ─────────
+    entrega: `${localEnt} — ${ruaEnt}, ${numEnt}, ${bairroEnt}, ${cidadeEnt}`,
+    enderecoEntrega: {
+        local:   localEnt,
+        rua:     ruaEnt,
+        numero:  numEnt,
+        bairro:  bairroEnt,
+        cidade:  cidadeEnt
+    },
+
+    // ── Pagamento ────────────────────────────────────────
+    pagamento:      formaPag,
+    formaPagamento: formaPag,     // pedidos.html lê p.formaPagamento
+
+    // ── Financeiro ───────────────────────────────────────
+    subtotal,
+    desconto,
+    frete,
+    total,
+    valorTotal: total,            // pedidos.html lê p.valorTotal como fallback
+    pesoTotal,
+    totalPecas: qtdTotal,
+    qtd:        qtdTotal,
+
+    // ── Observações ──────────────────────────────────────
+    observacoes: obs,
+
+    // ── Itens ────────────────────────────────────────────
+    itens: itens.map(i => ({
+        id:         i.id,
+        sku:        i.sku,
+        nome:       i.nome,
+        name:       i.nome,
+        variacao:   i.variacao,
+        preco:      i.preco,
+        price:      i.preco,
+        precoFinal: i.preco,
+        quantidade: i.quantidade,
+        subtotal:   i.subtotal,
+        peso:       i.peso,
+        pesoTotal:  i.pesoTotal,
+        imagem:     i.imagem,
+        image:      i.imagem
+    })),
+
+    // ── Controle ─────────────────────────────────────────
+    status:      'Novo',
+    dataCriacao: new Date().toISOString(),
+    data:        new Date().toLocaleDateString('pt-BR')
+};
                 await db.ref(_obterCaminhoDB(`orders/${pedidoId}`)).set(dadosPedido);
             }
 

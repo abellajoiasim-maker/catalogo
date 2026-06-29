@@ -183,13 +183,15 @@
         </div>
     </header>
 
-    <section id="heroSection" class="hero-section border-b border-zinc-900 relative overflow-hidden">
-        <div class="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-20 relative z-10">
-            <div class="max-w-3xl">
-                <div class="badge mb-6">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
-                    <span id="txt-badge" class="text-[11px] uppercase tracking-[.25em] gold font-black">Coleção Selecionada</span>
-                </div>
+    <section id="heroSection" class="border-b border-zinc-900 relative overflow-hidden">
+    <!-- Banner 16:9 -->
+    <div class="w-full aspect-video overflow-hidden relative">
+        <img id="herobannerImg" src="" alt="Banner"
+             class="w-full h-full object-cover"
+             onerror="this.parentNode.style.display='none'">
+        <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#070707]"></div>
+    </div>
+    <!-- Conteúdo do hero que já existia — mantenha aqui dentro -->
 
                 <h2 id="categoriaNome" class="serif text-4xl md:text-7xl font-black tracking-wide leading-tight uppercase">
                     Carregando...
@@ -334,16 +336,13 @@
                     }
                     if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;
 
-                    if (cfg.heroBannerUrl) {
-                        const urlBanner = typeof resolverImagemFirebase !== 'undefined' ? 
-                            resolverImagemFirebase(cfg.heroBannerUrl) : cfg.heroBannerUrl;
-                        const heroSec = document.getElementById('heroSection');
-                        if (heroSec) {
-                            heroSec.style.backgroundImage = `linear-gradient(to bottom, rgba(7,7,7,0.5) 0%, #070707 100%), url('${urlBanner}')`;
-                            heroSec.style.backgroundSize = 'cover';
-                            heroSec.style.backgroundPosition = 'center';
-                        }
-                    }
+                    if (cfg.bannerSubcategoria || cfg.banner_subcategoria || cfg.heroBannerUrl) {
+    const urlBanner = cfg.bannerSubcategoria || cfg.banner_subcategoria || cfg.heroBannerUrl;
+    const urlFinal  = typeof resolverImagemFirebase !== 'undefined'
+        ? resolverImagemFirebase(urlBanner) : urlBanner;
+    const heroImg = document.getElementById('herobannerImg');
+    if (heroImg) heroImg.src = urlFinal;
+}
 
                     const banner = document.getElementById('banner');
                     if (banner && cfg.bannerAtivo && cfg.bannerTexto) {

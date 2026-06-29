@@ -121,7 +121,6 @@
       <button class="tab-btn active" data-tab="produtos" type="button">📦 Produtos</button>
       <button class="tab-btn" data-tab="categorias" type="button">📁 Categorias</button>
       <button class="tab-btn" data-tab="subcategorias" type="button">🌿 Subcategorias</button>
-      <button class="tab-btn" data-tab="configuracoes" type="button">⚙️ Configurações da Loja</button>
     </section>
     
     <!-- CONTEÚDO DAS ABAS -->
@@ -129,7 +128,6 @@
       <div id="tab-produtos" class="grid grid-cols-1 gap-3"></div>
       <div id="tab-categorias" class="hidden grid grid-cols-1 gap-3"></div>
       <div id="tab-subcategorias" class="hidden grid grid-cols-1 gap-3"></div>
-      <div id="tab-configuracoes" class="hidden grid grid-cols-1 gap-3"></div>
     </section>
 
     <div id="status" class="text-xs text-zinc-500 mt-6"></div>
@@ -242,106 +240,25 @@
     return document.querySelector('.tab-btn.active')?.dataset?.tab || 'produtos';
   }
 
-  function renderCurrentTab() {
+ function renderCurrentTab() {
     const t = getActiveTab();
     const btn = document.getElementById('btnCriarNovo');
     if (btn) {
-      if (t === 'configuracoes') {
-        btn.style.display = 'none';
-      } else {
         btn.style.display = 'block';
-        if (t === 'produtos')       btn.innerText = '➕ Novo Produto';
+        if (t === 'produtos')           btn.innerText = '➕ Novo Produto';
         else if (t === 'categorias')    btn.innerText = '➕ Nova Categoria';
         else if (t === 'subcategorias') btn.innerText = '➕ Nova Subcategoria';
-      }
     }
-    
-    if (t === 'produtos')       renderProdutos();
+
+    if (t === 'produtos')           renderProdutos();
     else if (t === 'categorias')    renderCategorias();
     else if (t === 'subcategorias') renderSubcategorias();
-    else if (t === 'configuracoes') renderPainelConfiguracoes();
-  }
-
+}
   function renderAll() {
     atualizarEstatisticas();
     renderCurrentTab();
   }
 
-  // ============================================================
-  // PAINEL DE CONFIGURAÇÕES INSTITUCIONAIS
-  // ============================================================
-  async function renderPainelConfiguracoes() {
-    const container = document.getElementById('tab-configuracoes');
-    if (!container) return;
-
-    try {
-      const snap = await STATE.db.ref(window.getAbellaPath('settings')).once('value');
-      const cfg = snap.val() || {};
-
-      container.innerHTML = `
-        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-6">
-          <h3 class="text-base font-bold text-[#caa85c] mb-4">⚙️ Configurações de Identidade da Vitrine</h3>
-          
-          <label class="text-xs text-zinc-400 block mb-1">Nome da Loja</label>
-          <input id="cfgName" class="input-dark" value="${escapeHtml(cfg.name)}">
-
-          <label class="text-xs text-zinc-400 block mb-1">Slogan Principal</label>
-          <input id="cfgSlogan" class="input-dark" value="${escapeHtml(cfg.slogan)}">
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="text-xs text-zinc-400 block mb-1">Parcelas Sem Juros (Número)</label>
-              <input id="cfgParcelas" type="number" class="input-dark" value="${Number(cfg.parcelas || 1)}">
-            </div>
-            <div>
-              <label class="text-xs text-zinc-400 block mb-1">Desconto PIX (% apenas número)</label>
-              <input id="cfgPix" type="number" class="input-dark" value="${Number(cfg.pix || 0)}">
-            </div>
-          </div>
-
-          <label class="text-xs text-zinc-400 block mb-1">WhatsApp de Atendimento (Com DDD, apenas números)</label>
-          <input id="cfgWhatsapp" class="input-dark" value="${escapeHtml(cfg.whatsapp)}">
-
-          <label class="text-xs text-zinc-400 block mb-1">URL do Logotipo da Loja</label>
-          <input id="cfgLogoUrl" class="input-dark" value="${escapeHtml(cfg.logoUrl || cfg.logo)}">
-
-          <label class="text-xs text-zinc-400 block mb-1">URL do Banner Principal (Hero)</label>
-          <input id="cfgHeroBannerUrl" class="input-dark" value="${escapeHtml(cfg.heroBannerUrl)}">
-
-          <button onclick="salvarConfiguracoesGlobais()" 
-                  class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-4 hover:bg-opacity-90 transition-all">
-            💾 Salvar Configurações da Loja
-          </button>
-        </div>
-      `;
-    } catch(err) {
-      container.innerHTML = `<div class="text-sm text-red-400 p-4">Erro ao carregar dados institucionais.</div>`;
-    }
-  }
-
-  async function salvarConfiguracoesGlobais() {
-    try {
-      const dados = {
-        name: document.getElementById('cfgName').value.trim(),
-        slogan: document.getElementById('cfgSlogan').value.trim(),
-        parcelas: Number(document.getElementById('cfgParcelas').value),
-        pix: Number(document.getElementById('cfgPix').value),
-        whatsapp: document.getElementById('cfgWhatsapp').value.replace(/\D/g, ''),
-        logoUrl: document.getElementById('cfgLogoUrl').value.trim(),
-        heroBannerUrl: document.getElementById('cfgHeroBannerUrl').value.trim()
-      };
-
-      if(!dados.name || !dados.whatsapp) {
-        alert('Nome da loja e WhatsApp são obrigatórios!');
-        return;
-      }
-
-      await STATE.db.ref(window.getAbellaPath('settings')).update(dados);
-      setStatus('✅ Configurações institucionais salvas com sucesso!', 'ok');
-    } catch(err) {
-      setStatus('❌ Falha ao gravar configurações no banco', 'error');
-    }
-  }
 
   // ============================================================
   // DRAWER

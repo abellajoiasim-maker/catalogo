@@ -2,22 +2,19 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Painel Administrativo • Configurações Globais</title>
+    <title>Configurações da Loja • Abella Joias</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         :root {
             --gold: #caa85c;
             --gold-hover: #b5944a;
@@ -25,6 +22,7 @@
             --card-dark: #121212;
             --border-dark: #222222;
         }
+
         body {
             background-color: var(--bg-dark);
             color: #ffffff;
@@ -32,496 +30,523 @@
             min-height: 100vh;
             overflow-x: hidden;
         }
-        .serif {
-            font-family: 'Cinzel', serif;
-        }
-        .gold-text {
-            color: var(--gold);
-        }
+
+        .serif    { font-family: 'Cinzel', serif; }
+        .gold-text { color: var(--gold); }
+
         .glass-panel {
             background: rgba(18, 18, 18, 0.85);
             backdrop-filter: blur(16px);
             border: 1px solid var(--border-dark);
         }
+
         input, select, textarea {
             background: #181818 !important;
             border: 1px solid #282828 !important;
             color: #ffffff !important;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s ease;
         }
         input:focus, select:focus, textarea:focus {
             border-color: var(--gold) !important;
             box-shadow: 0 0 0 3px rgba(202, 168, 92, 0.15);
             outline: none;
         }
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: var(--gold);
+
+        /* TOGGLE SWITCH — corrigido */
+        .toggle-wrapper { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+        .toggle-wrapper input[type="checkbox"] { opacity: 0; width: 0; height: 0; position: absolute; }
+        .toggle-track {
+            position: absolute; inset: 0;
+            background: #3f3f46;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background .25s ease;
         }
-        .toggle-checkbox:checked + .toggle-label .toggle-dot {
-            transform: translateX(100%);
+        .toggle-track::after {
+            content: '';
+            position: absolute;
+            top: 3px; left: 3px;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform .25s ease;
         }
+        .toggle-wrapper input:checked + .toggle-track { background: var(--gold); }
+        .toggle-wrapper input:checked + .toggle-track::after { transform: translateX(22px); }
+
+        /* LOADER */
         #hud-loader {
-            background: rgba(7, 7, 7, 0.95);
+            background: rgba(7, 7, 7, 0.97);
             transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #caa85c; border-radius: 2px; }
+
+        /* Preview de imagem placeholder */
+        .preview-box {
+            background: #0a0a0a;
+            border: 1px solid #282828;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-box img.hidden { display: none; }
+        .preview-box .placeholder-label {
+            position: absolute;
+            font-size: 10px;
+            color: #52525b;
+            font-family: monospace;
+            text-align: center;
+            pointer-events: none;
         }
     </style>
 </head>
-<body class="bg-black text-white antialiased">
+<body class="pb-28">
 
-    <div id="hud-loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center">
-        <div class="w-12 h-12 border-4 border-zinc-800 border-t-[#caa85c] rounded-full animate-spin mb-4"></div>
-        <p class="serif gold-text tracking-[0.2em] text-xs uppercase animate-pulse">Sincronizando Parâmetros Corporativos...</p>
+<!-- LOADER -->
+<div id="hud-loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center">
+    <div class="w-12 h-12 border-4 border-zinc-800 border-t-[#caa85c] rounded-full animate-spin mb-4"></div>
+    <p class="serif gold-text tracking-[0.2em] text-xs uppercase animate-pulse">Carregando Configurações...</p>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container" class="fixed bottom-6 right-4 z-50 pointer-events-none space-y-3 max-w-sm w-full"></div>
+
+<!-- HEADER -->
+<header class="border-b border-zinc-900 bg-zinc-950/90 sticky top-0 backdrop-blur-md z-40">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+            <a href="editor.html"
+               class="shrink-0 h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors gap-1.5 whitespace-nowrap">
+                ← Editor
+            </a>
+            <div class="min-w-0">
+                <h1 class="serif gold-text text-base md:text-xl uppercase tracking-[0.15em] truncate">Configurações da Loja</h1>
+                <p class="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Identidade, Financeiro, Banners</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 bg-zinc-900/60 px-3 py-2 rounded-xl border border-zinc-800/50 shrink-0">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-[10px] font-mono text-zinc-400 tracking-wider hidden sm:block">PAINEL ADMIN</span>
+        </div>
     </div>
+</header>
 
-    <div id="toast-container" class="fixed bottom-6 right-6 z-50 pointer-events-none space-y-3"></div>
+<!-- CONTEÚDO -->
+<main class="max-w-5xl mx-auto px-4 md:px-6 py-8">
+    <form id="form-configuracoes" onsubmit="salvarConfiguracoesAdmin(event)" class="space-y-8">
 
-    <header class="border-b border-zinc-900 bg-zinc-950/80 sticky top-0 backdrop-blur-md z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="index.html" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors">
-                    ← Voltar ao Menu
-                </a>
+        <!-- ══════════════════════════════════════════════
+             SEÇÃO 1 — IDENTIDADE DA MARCA
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">🏷️ Identidade da Marca</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Nome -->
                 <div>
-                    <h1 class="serif gold-text text-lg md:text-xl uppercase tracking-[0.15em]">Painel de Controle</h1>
-                    <p class="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Parâmetros Operacionais & Comerciais</p>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Nome da Loja *</label>
+                    <input type="text" id="cfg-name" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm"
+                           placeholder="Ex: Abella Joias">
+                </div>
+
+                <!-- Slogan -->
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Slogan</label>
+                    <input type="text" id="cfg-slogan"
+                           class="w-full rounded-xl px-4 py-3.5 text-sm"
+                           placeholder="Ex: Atacado de Joias no Bruto">
+                </div>
+
+                <!-- WhatsApp -->
+                <div class="md:col-span-2">
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">WhatsApp de Vendas (com DDD, só números) *</label>
+                    <input type="text" id="cfg-whatsapp" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono"
+                           placeholder="Ex: 19999999999" maxlength="15">
+                    <p class="text-[10px] text-zinc-500 mt-1.5">Este número recebe os pedidos finalizados pelo checkout.</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2 bg-zinc-900/60 px-4 py-2 rounded-xl border border-zinc-800/50">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-[11px] font-mono text-zinc-400 tracking-wider">MODO ADMINISTRATIVE INFRA</span>
-            </div>
-        </div>
-    </header>
 
-    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <form id="form-configuracoes" onsubmit="salvarConfiguracoesAdmin(event)" class="space-y-8">
-            
-            <!-- SEÇÃO DE IDENTIDADE E COMUNICAÇÃO ATUALIZADA COM COMPONENTE DE LOGO -->
-            <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
-                <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
-                    <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
-                    <h2 class="serif text-lg md:text-xl uppercase tracking-wider text-white">Identidade & Comunicação</h2>
+            <!-- Logo -->
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-3">Logo da Empresa (formato quadrado 1:1)</label>
+                <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-black/30 p-4 rounded-2xl border border-zinc-900">
+                    <div class="preview-box w-24 h-24 shrink-0 rounded-xl">
+                        <img id="previewLogo" src="" alt="Preview Logo" class="hidden"
+                             onerror="this.classList.add('hidden'); document.getElementById('placeholderLogo').classList.remove('hidden')">
+                        <span id="placeholderLogo" class="placeholder-label">1:1<br>Logo</span>
+                    </div>
+                    <div class="flex-1 w-full">
+                        <input type="text" id="cfg-logoUrl"
+                               class="w-full rounded-xl px-4 py-3 text-sm font-mono"
+                               placeholder="https://... ou gs://..."
+                               oninput="atualizarPreview('cfg-logoUrl','previewLogo','placeholderLogo')">
+                        <p class="text-[10px] text-zinc-500 mt-1.5">Cole a URL da logomarca. Aparece no header de todas as páginas e nos romaneios.</p>
+                    </div>
                 </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Nome Corporativo da Marca *</label>
-                        <input type="text" id="cfg-name" required class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: Abella Joias">
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Slogan / Chamada Institucional</label>
-                        <input type="text" id="cfg-slogan" class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: Atacado de Joias no Bruto">
-                    </div>
-                    
-                    <!-- NOVO NO: URL DA LOGOMARCA COM PREVIEW OPERACIONAL EM TEMPO REAL -->
-                    <div class="md:col-span-2 bg-black/30 p-4 rounded-2xl border border-zinc-900/60 flex flex-col md:flex-row gap-4 items-center">
-                        <div class="w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center p-2 shrink-0 overflow-hidden">
-                            <img id="logo-preview" src="" alt="Logo Preview" class="max-w-full max-h-full object-contain hidden">
-                            <span id="logo-placeholder" class="text-xs text-zinc-600 font-mono text-center">Sem Logo</span>
-                        </div>
-                        <div class="flex-1 w-full">
-                            <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-1">URL Logotipo da Empresa (.png, .jpg ou link web)</label>
-                            <input type="url" id="cfg-logoUrl" oninput="atualizarPreviewLogo(this.value)" class="w-full rounded-xl px-4 py-2.5 text-xs font-mono" placeholder="https://exemplo.com/sua-logo.png">
-                            <p class="text-[10px] text-zinc-500 mt-1 uppercase tracking-wide">Cole o link da imagem da sua logomarca para renderização nos catálogos e romaneios gerados.</p>
-                        </div>
-                    </div>
-<div class="glass rounded-2xl p-4 space-y-4">
+            </div>
+        </section>
 
-    <!-- LOGO -->
-    <div>
-        <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">
-            Logo da Empresa (Formato 1:1)
-        </label>
-
-        <div class="flex items-center gap-4">
-            <div class="w-24 h-24 bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden flex items-center justify-center">
-                <img
-                    id="previewLogoQuadrada"
-                    src=""
-                    class="w-full h-full object-contain hidden"
-                >
-                <span id="previewLogoTexto" class="text-[10px] text-zinc-500">
-                    1:1
-                </span>
+        <!-- ══════════════════════════════════════════════
+             SEÇÃO 2 — BANNERS DAS PÁGINAS
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">🖼️ Banners das Páginas</h2>
             </div>
 
-            <input
-                type="text"
-                id="cfg-logoUrl"
-                class="flex-1 h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm"
-                placeholder="URL da logo"
-                oninput="
-                    document.getElementById('previewLogoQuadrada').src=this.value;
-                    document.getElementById('previewLogoQuadrada').classList.remove('hidden');
-                    document.getElementById('previewLogoTexto').classList.add('hidden');
-                "
-            >
-        </div>
-    </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <!-- HERO -->
-    <div>
-        <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">
-            Banner Principal (16:9)
-        </label>
-
-        <div class="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden mb-3">
-            <img
-                id="previewHero"
-                src=""
-                class="w-full h-full object-cover hidden"
-            >
-        </div>
-
-        <input
-            type="text"
-            id="cfg-bannerHeroUrl"
-            class="w-full h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm"
-            placeholder="gs://... ou https://..."
-            oninput="
-                document.getElementById('previewHero').src=this.value;
-                document.getElementById('previewHero').classList.remove('hidden');
-            "
-        >
-    </div>
-
-    <!-- SUBCATEGORIAS -->
-    <div>
-        <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">
-            Banner Subcategorias (16:9)
-        </label>
-
-        <div class="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden mb-3">
-            <img
-                id="previewSubcategoria"
-                src=""
-                class="w-full h-full object-cover hidden"
-            >
-        </div>
-
-        <input
-            type="text"
-            id="bannerSubcategoria"
-            class="w-full h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm"
-            placeholder="URL do banner"
-            oninput="
-                document.getElementById('previewSubcategoria').src=this.value;
-                document.getElementById('previewSubcategoria').classList.remove('hidden');
-            "
-        >
-    </div>
-
-    <!-- PRODUTOS -->
-    <div>
-        <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">
-            Banner Produtos (16:9)
-        </label>
-
-        <div class="aspect-video bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden mb-3">
-            <img
-                id="previewProduto"
-                src=""
-                class="w-full h-full object-cover hidden"
-            >
-        </div>
-
-        <input
-            type="text"
-            id="bannerProduto"
-            class="w-full h-12 rounded-xl bg-black border border-zinc-800 px-4 text-white text-sm"
-            placeholder="URL do banner"
-            oninput="
-                document.getElementById('previewProduto').src=this.value;
-                document.getElementById('previewProduto').classList.remove('hidden');
-            "
-        >
-    </div>
-
-                    <div class="md:col-span-2">
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">WhatsApp Oficial de Vendas (Com DDD e sem símbolos) *</label>
-                        <input type="text" id="cfg-whatsapp" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="Ex: 19999999999">
-                        <p class="text-[10px] text-zinc-500 mt-1.5 uppercase tracking-wide">Este número receberá a string estruturada dos carrinhos de checkout fechados pelos compradores.</p>
+                <!-- Banner Hero (Página inicial / principal) -->
+                <div>
+                    <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">Banner Principal (16:9)</label>
+                    <div class="preview-box aspect-video mb-3 rounded-xl">
+                        <img id="previewHero" src="" class="hidden"
+                             onerror="this.classList.add('hidden')">
+                        <span class="placeholder-label">16:9<br>Hero</span>
                     </div>
-                </div>
-            </section>
-
-            <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
-                <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
-                    <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
-                    <h2 class="serif text-lg md:text-xl uppercase tracking-wider text-white">Regras Financeiras & Logística</h2>
+                    <input type="text" id="cfg-bannerHeroUrl"
+                           class="w-full h-11 rounded-xl px-4 text-sm font-mono"
+                           placeholder="https://... ou gs://..."
+                           oninput="atualizarPreview('cfg-bannerHeroUrl','previewHero')">
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Pedido Mínimo Corporativo (R$) *</label>
-                        <input type="number" id="cfg-pedidoMinimo" step="0.01" min="0" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="0.00">
+                <!-- Banner Subcategorias -->
+                <div>
+                    <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">Banner Subcategorias (16:9)</label>
+                    <div class="preview-box aspect-video mb-3 rounded-xl">
+                        <img id="previewSubcategoria" src="" class="hidden"
+                             onerror="this.classList.add('hidden')">
+                        <span class="placeholder-label">16:9<br>Subcategorias</span>
                     </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Valor Base do Frete Fixo (R$) *</label>
-                        <input type="number" id="cfg-freteFixo" step="0.01" min="0" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Meta para Frete Grátis (R$) *</label>
-                        <input type="number" id="cfg-freteGratisAlvo" step="0.01" min="0" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="0.00">
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Desconto para Pagamento via PIX (%) *</label>
-                        <input type="number" id="cfg-pix" step="1" min="0" max="100" required class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="0">
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Limite Máximo de Parcelamento *</label>
-                        <select id="cfg-parcelas" required class="w-full rounded-xl px-4 py-3.5 text-sm">
-                            <option value="1">1x sem juros</option>
-                            <option value="2">2x sem juros</option>
-                            <option value="3">3x sem juros</option>
-                            <option value="4">4x sem juros</option>
-                            <option value="5">5x sem juros</option>
-                            <option value="6">6x sem juros</option>
-                            <option value="7">7x sem juros</option>
-                            <option value="8">8x sem juros</option>
-                            <option value="9">9x sem juros</option>
-                            <option value="10">10x sem juros</option>
-                            <option value="12">12x sem juros</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Status Operacional da Loja *</label>
-                        <select id="cfg-statusLoja" required class="w-full rounded-xl px-4 py-3.5 text-sm">
-                            <option value="aberto">🔓 Aberta para Pedidos</option>
-                            <option value="fechado">🔒 Fechada para Manutenção</option>
-                        </select>
-                    </div>
-                </div>
-            </section>
-
-            <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
-                <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
-                    <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
-                    <h2 class="serif text-lg md:text-xl uppercase tracking-wider text-white">Banner Informativo Global</h2>
+                    <input type="text" id="cfg-bannerSubcategoria"
+                           class="w-full h-11 rounded-xl px-4 text-sm font-mono"
+                           placeholder="https://... ou gs://..."
+                           oninput="atualizarPreview('cfg-bannerSubcategoria','previewSubcategoria')">
                 </div>
 
-                <div class="flex flex-col space-y-4">
-                    <div class="flex items-center justify-between bg-zinc-900/40 p-4 rounded-xl border border-zinc-800">
-                        <div>
-                            <h3 class="text-sm font-bold text-white uppercase tracking-wide">Exibir Alerta no Topo do Catálogo</h3>
-                            <p class="text-xs text-zinc-500 mt-0.5">Ativa ou desativa a régua superior de promoções e recados importantes.</p>
-                        </div>
-                        <div class="relative inline-block w-12 h-6 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" id="cfg-bannerAtivo" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-zinc-700 border-4 border-transparent appearance-none cursor-pointer checked:right-0 checked:bg-white checked:border-zinc-900"/>
-                            <label for="cfg-bannerAtivo" class="toggle-label block overflow-hidden h-6 rounded-full bg-zinc-800 cursor-pointer">
-                                <span class="toggle-dot block w-6 h-6 rounded-full bg-zinc-500 transition-transform duration-200 ease-in"></span>
-                            </label>
-                        </div>
+                <!-- Banner Produtos -->
+                <div>
+                    <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">Banner Produtos (16:9)</label>
+                    <div class="preview-box aspect-video mb-3 rounded-xl">
+                        <img id="previewProduto" src="" class="hidden"
+                             onerror="this.classList.add('hidden')">
+                        <span class="placeholder-label">16:9<br>Produtos</span>
                     </div>
-
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Mensagem do Alerta / Conteúdo Textual</label>
-                        <textarea id="cfg-bannerTexto" rows="3" class="w-full rounded-xl px-4 py-3.5 text-sm" placeholder="Ex: 🔥 ATENÇÃO: Frete Grátis nas compras acima de R$100,00 para todas as galvânicas parceiras in Limeira!"></textarea>
-                    </div>
+                    <input type="text" id="cfg-bannerProduto"
+                           class="w-full h-11 rounded-xl px-4 text-sm font-mono"
+                           placeholder="https://... ou gs://..."
+                           oninput="atualizarPreview('cfg-bannerProduto','previewProduto')">
                 </div>
-            </section>
-
-            <div class="bg-zinc-950/90 border border-zinc-900 rounded-2xl p-4 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky bottom-6 backdrop-blur-md shadow-2xl">
-                <div class="text-center sm:text-left">
-                    <p class="text-xs text-zinc-400">Última modificação registrada nesta instância:</p>
-                    <p id="cfg-ultimaAtualizacao" class="text-xs font-mono font-bold text-[#caa85c] mt-0.5">Sincronizando...</p>
-                </div>
-                <button type="submit" class="h-14 px-8 rounded-xl bg-[#caa85c] hover:bg-[#b5944a] text-black font-black uppercase tracking-[0.15em] text-xs transition-all duration-150 transform active:scale-95 shadow-lg shadow-[#caa85c]/10">
-                    💾 Gravar Parâmetros no Firebase
-                </button>
             </div>
 
-        </form>
-    </main>
+            <!-- Banner Topo (alerta global) -->
+            <div class="border-t border-zinc-900 pt-5 space-y-4">
+                <div class="flex items-center justify-between bg-zinc-900/40 p-4 rounded-xl border border-zinc-800 gap-4">
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-bold text-white">Exibir Alerta no Topo do Catálogo</h3>
+                        <p class="text-xs text-zinc-500 mt-0.5">Ativa a faixa superior de promoções e recados.</p>
+                    </div>
+                    <label class="toggle-wrapper shrink-0">
+                        <input type="checkbox" id="cfg-bannerAtivo">
+                        <div class="toggle-track"></div>
+                    </label>
+                </div>
 
-    <!-- IMPORTAÇÃO EXPLICITA DE SEGURANÇA E FALLBACK DE CONFIGURAÇÃO REMOTA -->
-    <script src="../js/firebase/firebase-config.js"></script>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Texto do Alerta</label>
+                    <textarea id="cfg-bannerTexto" rows="3"
+                              class="w-full rounded-xl px-4 py-3.5 text-sm"
+                              placeholder="Ex: 🔥 Frete Grátis nas compras acima de R$100,00!"></textarea>
+                </div>
+            </div>
+        </section>
 
-    <script>
-        // Singleton Database Handler em conformidade com barramento global protegido
-        const db = window.db || firebase.database();
+        <!-- ══════════════════════════════════════════════
+             SEÇÃO 3 — FINANCEIRO & LOGÍSTICA
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">💰 Financeiro & Logística</h2>
+            </div>
 
-        if (typeof window.getAbellaPath !== 'function') {
-            window.getAbellaPath = function(node) {
-                const root = window.ABELLA_DB_ROOT || 'abella';
-                return node ? `${root}/${node}` : root;
-            };
-        }
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
 
-        /**
-         * Monitoramento reativo local da imagem inserida por link de rede
-         */
-        function atualizarPreviewLogo(url) {
-            const preview = document.getElementById('logo-preview');
-            const placeholder = document.getElementById('logo-placeholder');
-            
-            if (url && url.trim() !== "") {
-                preview.src = url.trim();
-                preview.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            } else {
-                preview.src = "";
-                preview.classList.add('hidden');
-                placeholder.classList.remove('hidden');
-            }
-        }
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Pedido Mínimo (R$) *</label>
+                    <input type="number" id="cfg-pedidoMinimo" step="0.01" min="0" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="300.00">
+                </div>
 
-        function spawnAdminToast(msg, isError = false) {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Frete Fixo (R$) *</label>
+                    <input type="number" id="cfg-freteFixo" step="0.01" min="0" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="15.00">
+                </div>
 
-            const toast = document.createElement('div');
-            toast.className = `px-5 py-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 transform translate-y-4 opacity-0 flex items-center gap-3 border shadow-xl ${
-                isError 
-                ? 'bg-rose-950/90 text-rose-300 border-rose-800' 
-                : 'bg-zinc-900/95 text-emerald-400 border-zinc-800'
-            }`;
-            toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span> <span>${msg}</span>`;
-            
-            container.appendChild(toast);
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Frete Grátis acima de (R$) *</label>
+                    <input type="number" id="cfg-freteGratisAlvo" step="0.01" min="0" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="100.00">
+                </div>
 
-            setTimeout(() => {
-                toast.classList.remove('translate-y-4', 'opacity-0');
-            }, 50);
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Desconto PIX (%) *</label>
+                    <input type="number" id="cfg-pix" step="1" min="0" max="100" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="5">
+                    <p class="text-[10px] text-zinc-500 mt-1">Aplicado automaticamente no checkout e exibido na vitrine.</p>
+                </div>
 
-            setTimeout(() => {
-                toast.classList.add('translate-y-2', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
-        }
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Máx. Parcelas no Cartão *</label>
+                    <select id="cfg-parcelas" required class="w-full rounded-xl px-4 py-3.5 text-sm">
+                        <option value="1">1x sem juros</option>
+                        <option value="2">2x sem juros</option>
+                        <option value="3">3x sem juros</option>
+                        <option value="4">4x sem juros</option>
+                        <option value="5">5x sem juros</option>
+                        <option value="6" selected>6x sem juros</option>
+                        <option value="7">7x sem juros</option>
+                        <option value="8">8x sem juros</option>
+                        <option value="9">9x sem juros</option>
+                        <option value="10">10x sem juros</option>
+                        <option value="12">12x sem juros</option>
+                    </select>
+                </div>
 
-        async function carregarConfiguracoesAssincronas() {
-            const loader = document.getElementById('hud-loader');
-            try {
-                const path = window.getAbellaPath('settings');
-                const snap = await db.ref(path).once('value');
-                
-                let data = {};
-                if (snap.exists()) {
-                    data = snap.val() || {};
-                }
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Status da Loja *</label>
+                    <select id="cfg-statusLoja" required class="w-full rounded-xl px-4 py-3.5 text-sm">
+                        <option value="aberto">🔓 Aberta para Pedidos</option>
+                        <option value="fechado">🔒 Fechada / Manutenção</option>
+                    </select>
+                </div>
+            </div>
+        </section>
 
-                document.getElementById('cfg-name').value = data.name ?? 'Abella Joias';
-                document.getElementById('cfg-slogan').value = data.slogan ?? '';
-                document.getElementById('cfg-whatsapp').value = data.whatsapp ?? '';
-                
-               // População e validação visual de carregamento do nó da Logo
-const logoLink = data.logoUrl ?? '';
+        <!-- BARRA DE AÇÃO FIXA -->
+        <div class="glass-panel rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-4 shadow-2xl">
+            <div>
+                <p class="text-[10px] text-zinc-500 uppercase tracking-wider">Última atualização:</p>
+                <p id="cfg-ultimaAtualizacao" class="text-xs font-mono font-bold text-[#caa85c] mt-0.5">Sincronizando...</p>
+            </div>
+            <button type="submit"
+                    class="w-full sm:w-auto h-13 px-8 py-4 rounded-xl bg-[#caa85c] hover:bg-[#b5944a] text-black font-black uppercase tracking-[0.15em] text-xs transition-all active:scale-95 shadow-lg shadow-[#caa85c]/10 whitespace-nowrap">
+                💾 Salvar Configurações
+            </button>
+        </div>
 
-document.getElementById('cfg-logoUrl').value = logoLink;
-atualizarPreviewLogo(logoLink);
+    </form>
+</main>
 
-// Banner principal
-document.getElementById('cfg-bannerHeroUrl').value =
-    data.bannerHeroUrl ?? '';
+<!-- SCRIPTS -->
+<script src="../js/firebase/firebase-config.js"></script>
 
-// Banner da página de subcategorias
-document.getElementById('bannerSubcategoria').value =
-    data.bannerSubcategoria ??
-    data.banner_subcategoria ??
-    '';
+<script>
+// ================================================================
+// FIREBASE
+// ================================================================
+const db = window.db || firebase.database();
 
-// Banner da página de produtos
-document.getElementById('bannerProduto').value =
-    data.bannerProduto ??
-    data.banner_produto ?? '';
-
-                if(data.logoUrl){
-    previewLogoQuadrada.src = data.logoUrl;
-    previewLogoQuadrada.classList.remove('hidden');
-    previewLogoTexto.classList.add('hidden');
+if (typeof window.getAbellaPath !== 'function') {
+    window.getAbellaPath = function(node) {
+        const root = window.ABELLA_DB_ROOT || 'abella';
+        return node ? `${root}/${node}` : root;
+    };
 }
 
-if(data.bannerHeroUrl){
-    previewHero.src = data.bannerHeroUrl;
-    previewHero.classList.remove('hidden');
+// ================================================================
+// UTILITÁRIOS
+// ================================================================
+function atualizarPreview(inputId, imgId, placeholderId) {
+    const url = document.getElementById(inputId)?.value?.trim() || '';
+    const img = document.getElementById(imgId);
+    const ph  = placeholderId ? document.getElementById(placeholderId) : null;
+
+    if (!img) return;
+
+    if (url) {
+        img.src = url;
+        img.classList.remove('hidden');
+        if (ph) ph.classList.add('hidden');
+    } else {
+        img.src = '';
+        img.classList.add('hidden');
+        if (ph) ph.classList.remove('hidden');
+    }
 }
 
-if(data.bannerSubcategoria){
-    previewSubcategoria.src = data.bannerSubcategoria;
-    previewSubcategoria.classList.remove('hidden');
+function spawnToast(msg, isError = false) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `px-5 py-4 rounded-xl text-xs font-bold uppercase tracking-wider
+        transition-all duration-300 transform translate-y-4 opacity-0
+        flex items-center gap-3 border shadow-xl pointer-events-auto
+        ${isError
+            ? 'bg-rose-950/90 text-rose-300 border-rose-800'
+            : 'bg-zinc-900/95 text-emerald-400 border-zinc-800'}`;
+    toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span><span>${msg}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 50);
+    setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 }
 
-if(data.bannerProduto){
-    previewProduto.src = data.bannerProduto;
-    previewProduto.classList.remove('hidden');
+function _setVal(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.value = val ?? '';
 }
-                
-                document.getElementById('cfg-pedidoMinimo').value = data.pedidoMinimo ?? 300;
-                document.getElementById('cfg-freteFixo').value = data.freteFixo ?? 15;
-                document.getElementById('cfg-freteGratisAlvo').value = data.freteGratisAlvo ?? 100;
-                document.getElementById('cfg-pix').value = data.pix ?? 10;
-                document.getElementById('cfg-parcelas').value = data.parcelas ?? 6;
-                document.getElementById('cfg-statusLoja').value = data.statusLoja ?? 'aberto';
-                document.getElementById('cfg-bannerAtivo').checked = data.bannerAtivo ?? false;
-                document.getElementById('cfg-bannerTexto').value = data.bannerTexto ?? '';
-                
-                const timeField = document.getElementById('cfg-ultimaAtualizacao');
-                timeField.innerText = data.ultimaAtualizacao ?? 'Nenhum registro encontrado';
 
-            } catch (err) {
-                console.error("Falha Forense Crítica na Leitura Assíncrona do RTDB:", err);
-                spawnAdminToast("Falha ao puxar configurações da árvore Firebase.", true);
-            } finally {
-                if (loader) {
-                    loader.style.opacity = '0';
-                    setTimeout(() => loader.classList.add('hidden'), 400);
-                }
-            }
+function _getVal(id) {
+    return document.getElementById(id)?.value?.trim() ?? '';
+}
+
+// ================================================================
+// CARREGAR CONFIGURAÇÕES DO FIREBASE
+// ================================================================
+async function carregarConfiguracoes() {
+    const loader = document.getElementById('hud-loader');
+    try {
+        const snap = await db.ref(window.getAbellaPath('settings')).once('value');
+        const d    = snap.exists() ? (snap.val() || {}) : {};
+
+        // Identidade
+        _setVal('cfg-name',     d.name    ?? 'Abella Joias');
+        _setVal('cfg-slogan',   d.slogan  ?? '');
+        _setVal('cfg-whatsapp', d.whatsapp ?? '');
+
+        // Logo
+        const logoUrl = d.logoUrl ?? d.logo ?? '';
+        _setVal('cfg-logoUrl', logoUrl);
+        if (logoUrl) atualizarPreview('cfg-logoUrl', 'previewLogo', 'placeholderLogo');
+
+        // Banners
+        const bannerHero = d.bannerHeroUrl ?? '';
+        const bannerSub  = d.bannerSubcategoria ?? d.banner_subcategoria ?? '';
+        const bannerProd = d.bannerProduto ?? d.banner_produto ?? '';
+
+        _setVal('cfg-bannerHeroUrl',      bannerHero);
+        _setVal('cfg-bannerSubcategoria', bannerSub);
+        _setVal('cfg-bannerProduto',      bannerProd);
+
+        if (bannerHero) atualizarPreview('cfg-bannerHeroUrl',      'previewHero');
+        if (bannerSub)  atualizarPreview('cfg-bannerSubcategoria', 'previewSubcategoria');
+        if (bannerProd) atualizarPreview('cfg-bannerProduto',      'previewProduto');
+
+        // Banner alerta topo
+        const bannerAtivoEl = document.getElementById('cfg-bannerAtivo');
+        if (bannerAtivoEl) bannerAtivoEl.checked = d.bannerAtivo ?? false;
+        _setVal('cfg-bannerTexto', d.bannerTexto ?? '');
+
+        // Financeiro
+        _setVal('cfg-pedidoMinimo',    d.pedidoMinimo    ?? 300);
+        _setVal('cfg-freteFixo',       d.freteFixo       ?? 15);
+        _setVal('cfg-freteGratisAlvo', d.freteGratisAlvo ?? 100);
+        _setVal('cfg-pix',             d.pix             ?? 5);
+
+        const selParcelas = document.getElementById('cfg-parcelas');
+        if (selParcelas) selParcelas.value = String(d.parcelas ?? 6);
+
+        const selStatus = document.getElementById('cfg-statusLoja');
+        if (selStatus) selStatus.value = d.statusLoja ?? 'aberto';
+
+        const ultimaAtualizacaoEl = document.getElementById('cfg-ultimaAtualizacao');
+        if (ultimaAtualizacaoEl) ultimaAtualizacaoEl.innerText = d.ultimaAtualizacao ?? 'Nenhum registro encontrado';
+
+    } catch (err) {
+        console.error('[config.html] Falha ao carregar configurações:', err);
+        spawnToast('Erro ao carregar configurações do Firebase.', true);
+    } finally {
+        if (loader) {
+            loader.style.opacity = '0';
+            loader.style.visibility = 'hidden';
+            setTimeout(() => loader.classList.add('hidden'), 420);
         }
+    }
+}
 
-        async function salvarConfiguracoesAdmin(e) {
-            e.preventDefault();
-            
-            const sanitizarString = (str) => String(str).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
-            const higienizarWhats = (num) => String(num).replace(/\D/g, '');
+// ================================================================
+// SALVAR CONFIGURAÇÕES NO FIREBASE
+// ================================================================
+async function salvarConfiguracoesAdmin(e) {
+    e.preventDefault();
 
-            const whatsProcessado = higienizarWhats(document.getElementById('cfg-whatsapp').value);
-            if (whatsProcessado.length < 10) {
-                spawnAdminToast("O número de WhatsApp informado é inválido.", true);
-                return;
-            }
+    const nomeLoja = _getVal('cfg-name');
+    const whatsRaw = _getVal('cfg-whatsapp').replace(/\D/g, '');
 
-          const payload = {
-                name: sanitizarString(document.getElementById('cfg-name').value),
-                slogan: sanitizarString(document.getElementById('cfg-slogan').value),
-                whatsapp: whatsProcessado,
+    if (!nomeLoja) { spawnToast('Informe o nome da loja.', true); return; }
+    if (whatsRaw.length < 10) { spawnToast('Número de WhatsApp inválido.', true); return; }
 
-                logoUrl:
-                document.getElementById('cfg-logoUrl').value.trim(),
+    const sanitize = str => String(str).replace(/</g, '&lt;').replace(/>/g, '&gt;').trim();
 
-                bannerHeroUrl:
-document.getElementById('cfg-bannerHeroUrl').value.trim(),
+    const payload = {
+        // Identidade
+        name:     sanitize(nomeLoja),
+        slogan:   sanitize(_getVal('cfg-slogan')),
+        whatsapp: whatsRaw,
+        logoUrl:  _getVal('cfg-logoUrl'),
+        logo:     _getVal('cfg-logoUrl'),   // compatibilidade com páginas antigas
 
-bannerSubcategoria:
-document.getElementById('bannerSubcategoria').value.trim(),
+        // Banners
+        bannerHeroUrl:      _getVal('cfg-bannerHeroUrl'),
+        bannerSubcategoria: _getVal('cfg-bannerSubcategoria'),
+        banner_subcategoria: _getVal('cfg-bannerSubcategoria'), // compat. legado
+        bannerProduto:      _getVal('cfg-bannerProduto'),
+        banner_produto:     _getVal('cfg-bannerProduto'),       // compat. legado
 
-bannerProduto:
-document.getElementById('bannerProduto').value.trim(),
-                pedidoMinimo: Math.abs(parseFloat(document.getElementById('cfg-pedidoMinimo').value) || 0),
-                freteFixo: Math.abs(parseFloat(document.getElementById('cfg-freteFixo').value) || 0),
-                freteGratisAlvo: Math.abs(parseFloat(document.getElementById('cfg-freteGratisAlvo').value) || 0),
-                pix: Math.abs(parseInt(document.getElementById('cfg-pix').value, 10) || 0),
-                parcelas: parseInt(document.getElementById('cfg-parcelas').value, 10) || 6,
-                statusLoja: document.getElementById('cfg-statusLoja').value,
-                bannerAtivo: document.getElementById('cfg-bannerAtivo').checked,
-                bannerTexto: sanitizarString(document.getElementById('cfg-bannerTexto').value),
-                ultimaAtualizacao: new Date().toLocaleString('pt-BR') + ' (Painel Administrativo)'
-            };
+        // Alerta topo
+        bannerAtivo:  document.getElementById('cfg-bannerAtivo')?.checked ?? false,
+        bannerTexto:  sanitize(_getVal('cfg-bannerTexto')),
 
-            try {
-                const path = window.getAbellaPath('settings');
-                await db.ref(path).set(payload);
-                
-                document.getElementById('cfg-ultimaAtualizacao').innerText = payload.ultimaAtualizacao;
-                spawnAdminToast("Parâmetros operacionais gravados com sucesso no Firebase.");
-            } catch (err) {
-                console.error("Falha Forense Crítica na Escrita Assíncrona do RTDB:", err);
-                spawnAdminToast("Erro ao gravar os dados. Verifique a console de rede.", true);
-            }
-        }
+        // Financeiro
+        pedidoMinimo:    Math.abs(parseFloat(_getVal('cfg-pedidoMinimo'))    || 0),
+        freteFixo:       Math.abs(parseFloat(_getVal('cfg-freteFixo'))       || 0),
+        freteGratisAlvo: Math.abs(parseFloat(_getVal('cfg-freteGratisAlvo')) || 0),
+        pix:             Math.abs(parseInt(_getVal('cfg-pix'), 10)           || 0),
+        discountPix:     Math.abs(parseInt(_getVal('cfg-pix'), 10)           || 0), // compat. checkout.js
+        parcelas:        parseInt(_getVal('cfg-parcelas'), 10)               || 6,
+        statusLoja:      _getVal('cfg-statusLoja') || 'aberto',
 
-        document.addEventListener('DOMContentLoaded', carregarConfiguracoesAssincronas);
-    </script>
+        ultimaAtualizacao: new Date().toLocaleString('pt-BR') + ' (Painel Config)'
+    };
+
+    const btn = e.submitter || document.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.innerText = '⏳ Salvando...'; }
+
+    try {
+        await db.ref(window.getAbellaPath('settings')).set(payload);
+        const el = document.getElementById('cfg-ultimaAtualizacao');
+        if (el) el.innerText = payload.ultimaAtualizacao;
+        spawnToast('Configurações salvas com sucesso!');
+    } catch (err) {
+        console.error('[config.html] Erro ao salvar:', err);
+        spawnToast('Erro ao gravar no Firebase. Verifique o console.', true);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = '💾 Salvar Configurações'; }
+    }
+}
+
+// ================================================================
+// INIT
+// ================================================================
+document.addEventListener('DOMContentLoaded', carregarConfiguracoes);
+</script>
 </body>
 </html>

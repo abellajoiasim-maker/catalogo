@@ -84,14 +84,12 @@
     <script src="../js/utils/money.js"></script>
 
     <script>
-        // Inicializa o Firebase puxando a configuração global da sua arquitetura
         if (!window.firebase) {
-    throw new Error('Firebase não carregado');
-}
+            throw new Error('Firebase não carregado');
+        }
 
-const db = firebase.database();
+        const db = firebase.database();
 
-        // Mapeamento de Parâmetros de URL
         const urlParams = new URLSearchParams(window.location.search);
         const pedidoId = urlParams.get('id');
         const layout = urlParams.get('layout') || 'lista'; 
@@ -118,1533 +116,337 @@ const db = firebase.database();
 
                 const p = snap.val();
                 
-               // População de Metadados corrigida para a estrutura do PedidoService
-document.getElementById('doc-id').innerText = p.numeroPedido || pedidoId; // Usa numeroPedido oficial
-document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
-document.getElementById('cli-nome').innerText = p.cliente || 'Não Identificado';
-document.getElementById('cli-whats').innerText = "Contato: " + (p.whats || 'N/I');
-document.getElementById('cli-destino').innerText = "Destino: " + (p.cidade || 'Limeira/SP').toUpperCase();
-document.getElementById('cli-pagamento').innerText = "Forma de Pagto: " + (p.formaPagamento || 'Não Informada');
+                document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
+                document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
+                document.getElementById('cli-nome').innerText = p.cliente || p.nome || 'Não Identificado';
+                document.getElementById('cli-whats').innerText = "Contato: " + (p.whats || p.whatsapp || p.contato || 'N/I');
+                document.getElementById('cli-destino').innerText = "Destino: " + (p.cidade || 'Limeira/SP').toUpperCase();
+                document.getElementById('cli-pagamento').innerText = "Forma de Pagto: " + (p.formaPagamento || 'Não Informada');
 
-document.getElementById('resumo-qtd').innerText = `${p.totalPecas || 0} pçs`;
-document.getElementById('resumo-weight').innerText = `${parseFloat(p.pesoTotal || 0).toFixed(2)}g`;
-document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total ?? 0);
+                document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
+                // CORREÇÃO AQUI: Alterado de resumo-weight para resumo-peso para corresponder ao ID real do HTML
+                document.getElementById('resumo-peso').innerText = `${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g`;
+                document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
                 
-                // Oculta os preços se o romaneio for restrito à Conferência de Fábrica
                 if (tipo === 'conferencia') {
                     document.getElementById('bloco-financeiro-total').classList.add('invisible');
                 }
 
-               var itens = p.itens || p.produtos || [];
-
-if (!itens) itens = [];
+                var itens = p.itens || p.produtos || [];
                 if (typeof itens === 'object' && !Array.isArray(itens)) itens = Object.values(itens);
 
                 const target = document.getElementById('render-target');
                 target.innerHTML = '';
 
                 function renderResumoFinanceiro(p) {
+                    return `
+                    <div class="mt-6 border-t-2 border-black pt-4">
+                        <h3 class="font-bold text-sm mb-3">RESUMO FINANCEIRO</h3>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>Total de Itens:</div>
+                            <div class="text-right">${itens.length || 0}</div>
+                            <div>Total de Peças:</div>
+                            <div class="text-right">${p.totalPecas || p.qtd || 0}</div>
+                            <div>Peso Total:</div>
+                            <div class="text-right">${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g</div>
+                            <div>Desconto Categoria:</div>
+                            <div class="text-right">${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
+                            <div>Desconto Peso:</div>
+                            <div class="text-right">${formatarMoedaLocal(p.descontoPeso || 0)}</div>
+                            <div>Desconto Campanha:</div>
+                            <div class="text-right">${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
+                            <div class="font-bold border-t pt-2">Valor Final</div>
+                            <div class="font-bold text-right border-t pt-2">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
+                        </div>
+                    </div>`;
+                }
 
-    return `
-    <div class="mt-6 border-t-2 border-black pt-4">
-
-        <h3 class="font-bold text-sm mb-3">
-            RESUMO FINANCEIRO
-        </h3>
-
-        <div class="grid grid-cols-2 gap-2 text-xs">
-
-            <div>Total de Itens:</div>
-            <div class="text-right">${p.totalItens || 0}</div>
-
-            <div>Total de Peças:</div>
-            <div class="text-right">${p.totalPecas || 0}</div>
-
-            <div>Peso Total:</div>
-<div class="text-right">
-    ${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g
-</div>
-
-            <div>Desconto Categoria:</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(p.descontoCategoria || 0)}
-            </div>
-
-            <div>Desconto Peso:</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(p.descontoPeso || 0)}
-            </div>
-
-            <div>Desconto Campanha:</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(p.descontoCampanha || 0)}
-            </div>
-
-            <div class="font-bold border-t pt-2">
-                Valor Final
-            </div>
-
-            <div class="font-bold text-right border-t pt-2">
-                ${formatarMoedaLocal(p.total || 0)}
-            </div>
-
-        </div>
-
-    </div>
-    `;
-}
-
-               function renderListaConferencia(p, itens) {
-    return `
-        <table class="w-full border-collapse text-xs">
-            <thead>
-                <tr class="border-b border-zinc-200">
-                    <th class="py-2 text-left font-semibold text-zinc-700">SKU</th>
-                    <th class="py-2 text-left font-semibold text-zinc-700">Produto</th>
-                    <th class="py-2 text-center font-semibold text-zinc-700 w-16">Qtd</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-zinc-100">
-                ${itens.map(item => `
-                    <tr class="hover:bg-zinc-50/50">
-                        <td class="py-2 text-left font-mono text-zinc-600">${item.sku || '-'}</td>
-                        <td class="py-2 text-left text-zinc-800">${item.nome || item.name || '-'}</td>
-                        <td class="py-2 text-center text-zinc-900 font-medium">${item.quantidade || 1}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-}
+                function renderListaConferencia(p, itens) {
+                    return `
+                        <table class="w-full border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b border-zinc-200">
+                                    <th class="py-2 text-left font-semibold text-zinc-700">SKU</th>
+                                    <th class="py-2 text-left font-semibold text-zinc-700">Produto</th>
+                                    <th class="py-2 text-center font-semibold text-zinc-700 w-16">Qtd</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-100">
+                                ${itens.map(item => `
+                                    <tr class="hover:bg-zinc-50/50">
+                                        <td class="py-2 text-left font-mono text-zinc-600">${item.sku || '-'}</td>
+                                        <td class="py-2 text-left text-zinc-800">${item.nome || item.name || '-'}</td>
+                                        <td class="py-2 text-center text-zinc-900 font-medium">${item.quantidade || 1}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>`;
+                }
                 
                 function renderListaCompleto(p, itens) {
-
-    return `
-        <table class="w-full">
-
-            <thead>
-                <tr>
-                    <th>SKU</th>
-                    <th>Produto</th>
-                    <th>Qtd</th>
-                    <th>Peso</th>
-                    <th>Unitário</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-
-            <tbody>
-
-            ${itens.map(item => {
-
-                const qtd = item.quantidade || 1;
-                const unit = item.precoFinal || item.price || 0;
-
-                return `
-                    <tr>
-        <td>${item.sku || '-'}</td>
-        <td>${item.nome || item.name}</td>
-        <td>${qtd}</td>
-        <td>${parseFloat(item.peso || item.weight || 0).toFixed(2)}g</td>
-        <td>${formatarMoedaLocal(unit)}</td>
-        <td>${formatarMoedaLocal(unit * qtd)}</td>
-                    </tr>
-                `;
-            }).join('')}
-
-            </tbody>
-
-        </table>
-
-        ${renderResumoFinanceiro(p)}
-    `;
-}
+                    return `
+                        <table class="w-full text-xs border-collapse">
+                            <thead>
+                                <tr class="border-b-2 border-black text-left">
+                                    <th class="py-2">SKU</th>
+                                    <th class="py-2">Produto</th>
+                                    <th class="py-2 text-center">Qtd</th>
+                                    <th class="py-2 text-center">Peso</th>
+                                    <th class="py-2 text-right">Unitário</th>
+                                    <th class="py-2 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-200">
+                            ${itens.map(item => {
+                                const qtd = item.quantidade || 1;
+                                const unit = item.precoFinal || item.price || item.preco || 0;
+                                return `
+                                    <tr>
+                                        <td class="py-2 font-mono">${item.sku || '-'}</td>
+                                        <td class="py-2">${item.nome || item.name || '-'}</td>
+                                        <td class="py-2 text-center">${qtd}</td>
+                                        <td class="py-2 text-center">${parseFloat(item.peso || item.weight || 0).toFixed(2)}g</td>
+                                        <td class="py-2 text-right">${formatarMoedaLocal(unit)}</td>
+                                        <td class="py-2 text-right">${formatarMoedaLocal(unit * qtd)}</td>
+                                    </tr>`;
+                            }).join('')}
+                            </tbody>
+                        </table>
+                        ${renderResumoFinanceiro(p)}`;
+                }
 
                 function renderListaCompletoFoto(p, itens) {
-
-
-const totalItens = itens.length;
-
-let totalPecas = 0;
-let pesoTotal = 0;
-
-itens.forEach(item => {
-
-    const qtd =
-        parseInt(item.quantidade || 1);
-
-    const peso =
-        parseFloat(
-            item.peso ||
-            item.weight ||
-            0
-        );
-
-    totalPecas += qtd;
-    pesoTotal += (peso * qtd);
-
-});
-
-return `
-
-<div class="space-y-6">
-
-    <!-- CABEÇALHO -->
-
-    <div class="border border-zinc-300 rounded-xl p-4">
-
-        <div class="grid grid-cols-2 gap-4 text-xs">
-
-            <div>
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Cliente
-                </div>
-
-                <div class="font-bold text-sm uppercase">
-                    ${p.cliente || p.nome || '-'}
-                </div>
-
-                <div>
-                    ${p.whats || p.whatsapp || p.contato || '-'}
-                </div>
-            </div>
-
-            <div>
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Entrega
-                </div>
-
-                <div class="font-bold uppercase">
-                    ${p.entrega || '-'}
-                </div>
-
-                <div>
-                    ${p.cidade || '-'}
-                </div>
-            </div>
-
-            <div>
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Pedido
-                </div>
-
-                <div>
-                    ${p.idPedido || '-'}
-                </div>
-            </div>
-
-            <div>
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Data
-                </div>
-
-                <div>
-                    ${p.data || '-'}
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- TABELA -->
-
-    <table class="w-full border-collapse text-xs">
-
-        <thead>
-
-            <tr class="border-b-2 border-black">
-
-                <th class="py-2 text-left">
-                    Foto
-                </th>
-
-                <th class="py-2 text-left">
-                    SKU
-                </th>
-
-                <th class="py-2 text-left">
-                    Produto
-                </th>
-
-                <th class="py-2 text-center">
-                    Qtd
-                </th>
-
-                <th class="py-2 text-center">
-                    Peso
-                </th>
-
-                <th class="py-2 text-right">
-                    Unit.
-                </th>
-
-                <th class="py-2 text-right">
-                    Total
-                </th>
-
-            </tr>
-
-        </thead>
-
-        <tbody>
-
-            ${itens.map(item => {
-
-                const qtd =
-                    parseInt(
-                        item.quantidade || 1
-                    );
-
-                const peso =
-                    parseFloat(
-                        item.peso ||
-                        item.weight ||
-                        0
-                    );
-
-                const preco =
-                    parseFloat(
-                        item.precoFinal ||
-                        item.price ||
-                        item.preco ||
-                        0
-                    );
-
-                const totalLinha =
-                    preco * qtd;
-
-                return `
-
-                <tr class="border-b border-zinc-200">
-
-                    <td class="py-2">
-
-                        <img
-                            src="${item.image || item.imagem || 'https://placehold.co/100'}"
-                            style="
-                                width:60px;
-                                height:60px;
-                                object-fit:cover;
-                                border:1px solid #ddd;
-                                border-radius:6px;
-                            "
-                            onerror="this.src='https://placehold.co/100'"
-                        >
-
-                    </td>
-
-                    <td class="font-mono">
-                        ${item.sku || '-'}
-                    </td>
-
-                    <td class="uppercase font-semibold">
-                        ${item.nome || item.name || '-'}
-                    </td>
-
-                    <td class="text-center font-bold">
-                        ${qtd}
-                    </td>
-
-                    <td class="text-center">
-                        ${peso.toFixed(2)}g
-                    </td>
-
-                    <td class="text-right">
-                        ${formatarMoedaLocal(preco)}
-                    </td>
-
-                    <td class="text-right font-bold">
-                        ${formatarMoedaLocal(totalLinha)}
-                    </td>
-
-                </tr>
-
-                `;
-
-            }).join('')}
-
-        </tbody>
-
-    </table>
-
-    <!-- RESUMO FINANCEIRO -->
-
-    <div class="border-t-2 border-black pt-4">
-
-        <h3 class="font-bold text-sm mb-3 uppercase">
-            Resumo Financeiro
-        </h3>
-
-        <div class="grid grid-cols-2 gap-y-2 text-xs">
-
-            <div>Total de Itens</div>
-            <div class="text-right">
-                ${totalItens}
-            </div>
-
-            <div>Total de Peças</div>
-            <div class="text-right">
-                ${totalPecas}
-            </div>
-
-            <div>Peso Total</div>
-            <div class="text-right">
-                ${pesoTotal.toFixed(2)}g
-            </div>
-
-            <div>Subtotal</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.subtotal ||
-                    p.valorProdutos ||
-                    p.total ||
-                    0
-                )}
-            </div>
-
-            <div>Desconto Categoria</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoCategoria || 0
-                )}
-            </div>
-
-            <div>Desconto Peso</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoPeso || 0
-                )}
-            </div>
-
-            <div>Desconto Campanha</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoCampanha || 0
-                )}
-            </div>
-
-            <div>Desconto PIX</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoPix || 0
-                )}
-            </div>
-
-            <div>Frete</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.frete || 0
-                )}
-            </div>
-
-            <div class="border-t pt-2 font-black text-sm">
-                Total Final
-            </div>
-
-            <div class="border-t pt-2 text-right font-black text-sm">
-                ${formatarMoedaLocal(
-                    p.total ||
-                    p.valorTotal ||
-                    0
-                )}
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-`;
-
-}
-
+                    const totalItens = itens.length;
+                    let totalPecas = 0;
+                    let pesoTotal = 0;
+
+                    itens.forEach(item => {
+                        const qtd = parseInt(item.quantidade || 1);
+                        const peso = parseFloat(item.peso || item.weight || 0);
+                        totalPecas += qtd;
+                        pesoTotal += (peso * qtd);
+                    });
+
+                    return `
+                    <div class="space-y-6">
+                        <table class="w-full border-collapse text-xs">
+                            <thead>
+                                <tr class="border-b-2 border-black">
+                                    <th class="py-2 text-left">Foto</th>
+                                    <th class="py-2 text-left">SKU</th>
+                                    <th class="py-2 text-left">Produto</th>
+                                    <th class="py-2 text-center">Qtd</th>
+                                    <th class="py-2 text-center">Peso</th>
+                                    <th class="py-2 text-right">Unit.</th>
+                                    <th class="py-2 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itens.map(item => {
+                                    const qtd = parseInt(item.quantidade || 1);
+                                    const peso = parseFloat(item.peso || item.weight || 0);
+                                    const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                                    return `
+                                    <tr class="border-b border-zinc-200">
+                                        <td class="py-2">
+                                            <img src="${item.image || item.imagem || 'https://placehold.co/100'}" style="width:60px;height:60px;object-fit:cover;border:1px solid #ddd;border-radius:6px;" onerror="this.src='https://placehold.co/100'">
+                                        </td>
+                                        <td class="font-mono">${item.sku || '-'}</td>
+                                        <td class="uppercase font-semibold">${item.nome || item.name || '-'}</td>
+                                        <td class="text-center font-bold">${qtd}</td>
+                                        <td class="text-center">${peso.toFixed(2)}g</td>
+                                        <td class="text-right">${formatarMoedaLocal(preco)}</td>
+                                        <td class="text-right font-bold">${formatarMoedaLocal(preco * qtd)}</td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+
+                        <div class="border-t-2 border-black pt-4">
+                            <h3 class="font-bold text-sm mb-3 uppercase">Resumo Financeiro</h3>
+                            <div class="grid grid-cols-2 gap-y-2 text-xs">
+                                <div>Total de Itens</div><div class="text-right">${totalItens}</div>
+                                <div>Total de Peças</div><div class="text-right">${totalPecas}</div>
+                                <div>Peso Total</div><div class="text-right">${pesoTotal.toFixed(2)}g</div>
+                                <div>Subtotal</div><div class="text-right">${formatarMoedaLocal(p.subtotal || p.valorProdutos || p.total || 0)}</div>
+                                <div>Desconto Categoria</div><div class="text-right">${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
+                                <div>Desconto Peso</div><div class="text-right">${formatarMoedaLocal(p.descontoPeso || 0)}</div>
+                                <div>Desconto Campanha</div><div class="text-right">${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
+                                <div>Desconto PIX</div><div class="text-right">${formatarMoedaLocal(p.descontoPix || 0)}</div>
+                                <div>Frete</div><div class="text-right">${formatarMoedaLocal(p.frete || 0)}</div>
+                                <div class="border-t pt-2 font-black text-sm">Total Final</div>
+                                <div class="border-t pt-2 text-right font-black text-sm">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
 
                 function renderGradeConferencia(p, itens) {
+                    let totalPecas = 0;
+                    itens.forEach(item => { totalPecas += parseInt(item.quantidade || 1); });
 
-
-let totalPecas = 0;
-
-itens.forEach(item => {
-
-    totalPecas +=
-        parseInt(
-            item.quantidade || 1
-        );
-
-});
-
-return `
-
-<div class="space-y-6">
-
-    <!-- CABEÇALHO -->
-
-    <div class="border border-zinc-300 rounded-xl p-4">
-
-        <div class="grid grid-cols-2 gap-4 text-xs">
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Cliente
-                </div>
-
-                <div class="font-bold text-sm uppercase">
-                    ${p.cliente || p.nome || '-'}
-                </div>
-
-                <div>
-                    ${p.whats || p.whatsapp || p.contato || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Entrega
-                </div>
-
-                <div class="font-bold uppercase">
-                    ${p.entrega || '-'}
-                </div>
-
-                <div>
-                    ${p.cidade || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Pedido
-                </div>
-
-                <div>
-                    ${p.idPedido || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Data
-                </div>
-
-                <div>
-                    ${p.data || '-'}
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- GRADE -->
-
-    <div
-        class="
-            grid
-            grid-cols-2
-            md:grid-cols-3
-            lg:grid-cols-4
-            gap-3
-        "
-    >
-
-        ${itens.map(item => `
-
-            <div
-                class="
-                    border
-                    border-zinc-300
-                    rounded-xl
-                    p-3
-                    bg-white
-                    break-inside-avoid
-                "
-            >
-
-                <div
-                    class="
-                        flex
-                        justify-between
-                        items-start
-                        mb-2
-                    "
-                >
-
-                    <span
-                        class="
-                            text-[10px]
-                            font-mono
-                            text-zinc-500
-                            font-bold
-                        "
-                    >
-                        SKU
-                    </span>
-
-                    <span
-                        class="
-                            bg-black
-                            text-white
-                            px-2
-                            py-1
-                            rounded-lg
-                            text-xs
-                            font-black
-                        "
-                    >
-                        ${item.quantidade || 1}x
-                    </span>
-
-                </div>
-
-                <div
-                    class="
-                        text-[11px]
-                        font-mono
-                        text-zinc-700
-                        mb-2
-                        break-all
-                    "
-                >
-                    ${item.sku || '-'}
-                </div>
-
-                <div
-                    class="
-                        font-bold
-                        uppercase
-                        text-sm
-                        leading-tight
-                        text-black
-                    "
-                >
-                    ${item.nome || item.name || '-'}
-                </div>
-
-            </div>
-
-        `).join('')}
-
-    </div>
-
-    <!-- RESUMO -->
-
-    <div
-        class="
-            border-t-2
-            border-black
-            pt-4
-        "
-    >
-
-        <div
-            class="
-                grid
-                grid-cols-2
-                gap-3
-                text-xs
-            "
-        >
-
-            <div>
-
-                <div
-                    class="
-                        text-zinc-500
-                        uppercase
-                        font-bold
-                    "
-                >
-                    Total de Itens
-                </div>
-
-                <div
-                    class="
-                        text-lg
-                        font-black
-                    "
-                >
-                    ${itens.length}
-                </div>
-
-            </div>
-
-            <div
-                class="
-                    text-right
-                "
-            >
-
-                <div
-                    class="
-                        text-zinc-500
-                        uppercase
-                        font-bold
-                    "
-                >
-                    Total de Peças
-                </div>
-
-                <div
-                    class="
-                        text-lg
-                        font-black
-                    "
-                >
-                    ${totalPecas}
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-`;
-
-
-}
-
+                    return `
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            ${itens.map(item => `
+                                <div class="border border-zinc-300 rounded-xl p-3 bg-white break-inside-avoid">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="text-[10px] font-mono text-zinc-500 font-bold">SKU</span>
+                                        <span class="bg-black text-white px-2 py-1 rounded-lg text-xs font-black">${item.quantidade || 1}x</span>
+                                    </div>
+                                    <div class="text-[11px] font-mono text-zinc-700 mb-2 break-all">${item.sku || '-'}</div>
+                                    <div class="font-bold uppercase text-sm leading-tight text-black">${item.nome || item.name || '-'}</div>
+                                </div>`).join('')}
+                        </div>
+                        <div class="border-t-2 border-black pt-4">
+                            <div class="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                    <div class="text-zinc-500 uppercase font-bold">Total de Itens</div>
+                                    <div class="text-lg font-black">${itens.length}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-zinc-500 uppercase font-bold">Total de Peças</div>
+                                    <div class="text-lg font-black">${totalPecas}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
 
                 function renderGradeCompleto(p, itens) {
-
-
-let totalPecas = 0;
-let pesoTotal = 0;
-
-itens.forEach(item => {
-
-    const qtd =
-        parseInt(item.quantidade || 1);
-
-    const peso =
-        parseFloat(
-            item.peso ||
-            item.weight ||
-            0
-        );
-
-    totalPecas += qtd;
-    pesoTotal += (peso * qtd);
-
-});
-
-return `
-
-<div class="space-y-6">
-
-    <!-- CABEÇALHO -->
-
-    <div class="border border-zinc-300 rounded-xl p-4">
-
-        <div class="grid grid-cols-2 gap-4 text-xs">
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Cliente
-                </div>
-
-                <div class="font-bold text-sm uppercase">
-                    ${p.cliente || p.nome || '-'}
-                </div>
-
-                <div>
-                    ${p.whats || p.whatsapp || p.contato || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Entrega
-                </div>
-
-                <div class="font-bold uppercase">
-                    ${p.entrega || '-'}
-                </div>
-
-                <div>
-                    ${p.cidade || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Pedido
-                </div>
-
-                <div>
-                    ${p.idPedido || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Data
-                </div>
-
-                <div>
-                    ${p.data || '-'}
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- GRADE COMPLETA -->
-
-    <div
-        class="
-            grid
-            grid-cols-2
-            md:grid-cols-3
-            lg:grid-cols-4
-            gap-3
-        "
-    >
-
-        ${itens.map(item => {
-
-            const qtd =
-                parseInt(
-                    item.quantidade || 1
-                );
-
-            const peso =
-                parseFloat(
-                    item.peso ||
-                    item.weight ||
-                    0
-                );
-
-            const preco =
-                parseFloat(
-                    item.precoFinal ||
-                    item.price ||
-                    item.preco ||
-                    0
-                );
-
-            const totalLinha =
-                preco * qtd;
-
-            return `
-
-            <div
-                class="
-                    border
-                    border-zinc-300
-                    rounded-xl
-                    p-3
-                    bg-white
-                    flex
-                    flex-col
-                    justify-between
-                "
-            >
-
-                <div>
-
-                    <div
-                        class="
-                            flex
-                            justify-between
-                            items-start
-                            mb-2
-                        "
-                    >
-
-                        <span
-                            class="
-                                text-[10px]
-                                font-mono
-                                text-zinc-500
-                                font-bold
-                            "
-                        >
-                            SKU
-                        </span>
-
-                        <span
-                            class="
-                                bg-black
-                                text-white
-                                px-2
-                                py-1
-                                rounded-lg
-                                text-xs
-                                font-black
-                            "
-                        >
-                            ${qtd}x
-                        </span>
-
-                    </div>
-
-                    <div
-                        class="
-                            text-[11px]
-                            font-mono
-                            text-zinc-700
-                            mb-2
-                            break-all
-                        "
-                    >
-                        ${item.sku || '-'}
-                    </div>
-
-                    <div
-                        class="
-                            font-bold
-                            uppercase
-                            text-sm
-                            leading-tight
-                            text-black
-                            mb-3
-                        "
-                    >
-                        ${item.nome || item.name || '-'}
-                    </div>
-
-                </div>
-
-                <div
-                    class="
-                        border-t
-                        border-zinc-200
-                        pt-2
-                        text-[11px]
-                        font-mono
-                        space-y-1
-                    "
-                >
-
-                    <div class="flex justify-between">
-                        <span>Peso</span>
-                        <span>${peso.toFixed(2)}g</span>
-                    </div>
-
-                    <div class="flex justify-between">
-                        <span>Unitário</span>
-                        <span>${formatarMoedaLocal(preco)}</span>
-                    </div>
-
-                    <div class="flex justify-between font-bold">
-                        <span>Total</span>
-                        <span>
-                            ${formatarMoedaLocal(totalLinha)}
-                        </span>
-                    </div>
-
-                </div>
-
-            </div>
-
-            `;
-
-        }).join('')}
-
-    </div>
-
-    <!-- RESUMO FINANCEIRO -->
-
-    <div
-        class="
-            border-t-2
-            border-black
-            pt-4
-        "
-    >
-
-        <h3
-            class="
-                font-bold
-                text-sm
-                uppercase
-                mb-3
-            "
-        >
-            Resumo Financeiro
-        </h3>
-
-        <div
-            class="
-                grid
-                grid-cols-2
-                gap-y-2
-                text-xs
-            "
-        >
-
-            <div>Total de Itens</div>
-            <div class="text-right">
-                ${itens.length}
-            </div>
-
-            <div>Total de Peças</div>
-            <div class="text-right">
-                ${totalPecas}
-            </div>
-
-            <div>Peso Total</div>
-            <div class="text-right">
-                ${pesoTotal.toFixed(2)}g
-            </div>
-
-            <div>Subtotal</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.subtotal ||
-                    p.valorProdutos ||
-                    p.total ||
-                    0
-                )}
-            </div>
-
-            <div>Desconto Categoria</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoCategoria || 0
-                )}
-            </div>
-
-            <div>Desconto Peso</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoPeso || 0
-                )}
-            </div>
-
-            <div>Desconto Campanha</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoCampanha || 0
-                )}
-            </div>
-
-            <div>Desconto PIX</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoPix || 0
-                )}
-            </div>
-
-            <div>Frete</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.frete || 0
-                )}
-            </div>
-
-            <div
-                class="
-                    border-t
-                    pt-2
-                    font-black
-                    text-sm
-                "
-            >
-                Total Final
-            </div>
-
-            <div
-                class="
-                    border-t
-                    pt-2
-                    text-right
-                    font-black
-                    text-sm
-                "
-            >
-                ${formatarMoedaLocal(
-                    p.total ||
-                    p.valorTotal ||
-                    0
-                )}
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-`;
-
-
-}
-
+                    let totalPecas = 0;
+                    let pesoTotal = 0;
+                    itens.forEach(item => {
+                        totalPecas += parseInt(item.quantidade || 1);
+                        pesoTotal += (parseFloat(item.peso || item.weight || 0) * parseInt(item.quantidade || 1));
+                    });
+
+                    return `
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                            ${itens.map(item => {
+                                const qtd = parseInt(item.quantidade || 1);
+                                const peso = parseFloat(item.peso || item.weight || 0);
+                                const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                                return `
+                                <div class="border border-zinc-300 rounded-xl p-3 bg-white flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="text-[10px] font-mono text-zinc-500 font-bold">SKU</span>
+                                            <span class="bg-black text-white px-2 py-1 rounded-lg text-xs font-black">${qtd}x</span>
+                                        </div>
+                                        <div class="text-[11px] font-mono text-zinc-700 mb-2 break-all">${item.sku || '-'}</div>
+                                        <div class="font-bold uppercase text-sm leading-tight text-black mb-3">${item.nome || item.name || '-'}</div>
+                                    </div>
+                                    <div class="border-t border-zinc-200 pt-2 text-[11px] font-mono space-y-1">
+                                        <div class="flex justify-between"><span>Peso</span><span>${peso.toFixed(2)}g</span></div>
+                                        <div class="flex justify-between"><span>Unitário</span><span>${formatarMoedaLocal(preco)}</span></div>
+                                        <div class="flex justify-between font-bold"><span>Total</span><span>${formatarMoedaLocal(preco * qtd)}</span></div>
+                                    </div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                        
+                        <div class="border-t-2 border-black pt-4">
+                            <h3 class="font-bold text-sm uppercase mb-3">Resumo Financeiro</h3>
+                            <div class="grid grid-cols-2 gap-y-2 text-xs">
+                                <div>Total de Itens</div><div class="text-right">${itens.length}</div>
+                                <div>Total de Peças</div><div class="text-right">${totalPecas}</div>
+                                <div>Peso Total</div><div class="text-right">${pesoTotal.toFixed(2)}g</div>
+                                <div>Subtotal</div><div class="text-right">${formatarMoedaLocal(p.subtotal || p.valorProdutos || p.total || 0)}</div>
+                                <div>Desconto Categoria</div><div class="text-right">${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
+                                <div>Desconto Peso</div><div class="text-right">${formatarMoedaLocal(p.descontoPeso || 0)}</div>
+                                <div>Desconto Campanha</div><div class="text-right">${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
+                                <div>Desconto PIX</div><div class="text-right">${formatarMoedaLocal(p.descontoPix || 0)}</div>
+                                <div>Frete</div><div class="text-right">${formatarMoedaLocal(p.frete || 0)}</div>
+                                <div class="border-t pt-2 font-black text-sm">Total Final</div>
+                                <div class="border-t pt-2 text-right font-black text-sm">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
+                            </div>
+                        </div>
+                    </div>`;
+                }
 
                 function renderGradeCompletoFoto(p, itens) {
+                    let totalPecas = 0;
+                    let pesoTotal = 0;
+                    itens.forEach(item => {
+                        totalPecas += parseInt(item.quantidade || 1);
+                        pesoTotal += (parseFloat(item.peso || item.weight || 0) * parseInt(item.quantidade || 1));
+                    });
 
-
-let totalPecas = 0;
-let pesoTotal = 0;
-
-itens.forEach(item => {
-
-    const qtd =
-        parseInt(
-            item.quantidade || 1
-        );
-
-    const peso =
-        parseFloat(
-            item.peso ||
-            item.weight ||
-            0
-        );
-
-    totalPecas += qtd;
-    pesoTotal += (peso * qtd);
-
-});
-
-return `
-
-<div class="space-y-6">
-
-    <!-- CABEÇALHO -->
-
-    <div class="border border-zinc-300 rounded-xl p-4">
-
-        <div class="grid grid-cols-2 gap-4 text-xs">
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Cliente
-                </div>
-
-                <div class="font-bold text-sm uppercase">
-                    ${p.cliente || p.nome || '-'}
-                </div>
-
-                <div>
-                    ${p.whats || p.whatsapp || p.contato || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Entrega
-                </div>
-
-                <div class="font-bold uppercase">
-                    ${p.entrega || '-'}
-                </div>
-
-                <div>
-                    ${p.cidade || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Pedido
-                </div>
-
-                <div>
-                    ${p.idPedido || '-'}
-                </div>
-
-            </div>
-
-            <div>
-
-                <div class="font-bold uppercase text-zinc-500 mb-1">
-                    Data
-                </div>
-
-                <div>
-                    ${p.data || '-'}
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <!-- GRADE -->
-
-    <div
-        class="
-            grid
-            grid-cols-2
-            md:grid-cols-3
-            lg:grid-cols-4
-            gap-4
-        "
-    >
-
-        ${itens.map(item => {
-
-            const qtd =
-                parseInt(
-                    item.quantidade || 1
-                );
-
-            const peso =
-                parseFloat(
-                    item.peso ||
-                    item.weight ||
-                    0
-                );
-
-            const preco =
-                parseFloat(
-                    item.precoFinal ||
-                    item.price ||
-                    item.preco ||
-                    0
-                );
-
-            const totalLinha =
-                preco * qtd;
-
-            return `
-
-            <div
-                class="
-                    border
-                    border-zinc-300
-                    rounded-xl
-                    overflow-hidden
-                    bg-white
-                    flex
-                    flex-col
-                "
-            >
-
-                <!-- FOTO -->
-
-                <div
-                    class="
-                        h-40
-                        bg-zinc-100
-                        border-b
-                        border-zinc-200
-                        overflow-hidden
-                    "
-                >
-
-                    <img
-                        src="${item.image || item.imagem || 'https://placehold.co/400'}"
-                        class="
-                            w-full
-                            h-full
-                            object-cover
-                        "
-                        onerror="this.src='https://placehold.co/400'"
-                    >
-
-                </div>
-
-                <!-- CONTEÚDO -->
-
-                <div class="p-3 flex flex-col flex-1">
-
-                    <div
-                        class="
-                            flex
-                            justify-between
-                            items-start
-                            mb-2
-                        "
-                    >
-
-                        <span
-                            class="
-                                text-[10px]
-                                font-mono
-                                text-zinc-500
-                                font-bold
-                            "
-                        >
-                            SKU
-                        </span>
-
-                        <span
-                            class="
-                                bg-black
-                                text-white
-                                px-2
-                                py-1
-                                rounded-lg
-                                text-xs
-                                font-black
-                            "
-                        >
-                            ${qtd}x
-                        </span>
-
-                    </div>
-
-                    <div
-                        class="
-                            text-[11px]
-                            font-mono
-                            text-zinc-700
-                            break-all
-                            mb-2
-                        "
-                    >
-                        ${item.sku || '-'}
-                    </div>
-
-                    <div
-                        class="
-                            font-bold
-                            uppercase
-                            text-sm
-                            leading-tight
-                            text-black
-                            mb-3
-                            flex-1
-                        "
-                    >
-                        ${item.nome || item.name || '-'}
-                    </div>
-
-                    <div
-                        class="
-                            border-t
-                            border-zinc-200
-                            pt-2
-                            space-y-1
-                            text-[11px]
-                            font-mono
-                        "
-                    >
-
-                        <div class="flex justify-between">
-                            <span>Peso</span>
-                            <span>
-                                ${peso.toFixed(2)}g
-                            </span>
+                    return `
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            ${itens.map(item => {
+                                const qtd = parseInt(item.quantidade || 1);
+                                const peso = parseFloat(item.peso || item.weight || 0);
+                                const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                                return `
+                                <div class="border border-zinc-300 rounded-xl overflow-hidden bg-white flex flex-col">
+                                    <div class="h-40 bg-zinc-100 border-b border-zinc-200 overflow-hidden">
+                                        <img src="${item.image || item.imagem || 'https://placehold.co/400'}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400'">
+                                    </div>
+                                    <div class="p-3 flex flex-col flex-1">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <span class="text-[10px] font-mono text-zinc-500 font-bold">SKU</span>
+                                            <span class="bg-black text-white px-2 py-1 rounded-lg text-xs font-black">${qtd}x</span>
+                                        </div>
+                                        <div class="text-[11px] font-mono text-zinc-700 break-all mb-2">${item.sku || '-'}</div>
+                                        <div class="font-bold uppercase text-sm leading-tight text-black mb-3 flex-1">${item.nome || item.name || '-'}</div>
+                                        <div class="border-t border-zinc-200 pt-2 space-y-1 text-[11px] font-mono">
+                                            <div class="flex justify-between"><span>Peso</span><span>${peso.toFixed(2)}g</span></div>
+                                            <div class="flex justify-between"><span>Unitário</span><span>${formatarMoedaLocal(preco)}</span></div>
+                                            <div class="flex justify-between font-bold"><span>Total</span><span>${formatarMoedaLocal(preco * qtd)}</span></div>
+                                        </div>
+                                    </div>
+                                </div>`;
+                            }).join('')}
                         </div>
 
-                        <div class="flex justify-between">
-                            <span>Unitário</span>
-                            <span>
-                                ${formatarMoedaLocal(preco)}
-                            </span>
+                        <div class="border-t-2 border-black pt-4">
+                            <h3 class="font-bold text-sm uppercase mb-3">Resumo Financeiro</h3>
+                            <div class="grid grid-cols-2 gap-y-2 text-xs">
+                                <div>Total de Itens</div><div class="text-right">${itens.length}</div>
+                                <div>Total de Peças</div><div class="text-right">${totalPecas}</div>
+                                <div>Peso Total</div><div class="text-right">${pesoTotal.toFixed(2)}g</div>
+                                <div>Subtotal</div><div class="text-right">${formatarMoedaLocal(p.subtotal || p.valorProdutos || p.total || 0)}</div>
+                                <div>Desconto Categoria</div><div class="text-right">${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
+                                <div>Desconto Peso</div><div class="text-right">${formatarMoedaLocal(p.descontoPeso || 0)}</div>
+                                <div>Desconto Campanha</div><div class="text-right">${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
+                                <div>Desconto PIX</div><div class="text-right">${formatarMoedaLocal(p.descontoPix || 0)}</div>
+                                <div>Frete</div><div class="text-right">${formatarMoedaLocal(p.frete || 0)}</div>
+                                <div class="border-t pt-2 font-black text-sm">Total Final</div>
+                                <div class="border-t pt-2 text-right font-black text-sm">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
+                            </div>
                         </div>
+                    </div>`;
+                }
 
-                        <div
-                            class="
-                                flex
-                                justify-between
-                                font-bold
-                            "
-                        >
-                            <span>Total</span>
+                const modelo = `${layout}_${tipo}`;
+                const renderizadores = {
+                    lista_conferencia: renderListaConferencia,
+                    lista_financeiro: renderListaCompleto,
+                    lista_foto: renderListaCompletoFoto,
+                    grade_conferencia: renderGradeConferencia,
+                    grade_financeiro: renderGradeCompleto,
+                    grade_foto: renderGradeCompletoFoto
+                };
 
-                            <span>
-                                ${formatarMoedaLocal(totalLinha)}
-                            </span>
+                const renderizador = renderizadores[modelo];
+                if (!renderizador) {
+                    throw new Error(`Modelo estrutural não mapeado: ${modelo}`);
+                }
 
-                        </div>
+                target.innerHTML = renderizador(p, itens);
 
-                    </div>
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('romaneio-conteudo').classList.remove('hidden');
 
-                </div>
-
-            </div>
-
-            `;
-
-        }).join('')}
-
-    </div>
-
-    <!-- RESUMO FINANCEIRO -->
-
-    <div
-        class="
-            border-t-2
-            border-black
-            pt-4
-        "
-    >
-
-        <h3
-            class="
-                font-bold
-                text-sm
-                uppercase
-                mb-3
-            "
-        >
-            Resumo Financeiro
-        </h3>
-
-        <div
-            class="
-                grid
-                grid-cols-2
-                gap-y-2
-                text-xs
-            "
-        >
-
-            <div>Total de Itens</div>
-            <div class="text-right">
-                ${itens.length}
-            </div>
-
-            <div>Total de Peças</div>
-            <div class="text-right">
-                ${totalPecas}
-            </div>
-
-            <div>Peso Total</div>
-            <div class="text-right">
-                ${pesoTotal.toFixed(2)}g
-            </div>
-
-            <div>Subtotal</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.subtotal ||
-                    p.valorProdutos ||
-                    p.total ||
-                    0
-                )}
-            </div>
-
-            <div>Desconto Categoria</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoCategoria || 0
-                )}
-            </div>
-
-            <div>Desconto Peso</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoPeso || 0
-                )}
-            </div>
-
-            <div>Desconto Campanha</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoCampanha || 0
-                )}
-            </div>
-
-            <div>Desconto PIX</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.descontoPix || 0
-                )}
-            </div>
-
-            <div>Frete</div>
-            <div class="text-right">
-                ${formatarMoedaLocal(
-                    p.frete || 0
-                )}
-            </div>
-
-            <div
-                class="
-                    border-t
-                    pt-2
-                    font-black
-                    text-sm
-                "
-            >
-                Total Final
-            </div>
-
-            <div
-                class="
-                    border-t
-                    pt-2
-                    text-right
-                    font-black
-                    text-sm
-                "
-            >
-                ${formatarMoedaLocal(
-                    p.total ||
-                    p.valorTotal ||
-                    0
-                )}
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-`;
-
-
-}
-
-
-const modelo = `${layout}_${tipo}`;
-
-console.log('LAYOUT:', layout);
-console.log('TIPO:', tipo);
-console.log('MODELO:', modelo);
-
-const renderizadores = {
-    lista_conferencia: renderListaConferencia,
-    lista_financeiro: renderListaCompleto,
-    lista_foto: renderListaCompletoFoto,
-
-    grade_conferencia: renderGradeConferencia,
-    grade_financeiro: renderGradeCompleto,
-    grade_foto: renderGradeCompletoFoto
-};
-
-const renderizador = renderizadores[modelo];
-
-if (!renderizador) {
-    throw new Error(`Modelo não encontrado: ${modelo}`);
-}
-
-target.innerHTML = renderizador(p, itens);
-
-// Libera visualização
-document.getElementById('loader').classList.add('hidden');
-document.getElementById('romaneio-conteudo').classList.remove('hidden');
-
-} catch (err) {
-    console.error(err);
-    document.getElementById('loader').innerText =
-        "❌ Ocorreu uma exceção crítica ao sincronizar romaneio.";
-}
-}
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loader').innerText = "❌ Ocorreu uma exceção crítica ao sincronizar romaneio.";
+            }
+        }
     </script>
 </body>
 </html>

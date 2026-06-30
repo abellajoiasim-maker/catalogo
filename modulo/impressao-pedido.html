@@ -65,7 +65,7 @@
             </div>
         </div>
 
-        <!-- Informações Complementares (Forma de Pagto) -->
+        <!-- Informações Complementares -->
         <div class="bg-zinc-100/70 px-3 py-1.5 rounded-lg border border-zinc-200 flex justify-between text-[10px] font-mono uppercase tracking-wider text-zinc-600">
             <div>Forma de Pagto: <span id="cli-pagamento" class="font-bold text-black">-</span></div>
             <div id="layout-label"></div>
@@ -82,7 +82,7 @@
             </div>
             <div>
                 <p class="text-[9px] text-zinc-500 uppercase">Massa Total Bruta</p>
-                <p id="resumo-peso" class="text-base text-black mt-0.5">0.00g</p>
+                <p id="resumo-peso" class="text-base text-black mt-0.5">0.00 grs</p>
             </div>
             <div id="bloco-financeiro-total">
                 <p class="text-[9px] text-zinc-500 uppercase">Valor Consolidado</p>
@@ -105,10 +105,21 @@
 
         document.getElementById('layout-label').innerText = `Modo: ${layout} + ${tipo}`;
 
+        // REGRA 1: Formatação de Moeda BR fixa
         const formatarMoedaLocal = (v) => {
             if(window.MoneyUtils && typeof window.MoneyUtils.format === 'function') return window.MoneyUtils.format(v);
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
         };
+
+        // REGRA 2: Formatação de Peso Inteligente (Regra peso.js)
+        const formatarPesoLocal = (gramas) => {
+    const g = parseFloat(gramas || 0);
+    if (g < 1000) {
+        return `${g.toFixed(2)} grs`;
+    } else {
+        return `${(g / 1000).toFixed(3)} kg`; // Alterado para .toFixed(3) para exibir o terceiro dígito (ex: 1.870 kg)
+    }
+};
 
         if (!pedidoId) {
             document.getElementById('loader').innerText = "❌ Erro Crítico: ID de pedido ausente na URL.";
@@ -128,17 +139,14 @@
 
                 const p = snap.val();
                 
-                // Mapeamento dos Dados Gerais
                 document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
                 document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
                 document.getElementById('cli-pagamento').innerText = p.formaPagamento || 'Não Informada';
 
-                // Mapeamento Detalhado do Cliente
                 document.getElementById('cli-nome').innerText = p.cliente || p.nome || 'Não Identificado';
                 document.getElementById('cli-whats').innerText = p.whats || p.whatsapp || p.contato || 'N/I';
                 document.getElementById('cli-cidade').innerText = p.cidade || 'N/I';
 
-                // Mapeamento Detalhado do Local de Entrega (Tratando subobjeto ou fallback na raiz)
                 const end = p.enderecoEntrega || p.entrega || p.endereco || {};
                 document.getElementById('ent-nome').innerText = end.destinatario || end.nome || p.cliente || p.nome || 'Mesmo do Cadastro';
                 document.getElementById('ent-rua').innerText = end.rua || p.rua || end.logradouro || '-';
@@ -149,9 +157,9 @@
                 const ufEntrega = end.uf || p.uf || end.estado || 'SP';
                 document.getElementById('ent-cidade-uf').innerText = `${cidadeEntrega} - ${ufEntrega}`.toUpperCase();
 
-                // Totais Consolidados inferior
+                // Aplicando formatações no rodapé fixo
                 document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
-                document.getElementById('resumo-peso').innerText = `${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g`;
+                document.getElementById('resumo-peso').innerText = formatarPesoLocal(p.pesoTotal || p.peso || 0);
                 document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
                 
                 if (tipo === 'conferencia') {
@@ -164,7 +172,6 @@
                 const target = document.getElementById('render-target');
                 target.innerHTML = '';
 
-                // Componente Base de Resumo de Custos
                 function renderResumoFinanceiro(p) {
                     return `
                     <div class="mt-4 border-t-2 border-black pt-3 break-inside-avoid">
@@ -175,7 +182,7 @@
                             <div class="text-zinc-500">Total de Peças encaçapadas:</div>
                             <div class="text-right font-mono">${p.totalPecas || p.qtd || 0} pçs</div>
                             <div class="text-zinc-500">Massa Bruta Estimada:</div>
-                            <div class="text-right font-mono">${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g</div>
+                            <div class="text-right font-mono">${formatarPesoLocal(p.pesoTotal || p.peso || 0)}</div>
                             <div class="text-zinc-500">Desconto por Categoria:</div>
                             <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
                             <div class="text-zinc-500">Desconto por Peso Acumulado:</div>
@@ -192,7 +199,6 @@
                     </div>`;
                 }
 
-                // RENDERS TIPO LISTA
                 function renderListaConferencia(p, itens) {
                     return `
                         <table class="w-full border-collapse text-[11px]">
@@ -237,7 +243,7 @@
                                         <td class="py-1.5 font-mono">${item.sku || '-'}</td>
                                         <td class="py-1.5 uppercase">${item.nome || item.name || '-'}</td>
                                         <td class="py-1.5 text-center font-bold">${qtd}</td>
-                                        <td class="py-1.5 text-center font-mono">${parseFloat(item.peso || item.weight || 0).toFixed(2)}g</td>
+                                        <td class="py-1.5 text-center font-mono">${formatarPesoLocal(item.peso || item.weight || 0)}</td>
                                         <td class="py-1.5 text-right font-mono">${formatarMoedaLocal(unit)}</td>
                                         <td class="py-1.5 text-right font-bold font-mono">${formatarMoedaLocal(unit * qtd)}</td>
                                     </tr>`;
@@ -275,7 +281,7 @@
                                         <td class="font-mono text-zinc-600">${item.sku || '-'}</td>
                                         <td class="uppercase font-medium">${item.nome || item.name || '-'}</td>
                                         <td class="text-center font-bold text-black">${qtd}</td>
-                                        <td class="text-center font-mono text-zinc-600">${peso.toFixed(2)}g</td>
+                                        <td class="text-center font-mono text-zinc-600">${formatarPesoLocal(peso)}</td>
                                         <td class="text-right font-mono">${formatarMoedaLocal(preco)}</td>
                                         <td class="text-right font-bold font-mono">${formatarMoedaLocal(preco * qtd)}</td>
                                     </tr>`;
@@ -286,7 +292,6 @@
                     </div>`;
                 }
 
-                // RENDERS TIPO GRADE (OTIMIZADOS / COMPACTOS PARA FOLHA A4)
                 function renderGradeConferencia(p, itens) {
                     return `
                     <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
@@ -321,7 +326,7 @@
                                         <div class="font-bold uppercase text-[10px] leading-tight text-black line-clamp-2 h-6 mb-2">${item.nome || item.name || '-'}</div>
                                     </div>
                                     <div class="border-t border-zinc-100 pt-1 text-[9px] font-mono space-y-0.5 bg-zinc-50/50 p-1 rounded">
-                                        <div class="flex justify-between text-zinc-500"><span>Peso:</span><span class="text-zinc-900">${peso.toFixed(2)}g</span></div>
+                                        <div class="flex justify-between text-zinc-500"><span>Peso:</span><span class="text-zinc-900">${formatarPesoLocal(peso)}</span></div>
                                         <div class="flex justify-between text-zinc-500"><span>Unit:</span><span class="text-zinc-900">${formatarMoedaLocal(preco)}</span></div>
                                         <div class="flex justify-between font-bold text-zinc-600 border-t border-dashed mt-1 pt-0.5"><span>Total:</span><span class="text-black">${formatarMoedaLocal(preco * qtd)}</span></div>
                                     </div>
@@ -332,8 +337,6 @@
                     </div>`;
                 }
 
-                // OTIMIZAÇÃO: Altura da imagem reduzida de h-40 para h-24 e 6 colunas
-                // para comprimir o máximo de itens por página A4
                 function renderGradeCompletoFoto(p, itens) {
                     return `
                     <div class="space-y-4">
@@ -354,7 +357,7 @@
                                             <div class="font-black uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 mt-0.5 h-6">${item.nome || item.name || '-'}</div>
                                         </div>
                                         <div class="border-t border-zinc-100 pt-1 text-[9px] font-mono space-y-0.5 bg-zinc-50 p-1 rounded">
-                                            <div class="flex justify-between"><span>Peso Un:</span><span>${peso.toFixed(2)}g</span></div>
+                                            <div class="flex justify-between"><span>Peso Un:</span><span>${formatarPesoLocal(peso)}</span></div>
                                             <div class="flex justify-between text-zinc-500"><span>Valor:</span><span>${formatarMoedaLocal(preco)}</span></div>
                                             <div class="flex justify-between font-bold border-t border-zinc-200/60 mt-0.5 pt-0.5"><span>Total:</span><span class="text-black">${formatarMoedaLocal(preco * qtd)}</span></div>
                                         </div>

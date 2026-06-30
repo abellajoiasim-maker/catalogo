@@ -7,17 +7,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background: white; color: black; }
         .font-cinzel { font-family: 'Cinzel', serif; }
         @media print {
             body { background: white; color: black; padding: 0; }
             .no-print { display: none; }
+            .break-inside-avoid { break-inside: avoid; }
         }
     </style>
 </head>
-<body class="p-4 md:p-8 bg-white text-black">
+<body class="p-4 md:p-6 bg-white text-black">
 
     <!-- Botão de Comando Flutuante -->
     <div class="no-print mb-6 flex justify-end">
@@ -32,9 +33,9 @@
     </div>
 
     <!-- Área do Romaneio Comercial -->
-    <div id="romaneio-conteudo" class="hidden max-w-4xl mx-auto space-y-6">
+    <div id="romaneio-conteudo" class="hidden max-w-5xl mx-auto space-y-5">
         <!-- Cabeçalho Principal -->
-        <div class="border-b-2 border-black pb-4 flex justify-between items-end">
+        <div class="border-b-2 border-black pb-3 flex justify-between items-end">
             <div>
                 <h1 class="text-2xl font-black tracking-widest font-cinzel">ABELLA JOIAS</h1>
                 <p class="text-[10px] uppercase font-mono tracking-wider text-zinc-600">Atacado de Joias no Bruto • Limeira/SP</p>
@@ -45,36 +46,47 @@
             </div>
         </div>
 
-        <!-- Dados do Cliente -->
-        <div class="grid grid-cols-2 gap-4 bg-zinc-50 p-4 rounded-xl border border-zinc-200 text-xs">
-            <div class="space-y-1">
-                <p class="font-mono text-[9px] uppercase text-zinc-400 font-bold">Cliente / Atacandista</p>
-                <p id="cli-nome" class="font-bold text-sm uppercase">-</p>
-                <p id="cli-whats" class="font-mono text-zinc-600">-</p>
+        <!-- Dados do Cliente e Local de Entrega -->
+        <div class="grid grid-cols-2 gap-4 bg-zinc-50 p-3 rounded-xl border border-zinc-200 text-[11px] leading-relaxed">
+            <!-- Bloco Cliente -->
+            <div class="space-y-0.5 border-r border-zinc-200 pr-2">
+                <p class="font-mono text-[9px] uppercase text-zinc-400 font-black tracking-wider mb-1">📋 Dados do Cliente</p>
+                <p class="font-bold text-zinc-900 uppercase">Nome: <span id="cli-nome" class="font-medium">-</span></p>
+                <p class="font-bold text-zinc-900">WhatsApp: <span id="cli-whats" class="font-mono font-medium">-</span></p>
+                <p class="font-bold text-zinc-900 uppercase">Cidade: <span id="cli-cidade" class="font-medium">-</span></p>
             </div>
-            <div class="space-y-1">
-                <p class="font-mono text-[9px] uppercase text-zinc-400 font-bold">Logística e Expedição</p>
-                <p id="cli-destino" class="font-bold uppercase">-</p>
-                <p id="cli-pagamento" class="font-mono text-zinc-600 uppercase">-</p>
+            <!-- Bloco Local de Entrega -->
+            <div class="space-y-0.5 pl-2">
+                <p class="font-mono text-[9px] uppercase text-zinc-400 font-black tracking-wider mb-1">📍 Local de Entrega</p>
+                <p class="font-bold text-zinc-900 uppercase">Destinatário: <span id="ent-nome" class="font-medium">-</span></p>
+                <p class="font-bold text-zinc-900 uppercase">Endereço: <span id="ent-rua" class="font-medium">-</span>, <span id="ent-num" class="font-medium">-</span></p>
+                <p class="font-bold text-zinc-900 uppercase">Bairro: <span id="ent-bairro" class="font-medium">-</span></p>
+                <p class="font-bold text-zinc-900 uppercase">Cidade - UF: <span id="ent-cidade-uf" class="font-medium">-</span></p>
             </div>
+        </div>
+
+        <!-- Informações Complementares (Forma de Pagto) -->
+        <div class="bg-zinc-100/70 px-3 py-1.5 rounded-lg border border-zinc-200 flex justify-between text-[10px] font-mono uppercase tracking-wider text-zinc-600">
+            <div>Forma de Pagto: <span id="cli-pagamento" class="font-bold text-black">-</span></div>
+            <div id="layout-label"></div>
         </div>
 
         <!-- Destinatário de Renderização Dinâmica -->
         <div id="render-target"></div>
 
-        <!-- Totais Consolidados -->
-        <div class="border-t-2 border-black pt-4 grid grid-cols-3 text-center font-mono text-xs font-bold bg-zinc-50 p-3 rounded-xl border border-zinc-200">
+        <!-- Totais Consolidados de Rodapé -->
+        <div class="border-t-2 border-black pt-4 grid grid-cols-3 text-center font-mono text-xs font-bold bg-zinc-50 p-3 rounded-xl border border-zinc-200 break-inside-avoid">
             <div>
                 <p class="text-[9px] text-zinc-500 uppercase">Total de Peças</p>
-                <p id="resumo-qtd" class="text-lg text-black mt-0.5">0 pçs</p>
+                <p id="resumo-qtd" class="text-base text-black mt-0.5">0 pçs</p>
             </div>
             <div>
                 <p class="text-[9px] text-zinc-500 uppercase">Massa Total Bruta</p>
-                <p id="resumo-peso" class="text-lg text-black mt-0.5">0.00g</p>
+                <p id="resumo-peso" class="text-base text-black mt-0.5">0.00g</p>
             </div>
             <div id="bloco-financeiro-total">
                 <p class="text-[9px] text-zinc-500 uppercase">Valor Consolidado</p>
-                <p id="resumo-financeiro" class="text-lg text-black mt-0.5">R$ 0,00</p>
+                <p id="resumo-financeiro" class="text-base text-black mt-0.5">R$ 0,00</p>
             </div>
         </div>
     </div>
@@ -84,13 +96,14 @@
     <script src="../js/utils/money.js"></script>
 
     <script>
-        // CORREÇÃO: Removido 'const db = firebase.database()' para evitar conflito com o firebase-config.js
         const databaseInstancia = window.db || (window.firebase ? firebase.database() : null);
 
         const urlParams = new URLSearchParams(window.location.search);
         const pedidoId = urlParams.get('id');
         const layout = urlParams.get('layout') || 'lista'; 
         const tipo = urlParams.get('tipo') || 'financeiro'; 
+
+        document.getElementById('layout-label').innerText = `Modo: ${layout} + ${tipo}`;
 
         const formatarMoedaLocal = (v) => {
             if(window.MoneyUtils && typeof window.MoneyUtils.format === 'function') return window.MoneyUtils.format(v);
@@ -115,13 +128,28 @@
 
                 const p = snap.val();
                 
+                // Mapeamento dos Dados Gerais
                 document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
                 document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
-                document.getElementById('cli-nome').innerText = p.cliente || p.nome || 'Não Identificado';
-                document.getElementById('cli-whats').innerText = "Contato: " + (p.whats || p.whatsapp || p.contato || 'N/I');
-                document.getElementById('cli-destino').innerText = "Destino: " + (p.cidade || 'Limeira/SP').toUpperCase();
-                document.getElementById('cli-pagamento').innerText = "Forma de Pagto: " + (p.formaPagamento || 'Não Informada');
+                document.getElementById('cli-pagamento').innerText = p.formaPagamento || 'Não Informada';
 
+                // Mapeamento Detalhado do Cliente
+                document.getElementById('cli-nome').innerText = p.cliente || p.nome || 'Não Identificado';
+                document.getElementById('cli-whats').innerText = p.whats || p.whatsapp || p.contato || 'N/I';
+                document.getElementById('cli-cidade').innerText = p.cidade || 'N/I';
+
+                // Mapeamento Detalhado do Local de Entrega (Tratando subobjeto ou fallback na raiz)
+                const end = p.enderecoEntrega || p.entrega || p.endereco || {};
+                document.getElementById('ent-nome').innerText = end.destinatario || end.nome || p.cliente || p.nome || 'Mesmo do Cadastro';
+                document.getElementById('ent-rua').innerText = end.rua || p.rua || end.logradouro || '-';
+                document.getElementById('ent-num').innerText = end.numero || p.numero || 'S/N';
+                document.getElementById('ent-bairro').innerText = end.bairro || p.bairro || '-';
+                
+                const cidadeEntrega = end.cidade || p.cidade || '-';
+                const ufEntrega = end.uf || p.uf || end.estado || 'SP';
+                document.getElementById('ent-cidade-uf').innerText = `${cidadeEntrega} - ${ufEntrega}`.toUpperCase();
+
+                // Totais Consolidados inferior
                 document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
                 document.getElementById('resumo-peso').innerText = `${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g`;
                 document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
@@ -136,45 +164,51 @@
                 const target = document.getElementById('render-target');
                 target.innerHTML = '';
 
+                // Componente Base de Resumo de Custos
                 function renderResumoFinanceiro(p) {
                     return `
-                    <div class="mt-6 border-t-2 border-black pt-4">
-                        <h3 class="font-bold text-sm mb-3">RESUMO FINANCEIRO</h3>
-                        <div class="grid grid-cols-2 gap-2 text-xs">
-                            <div>Total de Itens:</div>
-                            <div class="text-right">${itens.length || 0}</div>
-                            <div>Total de Peças:</div>
-                            <div class="text-right">${p.totalPecas || p.qtd || 0}</div>
-                            <div>Peso Total:</div>
-                            <div class="text-right">${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g</div>
-                            <div>Desconto Categoria:</div>
-                            <div class="text-right">${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
-                            <div>Desconto Peso:</div>
-                            <div class="text-right">${formatarMoedaLocal(p.descontoPeso || 0)}</div>
-                            <div>Desconto Campanha:</div>
-                            <div class="text-right">${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
-                            <div class="font-bold border-t pt-2">Valor Final</div>
-                            <div class="font-bold text-right border-t pt-2">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
+                    <div class="mt-4 border-t-2 border-black pt-3 break-inside-avoid">
+                        <h3 class="font-bold text-[11px] uppercase tracking-wider mb-2 text-zinc-800">RESUMO FINANCEIRO COBRANÇA</h3>
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
+                            <div class="text-zinc-500">Total de Itens distintos:</div>
+                            <div class="text-right font-mono">${itens.length || 0}</div>
+                            <div class="text-zinc-500">Total de Peças encaçapadas:</div>
+                            <div class="text-right font-mono">${p.totalPecas || p.qtd || 0} pçs</div>
+                            <div class="text-zinc-500">Massa Bruta Estimada:</div>
+                            <div class="text-right font-mono">${parseFloat(p.pesoTotal || p.peso || 0).toFixed(2)}g</div>
+                            <div class="text-zinc-500">Desconto por Categoria:</div>
+                            <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
+                            <div class="text-zinc-500">Desconto por Peso Acumulado:</div>
+                            <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoPeso || 0)}</div>
+                            <div class="text-zinc-500">Campanha Promocional:</div>
+                            <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
+                            <div class="text-zinc-500">Desconto Modalidade PIX:</div>
+                            <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoPix || 0)}</div>
+                            <div class="text-zinc-500">Custo Adicional de Frete:</div>
+                            <div class="text-right font-mono text-green-700">${formatarMoedaLocal(p.frete || 0)}</div>
+                            <div class="font-bold border-t border-black pt-1.5 text-xs text-black">VALOR FINAL LÍQUIDO</div>
+                            <div class="font-black text-right border-t border-black pt-1.5 text-xs text-black font-mono">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
                         </div>
                     </div>`;
                 }
 
+                // RENDERS TIPO LISTA
                 function renderListaConferencia(p, itens) {
                     return `
-                        <table class="w-full border-collapse text-xs">
+                        <table class="w-full border-collapse text-[11px]">
                             <thead>
-                                <tr class="border-b border-zinc-200">
-                                    <th class="py-2 text-left font-semibold text-zinc-700">SKU</th>
-                                    <th class="py-2 text-left font-semibold text-zinc-700">Produto</th>
-                                    <th class="py-2 text-center font-semibold text-zinc-700 w-16">Qtd</th>
+                                <tr class="border-b border-black text-left">
+                                    <th class="py-1.5 font-bold text-zinc-700">SKU</th>
+                                    <th class="py-1.5 font-bold text-zinc-700">Descrição do Item Bruto</th>
+                                    <th class="py-1.5 text-center font-bold text-zinc-700 w-16">Qtd</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-zinc-100">
+                            <tbody class="divide-y divide-zinc-200">
                                 ${itens.map(item => `
-                                    <tr class="hover:bg-zinc-50/50">
-                                        <td class="py-2 text-left font-mono text-zinc-600">${item.sku || '-'}</td>
-                                        <td class="py-2 text-left text-zinc-800">${item.nome || item.name || '-'}</td>
-                                        <td class="py-2 text-center text-zinc-900 font-medium">${item.quantidade || 1}</td>
+                                    <tr>
+                                        <td class="py-1.5 font-mono text-zinc-600">${item.sku || '-'}</td>
+                                        <td class="py-1.5 uppercase">${item.nome || item.name || '-'}</td>
+                                        <td class="py-1.5 text-center font-bold text-zinc-900">${item.quantidade || 1}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
@@ -183,29 +217,29 @@
                 
                 function renderListaCompleto(p, itens) {
                     return `
-                        <table class="w-full text-xs border-collapse">
+                        <table class="w-full text-[11px] border-collapse">
                             <thead>
-                                <tr class="border-b-2 border-black text-left">
-                                    <th class="py-2">SKU</th>
-                                    <th class="py-2">Produto</th>
-                                    <th class="py-2 text-center">Qtd</th>
-                                    <th class="py-2 text-center">Peso</th>
-                                    <th class="py-2 text-right">Unitário</th>
-                                    <th class="py-2 text-right">Total</th>
+                                <tr class="border-b border-black text-left">
+                                    <th class="py-1.5">SKU</th>
+                                    <th class="py-1.5">Produto</th>
+                                    <th class="py-1.5 text-center">Qtd</th>
+                                    <th class="py-1.5 text-center">Peso Un.</th>
+                                    <th class="py-1.5 text-right">Preço Un.</th>
+                                    <th class="py-1.5 text-right">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-zinc-200">
                             ${itens.map(item => {
-                                const qtd = item.quantidade || 1;
-                                const unit = item.precoFinal || item.price || item.preco || 0;
+                                const qtd = parseInt(item.quantidade || 1);
+                                const unit = parseFloat(item.precoFinal || item.price || item.preco || 0);
                                 return `
                                     <tr>
-                                        <td class="py-2 font-mono">${item.sku || '-'}</td>
-                                        <td class="py-2">${item.nome || item.name || '-'}</td>
-                                        <td class="py-2 text-center">${qtd}</td>
-                                        <td class="py-2 text-center">${parseFloat(item.peso || item.weight || 0).toFixed(2)}g</td>
-                                        <td class="py-2 text-right">${formatarMoedaLocal(unit)}</td>
-                                        <td class="py-2 text-right">${formatarMoedaLocal(unit * qtd)}</td>
+                                        <td class="py-1.5 font-mono">${item.sku || '-'}</td>
+                                        <td class="py-1.5 uppercase">${item.nome || item.name || '-'}</td>
+                                        <td class="py-1.5 text-center font-bold">${qtd}</td>
+                                        <td class="py-1.5 text-center font-mono">${parseFloat(item.peso || item.weight || 0).toFixed(2)}g</td>
+                                        <td class="py-1.5 text-right font-mono">${formatarMoedaLocal(unit)}</td>
+                                        <td class="py-1.5 text-right font-bold font-mono">${formatarMoedaLocal(unit * qtd)}</td>
                                     </tr>`;
                             }).join('')}
                             </tbody>
@@ -214,209 +248,121 @@
                 }
 
                 function renderListaCompletoFoto(p, itens) {
-                    const totalItens = itens.length;
-                    let totalPecas = 0;
-                    let pesoTotal = 0;
-
-                    itens.forEach(item => {
-                        const qtd = parseInt(item.quantidade || 1);
-                        const peso = parseFloat(item.peso || item.weight || 0);
-                        totalPecas += qtd;
-                        pesoTotal += (peso * qtd);
-                    });
-
                     return `
-                    <div class="space-y-6">
-                        <table class="w-full border-collapse text-xs">
+                    <div class="space-y-4">
+                        <table class="w-full border-collapse text-[11px]">
                             <thead>
-                                <tr class="border-b-2 border-black">
-                                    <th class="py-2 text-left">Foto</th>
-                                    <th class="py-2 text-left">SKU</th>
-                                    <th class="py-2 text-left">Produto</th>
-                                    <th class="py-2 text-center">Qtd</th>
-                                    <th class="py-2 text-center">Peso</th>
-                                    <th class="py-2 text-right">Unit.</th>
-                                    <th class="py-2 text-right">Total</th>
+                                <tr class="border-b border-black text-left">
+                                    <th class="py-1.5 w-14">Miniatura</th>
+                                    <th class="py-1.5">SKU</th>
+                                    <th class="py-1.5">Especificação</th>
+                                    <th class="py-1.5 text-center">Qtd</th>
+                                    <th class="py-1.5 text-center">Massa</th>
+                                    <th class="py-1.5 text-right">Unit.</th>
+                                    <th class="py-1.5 text-right">Total</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-zinc-200">
                                 ${itens.map(item => {
                                     const qtd = parseInt(item.quantidade || 1);
                                     const peso = parseFloat(item.peso || item.weight || 0);
                                     const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
                                     return `
-                                    <tr class="border-b border-zinc-200">
-                                        <td class="py-2">
-                                            <img src="${item.image || item.imagem || 'https://placehold.co/100'}" style="width:60px;height:60px;object-fit:cover;border:1px solid #ddd;border-radius:6px;" onerror="this.src='https://placehold.co/100'">
+                                    <tr>
+                                        <td class="py-1">
+                                            <img src="${item.image || item.imagem || 'https://placehold.co/100'}" style="width:42px;height:42px;object-fit:cover;border:1px solid #e4e4e7;border-radius:6px;" onerror="this.src='https://placehold.co/100'">
                                         </td>
-                                        <td class="font-mono">${item.sku || '-'}</td>
-                                        <td class="uppercase font-semibold">${item.nome || item.name || '-'}</td>
-                                        <td class="text-center font-bold">${qtd}</td>
-                                        <td class="text-center">${peso.toFixed(2)}g</td>
-                                        <td class="text-right">${formatarMoedaLocal(preco)}</td>
-                                        <td class="text-right font-bold">${formatarMoedaLocal(preco * qtd)}</td>
+                                        <td class="font-mono text-zinc-600">${item.sku || '-'}</td>
+                                        <td class="uppercase font-medium">${item.nome || item.name || '-'}</td>
+                                        <td class="text-center font-bold text-black">${qtd}</td>
+                                        <td class="text-center font-mono text-zinc-600">${peso.toFixed(2)}g</td>
+                                        <td class="text-right font-mono">${formatarMoedaLocal(preco)}</td>
+                                        <td class="text-right font-bold font-mono">${formatarMoedaLocal(preco * qtd)}</td>
                                     </tr>`;
                                 }).join('')}
                             </tbody>
                         </table>
-
-                        <div class="border-t-2 border-black pt-4">
-                            <h3 class="font-bold text-sm uppercase mb-3">Resumo Financeiro</h3>
-                            <div class="grid grid-cols-2 gap-y-2 text-xs">
-                                <div>Total de Itens</div><div class="text-right">${totalItens}</div>
-                                <div>Total de Peças</div><div class="text-right">${totalPecas}</div>
-                                <div>Peso Total</div><div class="text-right">${pesoTotal.toFixed(2)}g</div>
-                                <div>Subtotal</div><div class="text-right">${formatarMoedaLocal(p.subtotal || p.valorProdutos || p.total || 0)}</div>
-                                <div>Desconto Categoria</div><div class="text-right">${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
-                                <div>Desconto Peso</div><div class="text-right">${formatarMoedaLocal(p.descontoPeso || 0)}</div>
-                                <div>Desconto Campanha</div><div class="text-right">${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
-                                <div>Desconto PIX</div><div class="text-right">${formatarMoedaLocal(p.descontoPix || 0)}</div>
-                                <div>Frete</div><div class="text-right">${formatarMoedaLocal(p.frete || 0)}</div>
-                                <div class="border-t pt-2 font-black text-sm">Total Final</div>
-                                <div class="border-t pt-2 text-right font-black text-sm">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
-                            </div>
-                        </div>
+                        ${renderResumoFinanceiro(p)}
                     </div>`;
                 }
 
+                // RENDERS TIPO GRADE (OTIMIZADOS / COMPACTOS PARA FOLHA A4)
                 function renderGradeConferencia(p, itens) {
-                    let totalPecas = 0;
-                    itens.forEach(item => { totalPecas += parseInt(item.quantidade || 1); });
-
                     return `
-                    <div class="space-y-6">
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                            ${itens.map(item => `
-                                <div class="border border-zinc-300 rounded-xl p-3 bg-white break-inside-avoid">
-                                    <div class="flex justify-between items-start mb-2">
-                                        <span class="text-[10px] font-mono text-zinc-500 font-bold">SKU</span>
-                                        <span class="bg-black text-white px-2 py-1 rounded-lg text-xs font-black">${item.quantidade || 1}x</span>
-                                    </div>
-                                    <div class="text-[11px] font-mono text-zinc-700 mb-2 break-all">${item.sku || '-'}</div>
-                                    <div class="font-bold uppercase text-sm leading-tight text-black">${item.nome || item.name || '-'}</div>
-                                </div>`).join('')}
-                        </div>
-                        <div class="border-t-2 border-black pt-4">
-                            <div class="grid grid-cols-2 gap-3 text-xs">
-                                <div>
-                                    <div class="text-zinc-500 uppercase font-bold">Total de Itens</div>
-                                    <div class="text-lg font-black">${itens.length}</div>
+                    <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+                        ${itens.map(item => `
+                            <div class="border border-zinc-300 rounded-lg p-1.5 bg-white text-[10px] flex flex-col justify-between break-inside-avoid shadow-sm">
+                                <div class="flex justify-between items-start gap-1 mb-1">
+                                    <span class="font-mono text-[9px] text-zinc-400 font-bold tracking-tight">SKU</span>
+                                    <span class="bg-black text-white px-1 py-0.5 rounded text-[10px] font-black">${item.quantidade || 1}x</span>
                                 </div>
-                                <div class="text-right">
-                                    <div class="text-zinc-500 uppercase font-bold">Total de Peças</div>
-                                    <div class="text-lg font-black">${totalPecas}</div>
-                                </div>
-                            </div>
-                        </div>
+                                <div class="font-mono text-zinc-800 font-medium truncate mb-1" title="${item.sku}">${item.sku || '-'}</div>
+                                <div class="font-bold uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 h-6">${item.nome || item.name || '-'}</div>
+                            </div>`).join('')}
                     </div>`;
                 }
 
                 function renderGradeCompleto(p, itens) {
-                    let totalPecas = 0;
-                    let pesoTotal = 0;
-                    itens.forEach(item => {
-                        totalPecas += parseInt(item.quantidade || 1);
-                        pesoTotal += (parseFloat(item.peso || item.weight || 0) * parseInt(item.quantidade || 1));
-                    });
-
                     return `
-                    <div class="space-y-6">
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
                             ${itens.map(item => {
                                 const qtd = parseInt(item.quantidade || 1);
                                 const peso = parseFloat(item.peso || item.weight || 0);
                                 const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
                                 return `
-                                <div class="border border-zinc-300 rounded-xl p-3 bg-white flex flex-col justify-between">
+                                <div class="border border-zinc-300 rounded-lg p-2 bg-white flex flex-col justify-between text-[10px] break-inside-avoid shadow-sm">
                                     <div>
-                                        <div class="flex justify-between items-start mb-2">
-                                            <span class="text-[10px] font-mono text-zinc-500 font-bold">SKU</span>
-                                            <span class="bg-black text-white px-2 py-1 rounded-lg text-xs font-black">${qtd}x</span>
+                                        <div class="flex justify-between items-start gap-1 mb-1">
+                                            <span class="font-mono text-[8px] text-zinc-400 font-bold">SKU</span>
+                                            <span class="bg-zinc-900 text-white px-1 py-0.5 rounded text-[10px] font-black">${qtd}x</span>
                                         </div>
-                                        <div class="text-[11px] font-mono text-zinc-700 mb-2 break-all">${item.sku || '-'}</div>
-                                        <div class="font-bold uppercase text-sm leading-tight text-black mb-3">${item.nome || item.name || '-'}</div>
+                                        <div class="font-mono text-zinc-700 truncate mb-1">${item.sku || '-'}</div>
+                                        <div class="font-bold uppercase text-[10px] leading-tight text-black line-clamp-2 h-6 mb-2">${item.nome || item.name || '-'}</div>
                                     </div>
-                                    <div class="border-t border-zinc-200 pt-2 text-[11px] font-mono space-y-1">
-                                        <div class="flex justify-between"><span>Peso</span><span>${peso.toFixed(2)}g</span></div>
-                                        <div class="flex justify-between"><span>Unitário</span><span>${formatarMoedaLocal(preco)}</span></div>
-                                        <div class="flex justify-between font-bold"><span>Total</span><span>${formatarMoedaLocal(preco * qtd)}</span></div>
+                                    <div class="border-t border-zinc-100 pt-1 text-[9px] font-mono space-y-0.5 bg-zinc-50/50 p-1 rounded">
+                                        <div class="flex justify-between text-zinc-500"><span>Peso:</span><span class="text-zinc-900">${peso.toFixed(2)}g</span></div>
+                                        <div class="flex justify-between text-zinc-500"><span>Unit:</span><span class="text-zinc-900">${formatarMoedaLocal(preco)}</span></div>
+                                        <div class="flex justify-between font-bold text-zinc-600 border-t border-dashed mt-1 pt-0.5"><span>Total:</span><span class="text-black">${formatarMoedaLocal(preco * qtd)}</span></div>
                                     </div>
                                 </div>`;
                             }).join('')}
                         </div>
-                        
-                        <div class="border-t-2 border-black pt-4">
-                            <h3 class="font-bold text-sm uppercase mb-3">Resumo Financeiro</h3>
-                            <div class="grid grid-cols-2 gap-y-2 text-xs">
-                                <div>Total de Itens</div><div class="text-right">${itens.length}</div>
-                                <div>Total de Peças</div><div class="text-right">${totalPecas}</div>
-                                <div>Peso Total</div><div class="text-right">${pesoTotal.toFixed(2)}g</div>
-                                <div>Subtotal</div><div class="text-right">${formatarMoedaLocal(p.subtotal || p.valorProdutos || p.total || 0)}</div>
-                                <div>Desconto Categoria</div><div class="text-right">${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
-                                <div>Desconto Peso</div><div class="text-right">${formatarMoedaLocal(p.descontoPeso || 0)}</div>
-                                <div>Desconto Campanha</div><div class="text-right">${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
-                                <div>Desconto PIX</div><div class="text-right">${formatarMoedaLocal(p.descontoPix || 0)}</div>
-                                <div>Frete</div><div class="text-right">${formatarMoedaLocal(p.frete || 0)}</div>
-                                <div class="border-t pt-2 font-black text-sm">Total Final</div>
-                                <div class="border-t pt-2 text-right font-black text-sm">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
-                            </div>
-                        </div>
+                        ${renderResumoFinanceiro(p)}
                     </div>`;
                 }
 
+                // OTIMIZAÇÃO: Altura da imagem reduzida de h-40 para h-24 e 6 colunas
+                // para comprimir o máximo de itens por página A4
                 function renderGradeCompletoFoto(p, itens) {
-                    let totalPecas = 0;
-                    let pesoTotal = 0;
-                    itens.forEach(item => {
-                        totalPecas += parseInt(item.quantidade || 1);
-                        pesoTotal += (parseFloat(item.peso || item.weight || 0) * parseInt(item.quantidade || 1));
-                    });
-
                     return `
-                    <div class="space-y-6">
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
                             ${itens.map(item => {
                                 const qtd = parseInt(item.quantidade || 1);
                                 const peso = parseFloat(item.peso || item.weight || 0);
                                 const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
                                 return `
-                                <div class="border border-zinc-300 rounded-xl overflow-hidden bg-white flex flex-col">
-                                    <div class="h-40 bg-zinc-100 border-b border-zinc-200 overflow-hidden">
-                                        <img src="${item.image || item.imagem || 'https://placehold.co/400'}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400'">
+                                <div class="border border-zinc-300 rounded-lg overflow-hidden bg-white flex flex-col justify-between text-[10px] break-inside-avoid shadow-sm">
+                                    <div class="h-24 bg-zinc-50 border-b border-zinc-100 overflow-hidden relative">
+                                        <img src="${item.image || item.imagem || 'https://placehold.co/200'}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/200'">
+                                        <span class="absolute top-1 right-1 bg-black text-white px-1.5 py-0.5 rounded text-[10px] font-black shadow-md">${qtd}x</span>
                                     </div>
-                                    <div class="p-3 flex flex-col flex-1">
-                                        <div class="flex justify-between items-start mb-2">
-                                            <span class="text-[10px] font-mono text-zinc-500 font-bold">SKU</span>
-                                            <span class="bg-black text-white px-2 py-1 rounded-lg text-xs font-black">${qtd}x</span>
+                                    <div class="p-1.5 flex flex-col flex-1 justify-between bg-white">
+                                        <div class="mb-1.5">
+                                            <div class="font-mono text-[8px] text-zinc-400 font-bold uppercase">SKU ${item.sku || '-'}</div>
+                                            <div class="font-black uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 mt-0.5 h-6">${item.nome || item.name || '-'}</div>
                                         </div>
-                                        <div class="text-[11px] font-mono text-zinc-700 break-all mb-2">${item.sku || '-'}</div>
-                                        <div class="font-bold uppercase text-sm leading-tight text-black mb-3 flex-1">${item.nome || item.name || '-'}</div>
-                                        <div class="border-t border-zinc-200 pt-2 space-y-1 text-[11px] font-mono">
-                                            <div class="flex justify-between"><span>Peso</span><span>${peso.toFixed(2)}g</span></div>
-                                            <div class="flex justify-between"><span>Unitário</span><span>${formatarMoedaLocal(preco)}</span></div>
-                                            <div class="flex justify-between font-bold"><span>Total</span><span>${formatarMoedaLocal(preco * qtd)}</span></div>
+                                        <div class="border-t border-zinc-100 pt-1 text-[9px] font-mono space-y-0.5 bg-zinc-50 p-1 rounded">
+                                            <div class="flex justify-between"><span>Peso Un:</span><span>${peso.toFixed(2)}g</span></div>
+                                            <div class="flex justify-between text-zinc-500"><span>Valor:</span><span>${formatarMoedaLocal(preco)}</span></div>
+                                            <div class="flex justify-between font-bold border-t border-zinc-200/60 mt-0.5 pt-0.5"><span>Total:</span><span class="text-black">${formatarMoedaLocal(preco * qtd)}</span></div>
                                         </div>
                                     </div>
                                 </div>`;
                             }).join('')}
                         </div>
-
-                        <div class="border-t-2 border-black pt-4">
-                            <h3 class="font-bold text-sm uppercase mb-3">Resumo Financeiro</h3>
-                            <div class="grid grid-cols-2 gap-y-2 text-xs">
-                                <div>Total de Itens</div><div class="text-right">${itens.length}</div>
-                                <div>Total de Peças</div><div class="text-right">${totalPecas}</div>
-                                <div>Peso Total</div><div class="text-right">${pesoTotal.toFixed(2)}g</div>
-                                <div>Subtotal</div><div class="text-right">${formatarMoedaLocal(p.subtotal || p.valorProdutos || p.total || 0)}</div>
-                                <div>Desconto Categoria</div><div class="text-right">${formatarMoedaLocal(p.descontoCategoria || 0)}</div>
-                                <div>Desconto Peso</div><div class="text-right">${formatarMoedaLocal(p.descontoPeso || 0)}</div>
-                                <div>Desconto Campanha</div><div class="text-right">${formatarMoedaLocal(p.descontoCampanha || 0)}</div>
-                                <div>Desconto PIX</div><div class="text-right">${formatarMoedaLocal(p.descontoPix || 0)}</div>
-                                <div>Frete</div><div class="text-right">${formatarMoedaLocal(p.frete || 0)}</div>
-                                <div class="border-t pt-2 font-black text-sm">Total Final</div>
-                                <div class="border-t pt-2 text-right font-black text-sm">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
-                            </div>
-                        </div>
+                        ${renderResumoFinanceiro(p)}
                     </div>`;
                 }
 

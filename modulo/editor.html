@@ -492,13 +492,8 @@
     }
     el.innerHTML = entries.map(([slug, cat]) => {
       const catImg = cat.imagem || cat.image || '';
-      const isPaused = !!cat.paused;
-      const cardBorder = isPaused ? 'border-red-900/40 opacity-60' : 'border-zinc-900';
-      const statusTag = isPaused
-        ? `<span class="bg-red-950 text-red-400 border border-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">PAUSADA</span>`
-        : `<span class="bg-green-950 text-green-400 border border-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold">ATIVA</span>`;
       return `
-        <div class="bg-zinc-950 border ${cardBorder} rounded-xl p-4 hover:border-zinc-800 transition-all">
+        <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 hover:border-zinc-800 transition-all">
           <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden relative flex items-center justify-center shrink-0">
@@ -506,9 +501,6 @@
                 ${catImg ? `<img src="${escapeHtml(tratarConversaoImagem(catImg))}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>` : ''}
               </div>
               <div>
-                <div class="flex items-center gap-2 mb-1 flex-wrap">
-                  ${statusTag}
-                </div>
                 <div class="font-bold text-white">${escapeHtml(cat?.name || slug)}</div>
                 <div class="text-xs text-zinc-500">Slug: <span class="font-mono text-zinc-400">${escapeHtml(slug)}</span></div>
                 <div class="text-[10px] text-zinc-600 mt-0.5">${Object.keys(cat?.subcategories || {}).length} subcategoria(s)</div>
@@ -516,7 +508,6 @@
             </div>
             <div class="flex gap-2">
               <button onclick="editarCategoria('${escapeAttr(slug)}')"  class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800 text-sm">✏️ Editar</button>
-              <button onclick="pausarCategoria('${escapeAttr(slug)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800 text-sm">${isPaused ? '▶️' : '⏸️'}</button>
               <button onclick="deletarCategoria('${escapeAttr(slug)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-red-400 hover:border-red-950 text-sm">🗑️</button>
             </div>
           </div>
@@ -532,13 +523,8 @@
     Object.entries(STATE.categorias).forEach(([catSlug, cat]) => {
       Object.entries(cat?.subcategories || {}).forEach(([subSlug, subObj]) => {
         const imgGrid = subObj.grid || subObj.gridImage || subObj.imagem || '';
-        const isPaused = !!subObj.paused;
-        const cardBorder = isPaused ? 'border-red-900/40 opacity-60' : 'border-zinc-900';
-        const statusTag = isPaused
-          ? `<span class="bg-red-950 text-red-400 border border-red-800 text-[10px] px-2 py-0.5 rounded-full font-bold">PAUSADA</span>`
-          : `<span class="bg-green-950 text-green-400 border border-green-800 text-[10px] px-2 py-0.5 rounded-full font-bold">ATIVA</span>`;
         html += `
-          <div class="bg-zinc-950 border ${cardBorder} rounded-xl p-4 hover:border-zinc-800 transition-all">
+          <div class="bg-zinc-950 border border-zinc-900 rounded-xl p-4 hover:border-zinc-800 transition-all">
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-4">
                 <div class="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden relative flex items-center justify-center shrink-0">
@@ -546,16 +532,12 @@
                   ${imgGrid ? `<img src="${escapeHtml(tratarConversaoImagem(imgGrid))}" class="w-full h-full object-cover relative z-10" onerror="handleImageError(this)"/>` : ''}
                 </div>
                 <div>
-                  <div class="flex items-center gap-2 mb-1 flex-wrap">
-                    ${statusTag}
-                  </div>
                   <div class="font-bold text-white">${escapeHtml(subObj?.name || subObj?.title || subSlug)}</div>
                   <div class="text-xs text-zinc-500">Pai: <span class="text-zinc-300 font-bold">${escapeHtml(catSlug)}</span> | Slug: <span class="font-mono">${escapeHtml(subSlug)}</span></div>
                 </div>
               </div>
               <div class="flex gap-2">
                 <button onclick="editarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')"  class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800 text-sm">✏️ Editar</button>
-                <button onclick="pausarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg hover:bg-zinc-800 text-sm">${isPaused ? '▶️' : '⏸️'}</button>
                 <button onclick="deletarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')" class="bg-zinc-900 border border-zinc-800 p-2 rounded-lg text-red-400 hover:border-red-950 text-sm">🗑️</button>
               </div>
             </div>
@@ -705,7 +687,6 @@
         name: nome,
         description: document.getElementById('newCatDesc').value,
         imagem: img, image: img,
-        paused: false,
         createdAt: Date.now(), updatedAt: Date.now()
       });
       fecharDrawer();
@@ -774,7 +755,6 @@
         description: document.getElementById('newSubDesc').value,
         imagem: grid, grid, gridImage: grid,
         hero, heroImage: hero,
-        paused: false,
         createdAt: Date.now(), updatedAt: Date.now()
       });
       fecharDrawer();
@@ -905,12 +885,6 @@
       </div>
       <input id="editCatImagem" class="input-dark" value="${escapeHtml(catImg)}" oninput="tratarInputImagem(this, 'previewCatEdicao')">
 
-      <label class="text-xs text-zinc-400 block mb-1">Status</label>
-      <div class="flex items-center gap-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl mb-3">
-        <input type="checkbox" id="editCatPaused" ${cat.paused ? 'checked' : ''} class="w-4 h-4 accent-red-500">
-        <label for="editCatPaused" class="text-xs text-zinc-400 cursor-pointer">Categoria pausada (não aparece na loja)</label>
-      </div>
-
       <button onclick="salvarCategoria('${escapeAttr(slug)}')"
               class="bg-[#caa85c] text-black px-4 py-3 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90">
         💾 Salvar Alterações
@@ -921,12 +895,10 @@
   async function salvarCategoria(slug) {
     try {
       const imgVal = document.getElementById('editCatImagem').value.trim();
-      const paused = document.getElementById('editCatPaused')?.checked || false;
       await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({
         name:        document.getElementById('editCatName').value,
         description: document.getElementById('editCatDesc').value,
         imagem: imgVal, image: imgVal,
-        paused,
         updatedAt: Date.now()
       });
       fecharDrawer();
@@ -965,12 +937,6 @@
         <input id="subHero" class="input-dark" value="${escapeHtml(imgHero)}" oninput="tratarInputImagem(this, 'previewHero')">
       </div>
 
-      <label class="text-xs text-zinc-400 block mb-1">Status</label>
-      <div class="flex items-center gap-3 p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl mb-3">
-        <input type="checkbox" id="subPaused" ${sub.paused ? 'checked' : ''} class="w-4 h-4 accent-red-500">
-        <label for="subPaused" class="text-xs text-zinc-400 cursor-pointer">Subcategoria pausada (não aparece na loja)</label>
-      </div>
-
       <button onclick="salvarSubcategoria('${escapeAttr(catSlug)}', '${escapeAttr(subSlug)}')"
               class="bg-[#caa85c] text-black px-4 py-2 rounded-xl w-full font-bold mt-2 hover:bg-opacity-90">
         💾 Salvar Subcategoria
@@ -982,13 +948,11 @@
     try {
       const gridVal = document.getElementById('subGrid').value.trim();
       const heroVal = document.getElementById('subHero').value.trim();
-      const paused  = document.getElementById('subPaused')?.checked || false;
       await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
         name:        document.getElementById('subName').value,
         description: document.getElementById('subDesc').value,
         imagem: gridVal, grid: gridVal, gridImage: gridVal,
         hero: heroVal, heroImage: heroVal,
-        paused,
         updatedAt: Date.now()
       });
       fecharDrawer();
@@ -997,7 +961,7 @@
   }
 
   // ============================================================
-  // DELETAR, DUPLICAR E PAUSAR
+  // DELETAR E DUPLICAR
   // ============================================================
   async function duplicarProduto(id) {
     const p = STATE.produtos.find(prod => prod.id === id);
@@ -1012,20 +976,6 @@
     const p = STATE.produtos.find(prod => prod.id === id);
     if (!p) return;
     await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({ paused: !p.paused, updatedAt: Date.now() });
-    await carregarTudo();
-  }
-
-  async function pausarCategoria(slug) {
-    const cat = STATE.categorias[slug];
-    if (!cat) return;
-    await STATE.db.ref(window.getAbellaPath(`categories/${slug}`)).update({ paused: !cat.paused, updatedAt: Date.now() });
-    await carregarTudo();
-  }
-
-  async function pausarSubcategoria(catSlug, subSlug) {
-    const sub = STATE.categorias[catSlug]?.subcategories?.[subSlug];
-    if (!sub) return;
-    await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({ paused: !sub.paused, updatedAt: Date.now() });
     await carregarTudo();
   }
 
@@ -1113,10 +1063,8 @@
   window.deletarProduto   = deletarProduto;
   window.editarCategoria  = editarCategoria;
   window.salvarCategoria  = salvarCategoria;
-  window.pausarCategoria  = pausarCategoria;
   window.editarSubcategoria  = editarSubcategoria;
   window.salvarSubcategoria  = salvarSubcategoria;
-  window.pausarSubcategoria  = pausarSubcategoria;
   window.fecharDrawer        = fecharDrawer;
   window.tratarInputImagem   = tratarInputImagem;
   window.handleImageError    = handleImageError;

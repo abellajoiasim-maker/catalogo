@@ -365,6 +365,39 @@ async function carregarProdutos() {
         const elHero = document.getElementById('heroTitulo');
         if (elHero) elHero.innerText = nomeFiltro;
 
+        // Bloqueia acesso a produtos de categoria/subcategoria pausada no painel administrativo
+        if (categoryParam) {
+            const snapCatCheck = await db.ref('abella/categories').once('value').catch(() => null);
+            if (snapCatCheck && snapCatCheck.exists()) {
+                const catsData = snapCatCheck.val() || {};
+                const catEntry = Object.entries(catsData).find(([key, val]) => {
+                    const itemSlug = (val && (val.slug || val.id)) || key;
+                    return String(itemSlug).toLowerCase() === String(categoryParam).toLowerCase();
+                });
+
+                if (catEntry) {
+                    const [, catVal] = catEntry;
+
+                    if (catVal && catVal.paused === true) {
+                        window.location.href = 'index.html';
+                        return;
+                    }
+
+                    if (subcatParam) {
+                        const subsObj = (catVal && (catVal.subcategories || catVal.subcategorias)) || {};
+                        const subEntry = Object.entries(subsObj).find(([subKey, subVal]) => {
+                            const subSlug = (subVal && subVal.slug) || subKey;
+                            return String(subSlug).toLowerCase() === String(subcatParam).toLowerCase();
+                        });
+                        if (subEntry && subEntry[1] && subEntry[1].paused === true) {
+                            window.location.href = `subcategorias.html?categoria=${encodeURIComponent(categoryParam)}`;
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
         let todos = null;
 
         try {

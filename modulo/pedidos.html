@@ -275,7 +275,13 @@
 
         async function alterarStatusPedidoUI(id, valor) {
             try {
-                await window.pedidoService.atualizarStatus(id, valor);
+                if (window.pedidoService && typeof window.pedidoService.atualizarStatus === 'function') {
+                    await window.pedidoService.atualizarStatus(id, valor);
+                } else {
+                    if (!window.db) throw new Error("Referência de banco global 'window.db' não mapeada.");
+                    const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
+                    await window.db.ref(path + '/' + id).update({ status: valor });
+                }
                 _PEDIDOS_CACHE[id].status = valor;
                 await carregarPainelPedidos();
             } catch(error) {
@@ -287,7 +293,9 @@
         async function deletarPedidoUI(id) {
             if (confirm("Deseja expurgar permanentemente esta ordem de compra do histórico remoto do Firebase?")) {
                 try {
-                    await window.pedidoService.deletar(id);
+                    if (!window.db) throw new Error("Referência de banco global 'window.db' não mapeada.");
+                    const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
+                    await window.db.ref(path + '/' + id).remove();
                     await carregarPainelPedidos();
                 } catch(error) {
                     console.error("Erro ao remover registro:", error);

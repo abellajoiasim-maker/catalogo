@@ -9,11 +9,10 @@
     <!-- Font Awesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Firebase App e Database (Versões Compat v9) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
     <style>
-        /* Estilização Customizada para manter a identidade visual do ecossistema */
         .glass {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -60,13 +59,31 @@
         .btn-gold:active {
             transform: translateY(0);
         }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background-color: #cbd5e1; transition: .2s; border-radius: 999px;
+        }
+        .slider:before {
+            content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px;
+            background-color: white; transition: .2s; border-radius: 50%;
+        }
+        .switch input:checked + .slider { background-color: #b88e45; }
+        .switch input:checked + .slider:before { transform: translateX(16px); }
     </style>
 </head>
 <body class="bg-[#fcfbf7] min-h-screen text-slate-800 font-sans antialiased">
 
     <!-- Container Principal -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         <!-- Header do Módulo -->
         <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 pb-6 border-b border-gold/10">
             <div>
@@ -75,7 +92,7 @@
             </div>
             <div class="mt-4 md:mt-0 flex gap-3">
                 <button onclick="limparTodasOfertas()" class="px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-lg transition-colors flex items-center gap-2 text-sm">
-                    <i class="fa-solid fa-trash-can"></i> Limpar Todas as Ofertas Ativas
+                    <i class="fa-solid fa-trash-can"></i> Desativar Todas as Ofertas
                 </button>
             </div>
         </div>
@@ -85,7 +102,7 @@
             <div class="card p-6 flex items-center gap-4">
                 <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-fire text-2xl"></i></div>
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Produtos em Oferta</p>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Categorias em Oferta</p>
                     <h3 id="count-ofertas" class="text-2xl font-bold text-slate-800">0</h3>
                 </div>
             </div>
@@ -97,16 +114,16 @@
                 </div>
             </div>
             <div class="card p-6 flex items-center gap-4">
-                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-bolt text-2xl"></i></div>
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-globe text-2xl"></i></div>
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Flash Sales Hoje</p>
-                    <h3 id="count-flash" class="text-2xl font-bold text-slate-800">0</h3>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Desconto Global</p>
+                    <h3 id="status-global" class="text-2xl font-bold text-slate-800">Inativo</h3>
                 </div>
             </div>
             <div class="card p-6 flex items-center gap-4">
                 <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i class="fa-solid fa-percent text-2xl"></i></div>
                 <div>
-                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Desconto Médio</p>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Desconto Médio (Categorias)</p>
                     <h3 id="avg-desconto" class="text-2xl font-bold text-slate-800">0%</h3>
                 </div>
             </div>
@@ -114,16 +131,17 @@
 
         <!-- Área de Trabalho Principal -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Coluna da Esquerda: Formulário de Configuração -->
+
+            <!-- Coluna da Esquerda -->
             <div class="lg:col-span-2 space-y-6">
+
+                <!-- Configurar Nova Campanha -->
                 <div class="card p-6 glass">
                     <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-[#b88e45]"></i> Configurar Nova Ação Comercial
+                        <i class="fa-solid fa-sliders text-[#b88e45]"></i> Configurar Nova Ação Comercial (por Categoria)
                     </h2>
-                    
+
                     <form id="form-campanha" onsubmit="prevenirEnvio(event)" class="space-y-5">
-                        <!-- Nome e Ícone da Campanha -->
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div class="sm:col-span-2">
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nome da Campanha (Ex: Black Friday)</label>
@@ -141,7 +159,6 @@
                             </div>
                         </div>
 
-                        <!-- Escopo da Campanha (Filtros de Destino) -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Categoria Alvo</label>
@@ -157,7 +174,6 @@
                             </div>
                         </div>
 
-                        <!-- Regras de Desconto e Cores -->
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Desconto (%)</label>
@@ -176,7 +192,12 @@
                             </div>
                         </div>
 
-                        <!-- Ações -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Válida até (opcional)</label>
+                            <input type="date" id="campanha-validade" class="input max-w-[220px]">
+                            <p class="text-[11px] text-slate-400 mt-1">Se preenchida, a campanha é desativada automaticamente ao abrir este painel após a data. Não afeta o site em tempo real fora deste painel.</p>
+                        </div>
+
                         <div class="pt-2 flex justify-end gap-3">
                             <button type="button" onclick="limparCampos()" class="px-5 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg font-medium text-sm transition-colors">
                                 Limpar Painel
@@ -187,22 +208,58 @@
                         </div>
                     </form>
                 </div>
+
+                <!-- Ofertas por Categoria Ativas -->
+                <div class="card p-6 glass">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-tags text-[#b88e45]"></i> Ofertas por Categoria Cadastradas
+                    </h2>
+                    <div id="lista-ofertas-categoria" class="space-y-2">
+                        <p class="text-sm text-slate-400 italic">Carregando...</p>
+                    </div>
+                </div>
+
+                <!-- Desconto Global -->
+                <div class="card p-6 glass">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-globe text-emerald-600"></i> Desconto Global da Loja
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-4">Aplica-se a todo o catálogo. Regras específicas de categoria têm prioridade sobre este valor.</p>
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div class="flex items-center gap-2">
+                            <label class="switch">
+                                <input type="checkbox" id="global-ativo">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="text-sm font-medium text-slate-600">Ativar desconto global</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Porcentagem (%)</label>
+                            <input type="number" id="global-porcentagem" class="input w-28" min="1" max="99" value="10">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Válido até (opcional)</label>
+                            <input type="date" id="global-validade" class="input w-44">
+                        </div>
+                        <button onclick="salvarDescontoGlobal()" class="px-5 py-2.5 btn-gold text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-check"></i> Salvar Desconto Global
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Coluna da Direita: Preview Visual e Central de Cupons -->
+            <!-- Coluna da Direita -->
             <div class="space-y-6">
-                <!-- Card de Preview em Tempo Real -->
+                <!-- Preview -->
                 <div class="card p-6 bg-slate-900 text-white relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-[#b88e45]/10 rounded-full blur-2xl pointer-events-none"></div>
                     <h2 class="text-sm font-bold uppercase tracking-wider text-[#b88e45] mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-eye"></i> Preview no App do Cliente
                     </h2>
-                    
+
                     <div class="bg-white rounded-xl p-4 text-slate-800 shadow-lg relative max-w-[240px] mx-auto">
-                        <!-- Imagem de Joia Fictícia Simulada -->
                         <div class="w-full h-40 bg-slate-100 rounded-lg mb-3 flex items-center justify-center text-slate-300 relative">
                             <i class="fa-solid fa-gem text-4xl text-slate-300"></i>
-                            <!-- Badge Customizada Dinâmica -->
                             <span id="preview-badge" class="absolute top-2 left-2 text-[10px] font-extrabold px-2 py-1 rounded shadow-sm whitespace-nowrap transition-all">
                                 🔥 15% OFF
                             </span>
@@ -218,7 +275,7 @@
                     </div>
                 </div>
 
-                <!-- Cadastro de Cupons de Desconto -->
+                <!-- Criar Cupom -->
                 <div class="card p-6 glass">
                     <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-ticket text-purple-600"></i> Criar Cupom de Loja
@@ -234,9 +291,27 @@
                                 <option value="fixo">Fixo (R$)</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Válido até (opcional)</label>
+                            <input type="date" id="cupom-validade" class="input">
+                        </div>
                         <button onclick="criarCupom()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center gap-2">
                             <i class="fa-solid fa-plus"></i> Ativar Cupom
                         </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-3 flex items-start gap-1.5">
+                        <i class="fa-solid fa-circle-info mt-0.5"></i>
+                        <span>Este cupom fica salvo em <code>abella/coupons</code>. Confirme com quem mantém o <code>checkout.js</code> se essa coleção já é lida no carrinho/checkout antes de divulgar o código ao cliente.</span>
+                    </p>
+                </div>
+
+                <!-- Cupons Ativos -->
+                <div class="card p-6 glass">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-purple-600"></i> Cupons Cadastrados
+                    </h2>
+                    <div id="lista-cupons" class="space-y-2">
+                        <p class="text-sm text-slate-400 italic">Carregando...</p>
                     </div>
                 </div>
             </div>
@@ -244,39 +319,64 @@
         </div>
     </div>
 
+    <!-- Scripts e Conexão de Dependências (arquitetura oficial) -->
+    <script src="../js/firebase/firebase-config.js"></script>
+    <script src="../js/utils/money.js"></script>
+
     <!-- Script de Lógica do Sistema -->
     <script>
-        // Inicialização Segura do Firebase (Adapte as credenciais se necessário)
-        const firebaseConfig = {
-            databaseURL: "https://abella-joias-default-rtdb.firebaseio.com/" 
-        };
-        
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        if (!window.firebase) {
+            throw new Error('Firebase não carregado');
         }
-        const db = firebase.database();
+        if (!window.db || typeof window.getAbellaPath !== 'function') {
+            throw new Error('Infraestrutura Abella (window.db / getAbellaPath) não foi inicializada por firebase-config.js');
+        }
 
-        // Estrutura em cache para categorias
+        function abellaPath(key) {
+            return window.getAbellaPath(key);
+        }
+
+        const formatarMoeda = (valor) => {
+            if (window.MoneyUtils && typeof window.MoneyUtils.format === 'function') {
+                return window.MoneyUtils.format(valor);
+            }
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
+        };
+
+        function formatarDataBR(iso) {
+            if (!iso) return '';
+            var partes = iso.split('-');
+            if (partes.length !== 3) return iso;
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+
+        function dataExpirada(iso) {
+            if (!iso) return false;
+            var hoje = new Date();
+            var hojeStr = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
+            return iso < hojeStr;
+        }
+
         let cacheCategorias = {};
+        let cacheSettings = {};
+        let cacheCupons = {};
 
-        // Previne comportamento padrão de recarga de formulários
         function prevenirEnvio(e) {
             e.preventDefault();
         }
 
-        // Carrega as Categorias cadastradas no banco
         async function carregarCategorias() {
             try {
                 const selectCat = document.getElementById('campanha-categoria');
-                const snapshot = await db.ref('abella/categories').once('value');
+                const snapshot = await window.db.ref(abellaPath('categories')).once('value');
                 cacheCategorias = snapshot.val() || {};
 
                 selectCat.innerHTML = '<option value="">Selecione uma categoria...</option>';
-                
+
                 Object.keys(cacheCategorias).forEach(key => {
                     const option = document.createElement('option');
                     option.value = key;
-                    option.textContent = cacheCategorias[key].name || key;
+                    option.textContent = cacheCategorias[key].name || cacheCategorias[key].nome || key;
                     selectCat.appendChild(option);
                 });
             } catch (error) {
@@ -284,11 +384,15 @@
             }
         }
 
-        // Atualiza dinamicamente as subcategorias baseadas na categoria pai escolhida
+        function nomeCategoria(chave) {
+            var cat = cacheCategorias[chave];
+            return cat ? (cat.name || cat.nome || chave) : chave;
+        }
+
         function carregarSubcategorias() {
             const categoriaId = document.getElementById('campanha-categoria').value;
             const selectSub = document.getElementById('campanha-subcategoria');
-            
+
             selectSub.innerHTML = '<option value="">Todas as subcategorias</option>';
 
             if (categoriaId && cacheCategorias[categoriaId] && cacheCategorias[categoriaId].subcategories) {
@@ -302,7 +406,6 @@
             }
         }
 
-        // Atualiza o componente visual de Preview baseado nos inputs em tempo real
         function atualizarPreview() {
             const nome = document.getElementById('campanha-nome').value || 'Oferta';
             const icone = document.getElementById('campanha-icone').value;
@@ -310,58 +413,243 @@
             const corBg = document.getElementById('campanha-cor').value;
             const corTexto = document.getElementById('campanha-cor-texto').value;
 
-            // Atualiza a badge flutuante
             const badge = document.getElementById('preview-badge');
             badge.innerHTML = `${icone} ${desconto}% OFF - ${nome}`;
             badge.style.backgroundColor = corBg;
             badge.style.color = corTexto;
 
-            // Calcula simulação matemática do valor real do produto
             const precoBaseFicticio = 199.90;
             const fatorDesconto = (100 - desconto) / 100;
             const precoFinalFicticio = precoBaseFicticio * fatorDesconto;
 
-            document.getElementById('preview-preco-por').textContent = `R$ ${precoFinalFicticio.toFixed(2).replace('.', ',')}`;
+            document.getElementById('preview-preco-por').textContent = formatarMoeda(precoFinalFicticio);
         }
 
-        // Atualiza de forma performática e robusta os contadores do dashboard principal
-        async function atualizarContadores() {
+        // ---------- Expiração automática (reforçada apenas quando este painel é aberto) ----------
+        async function expirarCampanhasVencidas(settings, cupons) {
+            const updates = {};
+            var houveExpiracao = false;
+
+            var regras = (settings.descontos && settings.descontos.regrasCategoria) || {};
+            Object.keys(regras).forEach(chave => {
+                var regra = regras[chave];
+                if (regra.ativo && dataExpirada(regra.validoAte)) {
+                    updates[`${abellaPath('settings')}/descontos/regrasCategoria/${chave}/ativo`] = false;
+                    houveExpiracao = true;
+                }
+            });
+
+            if (settings.descontos && settings.descontos.ativo && dataExpirada(settings.descontos.validoAte)) {
+                updates[`${abellaPath('settings')}/descontos/ativo`] = false;
+                houveExpiracao = true;
+            }
+
+            Object.keys(cupons).forEach(codigo => {
+                var cupom = cupons[codigo];
+                if (cupom.active && dataExpirada(cupom.expiraEm)) {
+                    updates[`${abellaPath('coupons')}/${codigo}/active`] = false;
+                    houveExpiracao = true;
+                }
+            });
+
+            if (houveExpiracao) {
+                await window.db.ref().update(updates);
+            }
+            return houveExpiracao;
+        }
+
+        // ---------- Carregamento central do painel ----------
+        async function carregarPainelOfertas() {
             try {
-                const snapProds = await db.ref('abella/products').once('value');
-                const prods = snapProds.val() || {};
-                
-                let totalOfertas = 0;
-                let somaDescontos = 0;
+                const snapSettings = await window.db.ref(abellaPath('settings')).once('value');
+                var settings = snapSettings.val() || {};
 
-                Object.keys(prods).forEach(id => {
-                    if (prods[id].ofertaAtiva || prods[id].promo > 0) {
-                        totalOfertas++;
-                        somaDescontos += (parseInt(prods[id].promo) || 0);
-                    }
-                });
+                const snapCupons = await window.db.ref(abellaPath('coupons')).once('value');
+                var cupons = snapCupons.val() || {};
 
-                const mediaDesconto = totalOfertas > 0 ? Math.round(somaDescontos / totalOfertas) : 0;
-                document.getElementById('count-ofertas').textContent = totalOfertas;
-                document.getElementById('avg-desconto').textContent = `${mediaDesconto}%`;
+                var expirou = await expirarCampanhasVencidas(settings, cupons);
+                if (expirou) {
+                    const snapSettings2 = await window.db.ref(abellaPath('settings')).once('value');
+                    settings = snapSettings2.val() || {};
+                    const snapCupons2 = await window.db.ref(abellaPath('coupons')).once('value');
+                    cupons = snapCupons2.val() || {};
+                }
 
-                // Busca estatísticas de Cupons ativos
-                const snapCupons = await db.ref('abella/coupons').once('value');
-                const cupons = snapCupons.val() || {};
-                document.getElementById('count-cupons').textContent = Object.keys(cupons).length;
+                cacheSettings = settings;
+                cacheCupons = cupons;
 
-                // Flash sales simulado por flag de urgência interna
-                let flashCount = 0;
-                Object.keys(prods).forEach(id => {
-                    if(prods[id].flashSale === true) flashCount++;
-                });
-                document.getElementById('count-flash').textContent = flashCount;
+                renderOfertasCategoria(settings);
+                renderDescontoGlobal(settings);
+                renderCupons(cupons);
+                atualizarContadores(settings, cupons);
 
             } catch (error) {
-                console.error("Erro ao atualizar indicadores de controle:", error);
+                console.error("Erro ao carregar painel de ofertas:", error);
             }
         }
 
-       // Executa a injeção centralizada alinhada com o ConfigService / DescontoService
+        function atualizarContadores(settings, cupons) {
+            var regras = (settings.descontos && settings.descontos.regrasCategoria) || {};
+            var chaves = Object.keys(regras).filter(k => regras[k].ativo);
+
+            document.getElementById('count-ofertas').textContent = chaves.length;
+
+            var somaDescontos = chaves.reduce((acc, k) => acc + (parseInt(regras[k].porcentagem) || 0), 0);
+            var media = chaves.length > 0 ? Math.round(somaDescontos / chaves.length) : 0;
+            document.getElementById('avg-desconto').textContent = `${media}%`;
+
+            var cuponsAtivos = Object.keys(cupons).filter(k => cupons[k].active);
+            document.getElementById('count-cupons').textContent = cuponsAtivos.length;
+
+            var globalAtivo = settings.descontos && settings.descontos.ativo;
+            document.getElementById('status-global').textContent = globalAtivo ? `${settings.descontos.porcentagem}% Ativo` : 'Inativo';
+        }
+
+        function renderOfertasCategoria(settings) {
+            var regras = (settings.descontos && settings.descontos.regrasCategoria) || {};
+            var container = document.getElementById('lista-ofertas-categoria');
+            var chaves = Object.keys(regras);
+
+            if (chaves.length === 0) {
+                container.innerHTML = '<p class="text-sm text-slate-400 italic">Nenhuma campanha por categoria cadastrada ainda.</p>';
+                return;
+            }
+
+            container.innerHTML = chaves.map(chave => {
+                var r = regras[chave];
+                var expirada = dataExpirada(r.validoAte);
+                var statusTexto = !r.ativo ? '<span class="text-[10px] font-bold text-slate-400 uppercase">Inativa</span>'
+                    : expirada ? '<span class="text-[10px] font-bold text-red-500 uppercase">Expirada</span>'
+                    : '<span class="text-[10px] font-bold text-emerald-600 uppercase">Ativa</span>';
+
+                return `
+                <div class="flex items-center justify-between gap-3 border border-slate-100 rounded-xl p-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <span class="text-xl">${r.badgeIcone || '🔥'}</span>
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-slate-800 truncate">${r.nomeCampanha || 'Oferta'} — ${nomeCategoria(chave)}</p>
+                            <p class="text-[11px] text-slate-500 font-mono">${r.porcentagem}% OFF ${r.validoAte ? '• válido até ' + formatarDataBR(r.validoAte) : ''} ${statusTexto}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <label class="switch">
+                            <input type="checkbox" ${r.ativo ? 'checked' : ''} onchange="toggleOfertaCategoria('${chave}', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        <button onclick="removerOfertaCategoria('${chave}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 w-8 h-8 rounded-lg transition-colors">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function toggleOfertaCategoria(chave, novoValor) {
+            try {
+                await window.db.ref(`${abellaPath('settings')}/descontos/regrasCategoria/${chave}/ativo`).set(novoValor);
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error("Erro ao alternar oferta de categoria:", error);
+                alert('Erro ao atualizar o status da oferta.');
+            }
+        }
+
+        async function removerOfertaCategoria(chave) {
+            if (!confirm('Remover permanentemente esta campanha de categoria?')) return;
+            try {
+                await window.db.ref(`${abellaPath('settings')}/descontos/regrasCategoria/${chave}`).remove();
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error("Erro ao remover oferta de categoria:", error);
+                alert('Erro ao remover a oferta.');
+            }
+        }
+
+        function renderDescontoGlobal(settings) {
+            var d = settings.descontos || {};
+            document.getElementById('global-ativo').checked = !!d.ativo;
+            document.getElementById('global-porcentagem').value = d.porcentagem || 10;
+            document.getElementById('global-validade').value = d.validoAte || '';
+        }
+
+        async function salvarDescontoGlobal() {
+            var ativo = document.getElementById('global-ativo').checked;
+            var porcentagem = parseInt(document.getElementById('global-porcentagem').value) || 0;
+            var validade = document.getElementById('global-validade').value || null;
+
+            try {
+                const updates = {};
+                updates[`${abellaPath('settings')}/descontos/ativo`] = ativo;
+                updates[`${abellaPath('settings')}/descontos/porcentagem`] = porcentagem;
+                updates[`${abellaPath('settings')}/descontos/validoAte`] = validade;
+
+                await window.db.ref().update(updates);
+                alert('✅ Desconto global salvo com sucesso!');
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error("Erro ao salvar desconto global:", error);
+                alert('Erro ao salvar o desconto global.');
+            }
+        }
+
+        function renderCupons(cupons) {
+            var container = document.getElementById('lista-cupons');
+            var codigos = Object.keys(cupons);
+
+            if (codigos.length === 0) {
+                container.innerHTML = '<p class="text-sm text-slate-400 italic">Nenhum cupom cadastrado ainda.</p>';
+                return;
+            }
+
+            container.innerHTML = codigos.map(codigo => {
+                var c = cupons[codigo];
+                var expirado = dataExpirada(c.expiraEm);
+                var statusTexto = !c.active ? '<span class="text-[10px] font-bold text-slate-400 uppercase">Inativo</span>'
+                    : expirado ? '<span class="text-[10px] font-bold text-red-500 uppercase">Expirado</span>'
+                    : '<span class="text-[10px] font-bold text-emerald-600 uppercase">Ativo</span>';
+                var valorTexto = c.type === 'fixo' ? formatarMoeda(c.value) : `${c.value}%`;
+
+                return `
+                <div class="flex items-center justify-between gap-3 border border-slate-100 rounded-xl p-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold font-mono text-slate-800 truncate">${codigo}</p>
+                        <p class="text-[11px] text-slate-500 font-mono">${valorTexto} ${c.expiraEm ? '• até ' + formatarDataBR(c.expiraEm) : ''} ${statusTexto}</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <label class="switch">
+                            <input type="checkbox" ${c.active ? 'checked' : ''} onchange="toggleCupom('${codigo}', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        <button onclick="removerCupom('${codigo}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 w-8 h-8 rounded-lg transition-colors">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function toggleCupom(codigo, novoValor) {
+            try {
+                await window.db.ref(`${abellaPath('coupons')}/${codigo}/active`).set(novoValor);
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error("Erro ao alternar cupom:", error);
+                alert('Erro ao atualizar o status do cupom.');
+            }
+        }
+
+        async function removerCupom(codigo) {
+            if (!confirm(`Remover permanentemente o cupom ${codigo}?`)) return;
+            try {
+                await window.db.ref(`${abellaPath('coupons')}/${codigo}`).remove();
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error("Erro ao remover cupom:", error);
+                alert('Erro ao remover o cupom.');
+            }
+        }
+
+        // ---------- Ações principais ----------
         async function aplicarCampanha() {
             const categoria = document.getElementById('campanha-categoria').value;
             const desconto = parseInt(document.getElementById('campanha-desconto').value) || 0;
@@ -369,6 +657,7 @@
             const icone = document.getElementById('campanha-icone').value;
             const corBg = document.getElementById('campanha-cor').value;
             const corTexto = document.getElementById('campanha-cor-texto').value;
+            const validade = document.getElementById('campanha-validade').value || null;
 
             if (!categoria) {
                 alert('Por favor, selecione uma Categoria Alvo para aplicar a ação comercial.');
@@ -376,28 +665,25 @@
             }
 
             try {
-                // Monta o payload exatamente no formato esperado pelo ConfigService / DescontoService
                 const novaRegra = {
                     ativo: true,
                     porcentagem: desconto,
                     nomeCampanha: nome,
                     badgeIcone: icone,
                     badgeColor: corBg,
-                    badgeTextColor: corTexto
+                    badgeTextColor: corTexto,
+                    validoAte: validade
                 };
 
-                // Grava diretamente no nó de regras por categoria da Abella Joias
-                // Converte a chave da categoria para minúsculo para casar com o mapeamento síncrono
-                const categoriaChave = categoria.trim().toLowerCase();
-                
+                // A chave da categoria em abella/categories já É o slug (conforme arquitetura oficial),
+                // por isso usamos a própria chave selecionada, sem inventar transformação adicional.
                 const updates = {};
-                updates[`abella/settings/descontos/ativo`] = true;
-                updates[`abella/settings/descontos/regrasCategoria/${categoriaChave}`] = novaRegra;
+                updates[`${abellaPath('settings')}/descontos/regrasCategoria/${categoria}`] = novaRegra;
 
-                await db.ref().update(updates);
-                alert(`Sucesso! Campanha para a categoria "${categoria}" ativada no ecossistema central.`);
-                
-                await atualizarContadores();
+                await window.db.ref().update(updates);
+                alert(`Sucesso! Campanha para a categoria "${nomeCategoria(categoria)}" ativada.`);
+
+                await carregarPainelOfertas();
                 limparCampos();
 
             } catch (error) {
@@ -406,30 +692,31 @@
             }
         }
 
-        // Reseta globalmente todas as regras de desconto do painel de parametrização
         async function limparTodasOfertas() {
-            if (!confirm('Esta ação desativará todas as campanhas de categoria e descontos globais. Deseja prosseguir?')) return;
+            if (!confirm('Esta ação desativará o desconto global e todas as campanhas de categoria (os cadastros continuam salvos, apenas inativos). Deseja prosseguir?')) return;
 
             try {
-                const updates = {
-                    'abella/settings/descontos/ativo': false,
-                    'abella/settings/descontos/porcentagem': 0,
-                    'abella/settings/descontos/regrasCategoria': {}
-                };
+                var regras = (cacheSettings.descontos && cacheSettings.descontos.regrasCategoria) || {};
+                const updates = {};
+                updates[`${abellaPath('settings')}/descontos/ativo`] = false;
+                Object.keys(regras).forEach(chave => {
+                    updates[`${abellaPath('settings')}/descontos/regrasCategoria/${chave}/ativo`] = false;
+                });
 
-                await db.ref().update(updates);
-                alert('Todas as regras de descontos em massa foram desativadas com sucesso.');
-                await atualizarContadores();
+                await window.db.ref().update(updates);
+                alert('Todas as regras de descontos foram desativadas com sucesso.');
+                await carregarPainelOfertas();
             } catch (error) {
                 console.error("Erro ao resetar catálogo comercial:", error);
+                alert('Erro ao desativar as ofertas.');
             }
         }
 
-        // Salva e ativa um novo cupom no banco de dados
         async function criarCupom() {
             const codigo = document.getElementById('cupom-codigo').value.trim().toUpperCase();
             const valor = parseFloat(document.getElementById('cupom-valor').value);
             const tipo = document.getElementById('cupom-tipo').value;
+            const validade = document.getElementById('cupom-validade').value || null;
 
             if (!codigo || !valor) {
                 alert('Preencha corretamente o código e o valor correspondente do cupom.');
@@ -437,38 +724,41 @@
             }
 
             try {
-                await db.ref(`abella/coupons/${codigo}`).set({
+                await window.db.ref(`${abellaPath('coupons')}/${codigo}`).set({
                     code: codigo,
                     value: valor,
                     type: tipo,
                     active: true,
+                    expiraEm: validade,
                     createdAt: new Date().toISOString()
                 });
 
-                alert(`Cupom [ ${codigo} ] inserido e ativado no e-commerce!`);
+                alert(`Cupom [ ${codigo} ] inserido e ativado!`);
                 document.getElementById('cupom-codigo').value = '';
                 document.getElementById('cupom-valor').value = '';
-                
-                await atualizarContadores();
+                document.getElementById('cupom-validade').value = '';
+
+                await carregarPainelOfertas();
             } catch (error) {
                 console.error("Erro ao criar cupom:", error);
+                alert('Erro ao criar o cupom.');
             }
         }
 
-        // Reseta os campos do formulário para o estado inicial padrão
         function limparCampos() {
             document.getElementById('form-campanha').reset();
             document.getElementById('campanha-nome').value = "Oferta Especial";
             document.getElementById('campanha-desconto').value = "15";
             document.getElementById('campanha-cor').value = "#b88e45";
+            document.getElementById('campanha-validade').value = "";
             atualizarPreview();
         }
 
-        // Inicialização de ciclo de vida da Aplicação
+        // Inicialização
         document.addEventListener('DOMContentLoaded', async () => {
             await carregarCategorias();
             atualizarPreview();
-            await atualizarContadores();
+            await carregarPainelOfertas();
         });
     </script>
 </body>

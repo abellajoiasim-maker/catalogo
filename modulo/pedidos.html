@@ -135,14 +135,25 @@
                 </h4>
 
                 <div id="formAdicionarItem" class="hidden bg-zinc-950 border border-zinc-800 rounded-xl p-3 space-y-2">
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        <input type="text" id="novoItemNome" placeholder="Nome do item" class="col-span-2 md:col-span-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
-                        <input type="text" id="novoItemSku" placeholder="SKU" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
-                        <input type="number" id="novoItemPreco" placeholder="Preço unit. (R$)" step="0.01" min="0" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
-                        <input type="number" id="novoItemPeso" placeholder="Peso (g)" step="0.01" min="0" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
-                        <input type="number" id="novoItemQtd" placeholder="Qtd" min="1" value="1" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
-                        <input type="text" id="novoItemImagem" placeholder="URL da imagem (opcional)" class="col-span-2 md:col-span-3 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                    <div class="relative">
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">🔎 Buscar no catálogo (nome ou SKU)</label>
+                        <input type="text" id="buscaProdutoCatalogo" placeholder="Digite para buscar produtos cadastrados..." autocomplete="off" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        <div id="resultadosBuscaCatalogo" class="hidden absolute z-10 left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg max-h-56 overflow-y-auto shadow-2xl"></div>
+                        <p id="statusBuscaCatalogo" class="text-[9px] text-zinc-600 font-mono mt-1"></p>
                     </div>
+
+                    <div class="border-t border-zinc-800/60 pt-2">
+                        <p class="text-[9px] font-mono text-zinc-500 uppercase mb-2">Ou preencha manualmente (peça avulsa fora do catálogo)</p>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <input type="text" id="novoItemNome" placeholder="Nome do item" class="col-span-2 md:col-span-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="text" id="novoItemSku" placeholder="SKU" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="number" id="novoItemPreco" placeholder="Preço unit. (R$)" step="0.01" min="0" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="number" id="novoItemPeso" placeholder="Peso (g)" step="0.01" min="0" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="number" id="novoItemQtd" placeholder="Qtd" min="1" value="1" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="text" id="novoItemImagem" placeholder="URL da imagem (opcional)" class="col-span-2 md:col-span-3 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        </div>
+                    </div>
+
                     <div class="flex justify-end gap-2">
                         <button onclick="ocultarFormAdicionarItem()" class="text-[10px] text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg transition-all">Cancelar</button>
                         <button onclick="confirmarAdicionarItem()" class="text-[10px] font-bold bg-[#caa85c] hover:bg-[#b5944f] text-black px-3 py-1.5 rounded-lg transition-all">Adicionar à Lista</button>
@@ -256,6 +267,25 @@
 
         document.addEventListener('DOMContentLoaded', () => { 
             carregarPainelPedidos(); 
+
+            var _debounceBusca = null;
+            var campoBusca = document.getElementById('buscaProdutoCatalogo');
+            if (campoBusca) {
+                campoBusca.addEventListener('input', function() {
+                    clearTimeout(_debounceBusca);
+                    var valor = this.value;
+                    _debounceBusca = setTimeout(function() { buscarProdutoCatalogo(valor); }, 250);
+                });
+            }
+
+            document.addEventListener('click', function(e) {
+                var container = document.getElementById('resultadosBuscaCatalogo');
+                var campo = document.getElementById('buscaProdutoCatalogo');
+                if (!container || !campo) return;
+                if (e.target !== campo && !container.contains(e.target)) {
+                    container.classList.add('hidden');
+                }
+            });
         });
 
         async function carregarPainelPedidos() {
@@ -509,16 +539,103 @@
             recalcularResumoFinanceiroModal();
         }
 
+        var _PRODUTOS_CATALOGO_CACHE = null;
+
+        async function garantirProdutosCatalogoCarregados() {
+            if (_PRODUTOS_CATALOGO_CACHE) return _PRODUTOS_CATALOGO_CACHE;
+            var status = document.getElementById('statusBuscaCatalogo');
+            try {
+                if (status) status.innerText = '⏳ Carregando catálogo de produtos...';
+                if (!window.db) throw new Error("window.db indisponível.");
+                const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('products') : 'abella/products';
+                const snap = await window.db.ref(path).once('value');
+                var dados = snap.val() || {};
+                var lista = Object.keys(dados).map(function(key) {
+                    var prod = dados[key];
+                    return Object.assign({ _id: key }, prod);
+                }).filter(function(prod) {
+                    return !prod.paused; // só produtos ativos na busca
+                });
+                _PRODUTOS_CATALOGO_CACHE = lista;
+                if (status) status.innerText = `${lista.length} produto(s) disponível(is) para busca.`;
+                return lista;
+            } catch (e) {
+                console.error("Falha ao carregar catálogo de produtos:", e);
+                if (status) status.innerText = '❌ Não foi possível carregar o catálogo. Preencha manualmente abaixo.';
+                _PRODUTOS_CATALOGO_CACHE = [];
+                return [];
+            }
+        }
+
+        function renderizarResultadosBuscaCatalogo(lista) {
+            var container = document.getElementById('resultadosBuscaCatalogo');
+            if (!lista.length) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = lista.slice(0, 8).map(function(prod, idx) {
+                var nome = prod.nome || prod.name || 'Sem nome';
+                var sku = prod.sku || prod.codigo || '-';
+                var preco = parseFloat(prod.precoFinal || prod.preco || prod.price || 0);
+                var imagem = prod.imagem || prod.image || 'https://placehold.co/60';
+                return `
+                    <div onclick="selecionarProdutoCatalogo(${idx})" class="flex items-center gap-2 p-2 hover:bg-zinc-800 cursor-pointer border-b border-zinc-800/60 last:border-0">
+                        <img src="${imagem}" onerror="this.src='https://placehold.co/60'" class="w-8 h-8 object-cover rounded-md border border-zinc-800 shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-white font-bold truncate">${nome}</p>
+                            <p class="text-[10px] text-zinc-500 font-mono">SKU: ${sku} • ${formatarMoeda(preco)}</p>
+                        </div>
+                    </div>`;
+            }).join('');
+            container.dataset.resultados = JSON.stringify(lista.slice(0, 8));
+            container.classList.remove('hidden');
+        }
+
+        async function buscarProdutoCatalogo(termo) {
+            var container = document.getElementById('resultadosBuscaCatalogo');
+            termo = (termo || '').trim().toLowerCase();
+            if (!termo) {
+                container.classList.add('hidden');
+                return;
+            }
+            var lista = await garantirProdutosCatalogoCarregados();
+            var filtrados = lista.filter(function(prod) {
+                var nome = (prod.nome || prod.name || '').toLowerCase();
+                var sku = (prod.sku || prod.codigo || '').toLowerCase();
+                return nome.includes(termo) || sku.includes(termo);
+            });
+            renderizarResultadosBuscaCatalogo(filtrados);
+        }
+
+        function selecionarProdutoCatalogo(idx) {
+            var container = document.getElementById('resultadosBuscaCatalogo');
+            var lista = JSON.parse(container.dataset.resultados || '[]');
+            var prod = lista[idx];
+            if (!prod) return;
+
+            document.getElementById('novoItemNome').value = prod.nome || prod.name || '';
+            document.getElementById('novoItemSku').value = prod.sku || prod.codigo || '';
+            document.getElementById('novoItemPreco').value = parseFloat(prod.precoFinal || prod.preco || prod.price || 0);
+            document.getElementById('novoItemPeso').value = parseFloat(prod.peso || prod.weight || 0);
+            document.getElementById('novoItemImagem').value = prod.imagem || prod.image || '';
+
+            document.getElementById('buscaProdutoCatalogo').value = (prod.nome || prod.name || '') + ' — selecionado ✓';
+            container.classList.add('hidden');
+        }
+
         function mostrarFormAdicionarItem() {
             document.getElementById('formAdicionarItem').classList.remove('hidden');
+            garantirProdutosCatalogoCarregados();
         }
 
         function ocultarFormAdicionarItem() {
             document.getElementById('formAdicionarItem').classList.add('hidden');
-            ['novoItemNome','novoItemSku','novoItemPreco','novoItemPeso','novoItemImagem'].forEach(function(fid) {
+            ['novoItemNome','novoItemSku','novoItemPreco','novoItemPeso','novoItemImagem','buscaProdutoCatalogo'].forEach(function(fid) {
                 document.getElementById(fid).value = '';
             });
             document.getElementById('novoItemQtd').value = 1;
+            document.getElementById('resultadosBuscaCatalogo').classList.add('hidden');
         }
 
         function confirmarAdicionarItem() {

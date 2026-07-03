@@ -87,8 +87,9 @@
         if (!window.firebase) {
             throw new Error('Firebase não carregado');
         }
-
-        const dbPedidos = firebase.database();
+        if (!window.db || typeof window.getAbellaPath !== 'function') {
+            throw new Error('Infraestrutura Abella (window.db / getAbellaPath) não foi inicializada por firebase-config.js');
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         const pedidoId = urlParams.get('id');
@@ -100,15 +101,32 @@
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
         };
 
+        function aguardarConexaoFirebase() {
+            return new Promise((resolve) => {
+                if (window.__ABELLA_FIREBASE_CONNECTED__) {
+                    resolve();
+                    return;
+                }
+                window.addEventListener('abella-connection', function onConn(e) {
+                    if (e.detail && e.detail.connected) {
+                        window.removeEventListener('abella-connection', onConn);
+                        resolve();
+                    }
+                });
+                // Failsafe: não travar para sempre caso o evento nunca dispare
+                setTimeout(resolve, 4000);
+            });
+        }
+
         if (!pedidoId) {
             document.getElementById('loader').innerText = "❌ Erro Crítico: ID de pedido ausente na URL.";
         } else {
-            carregarDadosRomaneio();
+            aguardarConexaoFirebase().then(carregarDadosRomaneio);
         }
 
         async function carregarDadosRomaneio() {
             try {
-                const snap = await dbPedidos.ref('abella/orders/' + pedidoId).once('value');
+                const snap = await window.db.ref(window.getAbellaPath('orders') + '/' + pedidoId).once('value');
                 if (!snap.exists()) {
                     document.getElementById('loader').innerText = "❌ Erro: Registro de pedido não localizado no Firebase.";
                     return;

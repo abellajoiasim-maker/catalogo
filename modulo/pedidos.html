@@ -64,10 +64,11 @@
     </div>
 
     <div id="modalEditarPedido" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 text-white relative">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-5 my-8 text-white relative">
             <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <h3 class="text-xs font-black text-[#caa85c] uppercase font-mono tracking-wider flex items-center gap-1.5">
                     ✏️ Editar Pedido & Fluxo Físico
+                    <span id="editPedidoNumero" class="text-zinc-500 normal-case font-mono text-[10px]"></span>
                 </h3>
                 <button onclick="fecharModalEditarPedido()" class="text-zinc-400 hover:text-white text-2xl font-light transition-colors leading-none">&times;</button>
             </div>
@@ -85,17 +86,41 @@
                         <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">WhatsApp / Contato</label>
                         <input type="text" id="editPedidoContato" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono text-white outline-none focus:border-[#caa85c] transition-colors">
                     </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Forma de Pagamento</label>
+                        <input type="text" id="editPedidoPagamento" placeholder="Ex: PIX" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Observações</label>
+                        <textarea id="editPedidoObservacoes" rows="2" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors resize-none"></textarea>
+                    </div>
                 </div>
-                
+
                 <div class="space-y-3 bg-black/20 p-3 rounded-xl border border-zinc-800/40">
                     <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800/60 pb-1">📍 Local de Entrega / Galvânica</h4>
                     <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Endereço / Galvânica Parceira</label>
-                        <input type="text" id="editPedidoEntrega" placeholder="Ex: Galvânica X - Limeira" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Nome do Destinatário / Galvânica</label>
+                        <input type="text" id="editEntregaNome" placeholder="Ex: Galvânica X" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
                     </div>
-                    <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Cidade / Estado</label>
-                        <input type="text" id="editPedidoCidade" placeholder="Ex: Limeira - SP" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="col-span-2">
+                            <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Endereço</label>
+                            <input type="text" id="editEntregaEndereco" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Número</label>
+                            <input type="text" id="editEntregaNumero" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Bairro</label>
+                            <input type="text" id="editEntregaBairro" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Cidade / Estado</label>
+                            <input type="text" id="editEntregaCidade" placeholder="Ex: Limeira - SP" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -103,9 +128,60 @@
             <div class="space-y-2 pt-1">
                 <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800 pb-1 flex justify-between items-center">
                     <span>💍 Itens e Peças no Pedido</span>
-                    <span id="contadorItensModal" class="text-[9px] font-mono text-zinc-500 normal-case">0 itens</span>
+                    <span class="flex items-center gap-3">
+                        <span id="contadorItensModal" class="text-[9px] font-mono text-zinc-500 normal-case">0 itens</span>
+                        <button onclick="mostrarFormAdicionarItem()" class="text-[9px] font-mono bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-[#caa85c] px-2 py-1 rounded-lg normal-case transition-all">+ Adicionar Item</button>
+                    </span>
                 </h4>
-                <div id="editPedidoListaProdutos" class="border border-zinc-800/80 bg-zinc-950 rounded-xl p-2 max-h-[180px] overflow-y-auto space-y-1.5"></div>
+
+                <div id="formAdicionarItem" class="hidden bg-zinc-950 border border-zinc-800 rounded-xl p-3 space-y-2">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <input type="text" id="novoItemNome" placeholder="Nome do item" class="col-span-2 md:col-span-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        <input type="text" id="novoItemSku" placeholder="SKU" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        <input type="number" id="novoItemPreco" placeholder="Preço unit. (R$)" step="0.01" min="0" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        <input type="number" id="novoItemPeso" placeholder="Peso (g)" step="0.01" min="0" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        <input type="number" id="novoItemQtd" placeholder="Qtd" min="1" value="1" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        <input type="text" id="novoItemImagem" placeholder="URL da imagem (opcional)" class="col-span-2 md:col-span-3 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button onclick="ocultarFormAdicionarItem()" class="text-[10px] text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg transition-all">Cancelar</button>
+                        <button onclick="confirmarAdicionarItem()" class="text-[10px] font-bold bg-[#caa85c] hover:bg-[#b5944f] text-black px-3 py-1.5 rounded-lg transition-all">Adicionar à Lista</button>
+                    </div>
+                </div>
+
+                <div id="editPedidoListaProdutos" class="border border-zinc-800/80 bg-zinc-950 rounded-xl p-2 max-h-[220px] overflow-y-auto space-y-1.5"></div>
+            </div>
+
+            <div class="bg-black/20 p-3 rounded-xl border border-zinc-800/40 space-y-2">
+                <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800/60 pb-1">💰 Resumo Financeiro</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Total de Peças</label>
+                        <p id="editResumoPecas" class="font-bold text-zinc-200">0 pçs</p>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Peso Total</label>
+                        <p id="editResumoPeso" class="font-bold text-zinc-200">0.00g</p>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Subtotal</label>
+                        <p id="editResumoSubtotal" class="font-bold text-zinc-200">R$ 0,00</p>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Total Final</label>
+                        <p id="editResumoTotal" class="font-black text-[#caa85c] text-sm">R$ 0,00</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-xs pt-1">
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Desconto (R$)</label>
+                        <input type="number" id="editPedidoDesconto" step="0.01" min="0" value="0" oninput="recalcularResumoFinanceiroModal()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Frete (R$)</label>
+                        <input type="number" id="editPedidoFrete" step="0.01" min="0" value="0" oninput="recalcularResumoFinanceiroModal()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center justify-between border-t border-zinc-800 pt-4 mt-2">
@@ -119,6 +195,7 @@
             </div>
         </div>
     </div>
+
 
     <div id="modalRomaneioMenu" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl text-white space-y-4">
@@ -318,44 +395,59 @@
             carregarPainelPedidos();
         }
 
+        function normalizarItensPedido(p) {
+            var lista = p.itens || p.produtos || [];
+            if (typeof lista === 'object' && !Array.isArray(lista)) lista = Object.values(lista);
+            return lista;
+        }
+
+        function calcularTotaisItens(itens) {
+            var subtotal = 0, totalPecas = 0, pesoTotal = 0;
+            itens.forEach(function(it) {
+                var preco = parseFloat(it.precoFinal || it.price || it.preco || 0);
+                var qtd = parseInt(it.quantidade || 1);
+                var peso = parseFloat(it.peso || it.weight || 0);
+                subtotal += (preco * qtd);
+                totalPecas += qtd;
+                pesoTotal += (peso * qtd);
+            });
+            return { subtotal: subtotal, totalPecas: totalPecas, pesoTotal: pesoTotal };
+        }
+
         function abrirModalEditarPedido(id) {
             var p = _PEDIDOS_CACHE[id];
             if (!p) return;
 
-            document.getElementById('editPedidoId').value = id;
-            document.getElementById('editPedidoCliente').value = p.cliente || p.nome || '';
-            document.getElementById('editPedidoContato').value = p.whats || p.contato || p.whatsapp || '';
-            document.getElementById('editPedidoEntrega').value = p.entrega || '';
-            document.getElementById('editPedidoCidade').value = p.cidade || '';
+            // Normaliza itens uma única vez no cache local para permitir edição livre (add/remover/qtd) antes de salvar
+            p.itens = normalizarItensPedido(p);
+            p.produtos = p.itens;
 
-            var containerItens = document.getElementById('editPedidoListaProdutos');
-            containerItens.innerHTML = '';
-            
-            var listaItens = p.itens || p.produtos || [];
-            if (typeof listaItens === 'object' && !Array.isArray(listaItens)) {
-                listaItens = Object.values(listaItens);
+            // Normaliza entrega: no banco é um objeto {nome, endereco, numero, bairro, cidade}.
+            // Se vier como string legada, joga tudo no campo de endereço para não perder o dado.
+            var entrega = p.entrega;
+            if (!entrega || typeof entrega !== 'object') {
+                entrega = { nome: '', endereco: (typeof p.entrega === 'string' ? p.entrega : ''), numero: '', bairro: '', cidade: p.cidade || '' };
             }
 
-            document.getElementById('contadorItensModal').innerText = `${listaItens.length} item(ns)`;
+            document.getElementById('editPedidoId').value = id;
+            document.getElementById('editPedidoNumero').innerText = '#' + (p.numeroPedido || p.idPedido || id.substring(id.length - 6));
+            document.getElementById('editPedidoCliente').value = p.cliente || p.nome || '';
+            document.getElementById('editPedidoContato').value = p.whats || p.whatsapp || p.contato || '';
+            document.getElementById('editPedidoPagamento').value = p.formaPagamento || '';
+            document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
 
-            listaItens.forEach(function(item, index) {
-                var div = document.createElement('div');
-                div.className = "flex items-center justify-between bg-zinc-900 border border-zinc-800/60 p-2 rounded-lg gap-2";
-                
-                const precoUnidade = parseFloat(item.price || item.precoFinal || item.preco || 0);
+            document.getElementById('editEntregaNome').value = entrega.nome || '';
+            document.getElementById('editEntregaEndereco').value = entrega.endereco || '';
+            document.getElementById('editEntregaNumero').value = entrega.numero || '';
+            document.getElementById('editEntregaBairro').value = entrega.bairro || '';
+            document.getElementById('editEntregaCidade').value = entrega.cidade || p.cidade || '';
 
-                div.innerHTML = `
-                    <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-zinc-100 truncate">${item.nome || item.name || item.titulo || 'Item sem especificação'}</p>
-                        <p class="text-[10px] text-zinc-500 font-mono">Unid: ${formatarMoeda(precoUnidade)}</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <input type="number" id="editItemQtd_${index}" value="${item.quantidade || 1}" min="1" onchange="atualizarInstanteCacheItem('${id}', ${index}, this.value)" class="w-14 bg-black border border-zinc-700 rounded-md text-center text-xs text-white p-1 font-mono outline-none focus:border-[#caa85c]">
-                        <button onclick="removerItemDoPedidoDoForm(${index})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 px-2 py-1 rounded text-xs transition-all">✕</button>
-                    </div>
-                `;
-                containerItens.appendChild(div);
-            });
+            document.getElementById('editPedidoDesconto').value = parseFloat(p.desconto || 0);
+            document.getElementById('editPedidoFrete').value = parseFloat(p.frete || 0);
+
+            ocultarFormAdicionarItem();
+            renderizarItensModal(id);
+            recalcularResumoFinanceiroModal();
 
             document.getElementById('modalEditarPedido').classList.remove('hidden');
         }
@@ -364,108 +456,185 @@
             document.getElementById('modalEditarPedido').classList.add('hidden');
         }
 
+        function renderizarItensModal(id) {
+            var p = _PEDIDOS_CACHE[id];
+            var itens = p.itens || [];
+            var containerItens = document.getElementById('editPedidoListaProdutos');
+            containerItens.innerHTML = '';
+
+            document.getElementById('contadorItensModal').innerText = `${itens.length} item(ns)`;
+
+            if (itens.length === 0) {
+                containerItens.innerHTML = '<p class="text-[11px] text-zinc-500 italic text-center py-4">Nenhum item neste pedido. Use "+ Adicionar Item" acima.</p>';
+                return;
+            }
+
+            itens.forEach(function(item, index) {
+                var div = document.createElement('div');
+                div.className = "flex items-center justify-between bg-zinc-900 border border-zinc-800/60 p-2 rounded-lg gap-2";
+
+                const precoUnidade = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                const pesoItem = parseFloat(item.peso || item.weight || 0);
+                const imagemItem = item.image || item.imagem || 'https://placehold.co/80';
+
+                div.innerHTML = `
+                    <img src="${imagemItem}" onerror="this.src='https://placehold.co/80'" class="w-10 h-10 object-cover rounded-md border border-zinc-800 shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-zinc-100 truncate">${item.nome || item.name || item.titulo || 'Item sem especificação'}</p>
+                        <p class="text-[10px] text-zinc-500 font-mono">SKU: ${item.sku || '-'} • Unid: ${formatarMoeda(precoUnidade)} • ${pesoItem.toFixed(2)}g</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <input type="number" id="editItemQtd_${index}" value="${item.quantidade || 1}" min="1" onchange="atualizarInstanteCacheItem('${id}', ${index}, this.value)" class="w-14 bg-black border border-zinc-700 rounded-md text-center text-xs text-white p-1 font-mono outline-none focus:border-[#caa85c]">
+                        <button onclick="removerItemDoPedidoDoForm('${id}', ${index})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 px-2 py-1 rounded text-xs transition-all">✕</button>
+                    </div>
+                `;
+                containerItens.appendChild(div);
+            });
+        }
+
         function atualizarInstanteCacheItem(pedidoId, itemIndex, valor) {
             var p = _PEDIDOS_CACHE[pedidoId];
+            if (!p || !p.itens[itemIndex]) return;
+            p.itens[itemIndex].quantidade = parseInt(valor) || 1;
+            recalcularResumoFinanceiroModal();
+        }
+
+        function removerItemDoPedidoDoForm(id, index) {
+            if (!confirm("Deseja remover esta peça do pedido? A remoção só será gravada no banco ao clicar em 'Salvar Alterações'.")) return;
+            var p = _PEDIDOS_CACHE[id];
             if (!p) return;
-            var listaItens = p.itens || p.produtos || [];
-            if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
-            
-            if (listaItens[itemIndex]) {
-                listaItens[itemIndex].quantidade = parseInt(valor) || 1;
-            }
+            p.itens.splice(index, 1);
+            p.produtos = p.itens;
+            renderizarItensModal(id);
+            recalcularResumoFinanceiroModal();
         }
 
-        async function removerItemDoPedidoDoForm(index) {
-            if (confirm("Deseja realmente remover esta peça do pedido? O recálculo financeiro será processado.")) {
-                var id = document.getElementById('editPedidoId').value;
-                var p = _PEDIDOS_CACHE[id];
-                var listaItens = p.itens || p.produtos || [];
-                if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
+        function mostrarFormAdicionarItem() {
+            document.getElementById('formAdicionarItem').classList.remove('hidden');
+        }
 
-                listaItens.splice(index, 1);
+        function ocultarFormAdicionarItem() {
+            document.getElementById('formAdicionarItem').classList.add('hidden');
+            ['novoItemNome','novoItemSku','novoItemPreco','novoItemPeso','novoItemImagem'].forEach(function(fid) {
+                document.getElementById(fid).value = '';
+            });
+            document.getElementById('novoItemQtd').value = 1;
+        }
 
-                var novoTotal = 0;
-                var novasPecas = 0;
-                listaItens.forEach(function(it) {
-                    var pr = parseFloat(it.price || it.precoFinal || it.preco || 0);
-                    var qt = parseInt(it.quantidade || 1);
-                    novoTotal += (pr * qt);
-                    novasPecas += qt;
-                });
+        function confirmarAdicionarItem() {
+            var id = document.getElementById('editPedidoId').value;
+            var p = _PEDIDOS_CACHE[id];
+            if (!p) return;
 
-                try {
-                    // Instanciando via barramento global seguro 'window.db' configurado pela arquitetura
-                    if (!window.db) throw new Error("Referência de banco global 'window.db' não mapeada.");
-                    
-                    await window.db.ref('abella/orders/' + id).update({
-                        itens: listaItens,
-                        produtos: listaItens,
-                        total: novoTotal,
-                        valorTotal: novoTotal,
-                        totalPecas: novasPecas
-                    });
+            var nome = document.getElementById('novoItemNome').value.trim();
+            if (!nome) {
+                alert("Informe ao menos o nome do item.");
+                return;
+            }
 
-                    _PEDIDOS_CACHE[id].itens = listaItens;
-                    _PEDIDOS_CACHE[id].produtos = listaItens;
-                    _PEDIDOS_CACHE[id].total = novoTotal;
-                    _PEDIDOS_CACHE[id].totalPecas = novasPecas;
-                    
-                    abrirModalEditarPedido(id);
-                } catch(err) {
-                    console.error("Falha ao remover item do banco:", err);
-                    alert("Erro de comunicação com o Firebase ao expurgar item.");
+            var novoItem = {
+                nome: nome,
+                name: nome,
+                sku: document.getElementById('novoItemSku').value.trim(),
+                preco: parseFloat(document.getElementById('novoItemPreco').value) || 0,
+                price: parseFloat(document.getElementById('novoItemPreco').value) || 0,
+                precoFinal: parseFloat(document.getElementById('novoItemPreco').value) || 0,
+                peso: parseFloat(document.getElementById('novoItemPeso').value) || 0,
+                weight: parseFloat(document.getElementById('novoItemPeso').value) || 0,
+                quantidade: parseInt(document.getElementById('novoItemQtd').value) || 1,
+                image: document.getElementById('novoItemImagem').value.trim(),
+                imagem: document.getElementById('novoItemImagem').value.trim()
+            };
+
+            p.itens.push(novoItem);
+            p.produtos = p.itens;
+
+            ocultarFormAdicionarItem();
+            renderizarItensModal(id);
+            recalcularResumoFinanceiroModal();
+        }
+
+        function recalcularResumoFinanceiroModal() {
+            var id = document.getElementById('editPedidoId').value;
+            var p = _PEDIDOS_CACHE[id];
+            if (!p) return;
+
+            var totais = calcularTotaisItens(p.itens || []);
+            var desconto = parseFloat(document.getElementById('editPedidoDesconto').value) || 0;
+            var frete = parseFloat(document.getElementById('editPedidoFrete').value) || 0;
+            var total = Math.max(0, totais.subtotal - desconto + frete);
+
+            document.getElementById('editResumoPecas').innerText = `${totais.totalPecas} pçs`;
+            document.getElementById('editResumoPeso').innerText = `${totais.pesoTotal.toFixed(2)}g`;
+            document.getElementById('editResumoSubtotal').innerText = formatarMoeda(totais.subtotal);
+            document.getElementById('editResumoTotal').innerText = formatarMoeda(total);
+        }
+
+        async function salvarAlteracoesPedido() {
+            var id = document.getElementById('editPedidoId').value;
+            var p = _PEDIDOS_CACHE[id];
+            if (!p) return;
+
+            var itens = p.itens || [];
+            var totais = calcularTotaisItens(itens);
+            var desconto = parseFloat(document.getElementById('editPedidoDesconto').value) || 0;
+            var frete = parseFloat(document.getElementById('editPedidoFrete').value) || 0;
+            var total = Math.max(0, totais.subtotal - desconto + frete);
+
+            var entregaCidade = document.getElementById('editEntregaCidade').value.trim();
+
+            var entregaAtualizada = {
+                nome: document.getElementById('editEntregaNome').value.trim(),
+                endereco: document.getElementById('editEntregaEndereco').value.trim(),
+                numero: document.getElementById('editEntregaNumero').value.trim(),
+                bairro: document.getElementById('editEntregaBairro').value.trim(),
+                cidade: entregaCidade
+            };
+
+            var dadosAtualizados = {
+                idPedido: p.idPedido || ('PED-' + id.slice(-6)),
+                cliente: document.getElementById('editPedidoCliente').value.trim(),
+                nome: document.getElementById('editPedidoCliente').value.trim(),
+                whats: document.getElementById('editPedidoContato').value.trim(),
+                contato: document.getElementById('editPedidoContato').value.trim(),
+                formaPagamento: document.getElementById('editPedidoPagamento').value.trim(),
+                observacoes: document.getElementById('editPedidoObservacoes').value.trim(),
+                cidade: entregaCidade,
+                entrega: entregaAtualizada,
+                itens: itens,
+                produtos: itens,
+                subtotal: totais.subtotal,
+                desconto: desconto,
+                frete: frete,
+                total: total,
+                valorTotal: total,
+                totalPix: total,
+                pesoTotal: totais.pesoTotal,
+                totalPecas: totais.totalPecas,
+                romaneio: {
+                    subtotal: totais.subtotal,
+                    desconto: desconto,
+                    totalPix: total,
+                    pesoTotal: totais.pesoTotal,
+                    totalPecas: totais.totalPecas
                 }
+            };
+
+            try {
+                if (!window.db) throw new Error("Instância do Realtime Database não encontrada.");
+                const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
+
+                await window.db.ref(path + '/' + id).update(dadosAtualizados);
+
+                fecharModalEditarPedido();
+                alert("✅ Ordem de compra sincronizada com sucesso!");
+                await carregarPainelPedidos();
+            } catch(e) {
+                console.error(e);
+                alert("Erro crítico ao salvar atualizações no banco remoto.");
             }
         }
 
-async function salvarAlteracoesPedido() {
-    var id = document.getElementById('editPedidoId').value;
-    var p = _PEDIDOS_CACHE[id];
-    if (!p) return;
-
-    var listaItens = p.itens || p.produtos || [];
-    if (typeof listaItens === 'object' && !Array.isArray(listaItens)) listaItens = Object.values(listaItens);
-
-    var novoTotal = 0;
-    var novasPecas = 0;
-    listaItens.forEach(function(item, index) {
-        var inputQtd = document.getElementById('editItemQtd_' + index);
-        if (inputQtd) item.quantidade = parseInt(inputQtd.value) || 1;
-        var pr = parseFloat(item.price || item.precoFinal || item.preco || 0);
-        novoTotal += (pr * item.quantidade);
-        novasPecas += item.quantidade;
-    });
-
-    // Criamos o objeto de atualização garantindo a persistência do ID sequencial
-    var dadosAtualizados = {
-        idPedido: p.idPedido || ('PED-' + id.slice(-6)), // Preserva o ID ou gera um fallback
-        cliente: document.getElementById('editPedidoCliente').value.trim(),
-        nome: document.getElementById('editPedidoCliente').value.trim(),
-        whats: document.getElementById('editPedidoContato').value.trim(),
-        contato: document.getElementById('editPedidoContato').value.trim(),
-        entrega: document.getElementById('editPedidoEntrega').value.trim(),
-        cidade: document.getElementById('editPedidoCidade').value.trim(),
-        itens: listaItens,
-        produtos: listaItens,
-        total: novoTotal,
-        valorTotal: novoTotal,
-        totalPecas: novasPecas
-    };
-
-    try {
-        if (!window.db) throw new Error("Instância do Realtime Database não encontrada.");
-        
-        // Usando o caminho absoluto conforme sua arquitetura
-        await window.db.ref('abella/orders/' + id).update(dadosAtualizados);
-        
-        fecharModalEditarPedido();
-        alert("✅ Ordem de compra sincronizada com sucesso!");
-        await carregarPainelPedidos();
-    } catch(e) {
-        console.error(e);
-        alert("Erro crítico ao salvar atualizações no banco remoto.");
-    }
-}
 
         async function excluirPedidoCompleto() {
             var id = document.getElementById('editPedidoId').value;

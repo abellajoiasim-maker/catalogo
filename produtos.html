@@ -168,7 +168,7 @@
 
             <!-- Imagem -->
             <div class="flex flex-col justify-start items-center lg:sticky lg:top-0">
-                <div class="aspect-square w-full max-w-[240px] sm:max-w-[280px] lg:max-w-full rounded-xl md:rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden">
+                <div id="modalImagemWrapper" class="aspect-square w-full max-w-[240px] sm:max-w-[280px] lg:max-w-full rounded-xl md:rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden">
                     <img id="modalImagem" src="" class="w-full h-full object-cover" alt="Produto">
                 </div>
             </div>
@@ -597,6 +597,7 @@ const valorPix   = produto.preco * fatorDesconto;
     ];
     const blocoFecharVitrine = document.getElementById('modalBlocoFecharVitrine');
     const labelDescricao = document.getElementById('modalDescricaoLabel');
+    const modalImagemWrapper = document.getElementById('modalImagemWrapper');
 
     if (produto.vitrine) {
         blocosDeCompra.forEach(id => document.getElementById(id)?.classList.add('hidden'));
@@ -606,10 +607,14 @@ const valorPix   = produto.preco * fatorDesconto;
             document.getElementById('modalDescricao').innerText =
                 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão logo abaixo.';
         }
+        modalImagemWrapper?.classList.remove('aspect-square', 'max-w-[240px]', 'sm:max-w-[280px]');
+        modalImagemWrapper?.classList.add('aspect-video');
     } else {
         blocosDeCompra.forEach(id => document.getElementById(id)?.classList.remove('hidden'));
         blocoFecharVitrine?.classList.add('hidden');
         if (labelDescricao) labelDescricao.innerText = 'Detalhes da Peça';
+        modalImagemWrapper?.classList.remove('aspect-video');
+        modalImagemWrapper?.classList.add('aspect-square', 'max-w-[240px]', 'sm:max-w-[280px]');
 
         if (typeof inicializarMatrizVenda === 'function') {
             inicializarMatrizVenda(produto);

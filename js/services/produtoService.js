@@ -102,6 +102,8 @@ return {
                 initials: Array.isArray(produto.initials) ? produto.initials : (Array.isArray(produto.iniciais) ? produto.iniciais : []),
                 peso: parseFloat(produto.peso || produto.weight || 0),
                 weight: parseFloat(produto.peso || produto.weight || 0),
+                // Produto "vitrine": foto ambientada de referência da coleção, não é vendável
+                vitrine: produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine',
                 metadados: {
                     finish: this._safeString(produto.metadados?.finish || produto.acabamento || ''),
                     loop: this._safeString(produto.metadados?.loop || produto.passador || '')
@@ -182,6 +184,7 @@ return {
                     destaque: norm.destaque,
                     variacoes: norm.variacoes,
                     peso: norm.peso,
+                    vitrine: norm.vitrine,
                     metadados: norm.metadados,
                     createdAt: norm.createdAt,
                     updatedAt: Date.now()

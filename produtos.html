@@ -247,7 +247,7 @@
 <script src="js/utils/peso.js"></script>
 <script src="js/utils/storage.js"></script>
 <script src="js/services/carrinhoService.js"></script>
-<script src="js/services/produtoService.js"></script>
+<script src="js/services/produtoService.js?v=vitrine2"></script>
 <script src="js/utils/image-helper.js"></script>
 <script src="js/components/modalProduto.js"></script>
 
@@ -285,7 +285,8 @@ function getProduto(p) {
         paused:      p.paused === true || p.ativo === false,
         // Produto "vitrine": foto ambientada (modelo usando a peça) que serve só de referência visual
         // da coleção da subcategoria. Não é vendável — não entra na grade de compra.
-        vitrine:     p.vitrine === true || p.isVitrine === true || p.showcase === true || p.tipo === 'vitrine'
+        vitrine:     p.vitrine === true || p.isVitrine === true || p.showcase === true || p.tipo === 'vitrine',
+        legendaVitrine: p.legendaVitrine || ''
     };
 }
 
@@ -497,7 +498,7 @@ function renderizarProdutos() {
                     </div>
                     <div class="absolute bottom-0 left-0 right-0 p-3 md:p-6">
                         <h3 class="serif text-white text-sm md:text-2xl font-bold leading-snug max-w-lg">${prod.nome}</h3>
-                        <p class="text-zinc-300 text-[10px] md:text-sm mt-1 max-w-lg line-clamp-2">${prod.descricao || 'Toque para ver em detalhe como esta coleção fica no corpo.'}</p>
+                        <p class="text-zinc-300 text-[10px] md:text-sm mt-1 max-w-lg line-clamp-2">${prod.legendaVitrine || prod.descricao || 'Toque para ver em detalhe como esta coleção fica no corpo.'}</p>
                     </div>
                 </div>
             `;
@@ -578,7 +579,7 @@ const valorPix   = produto.preco * fatorDesconto;
     document.getElementById('modalSku').innerText = produto.vitrine ? '✨ Foto ilustrativa' : ('Ref: ' + (produto.sku || '-'));
     document.getElementById('modalPreco').innerText = precoFmt;
     document.getElementById('modalPeso').innerText = typeof peso !== 'undefined' ? peso.formatar(produto.peso) : `${produto.peso}g`;
-    document.getElementById('modalDescricao').innerText = produto.descricao || 'Nenhuma especificação técnica adicional fornecida.';
+    document.getElementById('modalDescricao').innerText = (produto.vitrine ? (produto.legendaVitrine || produto.descricao) : produto.descricao) || 'Nenhuma especificação técnica adicional fornecida.';
     
     const mImg = document.getElementById('modalImagem');
     if (mImg) {
@@ -601,7 +602,7 @@ const valorPix   = produto.preco * fatorDesconto;
         blocosDeCompra.forEach(id => document.getElementById(id)?.classList.add('hidden'));
         blocoFecharVitrine?.classList.remove('hidden');
         if (labelDescricao) labelDescricao.innerText = 'Sobre esta coleção';
-        if (!produto.descricao) {
+        if (!produto.legendaVitrine && !produto.descricao) {
             document.getElementById('modalDescricao').innerText =
                 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão logo abaixo.';
         }

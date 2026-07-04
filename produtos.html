@@ -315,7 +315,7 @@ async function carregarConfiguracoes() {
             if (!logoFinal) logoFinal = INSTANCE_FALLBACK_IMG;
 
             if (logoImg) {
-                logoImg.src = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(logoFinal) : logoFinal;
+                logoImg.src = typeof ImageHelper !== 'undefined' ? ImageHelper.converterGsUrl(logoFinal) : logoFinal;
                 logoImg.onload = () => {
                     logoImg.classList.remove('hidden');
                     if (fallback) fallback.classList.add('hidden');
@@ -467,7 +467,7 @@ function renderizarProdutos() {
     }
 
     produtosFiltrados.forEach((prod, index) => {
-        const imgUrl   = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(prod.imagem) : (prod.imagem || INSTANCE_FALLBACK_IMG);
+        const imgUrl   = typeof ImageHelper !== 'undefined' ? ImageHelper.obterImagemProduto(prod.imagem) : (prod.imagem || INSTANCE_FALLBACK_IMG);
         const precoFmt = typeof money !== 'undefined' ? money.formatar(prod.preco) : 'R$ ' + prod.preco.toFixed(2);
 
         const temDizeres  = prod.dizeres.length  > 0;
@@ -530,7 +530,7 @@ function abrirModalProduto(index) {
     produtoAtual = produto;
     window.produtoAtual = produto; 
 
-    const imgSrc     = typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(produto.imagem) : (produto.imagem || INSTANCE_FALLBACK_IMG);
+    const imgSrc     = typeof ImageHelper !== 'undefined' ? ImageHelper.obterImagemProduto(produto.imagem) : (produto.imagem || INSTANCE_FALLBACK_IMG);
     const precoFmt   = typeof money !== 'undefined' ? money.formatar(produto.preco) : 'R$ ' + produto.preco.toFixed(2);
     
    const fatorDesconto = (100 - descontoPixGlobal) / 100;

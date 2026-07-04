@@ -177,7 +177,7 @@
             <div class="flex flex-col justify-between space-y-4">
 
                 <!-- Preço -->
-                <div class="bg-zinc-900/40 border border-zinc-900/80 p-3 rounded-xl flex justify-between items-center gap-2">
+                <div id="modalBlocoPreco" class="bg-zinc-900/40 border border-zinc-900/80 p-3 rounded-xl flex justify-between items-center gap-2">
                     <div>
                         <p class="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Atacado no Bruto</p>
                         <h3 id="modalPreco" class="text-xl md:text-2xl font-black gold tracking-tight mt-0.5"></h3>
@@ -189,7 +189,7 @@
                 </div>
 
                 <!-- Peso e estoque -->
-                <div class="grid grid-cols-2 gap-3">
+                <div id="modalBlocoPesoEstoque" class="grid grid-cols-2 gap-3">
                     <div class="bg-zinc-900/20 border border-zinc-900/50 p-2.5 rounded-xl">
                         <p class="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Peso Estimado</p>
                         <p id="modalPeso" class="text-xs md:text-sm font-bold text-zinc-200 mt-1">-</p>
@@ -201,7 +201,7 @@
 
                 <!-- Descrição -->
                 <div class="bg-zinc-900/20 border border-zinc-900/50 p-3 rounded-xl">
-                    <p class="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Detalhes da Peça</p>
+                    <p id="modalDescricaoLabel" class="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Detalhes da Peça</p>
                     <p id="modalDescricao" class="text-zinc-400 text-xs leading-relaxed mt-1.5 max-h-20 overflow-y-auto custom-scroll"></p>
                 </div>
 
@@ -209,7 +209,7 @@
                 <div id="moduloVariacoesMatriz" class="space-y-3"></div>
 
                 <!-- Painel de Quantidade Total Dinâmica -->
-                <div class="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between">
+                <div id="modalBlocoVolume" class="bg-zinc-900 border border-zinc-800 p-3 rounded-xl flex items-center justify-between">
                     <div>
                         <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Volume do Pedido</p>
                         <p class="text-xs text-zinc-400 mt-0.5">Soma das grades selecionadas</p>
@@ -221,10 +221,18 @@
                 </div>
 
                 <!-- Botão adicionar -->
-                <div class="pt-1 shrink-0">
+                <div id="modalBlocoBotaoComprar" class="pt-1 shrink-0">
                     <button onclick="adicionarGradeAoCarrinho()"
                             class="w-full h-11 md:h-12 bg-[#caa85c] hover:bg-[#b5944a] text-black font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg shadow-[#caa85c]/5 flex items-center justify-center gap-2">
                         <span>🛒</span> Adicionar ao Carrinho
+                    </button>
+                </div>
+
+                <!-- Botão fechar (modo vitrine) -->
+                <div id="modalBlocoFecharVitrine" class="pt-1 shrink-0 hidden">
+                    <button onclick="fecharModalProduto()"
+                            class="w-full h-11 md:h-12 bg-zinc-900 border border-[#caa85c]/40 hover:border-[#caa85c] text-[#caa85c] font-black uppercase text-xs tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
+                        Fechar e ver a coleção completa
                     </button>
                 </div>
 
@@ -274,7 +282,10 @@ function getProduto(p) {
         subcategoriaId: p.subcategory || p.subCategory || p.subcategoria || '',
         dizeres:     Array.isArray(p.dizeres)  ? p.dizeres  : (Array.isArray(p.sayings)  ? p.sayings  : []),
         iniciais:    Array.isArray(p.iniciais) ? p.iniciais : (Array.isArray(p.initials) ? p.initials : []),
-        paused:      p.paused === true || p.ativo === false
+        paused:      p.paused === true || p.ativo === false,
+        // Produto "vitrine": foto ambientada (modelo usando a peça) que serve só de referência visual
+        // da coleção da subcategoria. Não é vendável — não entra na grade de compra.
+        vitrine:     p.vitrine === true || p.isVitrine === true || p.showcase === true || p.tipo === 'vitrine'
     };
 }
 
@@ -439,6 +450,9 @@ async function carregarProdutos() {
             return true;
         });
 
+        // Garante que o(s) produto(s) vitrine (foto ambientada) sempre apareçam primeiro no grid
+        produtos.sort((a, b) => (b.vitrine === true) - (a.vitrine === true));
+
         if (document.getElementById('totalProdutos'))
             document.getElementById('totalProdutos').innerText = produtos.length;
 
@@ -468,6 +482,29 @@ function renderizarProdutos() {
 
     produtosFiltrados.forEach((prod, index) => {
         const imgUrl   = typeof ImageHelper !== 'undefined' ? ImageHelper.obterImagemProduto(prod.imagem) : (prod.imagem || INSTANCE_FALLBACK_IMG);
+
+        // ── CARD VITRINE: foto ambientada em destaque, mostrando a coleção no corpo ──
+        if (prod.vitrine) {
+            const cardVitrine = document.createElement('div');
+            cardVitrine.className = "col-span-2 md:col-span-4 cursor-pointer group relative rounded-2xl md:rounded-3xl overflow-hidden border border-[#caa85c]/30 mb-1 md:mb-2";
+            cardVitrine.onclick = () => abrirModalProduto(index);
+            cardVitrine.innerHTML = `
+                <div class="relative w-full aspect-[16/9] md:aspect-[21/9] bg-zinc-950">
+                    <img src="${imgUrl}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" alt="${prod.nome}" loading="lazy" onerror="this.src='${INSTANCE_FALLBACK_IMG}'">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent"></div>
+                    <div class="absolute top-3 left-3 md:top-5 md:left-5 inline-flex items-center gap-2 bg-black/60 border border-[#caa85c]/40 backdrop-blur-sm rounded-full px-3 py-1 md:px-4 md:py-1.5">
+                        <span class="text-[9px] md:text-[11px] uppercase tracking-[0.2em] text-[#caa85c] font-black">✨ Veja como fica</span>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-3 md:p-6">
+                        <h3 class="serif text-white text-sm md:text-2xl font-bold leading-snug max-w-lg">${prod.nome}</h3>
+                        <p class="text-zinc-300 text-[10px] md:text-sm mt-1 max-w-lg line-clamp-2">${prod.descricao || 'Toque para ver em detalhe como esta coleção fica no corpo.'}</p>
+                    </div>
+                </div>
+            `;
+            container.appendChild(cardVitrine);
+            return;
+        }
+
         const precoFmt = typeof money !== 'undefined' ? money.formatar(prod.preco) : 'R$ ' + prod.preco.toFixed(2);
 
         const temDizeres  = prod.dizeres.length  > 0;
@@ -538,7 +575,7 @@ const valorPix   = produto.preco * fatorDesconto;
     const pixFmt     = typeof money !== 'undefined' ? money.formatar(valorPix) : 'R$ ' + valorPix.toFixed(2);
 
     document.getElementById('modalNome').innerText = produto.nome;
-    document.getElementById('modalSku').innerText = 'Ref: ' + (produto.sku || '-');
+    document.getElementById('modalSku').innerText = produto.vitrine ? '✨ Foto ilustrativa' : ('Ref: ' + (produto.sku || '-'));
     document.getElementById('modalPreco').innerText = precoFmt;
     document.getElementById('modalPeso').innerText = typeof peso !== 'undefined' ? peso.formatar(produto.peso) : `${produto.peso}g`;
     document.getElementById('modalDescricao').innerText = produto.descricao || 'Nenhuma especificação técnica adicional fornecida.';
@@ -552,10 +589,32 @@ const valorPix   = produto.preco * fatorDesconto;
     const modalPix = document.getElementById('modalPix');
     if (modalPix) modalPix.innerText = pixFmt;
 
-    if (typeof inicializarMatrizVenda === 'function') {
-        inicializarMatrizVenda(produto);
+    // ── MODO VITRINE: produto é só a foto ambientada, sem venda direta ──
+    const blocosDeCompra = [
+        'modalBlocoPreco', 'modalBlocoPesoEstoque', 'moduloVariacoesMatriz',
+        'modalBlocoVolume', 'modalBlocoBotaoComprar'
+    ];
+    const blocoFecharVitrine = document.getElementById('modalBlocoFecharVitrine');
+    const labelDescricao = document.getElementById('modalDescricaoLabel');
+
+    if (produto.vitrine) {
+        blocosDeCompra.forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        blocoFecharVitrine?.classList.remove('hidden');
+        if (labelDescricao) labelDescricao.innerText = 'Sobre esta coleção';
+        if (!produto.descricao) {
+            document.getElementById('modalDescricao').innerText =
+                'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão logo abaixo.';
+        }
     } else {
-        _construirGradeDeCompra(produto);
+        blocosDeCompra.forEach(id => document.getElementById(id)?.classList.remove('hidden'));
+        blocoFecharVitrine?.classList.add('hidden');
+        if (labelDescricao) labelDescricao.innerText = 'Detalhes da Peça';
+
+        if (typeof inicializarMatrizVenda === 'function') {
+            inicializarMatrizVenda(produto);
+        } else {
+            _construirGradeDeCompra(produto);
+        }
     }
 
     const modal = document.getElementById('modalProduto');

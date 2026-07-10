@@ -96,6 +96,20 @@
         }
         .preview-box img { width: 100%; height: 100%; object-fit: cover; }
         .preview-box img.hidden { display: none; }
+        .tema-card.ativo {
+            border-color: var(--gold) !important;
+            background: rgba(202, 168, 92, 0.10) !important;
+        }
+        .tema-card.ativo::after {
+            content: '✓ Selecionado';
+            display: block;
+            font-size: 9px;
+            color: var(--gold);
+            margin-top: 6px;
+            font-weight: 700;
+            letter-spacing: .05em;
+        }
+
         .preview-box .placeholder-label {
             position: absolute;
             font-size: 10px;
@@ -274,6 +288,67 @@
         </section>
 
         <!-- ══════════════════════════════════════════════
+             SEÇÃO 2.5 — TEMA VISUAL DA LOJA
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">🎨 Tema Visual da Loja</h2>
+            </div>
+            <p class="text-xs text-zinc-500 -mt-2">Escolha a identidade visual do catálogo. A troca vale para todas as páginas na próxima vez que forem abertas.</p>
+
+            <input type="hidden" id="cfg-theme" value="dark">
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                <button type="button" data-theme="modern" onclick="selecionarTema('modern')"
+                        class="tema-card text-left rounded-2xl p-4 border-2 border-zinc-800 bg-zinc-900/40 transition-all hover:border-zinc-600">
+                    <div class="flex gap-1.5 mb-3">
+                        <span class="w-5 h-5 rounded-full" style="background:#2563EB"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#F8FAFC;border:1px solid #33415522"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#0F172A"></span>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-white">Modern</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">Azul e branco, clean</p>
+                </button>
+
+                <button type="button" data-theme="luxury" onclick="selecionarTema('luxury')"
+                        class="tema-card text-left rounded-2xl p-4 border-2 border-zinc-800 bg-zinc-900/40 transition-all hover:border-zinc-600">
+                    <div class="flex gap-1.5 mb-3">
+                        <span class="w-5 h-5 rounded-full" style="background:#B8935B"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#FBF7F1;border:1px solid #33415522"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#2B2620"></span>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-white">Luxury</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">Dourado e creme</p>
+                </button>
+
+                <button type="button" data-theme="minimal" onclick="selecionarTema('minimal')"
+                        class="tema-card text-left rounded-2xl p-4 border-2 border-zinc-800 bg-zinc-900/40 transition-all hover:border-zinc-600">
+                    <div class="flex gap-1.5 mb-3">
+                        <span class="w-5 h-5 rounded-full" style="background:#171717"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#FFFFFF;border:1px solid #33415522"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#EAEAEA"></span>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-white">Minimal</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">Preto e branco</p>
+                </button>
+
+                <button type="button" data-theme="dark" onclick="selecionarTema('dark')"
+                        class="tema-card text-left rounded-2xl p-4 border-2 border-zinc-800 bg-zinc-900/40 transition-all hover:border-zinc-600">
+                    <div class="flex gap-1.5 mb-3">
+                        <span class="w-5 h-5 rounded-full" style="background:#CAA85C"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#111111;border:1px solid #33415522"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#070707"></span>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-white">Dark</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">Visual clássico atual</p>
+                </button>
+
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
              SEÇÃO 3 — FINANCEIRO & LOGÍSTICA
         ══════════════════════════════════════════════ -->
         <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
@@ -390,6 +465,15 @@ function atualizarPreview(inputId, imgId, placeholderId) {
     }
 }
 
+function selecionarTema(tema, silencioso = false) {
+    const hidden = document.getElementById('cfg-theme');
+    if (hidden) hidden.value = tema;
+    document.querySelectorAll('.tema-card').forEach(card => {
+        card.classList.toggle('ativo', card.dataset.theme === tema);
+    });
+    if (!silencioso) spawnToast(`Tema "${tema}" selecionado. Clique em "Salvar Configurações" para aplicar no site.`);
+}
+
 function spawnToast(msg, isError = false) {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -469,6 +553,9 @@ async function carregarConfiguracoes() {
         const selStatus = document.getElementById('cfg-statusLoja');
         if (selStatus) selStatus.value = d.statusLoja ?? 'aberto';
 
+        // Tema visual
+        selecionarTema(d.theme ?? 'dark', true);
+
         const ultimaAtualizacaoEl = document.getElementById('cfg-ultimaAtualizacao');
         if (ultimaAtualizacaoEl) ultimaAtualizacaoEl.innerText = d.ultimaAtualizacao ?? 'Nenhum registro encontrado';
 
@@ -512,6 +599,9 @@ async function salvarConfiguracoesAdmin(e) {
         banner_subcategoria: _getVal('cfg-bannerSubcategoria'), // compat. legado
         bannerProduto:      _getVal('cfg-bannerProduto'),
         banner_produto:     _getVal('cfg-bannerProduto'),       // compat. legado
+
+        // Tema visual
+        theme: _getVal('cfg-theme') || 'dark',
 
         // Alerta topo
         bannerAtivo:  document.getElementById('cfg-bannerAtivo')?.checked ?? false,

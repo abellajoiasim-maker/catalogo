@@ -23,6 +23,7 @@
         endereco: '',
         parcelasMax: 6,
         pixDesc: 5,
+        theme: 'dark',
         descontos: Object.freeze({
             ativo: false,
             porcentagem: 0,
@@ -115,6 +116,10 @@
                     raw.pixDesc ?? raw.pix ?? empresa.pixDesc ?? empresa.pix ?? DEFAULT_SETTINGS.pixDesc
                 ),
 
+                theme: String(
+                    raw.theme ?? empresa.theme ?? DEFAULT_SETTINGS.theme
+                ).trim(),
+
                 descontos: {
                     ativo: Boolean(descontosCruos.ativo ?? DEFAULT_SETTINGS.descontos.ativo),
                     porcentagem: Number(descontosCruos.porcentagem ?? descontosCruos.valor ?? 0),
@@ -169,6 +174,7 @@
                     parcelas: normalized.parcelasMax,
                     pixDesc: normalized.pixDesc,
                     pix: normalized.pixDesc,
+                    theme: normalized.theme,
                     descontos: normalized.descontos,
                     cores: normalized.cores
                 };

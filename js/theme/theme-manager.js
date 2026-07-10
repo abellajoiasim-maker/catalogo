@@ -75,16 +75,17 @@ class ThemeManager{
 
         try{
 
-            /*
-            Aqui posteriormente será ligado ao ConfigService.
+            if(window.ConfigService && typeof window.ConfigService.getSettings==="function"){
 
-            Exemplo:
+                const cfg=await window.ConfigService.getSettings();
 
-            const cfg=await ConfigService.get();
+                if(cfg && cfg.theme){
 
-            return cfg.theme;
+                    return cfg.theme;
 
-            */
+                }
+
+            }
 
             if(window.catalogConfig){
 

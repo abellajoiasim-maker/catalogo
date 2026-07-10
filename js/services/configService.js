@@ -37,9 +37,11 @@
         })
     });
 
+    // ESTADO MUTÁVEL DE CACHE (fora do objeto selado, para permitir escrita em modo estrito)
+    let _cache = null;
+    let _cacheTimestamp = 0;
+
     const ConfigService = {
-        _cache: null,
-        _cacheTimestamp: 0,
         _cacheTTL: 60000,
 
         // CONEXÃO COM A ABSTRAÇÃO DE BASE DE DADOS
@@ -58,15 +60,15 @@
         // VALIDAÇÃO CRONOLÓGICA DO CACHE EM MEMÓRIA
         _isCacheValid() {
             return Boolean(
-                this._cache && 
-                (Date.now() - this._cacheTimestamp) < this._cacheTTL
+                _cache && 
+                (Date.now() - _cacheTimestamp) < this._cacheTTL
             );
         },
 
         // INVALIDAÇÃO FORÇADA DE INFRAESTRUTURA DE DADOS
         invalidateCache() {
-            this._cache = null;
-            this._cacheTimestamp = 0;
+            _cache = null;
+            _cacheTimestamp = 0;
         },
 
         // MONITOR DE COMPATIBILIDADE E SANEAMENTO DE ENTRADAS
@@ -139,16 +141,16 @@
         async getSettings(forceRefresh = false) {
             try {
                 if (!forceRefresh && this._isCacheValid()) {
-                    return structuredClone(this._cache);
+                    return structuredClone(_cache);
                 }
 
                 const snapshot = await this._ref().once('value');
                 const data = snapshot.val() || {};
 
-                this._cache = this.normalizarConfiguracoes(data);
-                this._cacheTimestamp = Date.now();
+                _cache = this.normalizarConfiguracoes(data);
+                _cacheTimestamp = Date.now();
 
-                return structuredClone(this._cache);
+                return structuredClone(_cache);
             } catch (error) {
                 console.error('[PMA V8] [ConfigService] Falha ao recuperar parametrização da Abella Joias:', error);
                 return structuredClone(DEFAULT_SETTINGS);
@@ -181,8 +183,8 @@
 
                 await this._ref().update(payload);
 
-                this._cache = normalized;
-                this._cacheTimestamp = Date.now();
+                _cache = normalized;
+                _cacheTimestamp = Date.now();
                 return true;
             } catch (error) {
                 console.error('[PMA V8] [ConfigService] Falha ao gravar parametrização no Firebase:', error);
@@ -216,11 +218,11 @@
                 
                 ref.on('value', (snapshot) => {
                     const data = snapshot.val() || {};
-                    this._cache = this.normalizarConfiguracoes(data);
-                    this._cacheTimestamp = Date.now();
+                    _cache = this.normalizarConfiguracoes(data);
+                    _cacheTimestamp = Date.now();
 
                     if (typeof callback === 'function') {
-                        callback(structuredClone(this._cache));
+                        callback(structuredClone(_cache));
                     }
                 });
 

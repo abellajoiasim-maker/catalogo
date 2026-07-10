@@ -204,16 +204,46 @@
             </button>
         </div>
 
-        <p class="text-xs text-gray-500 mb-4">Todos os dados abaixo vieram automaticamente do pedido. Só a logo (carregada das Configurações da Loja) e o QR Code precisam de upload manual, se quiser trocar.</p>
+        <p class="text-xs text-gray-500 mb-4">Os campos abaixo vêm preenchidos automaticamente do pedido, mas você pode editar qualquer um deles — ou deixar tudo em branco para criar uma guia avulsa, sem pedido vinculado.</p>
 
         <div class="grid grid-cols-2 gap-6">
-            <div>
-                <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Logotipo (opcional, já vem das Configurações)</label>
-                <input type="file" accept="image/*" onchange="loadFile(this, 'logo-view')" class="text-xs block w-full border rounded p-1">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Logotipo (opcional, já vem das Configurações)</label>
+                    <input type="file" accept="image/*" onchange="loadFile(this, 'logo-view')" class="text-xs block w-full border rounded p-1">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">QR Code do site</label>
+                    <input type="file" accept="image/*" onchange="loadFile(this, 'qr-view')" class="text-xs block w-full border rounded p-1">
+                </div>
+                <div class="pt-2">
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Nome do Cliente</label>
+                    <input type="text" id="in-cliente" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Cidade de Origem</label>
+                    <input type="text" id="in-cidade-orig" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold uppercase text-gray-400 mb-1">QR Code do site</label>
-                <input type="file" accept="image/*" onchange="loadFile(this, 'qr-view')" class="text-xs block w-full border rounded p-1">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Nome do Destinatário</label>
+                    <input type="text" id="in-destinatario" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Endereço Completo</label>
+                    <input type="text" id="in-endereco" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Número</label>
+                        <input type="text" id="in-numero" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Bairro</label>
+                        <input type="text" id="in-bairro" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -297,8 +327,24 @@
             }
         }
 
+        function sync() {
+            const mappings = {
+                'in-cliente': 'out-cliente',
+                'in-cidade-orig': 'out-cidade-orig',
+                'in-destinatario': 'out-destinatario',
+                'in-endereco': 'out-endereco',
+                'in-numero': 'out-numero',
+                'in-bairro': 'out-bairro'
+            };
+            for (const [inId, outId] of Object.entries(mappings)) {
+                document.getElementById(outId).innerText = document.getElementById(inId).value || '-';
+            }
+        }
+
         // FUNÇÃO DE IMPRESSÃO INFALÍVEL (idêntica ao modelo original)
         document.getElementById('btn-print').addEventListener('click', function() {
+            sync();
+
             const printContent = document.getElementById('print-area').innerHTML;
             const styles = document.head.innerHTML;
 
@@ -352,8 +398,8 @@
 
         async function carregarPedido() {
             if (!pedidoId) {
-                statusEl.innerText = '❌ Nenhum pedido informado na URL (faltou ?id=...).';
-                statusEl.classList.add('text-red-600');
+                statusEl.innerText = '📝 Guia avulsa — nenhum pedido vinculado. Preencha os campos manualmente.';
+                sync();
                 return;
             }
 
@@ -365,39 +411,42 @@
                 const snap = await db.ref(path + '/' + pedidoId).once('value');
 
                 if (!snap.exists()) {
-                    statusEl.innerText = '❌ Pedido não encontrado no Firebase.';
+                    statusEl.innerText = '❌ Pedido não encontrado no Firebase. Preencha manualmente, se quiser.';
                     statusEl.classList.add('text-red-600');
+                    sync();
                     return;
                 }
 
                 const p = snap.val();
 
                 // Mesma lógica de fallback usada em impressao-pedido.html
-                const nomeCliente = p.cliente || p.nome || 'Não Identificado';
-                const cidadeCliente = p.cidade || 'N/I';
+                const nomeCliente = p.cliente || p.nome || '';
+                const cidadeCliente = p.cidade || '';
 
                 const end = p.enderecoEntrega || p.entrega || p.endereco || {};
                 const destinatario = end.destinatario || end.nome || nomeCliente;
-                const rua = end.rua || p.rua || end.logradouro || '-';
-                const numero = end.numero || p.numero || 'S/N';
-                const bairro = end.bairro || p.bairro || '-';
+                const rua = end.rua || p.rua || end.logradouro || '';
+                const numero = end.numero || p.numero || '';
+                const bairro = end.bairro || p.bairro || '';
 
-                document.getElementById('out-cliente').innerText = nomeCliente;
-                document.getElementById('out-cidade-orig').innerText = cidadeCliente;
-                document.getElementById('out-destinatario').innerText = destinatario;
-                document.getElementById('out-endereco').innerText = rua;
-                document.getElementById('out-numero').innerText = numero;
-                document.getElementById('out-bairro').innerText = bairro;
+                document.getElementById('in-cliente').value = nomeCliente;
+                document.getElementById('in-cidade-orig').value = cidadeCliente;
+                document.getElementById('in-destinatario').value = destinatario;
+                document.getElementById('in-endereco').value = rua;
+                document.getElementById('in-numero').value = numero;
+                document.getElementById('in-bairro').value = bairro;
+                sync();
 
                 const numeroPedido = p.numeroPedido || p.idPedido || pedidoId;
-                statusEl.innerText = `✅ Pedido #${numeroPedido} — ${nomeCliente}`;
+                statusEl.innerText = `✅ Pedido #${numeroPedido} — ${nomeCliente || 'sem nome'} (edite se precisar)`;
                 statusEl.classList.remove('text-red-600');
                 statusEl.classList.add('text-green-600');
 
             } catch (err) {
                 console.error(err);
-                statusEl.innerText = '❌ Erro ao carregar o pedido. Veja o console.';
+                statusEl.innerText = '❌ Erro ao carregar o pedido. Preencha manualmente, se quiser.';
                 statusEl.classList.add('text-red-600');
+                sync();
             }
         }
 

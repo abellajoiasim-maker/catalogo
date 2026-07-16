@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Subcategorias • Abella Joias</title>
+
+    <script>window.AURORA_FALLBACK_IMAGE = '../../images/fallback.jpg';</script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <link rel="stylesheet" href="../components/index.css">
+    <style>
+        .cat-hero{
+            position: relative; min-height: 46vh; display:flex; align-items:flex-end;
+            overflow:hidden; border-radius: var(--radius-lg); margin-top: var(--space-4);
+        }
+        .cat-hero img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        .cat-hero::after{
+            content:''; position:absolute; inset:0;
+            background: linear-gradient(to top, rgba(30,26,20,.85) 0%, rgba(30,26,20,.15) 60%);
+        }
+        .cat-hero-content{ position:relative; z-index:2; color:var(--color-bg); padding: var(--space-7); }
+    </style>
+</head>
+<body>
+
+    <div class="aurora-header">
+        <div class="bar aurora-container">
+            <nav class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="../../galvanicas.html">Galvânicas</a>
+            </nav>
+            <div class="brand">
+                <div class="brand-logo"><span style="font-family:var(--font-heading);font-weight:600;">A</span></div>
+                <div><p class="brand-name">Abella</p></div>
+            </div>
+            <div class="actions">
+                <a href="carrinho.html" class="cart-btn"><span id="cart-count">0</span></a>
+            </div>
+        </div>
+    </div>
+
+    <main class="aurora-container">
+
+        <div id="breadcrumb-slot"></div>
+
+        <section class="cat-hero" data-aurora-reveal>
+            <img id="categoriaBannerImg" src="" alt="" loading="lazy" onerror="this.style.display='none'">
+            <div class="cat-hero-content">
+                <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary); margin-bottom:var(--space-2);">Coleção</p>
+                <h1 id="categoriaNome" style="font-size:clamp(28px,5vw,52px);"></h1>
+                <p id="categoriaDescricao" style="font-size:13px; max-width:520px; opacity:.9; margin-top:var(--space-3);"></p>
+            </div>
+        </section>
+
+        <section class="aurora-section">
+            <div id="loading" style="text-align:center; padding: var(--space-6) 0;">
+                <p style="color:var(--color-primary-hover); font-weight:600;">⏳ Carregando subcategorias...</p>
+            </div>
+
+            <div style="text-align:center; margin-bottom: var(--space-7);">
+                <h2 style="font-size: clamp(22px,3.5vw,36px);">Selecione uma Subcategoria</h2>
+            </div>
+
+            <div id="grid-subcategorias" class="aurora-grid"></div>
+
+            <div id="no-result" class="hidden" style="grid-column:1/-1; text-align:center; padding: var(--space-8) 0;">
+                <p style="font-size:14px; color:var(--color-secondary);">Nenhuma subcategoria disponível.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="aurora-footer">
+        <div class="aurora-container">
+            <div class="bottom">
+                <span>© Abella Joias — atacado de joias no bruto</span>
+                <a href="index.html" style="color:var(--color-secondary);">← Voltar para a Home</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../../js/firebase/firebase-config.js"></script>
+    <script src="../../js/utils/money.js"></script>
+    <script src="../../js/utils/peso.js"></script>
+    <script src="../../js/utils/storage.js"></script>
+    <script src="../../js/services/carrinhoService.js"></script>
+    <script src="../../js/utils/image-helper.js"></script>
+    <script src="../../js/utils/imagens.js"></script>
+
+    <script src="../engine/render.js"></script>
+    <script src="../engine/animations.js"></script>
+    <script src="../engine/mobile-nav.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const grid = document.getElementById('grid-subcategorias');
+            const loading = document.getElementById('loading');
+            const noResult = document.getElementById('no-result');
+
+            const cartEl = document.getElementById('cart-count');
+            if (cartEl && window.carrinhoService) cartEl.innerText = carrinhoService.obterContagem();
+
+            const params = new URLSearchParams(window.location.search);
+            const categoriaSlug = (params.get('categoria') || params.get('id') || '').toString().trim();
+
+            if (!categoriaSlug) {
+                if (loading) loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Categoria não informada na URL.</p>`;
+                return;
+            }
+
+            if (typeof db === 'undefined') {
+                if (loading) loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Conexão com o banco de dados não configurada.</p>`;
+                return;
+            }
+
+            try {
+                // Banner específico de subcategoria (mesma regra do settings real)
+                const snapSettings = await db.ref('abella/settings').once('value').catch(() => null);
+                if (snapSettings && snapSettings.exists()) {
+                    const cfg = snapSettings.val();
+                    const urlBanner = cfg.bannerSubcategoria || cfg.banner_subcategoria || cfg.heroBannerUrl;
+                    if (urlBanner) {
+                        const img = document.getElementById('categoriaBannerImg');
+                        img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(urlBanner) : urlBanner;
+                    }
+                }
+
+                const snapCategories = await db.ref('abella/categories').once('value');
+                let categoriaAtual = null;
+
+                if (snapCategories.exists()) {
+                    const dados = snapCategories.val();
+                    const encontrada = Object.entries(dados).find(([itemSlug, val]) => {
+                        const chaveComparar = val && val.slug ? val.slug : itemSlug;
+                        return String(chaveComparar).toLowerCase() === String(categoriaSlug).toLowerCase();
+                    });
+                    if (encontrada) categoriaAtual = encontrada[1];
+                }
+
+                if (!categoriaAtual || categoriaAtual.paused === true) {
+                    if (loading) loading.classList.add('hidden');
+                    document.getElementById('categoriaNome').innerText = 'Coleção Especial';
+                    if (noResult) noResult.classList.remove('hidden');
+                    return;
+                }
+
+                const nomeCategoria = categoriaAtual.nome || categoriaAtual.name || categoriaSlug;
+                document.getElementById('categoriaNome').innerText = nomeCategoria;
+                document.title = `${nomeCategoria} • Subcategorias • Abella Joias`;
+                document.getElementById('categoriaDescricao').innerText =
+                    categoriaAtual.descricao || categoriaAtual.description || `Explore a coleção completa de ${nomeCategoria}.`;
+
+                document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb([
+                    { label: 'Home', href: 'index.html' },
+                    { label: nomeCategoria }
+                ]);
+
+                if (!document.getElementById('categoriaBannerImg').src) {
+                    const imgCat = categoriaAtual.imagem || categoriaAtual.image || '';
+                    if (imgCat) document.getElementById('categoriaBannerImg').src =
+                        typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(imgCat) : imgCat;
+                }
+
+                const subcategoriasObj = categoriaAtual.subcategories || categoriaAtual.subcategorias || {};
+                const listaSubcategorias = Object.entries(subcategoriasObj).filter(([_, sub]) => sub && sub.paused !== true);
+
+                if (loading) loading.classList.add('hidden');
+
+                if (listaSubcategorias.length === 0) {
+                    // Mesmo comportamento do subcategorias.html real: pula direto pra produtos
+                    window.location.href = `produtos.html?categoria=${encodeURIComponent(categoriaSlug)}`;
+                    return;
+                }
+
+                grid.innerHTML = listaSubcategorias.map(([subSlug, subData]) => {
+                    const html = AuroraRender.subcategoryCard(subSlug, subData, categoriaSlug, categoriaAtual.imagem || categoriaAtual.image);
+                    return `<div style="grid-column: span 3;" data-aurora-reveal>${html}</div>`;
+                }).join('');
+
+                if (window.AuroraAnimations) AuroraAnimations.initReveal();
+
+            } catch (error) {
+                console.error('Erro ao processar subcategorias:', error);
+                if (loading) {
+                    loading.classList.remove('hidden');
+                    loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Erro técnico ao carregar subcategorias.</p>`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

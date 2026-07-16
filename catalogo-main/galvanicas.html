@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Galvânicas Parceiras • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Conheça as principais Galvânicas Parceiras da Abella Joias em Limeira. Garantia de banho de ouro, prata e ródio de altíssima qualidade para joias no bruto.">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+    <!-- ABELLA VISUAL ENGINE — preparacao para temas futuros (Modern, Luxury, Minimal, Dark). Nao altera a logica de negocio das paginas. -->
+    <script>window.catalogConfig = window.catalogConfig || { theme: 'dark' };</script>
+    <script src="js/services/configService.js" defer></script>
+    <script src="js/theme/theme-manager.js" defer></script>
+    <script src="js/theme/visual-engine.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --gold: #caa85c;
+            --gold-hover: #b5944a;
+            --bg: #070707;
+            --card: #111111;
+            --border: #1e1e24;
+        }
+
+        body {
+            background: var(--bg);
+            color: #f4f4f5;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .serif  { font-family: 'Cinzel', serif; }
+        .gold   { color: var(--gold); }
+
+        /* CARD GALVÂNICA */
+        .galv-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: relative;
+            transition: border-color .25s ease, transform .25s ease, box-shadow .25s ease;
+        }
+        .galv-card:hover {
+            border-color: rgba(202,168,92,.4);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(202,168,92,.08);
+        }
+
+        /* Selo parceiro */
+        .galv-card::before {
+            content: "✦ Parceiro Abella";
+            position: absolute;
+            top: -11px;
+            right: 18px;
+            background: linear-gradient(135deg, #caa85c, #e8c87a);
+            color: #3a2a00;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1.5px solid rgba(255,245,200,.5);
+            box-shadow: 0 4px 12px rgba(202,168,92,.35);
+            animation: selo-pulse 3s infinite ease-in-out;
+        }
+        @keyframes selo-pulse {
+            0%,100% { box-shadow: 0 4px 12px rgba(202,168,92,.35); }
+            50%      { box-shadow: 0 4px 20px rgba(202,168,92,.65); }
+        }
+
+        /* Logo da galvânica */
+        .galv-logo {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border-radius: 1rem;
+            overflow: hidden;
+            padding: 8px;
+        }
+        .galv-logo img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Info */
+        .galv-info { flex: 1; }
+        .galv-info h3 {
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: .5rem;
+        }
+        .galv-info .info-row {
+            display: flex;
+            gap: .5rem;
+            font-size: .75rem;
+            color: #a1a1aa;
+            margin-bottom: .35rem;
+            line-height: 1.4;
+        }
+        .galv-info .info-row strong {
+            color: #d4d4d8;
+            min-width: 72px;
+            flex-shrink: 0;
+        }
+        .galv-slogan {
+            font-size: .7rem;
+            color: #71717a;
+            font-style: italic;
+            margin-top: .6rem;
+            padding-top: .6rem;
+            border-top: 1px solid #1e1e24;
+            line-height: 1.5;
+        }
+
+        /* Botão WhatsApp */
+        .btn-whats {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            background: linear-gradient(135deg, #25d366, #128c7e);
+            color: #fff;
+            font-size: .7rem;
+            font-weight: 800;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            padding: .65rem 1.25rem;
+            border-radius: 999px;
+            text-decoration: none;
+            transition: opacity .2s, transform .2s;
+            box-shadow: 0 4px 14px rgba(18,140,126,.2);
+        }
+        .btn-whats:hover { opacity: .9; transform: translateY(-1px); }
+
+        /* BANNER PARCEIRO GOLD */
+        .banner-gold {
+            border-radius: 1.5rem;
+            overflow: hidden;
+            border: 1px solid rgba(202,168,92,.2);
+        }
+        .banner-gold img { width: 100%; height: auto; display: block; }
+
+        /* SCROLL */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #caa85c; border-radius: 2px; }
+
+        /* FADE IN */
+        .fade-in { animation: fade .4s ease forwards; }
+        @keyframes fade { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    </style>
+</head>
+
+<body class="pb-16">
+
+<!-- BANNER TOPO -->
+<div id="banner" class="hidden border-b border-[#caa85c]/20 bg-gradient-to-r from-[#1a1407] via-black to-[#1a1407]">
+    <div class="max-w-7xl mx-auto px-4 py-3 text-center">
+        <p id="bannerTexto" class="gold font-black uppercase tracking-[.25em] text-xs"></p>
+    </div>
+</div>
+
+<!-- HEADER -->
+<header class="sticky top-0 z-50 border-b border-[#1e1e24] bg-black/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 md:px-6">
+        <div class="h-20 flex items-center justify-between gap-4">
+
+            <!-- Logo + Nome -->
+            <a href="index.html" class="flex items-center gap-3 min-w-0 group">
+                <div class="w-11 h-11 md:w-12 md:h-12 rounded-2xl overflow-hidden bg-white border border-[#caa85c]/20 flex items-center justify-center shrink-0">
+                    <span id="logoFallback" class="serif text-black font-bold text-xl">A</span>
+                    <img id="logoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
+                </div>
+                <div class="min-w-0">
+                    <h1 id="nomeLoja" class="serif gold text-sm md:text-xl font-bold uppercase tracking-[.18em] leading-tight truncate whitespace-nowrap">Abella Joias</h1>
+                    <p id="sloganLoja" class="text-zinc-400 text-[9px] md:text-[11px] uppercase tracking-[.12em] font-bold leading-tight mt-0.5 whitespace-nowrap">Atacado de Joias no Bruto</p>
+                </div>
+            </a>
+
+            <!-- Botão voltar -->
+            <a href="index.html"
+               class="shrink-0 h-10 px-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#caa85c]/40 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[.15em] text-zinc-300 hover:text-white transition-all whitespace-nowrap">
+                ← Voltar à Loja
+            </a>
+
+        </div>
+    </div>
+</header>
+
+<!-- HERO -->
+<section class="border-b border-[#1e1e24] bg-zinc-950/30">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-16 text-center">
+        <span class="inline-flex items-center gap-2 text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 font-black px-4 py-1.5 rounded-full uppercase tracking-[.2em] mb-4">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            Logística Integrada — Limeira/SP
+        </span>
+        <h2 class="serif text-2xl md:text-5xl font-black text-white tracking-tight mt-2">
+            Galvânicas Parceiras
+        </h2>
+        <p class="text-zinc-400 text-sm md:text-base leading-relaxed mt-4 max-w-2xl mx-auto">
+            Compre no bruto e entregamos direto na galvânica da sua preferência em Limeira.
+            <span class="gold font-semibold block mt-1">Frete grátis para compras acima de R$100.</span>
+        </p>
+
+        <!-- Stats -->
+        <div class="flex items-center justify-center gap-6 mt-8 flex-wrap">
+            <div class="text-center">
+                <p id="statTotal" class="text-2xl font-black gold">14</p>
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-0.5">Parceiros</p>
+            </div>
+            <div class="w-px h-8 bg-zinc-800"></div>
+            <div class="text-center">
+                <p class="text-2xl font-black text-emerald-400">Diária</p>
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-0.5">Coleta</p>
+            </div>
+            <div class="w-px h-8 bg-zinc-800"></div>
+            <div class="text-center">
+                <p class="text-2xl font-black text-white">Limeira</p>
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mt-0.5">Cidade</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- GRID DE GALVÂNICAS -->
+<main class="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14 fade-in">
+
+    <!-- Galvânicas do Firebase (dinâmicas) -->
+    <div id="grid-dinamico" class="hidden">
+        <div class="flex items-center gap-3 mb-6">
+            <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+            <h3 class="serif text-lg uppercase tracking-wider gold">Parceiros Cadastrados</h3>
+        </div>
+        <div id="grid-galvanicas-firebase" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"></div>
+    </div>
+
+    <!-- Título das fixas -->
+    <div class="flex items-center gap-3 mb-8">
+        <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+        <h3 class="serif text-lg uppercase tracking-wider gold">Galvânicas Credenciadas</h3>
+    </div>
+
+    <!-- GRID FIXO (dados estáticos) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="grid-fixo">
+
+        <!-- Franco Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/unnamed-5-300x129.jpg" alt="Franco Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Franco Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>R: José Motta dos Santos, 113 - Jd. Adélia Cavicchia Grotta</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 3451-6246</span></div>
+                <p class="galv-slogan">Mais de 20 anos de tradição — banhos de Ouro, Prata, Ródio Branco e Negro</p>
+            </div>
+            <a href="https://wa.me/5519984202600?text=Olá%20Franco.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Costa Rica Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/IMG-20251018-WA0045-300x150.jpg" alt="Costa Rica Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Costa Rica Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Mário Lima, 241 - Jd. Anhanguera</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 98876-0429</span></div>
+                <p class="galv-slogan">Especializada em banhos folheados com foco em acabamento de alto padrão</p>
+            </div>
+            <a href="https://wa.me/5519988760429?text=Olá%20Costa%20Rica.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Queen Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/IMG-20251018-WA0042-300x150.jpg" alt="Queen Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Queen Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Arthur Salibe, 589 - Jd. Nova Suíça</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 99970-2895</span></div>
+                <p class="galv-slogan">Galvanoplastia com os melhores produtos e controles de qualidade</p>
+            </div>
+            <a href="https://wa.me/5519999702895?text=Olá%20Queen.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Atenas Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/IMG-20251018-WA0039.jpg" alt="Atenas Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Atenas Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Tancre Leitão, 34 - Jd. Aeroporto</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 98122-6758</span></div>
+                <p class="galv-slogan">Foco em atendimento comercial especializado para o mercado de semijoias</p>
+            </div>
+            <a href="https://wa.me/5519981226758?text=Olá%20Atenas.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- 4D Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/unnamed-7-300x232.jpg" alt="4D Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>4D Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Giocondo Negro, 316 - Vila Rosana</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 3451-9651</span></div>
+                <p class="galv-slogan">Soluções completas para fabricantes e empreendedores de semijoias</p>
+            </div>
+            <a href="https://wa.me/5519971796251?text=Olá%204D.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Sul Folheados -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/unnamed-6-300x121.jpg" alt="Sul Folheados" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Sul Folheados</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Major Francisco Barcellos, 453 - Jd. Glória</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 98324-2156</span></div>
+                <p class="galv-slogan">Transformar semijoias com credibilidade e pontualidade</p>
+            </div>
+            <a href="https://wa.me/5519983242156?text=Olá%20Sul%20Folheados.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Viena Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/Imagem-do-WhatsApp-de-2025-10-14-as-21.47.01_f45b979f.jpg" alt="Viena Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Viena Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua João Bozza, 496 - Jd. Maria Buchi Modeneis</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 99216-2908</span></div>
+                <p class="galv-slogan">Serviços de galvanoplastia para semijoias</p>
+            </div>
+            <a href="https://wa.me/5519992162908?text=Olá%20Viena.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Fiori Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/IMG-20251018-WA0041-300x150.jpg" alt="Fiori Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Fiori Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Desemb. Júlio César da Silveira, 1352 - Vila Claudia</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 3704-4590</span></div>
+                <p class="galv-slogan">Rapidez de entrega e qualidade no acabamento</p>
+            </div>
+            <a href="https://wa.me/5519983148195?text=Olá%20Fiori.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Amazon Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/IMG-20251018-WA0043-300x150.jpg" alt="Amazon Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Amazon Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Clarindo Peixoto de Oliveira, 201 - Jd. Maria Buchi Modeneis</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 3792-9005</span></div>
+                <p class="galv-slogan">Banhos em ouro, prata, ródio e verniz Diamond — profissionalismo e compromisso</p>
+            </div>
+            <a href="https://wa.me/5519988839762?text=Olá%20Amazon.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Reluz Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/IMG-20251018-WA0044-300x150.jpg" alt="Reluz Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Reluz Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Av. Mal. Artur da Costa e Silva, 708 – Jd. Glória</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 99380-6585</span></div>
+                <p class="galv-slogan">Três décadas de experiência — banhos duradouros e confiáveis</p>
+            </div>
+            <a href="https://wa.me/5519998893690?text=Olá%20Reluz.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Magri Folheados -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/Imagem-do-WhatsApp-de-2025-10-18-as-12.02.21_cf8ffdba-300x150.jpg" alt="Magri Folheados" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Magri Folheados</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Roque Vaz Gonçalves, 88 - Jd. Boa Vista</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 3442-4287</span></div>
+                <p class="galv-slogan">Qualidade, honestidade e compromisso — banho de ouro 18k e folheados</p>
+            </div>
+            <a href="https://wa.me/5519996942050?text=Olá%20Magri%20Folheados.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Banho do Salvador -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/72dpi_0002_LOGO_SALVADOR_HORIZONTAL_FUNDO_CLARO.png" alt="Banho do Salvador" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Banho do Salvador</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Paraná, 698 - Vila Rocha</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 99817-3164</span></div>
+                <p class="galv-slogan">Há mais de 30 anos como referência em galvanoplastia</p>
+            </div>
+            <a href="https://wa.me/5519998173164?text=Olá%20Banho%20do%20Salvador.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- Fenix Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/IMG-20251018-WA0038.jpg" alt="Fenix Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>Fenix Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Maria Tomeo de Almeida, 94 - Jd. Glória</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 98829-2435</span></div>
+                <p class="galv-slogan">Serviços de banho para o setor de semijoias com foco em qualidade</p>
+            </div>
+            <a href="https://wa.me/5519988292435?text=Olá%20Fenix.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+        <!-- ORO Galvânica -->
+        <div class="galv-card">
+            <div class="galv-logo">
+                <img src="https://abellajoias.com.br/wp-content/uploads/2025/11/Imagem-do-WhatsApp-de-2025-11-06-as-18.41.47_4b4afb87.jpg" alt="ORO Galvânica" loading="lazy">
+            </div>
+            <div class="galv-info">
+                <h3>ORO Galvânica</h3>
+                <div class="info-row"><strong>Endereço:</strong><span>Rua Pércio Machado Gomes, 243 - Jd. Anhanguera</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 98907-2453</span></div>
+                <div class="info-row"><strong>Telefone:</strong><span>(19) 97171-6251</span></div>
+                <p class="galv-slogan">Excelência em banhos galvânicos para semijoias de alto padrão</p>
+            </div>
+            <a href="https://wa.me/5519989072453?text=Olá%20ORO.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F" target="_blank" rel="noopener" class="btn-whats">
+                📲 Falar no WhatsApp
+            </a>
+        </div>
+
+    </div><!-- fim grid fixo -->
+
+    <!-- BANNER PARCEIRO GOLD -->
+    <div class="mt-14 banner-gold">
+        <a href="https://wa.me/5519988207658?text=Olá%2C%20tenho%20interesse%20em%20ser%20Parceiro%20GOLD%20Abella%20Joias."
+           target="_blank" rel="noopener">
+            <img src="https://abellajoias.com.br/wp-content/uploads/2025/10/Gemini_Generated_Image_56v05c56v05c56v0.png"
+                 alt="Seja nosso Parceiro GOLD — Abella Joias"
+                 loading="lazy">
+        </a>
+    </div>
+
+</main>
+
+<!-- SCRIPTS -->
+<script src="js/firebase/firebase-config.js"></script>
+
+<script>
+// ================================================================
+// FIREBASE — carrega settings (logo, nome, slogan, banner)
+// ================================================================
+function _db() {
+    return window.db || (typeof firebase !== 'undefined' ? firebase.database() : null);
+}
+
+function _path(node) {
+    return typeof window.getAbellaPath === 'function'
+        ? window.getAbellaPath(node)
+        : `abella/${node}`;
+}
+
+async function carregarSettings() {
+    try {
+        const db = _db();
+        if (!db) return;
+
+        const snap = await db.ref(_path('settings')).once('value');
+        if (!snap.exists()) return;
+        const cfg = snap.val() || {};
+
+        // Nome e slogan
+        if (cfg.name   && document.getElementById('nomeLoja'))   document.getElementById('nomeLoja').innerText   = cfg.name;
+        if (cfg.slogan && document.getElementById('sloganLoja')) document.getElementById('sloganLoja').innerText = cfg.slogan;
+
+        // Logo
+        const logoUrl = (cfg.logoUrl || cfg.logo || '').trim();
+        const logoImg  = document.getElementById('logoImg');
+        const logoFb   = document.getElementById('logoFallback');
+        if (logoUrl && logoImg) {
+            logoImg.src    = logoUrl;
+            logoImg.onload = () => { logoImg.classList.remove('hidden'); if (logoFb) logoFb.classList.add('hidden'); };
+            logoImg.onerror = () => { logoImg.classList.add('hidden'); };
+        }
+
+        // Banner topo
+        const banner = document.getElementById('banner');
+        if (banner && cfg.bannerAtivo && cfg.bannerTexto) {
+            const bt = document.getElementById('bannerTexto');
+            if (bt) bt.innerText = cfg.bannerTexto;
+            banner.classList.remove('hidden');
+        }
+    } catch(e) {
+        console.warn('[galvanicas.html] Erro ao carregar settings:', e);
+    }
+}
+
+// ================================================================
+// FIREBASE — carrega galvânicas dinâmicas (galvanicaService opcional)
+// ================================================================
+async function carregarGalvanicasFirebase() {
+    try {
+        const db = _db();
+        if (!db) return;
+
+        const snap = await db.ref(_path('galvanicas')).once('value');
+        if (!snap.exists()) return;
+
+        const dados = snap.val() || {};
+        const lista = Object.entries(dados)
+            .map(([id, g]) => ({ id, ...g }))
+            .filter(g => g.paused !== true);
+
+        if (lista.length === 0) return;
+
+        const grid     = document.getElementById('grid-galvanicas-firebase');
+        const wrapper  = document.getElementById('grid-dinamico');
+        if (!grid || !wrapper) return;
+
+        grid.innerHTML = '';
+        lista.forEach(g => {
+            const nome     = g.name    || g.nome    || 'Galvânica';
+            const endereco = g.address || g.endereco || '';
+            const telefone = g.phone   || g.telefone || '';
+            const whatsNum = (g.whatsapp || g.phone || '').replace(/\D/g, '');
+            const logo     = g.logo    || g.imagem  || '';
+            const slogan   = g.slogan  || g.descricao || '';
+
+            const card = document.createElement('div');
+            card.className = 'galv-card';
+            card.innerHTML = `
+                ${logo ? `<div class="galv-logo"><img src="${logo}" alt="${nome}" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : ''}
+                <div class="galv-info">
+                    <h3>${nome}</h3>
+                    ${endereco ? `<div class="info-row"><strong>Endereço:</strong><span>${endereco}</span></div>` : ''}
+                    ${telefone ? `<div class="info-row"><strong>Telefone:</strong><span>${telefone}</span></div>` : ''}
+                    ${slogan   ? `<p class="galv-slogan">${slogan}</p>` : ''}
+                </div>
+                ${whatsNum ? `
+                <a href="https://wa.me/${whatsNum}?text=Olá%20${encodeURIComponent(nome)}.%20Sou%20cliente%20da%20Abella%20Joias%20e%20gostaria%20de%20iniciar%20uma%20parceria%20para%20os%20serviços%20de%20banho%20de%20semijoias.%20Qual%20o%20melhor%20contato%3F"
+                   target="_blank" rel="noopener" class="btn-whats">
+                    📲 Falar no WhatsApp
+                </a>` : ''}
+            `;
+            grid.appendChild(card);
+        });
+
+        wrapper.classList.remove('hidden');
+
+        // Atualiza o stat de total
+        const total = lista.length + document.querySelectorAll('#grid-fixo .galv-card').length;
+        const statEl = document.getElementById('statTotal');
+        if (statEl) statEl.innerText = total;
+
+    } catch(e) {
+        console.warn('[galvanicas.html] Nó galvanicas não encontrado no Firebase:', e);
+    }
+}
+
+// ================================================================
+// INIT
+// ================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    await carregarSettings();
+    await carregarGalvanicasFirebase();
+});
+</script>
+
+</body>
+</html>
+"prep: estrutura de temas + visual engine (sem alterar lógica)"

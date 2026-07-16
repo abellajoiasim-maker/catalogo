@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="description" content="Abella Joias — Plataforma corporativa premium de pedidos. Compre joias com clareza, segurança e total transparência.">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Abella Joias • Catálogo Premium">
+    <meta property="og:description" content="Plataforma inteligente de pedidos. Veja pesos, descontos, parcelamentos e economia em tempo real.">
+    <meta property="og:type" content="website">
+    <title>Abella Joias • Catálogo Premium</title>
+
+    <!-- ABELLA VISUAL ENGINE — preparacao para temas futuros (Modern, Luxury, Minimal, Dark). Nao altera a logica de negocio das paginas. -->
+    <script>window.catalogConfig = window.catalogConfig || { theme: 'dark' };</script>
+    <script src="js/services/configService.js" defer></script>
+    <script src="js/theme/theme-manager.js" defer></script>
+    <script src="js/theme/visual-engine.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        :root {
+            --gold: #caa85c;
+            --gold-dark: #a8863a;
+            --gold-light: #e2c07a;
+            --bg: #070707;
+            --bg-card: #111111;
+            --bg-card2: #0d0d0d;
+            --border: #1e1e1e;
+            --border-gold: rgba(202,168,92,.25);
+            --text-muted: #888;
+            --text-dim: #444;
+            --emerald: #34d399;
+        }
+
+        body {
+            background: var(--bg);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .serif { font-family: 'Cinzel', serif; }
+        .gold  { color: var(--gold); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold-dark); }
+
+        .glass {
+            background: rgba(7,7,7,.88);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .hero-gradient {
+            background:
+                radial-gradient(ellipse at top left, rgba(61,47,21,.55) 0%, transparent 45%),
+                radial-gradient(ellipse at bottom right, rgba(26,26,26,.4) 0%, transparent 45%);
+        }
+
+        /* Estilização Refatorada do Grid Premium de Produtos */
+        .cat-card {
+            background: transparent;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform .35s cubic-bezier(.22,1,.36,1);
+        }
+        .cat-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .img-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            border-radius: 1.25rem;
+            border: 1px solid var(--border);
+            background: #0d0d0d;
+            transition: border-color .3s, box-shadow .3s;
+        }
+        .cat-card:hover .img-container {
+            border-color: var(--gold);
+            box-shadow: 0 12px 40px rgba(202,168,92,.15);
+        }
+        .cat-card img {
+            transition: transform .5s cubic-bezier(.22,1,.36,1);
+        }
+        .cat-card:hover img {
+            transform: scale(1.04);
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 1.25rem 1.5rem;
+            transition: border-color .25s;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 2rem;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        #busca:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            background: rgba(202,168,92,.08);
+            border: 1px solid rgba(202,168,92,.18);
+            border-radius: 999px;
+            padding: .35rem 1rem;
+        }
+
+        #abellaLogoContainer {
+            width: 44px; height: 44px;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #ffffff;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(202,168,92,.2);
+            box-shadow: 0 4px 20px rgba(202,168,92,.12);
+            flex-shrink: 0;
+        }
+
+        @media (max-width:768px){
+            .stat-card { padding: .75rem !important; border-radius:1rem !important; }
+            .badge { font-size: .65rem; }
+            .hero-gradient .serif { font-size: 2rem !important; line-height: 1.1 !important; }
+            .hero-gradient p.text-zinc-400 { font-size: .9rem !important; line-height: 1.5 !important; }
+            .hero-gradient a { height: 44px !important; padding: 0 16px !important; font-size: .65rem !important; border-radius: 12px !important; }
+            .img-container { border-radius: 1rem !important; }
+            #busca { height: 48px !important; font-size: .85rem !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <header class="sticky top-0 z-50 border-b border-zinc-900 glass">
+        <div class="max-w-7xl mx-auto px-4 md:px-6">
+            <div class="h-14 md:h-20 flex items-center justify-between gap-2 md:gap-4">
+                <div class="flex items-center gap-4">
+                    <div id="abellaLogoContainer" class="flex items-center justify-center">
+                        <span id="abellaLogoFallback" class="text-black font-black text-xl serif">A</span>
+                        <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-contain hidden">
+                    </div>
+                    <div>
+                        <h1 id="nome" class="serif gold text-lg md:text-2xl uppercase tracking-[.25em]">Abella Joias</h1>
+                        <p id="slogan" class="text-[10px] text-zinc-500 uppercase tracking-[.25em] mt-1">Catálogo Premium</p>
+                    </div>
+                </div>
+
+                <nav class="hidden lg:flex items-center gap-3">
+                    <a href="galvanicas.html" class="h-12 px-5 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-[#caa85c] transition-all flex items-center gap-3 text-sm font-bold">
+                        ✨ Galvânicas Parceiras <span class="gold text-xs">Limeira →</span>
+                    </a>
+                    <a href="carrinho.html" class="h-12 px-5 rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.15em] flex items-center gap-3">
+                        <span>🛒</span> <span id="cart-count">0</span> <span class="opacity-60">|</span> <span id="cart-total">R$ 0,00</span>
+                    </a>
+                </nav>
+                <a href="carrinho.html" class="lg:hidden w-12 h-12 rounded-2xl bg-[#caa85c] text-black flex items-center justify-center font-black">🛒</a>
+            </div>
+        </div>
+    </header>
+
+    <div id="banner" class="hidden border-b border-[#caa85c]/20 bg-gradient-to-r from-[#1a1407] via-black to-[#1a1407]">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-4 text-center">
+            <p id="bannerTexto" class="gold font-black uppercase tracking-[.25em] text-xs md:text-sm"></p>
+        </div>
+    </div>
+
+<section class="hero-gradient border-b border-zinc-900">
+    <div class="w-full aspect-video overflow-hidden relative">
+        <img id="heroBannerImg"
+             src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20251123_210246643.jpg?alt=media"
+             alt="Banner Abella Joias"
+             loading="lazy"
+             class="w-full h-full object-cover object-center"
+             onerror="this.parentNode.style.display='none'">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#070707] pointer-events-none"></div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10">
+        <div class="fade-up">
+            <div class="badge mb-3">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span class="text-[11px] uppercase tracking-[.25em] gold font-black">Catálogo Corporativo Online</span>
+            </div>
+            <h2 class="serif text-3xl md:text-5xl leading-tight">Sua próxima coleção<br>começa aqui.</h2>
+            <p class="text-zinc-400 text-sm md:text-base leading-relaxed mt-3 max-w-2xl">
+                Plataforma inteligente de pedidos. Compre com clareza, segurança e total transparência.
+            </p>
+
+            <div class="grid grid-cols-3 gap-3 mt-6 max-w-lg">
+                <div class="stat-card">
+                    <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Parcelamento</p>
+                    <p id="parcelamento" class="text-xs md:text-base font-black gold mt-1 md:mt-2">6x sem juros</p>
+                </div>
+                <div class="stat-card">
+                    <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">PIX</p>
+                    <p id="pix" class="text-base font-black text-emerald-400 mt-2">10% OFF</p>
+                </div>
+                <div class="stat-card">
+                    <p class="text-[10px] uppercase tracking-[.2em] text-zinc-500 font-bold">Atendimento</p>
+                    <a id="whats" href="#" target="_blank" rel="noopener noreferrer"
+                       class="text-xs md:text-base font-black gold mt-1 md:mt-2 block">WhatsApp</a>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <a href="#categorias"
+                   class="inline-flex h-11 md:h-14 px-6 md:px-8 rounded-xl md:rounded-2xl bg-[#caa85c] text-black font-black uppercase tracking-[.2em] items-center justify-center hover:bg-[#b5944a] transition-colors">
+                    Explorar Categorias
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+    <section class="border-b border-zinc-900">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-8">
+            <div class="bg-[#111] border border-[#1e1e1e] rounded-[2rem] p-4 md:p-6">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1 relative">
+                        <input type="search" id="busca" placeholder="Buscar categorias comerciais..." autocomplete="off" class="w-full h-14 rounded-2xl bg-black border border-zinc-800 px-5 pl-14 text-white text-sm transition-colors">
+                        <span class="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">🔎</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main id="categorias" class="py-12 md:py-16">
+        <div class="max-w-7xl mx-auto px-4 md:px-6">
+            <div id="loading" class="text-center py-10">
+                <div class="inline-flex items-center gap-3 text-[#caa85c] font-bold">
+                    <span class="animate-pulse">⏳</span><span>Carregando categorias...</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+                <div>
+                    <p class="gold uppercase tracking-[.25em] text-xs font-black">Catálogo Premium</p>
+                    <h2 class="serif text-2xl md:text-5xl mt-2 md:mt-3">Categorias Oficiais</h2>
+                </div>
+            </div>
+
+            <div id="grid-categorias" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"></div>
+
+            <div id="no-result" class="hidden empty-state">
+                <p class="text-3xl mb-4">🔎</p>
+                <h3 class="text-xl font-black text-zinc-400">Nenhuma categoria encontrada.</h3>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/utils/money.js"></script>
+    <script src="js/utils/peso.js"></script>
+    <script src="js/utils/storage.js"></script>
+    <script src="js/services/carrinhoService.js"></script>
+    <script src="js/utils/image-helper.js"></script>
+    <script src="js/utils/imagens.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const grid = document.getElementById('grid-categorias');
+            const loading = document.getElementById('loading');
+            const noResult = document.getElementById('no-result');
+
+            if (typeof db === 'undefined') {
+                console.error('Instância global "db" do Firebase não encontrada. Verifique o arquivo firebase-config.js');
+                if (loading) {
+                    loading.innerHTML = `<p class="text-xs uppercase text-rose-500 font-mono py-4">⚠️ Conexão com o banco de dados não configurada.</p>`;
+                }
+                return;
+            }
+
+            try {
+                const [snapSettings, snapCategories] = await Promise.all([
+                    db.ref('abella/settings').once('value').catch(err => { console.warn('Erro ao carregar settings:', err); return null; }),
+                    db.ref('abella/categories').once('value').catch(err => { console.warn('Erro ao carregar categories:', err); return null; })
+                ]);
+
+                if (snapSettings && snapSettings.exists()) {
+                    const cfg = snapSettings.val();
+                    
+                    const logoUrlReal = cfg.logoUrl || cfg.logo;
+                    if (logoUrlReal) {
+                        const img = document.getElementById('abellaLogoImg');
+                        const fallback = document.getElementById('abellaLogoFallback');
+                        if (img) {
+                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
+                            img.classList.remove('hidden');
+                            if(fallback) fallback.classList.add('hidden');
+                        }
+                    }
+
+                    const heroBannerUrlReal = cfg.bannerHeroUrl || cfg.heroBannerUrl;
+                    if (heroBannerUrlReal) {
+                        const hero = document.getElementById('heroBannerImg');
+                        if (hero) hero.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(heroBannerUrlReal) : heroBannerUrlReal;
+                    }
+                    
+                    if (cfg.name) {
+                        const elemNome = document.getElementById('nome');
+                        if (elemNome) elemNome.innerText = cfg.name;
+                    }
+                    if (cfg.slogan) {
+                        const elemSlogan = document.getElementById('slogan');
+                        if (elemSlogan) elemSlogan.innerText = cfg.slogan;
+                    }
+                    if (cfg.parcelas) {
+                        const elemParc = document.getElementById('parcelamento');
+                        const elemFloatParc = document.getElementById('float-parcelas');
+                        if (elemParc) elemParc.innerText = `${cfg.parcelas}x sem juros`;
+                        if (elemFloatParc) elemFloatParc.innerText = `Até ${cfg.parcelas}x sem juros`;
+                    }
+                    if (cfg.pix) {
+                        const elemPix = document.getElementById('pix');
+                        const elemFloatPix = document.getElementById('float-pix');
+                        if (elemPix) elemPix.innerText = `${cfg.pix}% OFF`;
+                        if (elemFloatPix) elemFloatPix.innerText = `PIX ${cfg.pix}% OFF`;
+                    }
+                    if (cfg.whatsapp) {
+                        const linkWhats = `https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}`;
+                        const elemWhats = document.getElementById('whats');
+                        if (elemWhats) elemWhats.href = linkWhats;
+                    }
+                }
+
+                let listaCategorias = [];
+
+                if (snapCategories && snapCategories.exists() && snapCategories.val()) {
+                    const dadosCat = snapCategories.val();
+                    if (Array.isArray(dadosCat)) {
+                        listaCategorias = dadosCat.filter(Boolean);
+                    } else {
+                        listaCategorias = Object.entries(dadosCat).map(([key, val]) => ({
+                            slug: key,
+                            ...val
+                        }));
+                    }
+                } 
+                
+                // Remove categorias pausadas no painel administrativo antes de exibir no grid
+                listaCategorias = listaCategorias.filter(cat => cat && cat.paused !== true);
+
+                if (listaCategorias.length === 0) {
+                    const snapProdutos = await db.ref('abella/products').once('value').catch(() => null);
+                    if (snapProdutos && snapProdutos.exists() && snapProdutos.val()) {
+                        const prods = Object.values(snapProdutos.val());
+                        const categoriasUnicas = [...new Set(prods.map(p => p.categoria || p.category).filter(Boolean))];
+                        listaCategorias = categoriasUnicas.map(cat => ({
+                            nome: cat,
+                            slug: cat.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g,'-'),
+                            imagem: prods.find(p => (p.categoria || p.category) === cat)?.image || prods.find(p => (p.categoria || p.category) === cat)?.imagem || ''
+                        }));
+                    }
+                }
+
+                if (loading) loading.classList.add('hidden');
+
+                if (listaCategorias.length === 0) {
+                    if (noResult) noResult.classList.remove('hidden');
+                    return;
+                }
+
+                if (noResult) noResult.classList.add('hidden');
+                grid.innerHTML = '';
+                const fragmento = document.createDocumentFragment();
+
+                listaCategorias.forEach(cat => {
+                    const nomeCat = cat.nome || cat.name || 'Joia';
+                    const slugCat = cat.slug || cat.categorySlug || nomeCat.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g,'-');
+
+                    let linkBanco = cat.imagem || cat.image || '';
+                    if (linkBanco && typeof resolverImagemFirebase !== 'undefined') {
+                        linkBanco = resolverImagemFirebase(linkBanco);
+                    }
+
+                    const imgCat = linkBanco ? linkBanco : (typeof obterImagemCategoriaGrid !== 'undefined' ? obterImagemCategoriaGrid(slugCat) : 'images/fallback.jpg');
+                    const div = document.createElement('div');
+
+                    div.className = "cat-card flex flex-col group";
+                    div.onclick = () => {
+                        window.location.href = `subcategorias.html?categoria=${encodeURIComponent(slugCat)}`;
+                    };
+
+                    div.innerHTML = `
+                        <div class="img-container">
+                            <img src="${imgCat}" alt="${nomeCat}" loading="lazy" onerror="this.src='images/fallback.jpg'" class="w-full h-full object-cover">
+                        </div>
+                        <div class="pt-3 px-1 flex flex-col text-left">
+                            <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Coleção Premium</p>
+                            <h3 class="serif text-zinc-100 text-sm md:text-base font-medium tracking-wide uppercase mt-0.5 group-hover:text-[#caa85c] transition-colors duration-200 truncate">${nomeCat}</h3>
+                        </div>
+                    `;
+                    fragmento.appendChild(div);
+                });
+
+                grid.appendChild(fragmento);
+
+                const inputBusca = document.getElementById('busca');
+                if (inputBusca) {
+                    inputBusca.addEventListener('input', (e) => {
+                        const termo = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                        const cards = grid.querySelectorAll('.cat-card');
+                        let encontrouAlgum = false;
+
+                        cards.forEach(card => {
+                            const elemH3 = card.querySelector('h3');
+                            if (elemH3) {
+                                const textoCard = elemH3.innerText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                                if (textoCard.includes(termo)) {
+                                    card.classList.remove('hidden');
+                                    encontrouAlgum = true;
+                                } else {
+                                    card.classList.add('hidden');
+                                }
+                            }
+                        });
+
+                        if (encontrouAlgum) {
+                            if (noResult) noResult.classList.add('hidden');
+                        } else {
+                            if (noResult) noResult.classList.remove('hidden');
+                        }
+                    });
+                }
+
+            } catch (error) {
+                console.error('Falha crítica de inicialização:', error);
+                if (loading) {
+                    loading.classList.remove('hidden');
+                    loading.innerHTML = `<p class="text-xs uppercase text-rose-500 font-mono py-4">⚠️ Erro técnico ao processar banco de dados local.</p>`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

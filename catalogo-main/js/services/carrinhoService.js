@@ -1,0 +1,206 @@
+/**
+ * Abella Joias - PMA V8
+ * Service: carrinhoService
+ * Descrição: Gerenciamento unificado, seguro e reativo do carrinho de compras integrado ao sistema de descontos.
+ */
+
+(function () {
+    'use strict';
+
+    // Chave de isolamento do LocalStorage para multi-lojas
+    const STORAGE_KEY = 'pma_v8_carrinho_itens';
+
+    /**
+     * Recupera os itens do carrinho com tratamento seguro de erros
+     * @returns {Array} Lista de itens do carrinho
+     */
+    function obterItens() {
+        try {
+            const dados = localStorage.getItem(STORAGE_KEY);
+            return dados ? JSON.parse(dados) : [];
+        } catch (error) {
+            console.error('[carrinhoService] Erro ao ler itens do localStorage:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Salva o estado atual do carrinho no LocalStorage
+     * @param {Array} itens - Lista de itens atualizada
+     */
+    function salvarItens(itens) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(itens));
+        } catch (error) {
+            console.error('[carrinhoService] Erro ao salvar itens no localStorage:', error);
+        }
+    }
+
+    // Instanciação do serviço com os métodos públicos
+    const carrinhoService = {
+        
+        /**
+         * Retorna todos os itens do carrinho com os cálculos de desconto atualizados dinamicamente
+         */
+        listar: function () {
+            const itens = obterItens();
+            
+            // Injeta em tempo real os descontos vigentes do ecossistema para cada item
+            return itens.map(item => {
+                if (window.descontoService && typeof window.descontoService.calcularDesconto === 'function') {
+                    const infoDesconto = window.descontoService.calcularDesconto(item);
+                    return {
+                        ...item,
+                        precoVendaUnitario: infoDesconto.precoFinal,
+                        possuiDesconto: infoDesconto.descontoAplicado > 0,
+                        badgePromocional: infoDesconto.badge
+                    };
+                }
+                // Fallback de segurança caso o descontoService falhe ou não tenha carregado
+                return {
+                    ...item,
+                    precoVendaUnitario: parseFloat(item.preco) || 0,
+                    possuiDesconto: false,
+                    badgePromocional: null
+                };
+            });
+        },
+
+        /**
+         * Retorna a lista de itens brutos (utilizado por componentes externos)
+         */
+        obterItens: function() {
+            return obterItens();
+        },
+
+        /**
+         * Adiciona um produto ou incrementa sua quantidade caso já exista (considerando a variação)
+         * @param {Object} produto - Objeto do produto a ser adicionado
+         * @param {number} quantidade - Quantidade desejada (padrão 1)
+         * @param {string} variacao - String contendo o nome da variação/grade (opcional)
+         */
+        adicionar: function (produto, quantidade = 1, variacao = '') {
+            if (!produto || (!produto.id && !produto.codigo && !produto.sku)) {
+                console.error('[carrinhoService] Produto inválido para adição.');
+                return false;
+            }
+
+            const pId = produto.id || produto.codigo || produto.sku;
+            const labelVariacao = variacao ? variacao.trim() : '';
+            const itens = obterItens();
+
+            // Busca por ID E pela variação exata para não somar itens de grades diferentes na mesma linha
+            const index = itens.findIndex(item => item.id === pId && (item.variacao || '') === labelVariacao);
+
+            if (index !== -1) {
+                itens[index].quantidade += quantidade;
+            } else {
+                // Guarda apenas os dados brutos essenciais estruturais no storage
+                itens.push({
+                    id: pId,
+                    name: produto.nome || produto.name,
+                    preco: parseFloat(produto.preco) || 0,
+                    category: produto.categoriaId || produto.category || produto.categoria || '',
+                    subcategory: produto.subcategoriaId || produto.subcategory || produto.subcategoria || '',
+                    image: produto.imagem || produto.image || '',
+                    peso: parseFloat(produto.peso || 0),
+                    quantidade: quantidade,
+                    variacao: labelVariacao // Persistência estável da grade escolhida
+                });
+            }
+
+            salvarItens(itens);
+            console.info(`[carrinhoService] Produto ID ${pId} (${labelVariacao || 'Sem Variação'}) adicionado/atualizado.`);
+            return true;
+        },
+
+        /**
+         * Remove completamente um item do carrinho pelo ID e sua variação específica
+         * @param {string|number} produtoId - ID do produto
+         * @param {string} variacao - Nome da variação para diferenciação
+         */
+        remover: function (produtoId, variacao = '') {
+            let itens = obterItens();
+            const tamanhoOriginal = itens.length;
+            const labelVariacao = variacao ? variacao.trim() : '';
+            
+            itens = itens.filter(item => !(item.id === produtoId && (item.variacao || '') === labelVariacao));
+
+            if (itens.length < tamanhoOriginal) {
+                salvarItens(itens);
+                console.info(`[carrinhoService] Produto ID ${produtoId} (${labelVariacao}) removido do carrinho.`);
+                return true;
+            }
+            return false;
+        },
+
+        /**
+         * Atualiza diretamente a quantidade de um item específico filtrado por variação
+         */
+        atualizarQuantidade: function (produtoId, novaQuantidade, variacao = '') {
+            if (novaQuantidade <= 0) {
+                return this.remover(produtoId, variacao);
+            }
+
+            const itens = obterItens();
+            const labelVariacao = variacao ? variacao.trim() : '';
+            const item = itens.find(item => item.id === produtoId && (item.variacao || '') === labelVariacao);
+
+            if (item) {
+                item.quantidade = novaQuantidade;
+                salvarItens(itens);
+                console.info(`[carrinhoService] Quantidade do produto ID ${produtoId} (${labelVariacao}) atualizada para ${novaQuantidade}.`);
+                return true;
+            }
+            return false;
+        },
+
+        /**
+         * Limpa totalmente os itens salvos no carrinho
+         */
+        limpar: function () {
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+                console.info('[carrinhoService] Carrinho esvaziado com sucesso.');
+                return true;
+            } catch (error) {
+                console.error('[carrinhoService] Erro ao limpar carrinho:', error);
+                return false;
+            }
+        },
+
+        /**
+         * Calcula o total de itens (soma das quantidades) presentes no carrinho
+         */
+        obterContagem: function () {
+            return obterItens().reduce((total, item) => total + (parseInt(item.quantidade) || 0), 0);
+        },
+
+        /**
+         * Calcula o valor BRUTO total acumulado (sem qualquer tipo de desconto)
+         */
+        obterTotalBruto: function () {
+            return obterItens().reduce((total, item) => {
+                const precoOriginal = parseFloat(item.preco) || 0;
+                return total + (precoOriginal * (parseInt(item.quantidade) || 0));
+            }, 0);
+        },
+
+        /**
+         * Calcula o valor LÍQUIDO total real de cobrança aplicando as regras do descontoService
+         */
+        obterTotal: function () {
+            const itensComDesconto = this.listar();
+            return itensComDesconto.reduce((total, item) => {
+                return total + (item.precoVendaUnitario * (parseInt(item.quantidade) || 0));
+            }, 0);
+        }
+    };
+
+    // Aplicação do congelamento estrito (Imutabilidade de Runtime)
+    Object.freeze(carrinhoService);
+
+    // Exposição segura no escopo global (window)
+    window.carrinhoService = carrinhoService;
+
+})();

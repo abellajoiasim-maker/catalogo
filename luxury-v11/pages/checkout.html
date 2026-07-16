@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Finalizar Pedido • Abella Joias</title>
+
+    <script>window.AURORA_FALLBACK_IMAGE = '../../images/fallback.jpg';</script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <link rel="stylesheet" href="../components/index.css">
+    <style>
+        .cart-line{ display:flex; align-items:center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); }
+        .cart-line img{ width:48px; height:48px; border-radius: var(--radius-sm); object-fit:cover; }
+        .summary-row{ display:flex; justify-content:space-between; font-size:13px; padding-block: var(--space-2); color: var(--color-secondary); }
+        .summary-total{ display:flex; justify-content:space-between; font-family: var(--font-heading); font-size:22px; padding-top: var(--space-4); margin-top: var(--space-3); border-top: 1px solid var(--color-border); }
+        .payment-option{
+            border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4);
+            cursor: pointer; display:flex; align-items:center; justify-content:space-between;
+            transition: border-color var(--duration-fast) var(--ease);
+        }
+        .payment-option:has(input:checked){ border-color: var(--color-primary); background: var(--color-primary-tint, rgba(var(--color-primary-rgb),.06)); }
+
+        #print-checkout-a4{ display:none; }
+        @media print{
+            body *{ visibility: hidden; }
+            #print-checkout-a4, #print-checkout-a4 *{ visibility: visible; }
+            #print-checkout-a4{ display:block; position:absolute; top:0; left:0; width:100%; padding:12mm; color:#000; }
+            #print-checkout-a4 table{ width:100%; border-collapse:collapse; font-size:10px; }
+            #print-checkout-a4 th, #print-checkout-a4 td{ border:1px solid #999; padding:4px 6px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="aurora-header">
+        <div class="bar aurora-container">
+            <nav class="nav-links"><a href="index.html">Home</a></nav>
+            <div class="brand">
+                <div class="brand-logo" id="abellaLogoContainer">
+                    <span id="abellaLogoFallback" style="font-family:var(--font-heading); font-weight:600;">A</span>
+                    <img id="abellaLogoImg" src="" alt="Abella Joias" style="width:100%;height:100%;object-fit:contain;display:none;">
+                </div>
+                <div><p class="brand-name" id="nomeLojaHeader">Abella</p></div>
+            </div>
+            <div class="actions">
+                <a href="carrinho.html" class="aurora-btn aurora-btn--ghost aurora-btn--sm">← Sacola</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="banner" class="hidden" style="background:var(--color-text); text-align:center; padding-block: var(--space-3);">
+        <p id="bannerTexto" style="color: var(--color-primary); font-weight:700; text-transform:uppercase; letter-spacing:.2em; font-size:12px;"></p>
+    </div>
+
+    <main class="aurora-container">
+        <div id="breadcrumb-slot"></div>
+
+        <div class="aurora-grid" style="margin-top: var(--space-5);">
+
+            <div style="grid-column: span 7;">
+                <section class="aurora-card" style="cursor:default; padding: var(--space-6); margin-bottom: var(--space-5); box-shadow:none; border:1px solid var(--color-border);">
+                    <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom:1px solid var(--color-border);">Dados do Cliente</h2>
+                    <div class="aurora-grid">
+                        <div style="grid-column: span 12;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">Nome Completo *</label>
+                                <input type="text" id="cli-nome" class="aurora-input" placeholder="Ex: João Silva">
+                            </div>
+                        </div>
+                        <div style="grid-column: span 6;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">WhatsApp *</label>
+                                <input type="text" id="cli-whats" class="aurora-input" placeholder="(19) 99999-9999">
+                            </div>
+                        </div>
+                        <div style="grid-column: span 6;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">Cidade do Cliente *</label>
+                                <input type="text" id="cli-cidade" class="aurora-input" placeholder="Ex: Limeira - SP">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="aurora-card" style="cursor:default; padding: var(--space-6); margin-bottom: var(--space-5); box-shadow:none; border:1px solid var(--color-border);">
+                    <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom:1px solid var(--color-border);">Entrega</h2>
+                    <div class="aurora-grid">
+                        <div style="grid-column: span 12;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">Nome do Local de Entrega *</label>
+                                <input type="text" id="ent-local" class="aurora-input" placeholder="Ex: Loja Centro Limeira">
+                            </div>
+                        </div>
+                        <div style="grid-column: span 8;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">Rua *</label>
+                                <input type="text" id="ent-rua" class="aurora-input" placeholder="Ex: Rua Boa Morte">
+                            </div>
+                        </div>
+                        <div style="grid-column: span 4;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">Nº *</label>
+                                <input type="text" id="ent-numero" class="aurora-input" placeholder="150">
+                            </div>
+                        </div>
+                        <div style="grid-column: span 6;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">Bairro *</label>
+                                <input type="text" id="ent-bairro" class="aurora-input" placeholder="Centro">
+                            </div>
+                        </div>
+                        <div style="grid-column: span 6;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">Cidade *</label>
+                                <input type="text" id="ent-cidade" class="aurora-input" placeholder="Limeira">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="aurora-card" style="cursor:default; padding: var(--space-6); box-shadow:none; border:1px solid var(--color-border);">
+                    <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom:1px solid var(--color-border);">Pagamento</h2>
+                    <div class="aurora-grid">
+                        <div style="grid-column: span 6;">
+                            <label class="payment-option">
+                                <div>
+                                    <p style="font-weight:700;">PIX</p>
+                                    <p id="labelDescontoPix" style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">5% de desconto</p>
+                                </div>
+                                <input type="radio" name="formaPagamento" value="PIX" checked onchange="atualizarResumoAurora()">
+                            </label>
+                        </div>
+                        <div style="grid-column: span 6;">
+                            <label class="payment-option">
+                                <div>
+                                    <p style="font-weight:700;">Cartão</p>
+                                    <p id="labelParcelasCartao" style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">Em até 6x</p>
+                                </div>
+                                <input type="radio" name="formaPagamento" value="Cartão" onchange="atualizarResumoAurora()">
+                            </label>
+                        </div>
+                        <div style="grid-column: span 12;">
+                            <div class="aurora-field">
+                                <label class="aurora-label">Observações</label>
+                                <textarea id="obs-pedido" class="aurora-textarea" placeholder="Informações adicionais..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div style="grid-column: span 5;">
+                <div class="aurora-card" style="cursor:default; padding: var(--space-6); box-shadow: var(--shadow-md); border:1px solid var(--color-border); position:sticky; top:100px;">
+                    <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom:1px solid var(--color-border);">Resumo</h2>
+
+                    <div id="lista-itens-checkout" style="max-height:280px; overflow-y:auto;"></div>
+
+                    <div style="margin-top: var(--space-5); padding-top: var(--space-4); border-top:1px solid var(--color-border);">
+                        <div class="summary-row"><span>Quantidade</span><span id="res-qtd">0 pçs</span></div>
+                        <div class="summary-row"><span>Peso Total</span><span id="res-peso">0,00 grs.</span></div>
+                        <div class="summary-row"><span>Subtotal</span><span id="res-subtotal">R$ 0,00</span></div>
+                        <div class="summary-row hidden" id="box-desconto" style="color:var(--color-success);"><span>Desconto PIX</span><span id="res-desconto">- R$ 0,00</span></div>
+                        <div class="summary-row"><span>Frete</span><span id="res-frete">R$ 0,00</span></div>
+                        <div class="summary-total"><span>Total</span><span id="res-total" style="color:var(--color-primary-hover);">R$ 0,00</span></div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--space-3); margin: var(--space-5) 0;">
+                        <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="verRomaneioAurora()">👁️ Ver Romaneio</button>
+                        <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="window.print()">🖨️ Imprimir</button>
+                    </div>
+
+                    <button class="aurora-btn aurora-btn--primary aurora-btn--block aurora-btn--lg" id="btnFinalizar" onclick="finalizarPedidoAurora(event)">
+                        🚀 Finalizar Pedido via WhatsApp
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="aurora-footer">
+        <div class="aurora-container">
+            <div class="bottom">
+                <span>© Abella Joias — atacado de joias no bruto</span>
+                <a href="carrinho.html" style="color:var(--color-secondary);">← Voltar para a sacola</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal único (Sprint 1) — usado pro Romaneio -->
+    <div class="aurora-modal-overlay" id="auroraModal">
+        <div class="aurora-modal" role="dialog" aria-modal="true">
+            <div class="header"><h3 class="title" id="auroraModalTitle"></h3><button class="close-btn" onclick="AuroraModal.close()">✕</button></div>
+            <div class="body" id="auroraModalBody"></div>
+            <div class="footer" id="auroraModalFooter"></div>
+        </div>
+    </div>
+
+    <!-- Espelho de impressão A4 -->
+    <div id="print-checkout-a4">
+        <h2 id="print-nome-loja" style="font-family: serif;">ABELLA JOIAS</h2>
+        <p>Data: <span id="print-data"></span></p>
+        <table style="margin-top:8px;">
+            <tr><th>Item</th><th>Qtd</th><th>Peso</th><th>Subtotal</th></tr>
+            <tbody id="print-itens-tbody"></tbody>
+        </table>
+        <p style="margin-top:8px;"><strong>Total: <span id="print-total"></span></strong></p>
+    </div>
+
+    <script src="../../js/firebase/firebase-config.js"></script>
+    <script src="../../js/utils/money.js"></script>
+    <script src="../../js/utils/peso.js"></script>
+    <script src="../../js/utils/storage.js"></script>
+    <script src="../../js/services/carrinhoService.js"></script>
+    <script src="../../js/utils/image-helper.js"></script>
+    <script src="../../js/utils/imagens.js"></script>
+
+    <script src="../components/modal.js"></script>
+    <script src="../engine/render.js"></script>
+
+    <script>
+        // ==================================================================
+        // Réplica fiel da lógica de js/services/checkout.js (a que realmente
+        // roda em produção, por sobrescrever a versão antiga inline).
+        // Mesmos nomes de campos de configuração, mesma fórmula de desconto/
+        // frete, mesmo formato de payload salvo em abella/orders.
+        // ==================================================================
+
+        let _configCache = null;
+
+        function fmtMoeda(v) {
+            return window.MoneyUtils?.format ? window.MoneyUtils.format(v) : `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
+        }
+        function fmtPeso(g) {
+            if (window.PesoUtils?.formatarPeso) return PesoUtils.formatarPeso(g);
+            const n = parseFloat(g) || 0;
+            return n >= 1000 ? (n / 1000).toFixed(2).replace('.', ',') + ' Kg.' : n.toFixed(2).replace('.', ',') + ' grs.';
+        }
+        function resolverImg(url) {
+            if (!url) return window.AURORA_FALLBACK_IMAGE;
+            return (typeof resolverImagemFirebase !== 'undefined') ? resolverImagemFirebase(url) : url;
+        }
+
+        async function carregarConfigAurora() {
+            if (_configCache) return _configCache;
+            try {
+                const snap = await db.ref('abella/settings').once('value');
+                _configCache = snap.exists() ? snap.val() : {};
+            } catch (e) {
+                console.warn('Falha ao carregar settings:', e);
+                _configCache = {};
+            }
+            return _configCache;
+        }
+
+        function itensNormalizados() {
+            const raw = (window.carrinhoService ? carrinhoService.obterItens() : []) || [];
+            return raw.map(item => {
+                const qtd = parseInt(item.quantidade || 0);
+                const preco = parseFloat(item.preco || item.price || 0);
+                const peso = parseFloat(item.peso || 0);
+                return {
+                    id: item.id || '',
+                    nome: item.name || item.nome || 'Produto',
+                    imagem: item.image || item.imagem || '',
+                    preco, peso, quantidade: qtd,
+                    subtotal: preco * qtd,
+                    pesoTotal: peso * qtd,
+                    variacao: item.variacao || ''
+                };
+            });
+        }
+
+        async function atualizarResumoAurora() {
+            const cfg = await carregarConfigAurora();
+            const descontoPix = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
+            const freteFixo = parseFloat(cfg.freteFixo || cfg.frete || 0);
+            const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
+
+            const itens = itensNormalizados();
+            const lista = document.getElementById('lista-itens-checkout');
+
+            if (itens.length === 0) {
+                lista.innerHTML = `<p style="font-size:12px;color:var(--color-secondary);text-align:center;padding:var(--space-4) 0;">Nenhum item no carrinho.</p>`;
+            } else {
+                lista.innerHTML = itens.map(item => `
+                    <div class="cart-line">
+                        <img src="${resolverImg(item.imagem)}" onerror="this.src='${window.AURORA_FALLBACK_IMAGE}'">
+                        <div style="flex:1; min-width:0;">
+                            <p style="font-size:12px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.nome}</p>
+                            ${item.variacao ? `<p style="font-size:10px; color:var(--color-primary-hover);">🔹 ${item.variacao}</p>` : ''}
+                            <p style="font-size:10px; color:var(--color-secondary);">${item.quantidade} pçs • ${fmtPeso(item.pesoTotal)}</p>
+                        </div>
+                        <span style="font-size:12px; font-weight:700; color:var(--color-primary-hover);">${fmtMoeda(item.subtotal)}</span>
+                    </div>
+                `).join('');
+            }
+
+            const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
+            const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
+            const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+
+            const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
+            const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+            const frete = subtotal >= freteGratis ? 0 : freteFixo;
+            const total = subtotal - desconto + frete;
+
+            document.getElementById('box-desconto').classList.toggle('hidden', desconto === 0);
+            document.getElementById('labelDescontoPix').innerText = `${descontoPix}% de desconto`;
+            document.getElementById('labelParcelasCartao').innerText = `Em até ${cfg.maxInstallments || cfg.parcelas || 6}x`;
+
+            document.getElementById('res-qtd').innerText = `${qtdTotal} pçs`;
+            document.getElementById('res-peso').innerText = fmtPeso(pesoTotal);
+            document.getElementById('res-subtotal').innerText = fmtMoeda(subtotal);
+            document.getElementById('res-desconto').innerText = `- ${fmtMoeda(desconto)}`;
+            document.getElementById('res-frete').innerText = frete === 0 ? 'Grátis' : fmtMoeda(frete);
+            document.getElementById('res-total').innerText = fmtMoeda(total);
+        }
+
+        function verRomaneioAurora() {
+            const itens = itensNormalizados();
+            if (!itens.length) { alert('Nenhum item no carrinho para gerar romaneio.'); return; }
+
+            const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+            const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
+            const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
+
+            const linhas = itens.map((item, idx) => `
+                <div style="display:flex; justify-content:space-between; padding: var(--space-2) 0; border-bottom:1px solid var(--color-border); font-size:13px;">
+                    <span>${String(idx + 1).padStart(2, '0')}. ${item.nome}${item.variacao ? ' — ' + item.variacao : ''} <span style="color:var(--color-secondary);">(x${item.quantidade})</span></span>
+                    <span style="font-weight:700; color:var(--color-primary-hover);">${fmtMoeda(item.subtotal)}</span>
+                </div>
+            `).join('');
+
+            const bodyHTML = `
+                <div>${linhas}</div>
+                <div style="margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--color-border); font-size:13px;">
+                    <div style="display:flex;justify-content:space-between;"><span>Total de peças</span><strong>${qtdTotal} pçs</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Peso total</span><strong>${fmtPeso(pesoTotal)}</strong></div>
+                    <div style="display:flex;justify-content:space-between;font-size:17px;margin-top:var(--space-2);"><span>Subtotal</span><strong style="color:var(--color-primary-hover);">${fmtMoeda(subtotal)}</strong></div>
+                </div>
+            `;
+
+            AuroraModal.open({ title: 'Romaneio do Pedido', bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
+        }
+
+        async function finalizarPedidoAurora(event) {
+            if (event) event.preventDefault();
+
+            const itens = itensNormalizados();
+            if (!itens.length) { alert('Seu carrinho está vazio!'); return; }
+
+            const nome = document.getElementById('cli-nome')?.value.trim();
+            const whats = document.getElementById('cli-whats')?.value.trim();
+            const cidadeCli = document.getElementById('cli-cidade')?.value.trim();
+            const localEnt = document.getElementById('ent-local')?.value.trim();
+            const ruaEnt = document.getElementById('ent-rua')?.value.trim();
+            const numEnt = document.getElementById('ent-numero')?.value.trim();
+            const bairroEnt = document.getElementById('ent-bairro')?.value.trim();
+            const cidadeEnt = document.getElementById('ent-cidade')?.value.trim();
+            const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
+            const obs = document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma';
+
+            if (!nome || !whats || !cidadeCli || !localEnt || !ruaEnt || !numEnt || !bairroEnt || !cidadeEnt) {
+                alert('Por favor, preencha todos os campos obrigatórios (*).');
+                return;
+            }
+
+            const btn = document.getElementById('btnFinalizar');
+            if (btn) { btn.disabled = true; btn.innerText = '⏳ Processando...'; }
+
+            try {
+                const cfg = await carregarConfigAurora();
+                const descontoPix = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
+                const freteFixo = parseFloat(cfg.freteFixo || cfg.frete || 0);
+                const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
+                const whatsDestino = cfg.whatsapp || '5519999999999';
+                const nomeLoja = cfg.name || 'Abella Joias';
+
+                const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+                const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
+                const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
+                const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+                const frete = subtotal >= freteGratis ? 0 : freteFixo;
+                const total = subtotal - desconto + frete;
+
+                const pedidoId = 'PED-' + Date.now();
+
+                // Mesmo payload exato que o checkout.js real grava — todos os campos
+                // duplicados existem de propósito, é o que o pedidos.html espera ler.
+                const dadosPedido = {
+                    id: pedidoId,
+                    idPedido: pedidoId,
+
+                    cliente: nome,
+                    nome: nome,
+                    whats: whats,
+                    whatsapp: whats,
+                    contato: whats,
+                    cidade: cidadeCli,
+                    cidadeCliente: cidadeCli,
+
+                    entrega: `${localEnt} — ${ruaEnt}, ${numEnt}, ${bairroEnt}, ${cidadeEnt}`,
+                    enderecoEntrega: { local: localEnt, rua: ruaEnt, numero: numEnt, bairro: bairroEnt, cidade: cidadeEnt },
+
+                    pagamento: formaPag,
+                    formaPagamento: formaPag,
+
+                    subtotal, desconto, frete, total,
+                    valorTotal: total,
+                    pesoTotal,
+                    totalPecas: qtdTotal,
+                    qtd: qtdTotal,
+
+                    observacoes: obs,
+
+                    itens: itens.map(i => ({
+                        id: i.id, nome: i.nome, name: i.nome, variacao: i.variacao,
+                        preco: i.preco, price: i.preco, precoFinal: i.preco,
+                        quantidade: i.quantidade, subtotal: i.subtotal,
+                        peso: i.peso, pesoTotal: i.pesoTotal,
+                        imagem: i.imagem, image: i.imagem
+                    })),
+
+                    status: 'Novo',
+                    dataCriacao: new Date().toISOString(),
+                    data: new Date().toLocaleDateString('pt-BR')
+                };
+
+                if (!window.db) throw new Error('Instância global do Firebase (window.db) não inicializada.');
+                await db.ref(`abella/orders/${pedidoId}`).set(dadosPedido);
+
+                if (window.carrinhoService && typeof carrinhoService.limpar === 'function') {
+                    carrinhoService.limpar();
+                }
+
+                const Q = '\n';
+                let msg = `*Novo Pedido — ${nomeLoja}*${Q}${Q}`;
+                msg += `*ID:* ${pedidoId}${Q}`;
+                msg += `*Cliente:* ${nome}${Q}`;
+                msg += `*WhatsApp:* ${whats}${Q}`;
+                msg += `*Cidade:* ${cidadeCli}${Q}${Q}`;
+                msg += `*─── ITENS ───*${Q}`;
+                itens.forEach(item => {
+                    const varStr = item.variacao ? ` (${item.variacao})` : '';
+                    msg += `▪ ${item.quantidade}x ${item.nome}${varStr} → ${fmtMoeda(item.subtotal)}${Q}`;
+                });
+                msg += `${Q}*─── VALORES ───*${Q}`;
+                msg += `Subtotal: ${fmtMoeda(subtotal)}${Q}`;
+                if (desconto > 0) msg += `Desconto PIX (${descontoPix}%): -${fmtMoeda(desconto)}${Q}`;
+                msg += `Frete: ${frete === 0 ? 'Grátis' : fmtMoeda(frete)}${Q}`;
+                msg += `*Total: ${fmtMoeda(total)}*${Q}${Q}`;
+                msg += `*─── ENTREGA ───*${Q}`;
+                msg += `${localEnt}${Q}${ruaEnt}, ${numEnt} — ${bairroEnt}${Q}${cidadeEnt}${Q}${Q}`;
+                msg += `*Pagamento:* ${formaPag}${Q}`;
+                msg += `*Obs:* ${obs}`;
+
+                const urlWhats = `https://api.whatsapp.com/send?phone=${whatsDestino}&text=${encodeURIComponent(msg)}`;
+                window.open(urlWhats, '_blank');
+                window.location.href = 'index.html';
+
+            } catch (err) {
+                console.error('[Aurora Checkout] Erro ao finalizar pedido:', err);
+                alert('Erro técnico ao processar o pedido. Tente novamente.');
+                if (btn) { btn.disabled = false; btn.innerText = '🚀 Finalizar Pedido via WhatsApp'; }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb([
+                { label: 'Home', href: 'index.html' },
+                { label: 'Sacola', href: 'carrinho.html' },
+                { label: 'Finalizar Pedido' }
+            ]);
+
+            const cfg = await carregarConfigAurora();
+            if (cfg.name) {
+                document.getElementById('nomeLojaHeader').innerText = cfg.name;
+                document.getElementById('print-nome-loja').innerText = cfg.name.toUpperCase();
+            }
+            const logoUrlReal = cfg.logoUrl || cfg.logo;
+            if (logoUrlReal) {
+                const img = document.getElementById('abellaLogoImg');
+                img.src = resolverImg(logoUrlReal);
+                img.style.display = 'block';
+                document.getElementById('abellaLogoFallback').style.display = 'none';
+            }
+            if (cfg.bannerAtivo && cfg.bannerTexto) {
+                document.getElementById('banner').classList.remove('hidden');
+                document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
+            }
+
+            await atualizarResumoAurora();
+        });
+    </script>
+</body>
+</html>

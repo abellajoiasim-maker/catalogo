@@ -171,8 +171,9 @@
                         <div class="summary-total"><span>Total</span><span id="res-total" style="color:var(--color-primary-hover);">R$ 0,00</span></div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--space-3); margin: var(--space-5) 0;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap: var(--space-3); margin: var(--space-5) 0;">
                         <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="verRomaneioAurora()">👁️ Ver Romaneio</button>
+                        <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="prepararImpressao()">📄 Baixar PDF</button>
                         <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="prepararImpressao()">🖨️ Imprimir</button>
                     </div>
 
@@ -205,13 +206,43 @@
 
     <!-- Espelho de impressão A4 -->
     <div id="print-checkout-a4">
-        <h2 id="print-nome-loja" style="font-family: serif;">ABELLA JOIAS</h2>
-        <p>Data: <span id="print-data"></span></p>
-        <table style="margin-top:8px;">
-            <tr><th>Item</th><th>Qtd</th><th>Peso</th><th>Subtotal</th></tr>
+        <h2 id="print-nome-loja" style="font-family: serif; margin-bottom:2px;">ABELLA JOIAS</h2>
+        <p style="font-size:11px;">Documento: <span id="print-doc-id"></span> — <span id="print-doc-data"></span></p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px; font-size:11px;">
+            <div>
+                <strong>Cliente</strong>
+                <p id="print-cli-nome"></p>
+                <p>WhatsApp: <span id="print-cli-whats"></span></p>
+                <p>Cidade: <span id="print-cli-cidade"></span></p>
+            </div>
+            <div>
+                <strong>Entrega</strong>
+                <p id="print-ent-local"></p>
+                <p id="print-ent-endereco"></p>
+                <p>Cidade: <span id="print-ent-cidade"></span></p>
+            </div>
+        </div>
+
+        <table style="margin-top:12px;">
+            <thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Qtd</th><th>Peso</th><th>Subtotal</th></tr></thead>
             <tbody id="print-itens-tbody"></tbody>
         </table>
-        <p style="margin-top:8px;"><strong>Total: <span id="print-total"></span></strong></p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px; font-size:11px;">
+            <div>
+                <p>Peças: <strong id="print-fin-pecas"></strong></p>
+                <p>Peso Total: <strong id="print-fin-peso"></strong></p>
+                <p>Pagamento: <strong id="print-fin-forma"></strong></p>
+                <p>Obs: <span id="print-obs-texto"></span></p>
+            </div>
+            <div style="text-align:right;">
+                <p>Subtotal: <strong id="print-fin-subtotal"></strong></p>
+                <p id="print-fin-linha-desc">Desconto: <strong id="print-fin-desconto" style="color:#0a7a4d;"></strong></p>
+                <p>Frete: <strong id="print-fin-frete"></strong></p>
+                <p style="font-size:14px; margin-top:4px;">TOTAL: <strong id="print-fin-total"></strong></p>
+            </div>
+        </div>
     </div>
 
     <script src="../../js/firebase/firebase-config.js"></script>
@@ -324,51 +355,132 @@
             document.getElementById('res-total').innerText = fmtMoeda(total);
         }
 
-        function prepararImpressao() {
+        function coletarDadosCompletos() {
             const itens = itensNormalizados();
-            if (!itens.length) { alert('Nenhum item no carrinho para imprimir.'); return; }
+            const cfg = _configCache || {};
+
+            const form = {
+                nome: document.getElementById('cli-nome')?.value.trim() || '(Não preenchido)',
+                whats: document.getElementById('cli-whats')?.value.trim() || '(Não preenchido)',
+                cidadeCli: document.getElementById('cli-cidade')?.value.trim() || '(Não preenchido)',
+                local: document.getElementById('ent-local')?.value.trim() || '(Não preenchido)',
+                rua: document.getElementById('ent-rua')?.value.trim() || '',
+                numero: document.getElementById('ent-numero')?.value.trim() || '',
+                bairro: document.getElementById('ent-bairro')?.value.trim() || '',
+                cidadeEnt: document.getElementById('ent-cidade')?.value.trim() || '(Não preenchido)',
+                formaPag: document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX',
+                obs: document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma'
+            };
+
+            const descontoPix = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
+            const freteFixo = parseFloat(cfg.freteFixo || cfg.frete || 0);
+            const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
 
             const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+            const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
+            const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
+            const desconto = form.formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+            const frete = subtotal >= freteGratis ? 0 : freteFixo;
+            const total = subtotal - desconto + frete;
 
-            document.getElementById('print-data').innerText = new Date().toLocaleDateString('pt-BR');
-            document.getElementById('print-itens-tbody').innerHTML = itens.map(item => `
+            return { itens, form, calc: { subtotal, pesoTotal, qtdTotal, desconto, frete, total } };
+        }
+
+        function prepararImpressao() {
+            const dados = coletarDadosCompletos();
+            if (!dados.itens.length) { alert('Nenhum item no carrinho para imprimir.'); return; }
+
+            const nomeLoja = document.getElementById('nomeLojaHeader')?.innerText || 'ABELLA JOIAS';
+            document.getElementById('print-nome-loja').innerText = nomeLoja.toUpperCase();
+
+            const agora = new Date();
+            document.getElementById('print-doc-id').innerText = 'PED-' + Date.now().toString().slice(-8);
+            document.getElementById('print-doc-data').innerText = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR');
+
+            document.getElementById('print-cli-nome').innerText = dados.form.nome;
+            document.getElementById('print-cli-whats').innerText = dados.form.whats;
+            document.getElementById('print-cli-cidade').innerText = dados.form.cidadeCli;
+            document.getElementById('print-ent-local').innerText = dados.form.local;
+            document.getElementById('print-ent-endereco').innerText = dados.form.rua ? `${dados.form.rua}, ${dados.form.numero} - ${dados.form.bairro}` : 'Não informado';
+            document.getElementById('print-ent-cidade').innerText = dados.form.cidadeEnt;
+            document.getElementById('print-obs-texto').innerText = dados.form.obs;
+
+            document.getElementById('print-itens-tbody').innerHTML = dados.itens.map((item, idx) => `
                 <tr>
-                    <td>${item.nome}${item.variacao ? ' — ' + item.variacao : ''}</td>
+                    <td style="text-align:center;">${idx + 1}</td>
+                    <td style="text-align:center; font-family:monospace;">${item.id}</td>
+                    <td>${item.nome}${item.variacao ? ` [Var: ${item.variacao}]` : ''}</td>
                     <td style="text-align:center;">${item.quantidade}</td>
-                    <td style="text-align:center;">${fmtPeso(item.pesoTotal)}</td>
+                    <td style="text-align:right;">${fmtPeso(item.pesoTotal)}</td>
                     <td style="text-align:right;">${fmtMoeda(item.subtotal)}</td>
                 </tr>
             `).join('');
-            document.getElementById('print-total').innerText = fmtMoeda(subtotal);
+
+            document.getElementById('print-fin-pecas').innerText = `${dados.calc.qtdTotal} pçs`;
+            document.getElementById('print-fin-peso').innerText = fmtPeso(dados.calc.pesoTotal);
+            document.getElementById('print-fin-forma').innerText = dados.form.formaPag.toUpperCase();
+            document.getElementById('print-fin-subtotal').innerText = fmtMoeda(dados.calc.subtotal);
+            document.getElementById('print-fin-frete').innerText = dados.calc.frete === 0 ? 'Grátis' : fmtMoeda(dados.calc.frete);
+            document.getElementById('print-fin-total').innerText = fmtMoeda(dados.calc.total);
+
+            const linhaDesc = document.getElementById('print-fin-linha-desc');
+            if (dados.calc.desconto > 0) {
+                linhaDesc.style.display = '';
+                document.getElementById('print-fin-desconto').innerText = `- ${fmtMoeda(dados.calc.desconto)}`;
+            } else {
+                linhaDesc.style.display = 'none';
+            }
 
             window.print();
         }
 
         function verRomaneioAurora() {
-            const itens = itensNormalizados();
-            if (!itens.length) { alert('Nenhum item no carrinho para gerar romaneio.'); return; }
+            const dados = coletarDadosCompletos();
+            if (!dados.itens.length) { alert('Nenhum item no carrinho para gerar romaneio.'); return; }
 
-            const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
-            const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
-            const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
-
-            const linhas = itens.map((item, idx) => `
-                <div style="display:flex; justify-content:space-between; padding: var(--space-2) 0; border-bottom:1px solid var(--color-border); font-size:13px;">
-                    <span>${String(idx + 1).padStart(2, '0')}. ${item.nome}${item.variacao ? ' — ' + item.variacao : ''} <span style="color:var(--color-secondary);">(x${item.quantidade})</span></span>
-                    <span style="font-weight:700; color:var(--color-primary-hover);">${fmtMoeda(item.subtotal)}</span>
+            const linhas = dados.itens.map((item, idx) => `
+                <div style="display:flex; justify-content:space-between; gap:var(--space-3); padding: var(--space-2) 0; border-bottom:1px solid var(--color-border); font-size:12px;">
+                    <span style="flex:1;">
+                        ${String(idx + 1).padStart(2, '0')}. <strong>${item.nome}</strong>
+                        <span style="color:var(--color-secondary); font-family:monospace; font-size:11px;"> (SKU ${item.id})</span>
+                        ${item.variacao ? `<span style="color:var(--color-primary-hover);"> 🔹 ${item.variacao}</span>` : ''}
+                    </span>
+                    <span style="white-space:nowrap;">${item.quantidade} pçs</span>
+                    <span style="white-space:nowrap; font-weight:700; color:var(--color-primary-hover);">${fmtMoeda(item.subtotal)}</span>
                 </div>
             `).join('');
 
             const bodyHTML = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-5); font-size:13px; margin-bottom:var(--space-5); padding-bottom:var(--space-4); border-bottom:1px solid var(--color-border);">
+                    <div>
+                        <p style="font-weight:700; margin-bottom:var(--space-1);">Cliente</p>
+                        <p>${dados.form.nome}</p>
+                        <p style="color:var(--color-secondary);">WhatsApp: ${dados.form.whats}</p>
+                        <p style="color:var(--color-secondary);">Cidade Base: ${dados.form.cidadeCli}</p>
+                    </div>
+                    <div>
+                        <p style="font-weight:700; margin-bottom:var(--space-1);">Entrega</p>
+                        <p>${dados.form.local}</p>
+                        <p style="color:var(--color-secondary);">${dados.form.rua ? `${dados.form.rua}, ${dados.form.numero} — ${dados.form.bairro}` : 'Não informado'}</p>
+                        <p style="color:var(--color-secondary);">Destino: ${dados.form.cidadeEnt}</p>
+                    </div>
+                </div>
                 <div>${linhas}</div>
                 <div style="margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--color-border); font-size:13px;">
-                    <div style="display:flex;justify-content:space-between;"><span>Total de peças</span><strong>${qtdTotal} pçs</strong></div>
-                    <div style="display:flex;justify-content:space-between;"><span>Peso total</span><strong>${fmtPeso(pesoTotal)}</strong></div>
-                    <div style="display:flex;justify-content:space-between;font-size:17px;margin-top:var(--space-2);"><span>Subtotal</span><strong style="color:var(--color-primary-hover);">${fmtMoeda(subtotal)}</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Total de peças</span><strong>${dados.calc.qtdTotal} pçs</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Peso total</span><strong>${fmtPeso(dados.calc.pesoTotal)}</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Forma de pagamento</span><strong>${dados.form.formaPag}</strong></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Subtotal</span><strong>${fmtMoeda(dados.calc.subtotal)}</strong></div>
+                    ${dados.calc.desconto > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Desconto PIX</span><strong>- ${fmtMoeda(dados.calc.desconto)}</strong></div>` : ''}
+                    <div style="display:flex;justify-content:space-between;"><span>Frete</span><strong>${dados.calc.frete === 0 ? 'Grátis' : fmtMoeda(dados.calc.frete)}</strong></div>
+                    <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:var(--space-2);"><span>Total</span><strong style="color:var(--color-primary-hover);">${fmtMoeda(dados.calc.total)}</strong></div>
                 </div>
             `;
 
-            AuroraModal.open({ title: 'Romaneio do Pedido', bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
+            AuroraModal.open({ title: 'Romaneio do Pedido', bodyHTML, footerHTML: `
+                <button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>
+                <button class="aurora-btn aurora-btn--primary" onclick="prepararImpressao()">🖨️ Imprimir</button>
+            ` });
         }
 
         async function finalizarPedidoAurora(event) {

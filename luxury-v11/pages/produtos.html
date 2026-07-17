@@ -12,6 +12,12 @@
 
     <link rel="stylesheet" href="../components/index.css">
     <style>
+        /* Nesta página especificamente: produtos ficam 2 por linha no celular
+           (em vez do padrão "1 por linha" das outras grades) */
+        @media (max-width: 600px){
+            #grid-produtos.aurora-grid{ grid-template-columns: repeat(4, 1fr); gap: var(--space-3); }
+            #grid-produtos .col-3{ grid-column: span 2; }
+        }
         .toast{
             position: fixed; bottom: var(--space-6); left: 50%; transform: translateX(-50%) translateY(20px);
             background: var(--color-text); color: var(--color-bg);
@@ -20,6 +26,12 @@
             transition: opacity var(--duration-base) var(--ease), transform var(--duration-base) var(--ease);
         }
         .toast.is-visible{ opacity: 1; transform: translateX(-50%) translateY(0); }
+        .qty-btn{
+            width:28px; height:28px; border-radius:50%; border:1px solid var(--color-border);
+            background:var(--color-surface); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
+            flex-shrink:0;
+        }
+        .qty-btn:hover{ border-color: var(--color-primary); }
     </style>
 </head>
 <body>
@@ -115,12 +127,59 @@
             const produto = produtosDaPagina.find(p => p.id === produtoId);
             if (!produto) return;
 
-            const temVariacoes = Array.isArray(produto.variacoes) && produto.variacoes.length > 0;
             const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(produto.preco) : `R$ ${produto.preco.toFixed(2)}`;
+
+            const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
+            const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
+
+            let combinacoes = [];
+            if (dizeres.length > 0 && iniciais.length > 0) {
+                dizeres.forEach(d => iniciais.forEach(i => combinacoes.push(`${d} • Letra ${i}`)));
+            } else if (dizeres.length > 0) {
+                combinacoes = [...dizeres];
+            } else if (iniciais.length > 0) {
+                combinacoes = iniciais.map(i => `Letra ${i}`);
+            }
+
+            let gradeHTML;
+            if (combinacoes.length === 0) {
+                gradeHTML = `
+                    <div class="aurora-field">
+                        <label class="aurora-label">Quantidade</label>
+                        <div style="display:flex; align-items:center; gap: var(--space-3);">
+                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
+                            <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="1" min="1"
+                                   data-variacao-nome="" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
+                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                gradeHTML = `
+                    <div class="aurora-field">
+                        <label class="aurora-label">Grade de Variações Disponíveis</label>
+                        <div style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap: var(--space-2);">
+                            ${combinacoes.map((variacao, idx) => `
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
+                                    <span style="font-size:13px;">${variacao}</span>
+                                    <div style="display:flex; align-items:center; gap: var(--space-2);">
+                                        <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
+                                        <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
+                                               data-variacao-nome="${variacao.replace(/"/g, '&quot;')}" oninput="calcularTotalGrade()"
+                                               style="width:52px; text-align:center; height:36px; padding-inline:0;">
+                                        <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <p style="font-size:12px; color:var(--color-secondary); margin-top: var(--space-2);">Total selecionado: <strong id="totalGradeQtd">0</strong> peças</p>
+                    </div>
+                `;
+            }
 
             const bodyHTML = `
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">
-                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1;">
+                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1; border: 1px solid var(--color-border);">
                         <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
                     </div>
                     <div>
@@ -128,20 +187,7 @@
                         <p class="aurora-price" style="font-size:24px;">${precoFmt}</p>
                         ${produto.peso ? `<p style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">Peso: ${produto.peso}g</p>` : ''}
                         ${produto.sku ? `<p style="font-size:12px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
-
-                        ${temVariacoes ? `
-                            <div class="aurora-field" style="margin-top: var(--space-5);">
-                                <label class="aurora-label">Variação</label>
-                                <select class="aurora-select" id="modalVariacao">
-                                    ${produto.variacoes.map(v => `<option value="${typeof v === 'string' ? v : (v.nome || v.label || '')}">${typeof v === 'string' ? v : (v.nome || v.label || '')}</option>`).join('')}
-                                </select>
-                            </div>
-                        ` : ''}
-
-                        <div class="aurora-field" style="margin-top: var(--space-4);">
-                            <label class="aurora-label">Quantidade</label>
-                            <input type="number" class="aurora-input" id="modalQtd" value="1" min="1" style="max-width:120px;">
-                        </div>
+                        <div style="margin-top: var(--space-5);">${gradeHTML}</div>
                     </div>
                 </div>
             `;
@@ -149,18 +195,44 @@
             const footerHTML = `<button class="aurora-btn aurora-btn--primary aurora-btn--block" onclick="confirmarAdicionarCarrinho('${produto.id}')">Adicionar à sacola</button>`;
 
             AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML });
+            calcularTotalGrade();
+        }
+
+        function alterarInputGrade(id, delta) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            const min = parseInt(input.getAttribute('min')) || 0;
+            input.value = Math.max(min, (parseInt(input.value) || 0) + delta);
+            calcularTotalGrade();
+        }
+
+        function calcularTotalGrade() {
+            const total = Array.from(document.querySelectorAll('.input-grade-qtd')).reduce((a, el) => a + (parseInt(el.value) || 0), 0);
+            const totalEl = document.getElementById('totalGradeQtd');
+            if (totalEl) totalEl.innerText = total;
         }
 
         function confirmarAdicionarCarrinho(produtoId) {
             const produto = produtosDaPagina.find(p => p.id === produtoId);
             if (!produto || !window.carrinhoService) return;
 
-            const qtdEl = document.getElementById('modalQtd');
-            const varEl = document.getElementById('modalVariacao');
-            const quantidade = qtdEl ? Math.max(1, parseInt(qtdEl.value) || 1) : 1;
-            const variacao = varEl ? varEl.value : '';
+            const itensParaAdicionar = [];
+            document.querySelectorAll('.input-grade-qtd').forEach(input => {
+                const qtd = parseInt(input.value) || 0;
+                if (qtd > 0) {
+                    itensParaAdicionar.push({ variacao: input.getAttribute('data-variacao-nome') || '', qtd });
+                }
+            });
 
-            carrinhoService.adicionar(produto, quantidade, variacao);
+            if (itensParaAdicionar.length === 0) {
+                alert('Informe a quantidade desejada em pelo menos uma variação.');
+                return;
+            }
+
+            itensParaAdicionar.forEach(item => {
+                carrinhoService.adicionar(produto, item.qtd, item.variacao);
+            });
+
             atualizarContadorSacola();
             AuroraModal.close();
             mostrarToast(`${produto.nome} adicionado à sacola.`);

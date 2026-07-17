@@ -60,6 +60,11 @@
             <div style="display:flex; flex-direction:column; gap:var(--space-2); margin-bottom: var(--space-7);">
                 <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary-hover); font-weight:700;" id="categoriaEyebrow">Coleção</p>
                 <h1 id="categoriaNome" style="font-size:clamp(26px,4.5vw,44px);"></h1>
+                <div style="max-width:420px; margin-top: var(--space-4); position:relative;">
+                    <input type="text" id="busca" placeholder="Buscar produto pelo nome ou SKU..." autocomplete="off"
+                           class="aurora-input" style="padding-left: var(--space-8);">
+                    <span style="position:absolute; left:var(--space-4); top:50%; transform:translateY(-50%); color:var(--color-secondary);">🔎</span>
+                </div>
             </div>
 
             <div id="loading" style="text-align:center; padding: var(--space-6) 0;">
@@ -128,6 +133,19 @@
             if (!produto) return;
 
             const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(produto.preco) : `R$ ${produto.preco.toFixed(2)}`;
+
+            if (produto.vitrine) {
+                const bodyHTML = `
+                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:16/9; border: 1px solid var(--color-border); margin-bottom: var(--space-5);">
+                        <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <p style="font-size:13px; color:var(--color-secondary); line-height:1.7;">
+                        ${produto.legendaVitrine || produto.descricao || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
+                    </p>
+                `;
+                AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
+                return;
+            }
 
             const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
             const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
@@ -260,7 +278,8 @@
                     if (snap.exists()) todos = Object.entries(snap.val()).map(([id, p]) => ({ id, ...p }));
                 }
 
-                let filtrados = todos.filter(p => p && p.ativo !== false && p.paused !== true && p.vitrine !== true);
+                let filtrados = todos.filter(p => p && p.ativo !== false && p.paused !== true);
+                filtrados.sort((a, b) => (b.vitrine === true) - (a.vitrine === true));
 
                 if (categoriaSlug) {
                     filtrados = filtrados.filter(p =>
@@ -298,6 +317,23 @@
                 }).join('');
 
                 if (window.AuroraAnimations) AuroraAnimations.initReveal();
+
+                const inputBusca = document.getElementById('busca');
+                if (inputBusca) {
+                    inputBusca.addEventListener('input', (e) => {
+                        const termo = e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                        const cards = grid.querySelectorAll('.col-3');
+                        let achou = false;
+                        cards.forEach((card, idx) => {
+                            const p = filtrados[idx];
+                            const alvo = `${p.nome || ''} ${p.sku || ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            const visivel = !termo || alvo.includes(termo);
+                            card.style.display = visivel ? '' : 'none';
+                            if (visivel) achou = true;
+                        });
+                        noResult.classList.toggle('hidden', achou);
+                    });
+                }
 
             } catch (error) {
                 console.error('Erro ao carregar produtos:', error);

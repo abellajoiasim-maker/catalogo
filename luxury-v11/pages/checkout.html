@@ -25,9 +25,13 @@
 
         #print-checkout-a4{ display:none; }
         @media print{
-            body *{ visibility: hidden; }
-            #print-checkout-a4, #print-checkout-a4 *{ visibility: visible; }
-            #print-checkout-a4{ display:block; position:absolute; top:0; left:0; width:100%; padding:12mm; color:#000; }
+            body *{ display: none !important; }
+            #print-checkout-a4, #print-checkout-a4 *{ display: revert !important; }
+            #print-checkout-a4{
+                display: block !important;
+                position: static !important;
+                width: 100%; padding: 12mm; color:#000;
+            }
             #print-checkout-a4 table{ width:100%; border-collapse:collapse; font-size:10px; }
             #print-checkout-a4 th, #print-checkout-a4 td{ border:1px solid #999; padding:4px 6px; }
         }
@@ -169,7 +173,7 @@
 
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap: var(--space-3); margin: var(--space-5) 0;">
                         <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="verRomaneioAurora()">👁️ Ver Romaneio</button>
-                        <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="window.print()">🖨️ Imprimir</button>
+                        <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="prepararImpressao()">🖨️ Imprimir</button>
                     </div>
 
                     <button class="aurora-btn aurora-btn--primary aurora-btn--block aurora-btn--lg" id="btnFinalizar" onclick="finalizarPedidoAurora(event)">
@@ -318,6 +322,26 @@
             document.getElementById('res-desconto').innerText = `- ${fmtMoeda(desconto)}`;
             document.getElementById('res-frete').innerText = frete === 0 ? 'Grátis' : fmtMoeda(frete);
             document.getElementById('res-total').innerText = fmtMoeda(total);
+        }
+
+        function prepararImpressao() {
+            const itens = itensNormalizados();
+            if (!itens.length) { alert('Nenhum item no carrinho para imprimir.'); return; }
+
+            const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+
+            document.getElementById('print-data').innerText = new Date().toLocaleDateString('pt-BR');
+            document.getElementById('print-itens-tbody').innerHTML = itens.map(item => `
+                <tr>
+                    <td>${item.nome}${item.variacao ? ' — ' + item.variacao : ''}</td>
+                    <td style="text-align:center;">${item.quantidade}</td>
+                    <td style="text-align:center;">${fmtPeso(item.pesoTotal)}</td>
+                    <td style="text-align:right;">${fmtMoeda(item.subtotal)}</td>
+                </tr>
+            `).join('');
+            document.getElementById('print-total').innerText = fmtMoeda(subtotal);
+
+            window.print();
         }
 
         function verRomaneioAurora() {

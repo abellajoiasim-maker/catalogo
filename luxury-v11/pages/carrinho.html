@@ -22,6 +22,12 @@
             background:var(--color-surface); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
         }
         .qty-btn:hover{ border-color: var(--color-primary); }
+        .qty-input{
+            width: 56px; height: 28px; text-align: center; padding: 0 !important;
+            font-size: 13px; -moz-appearance: textfield;
+        }
+        .qty-input::-webkit-outer-spin-button,
+        .qty-input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
         .summary-row{ display:flex; justify-content:space-between; font-size:14px; padding-block: var(--space-2); color: var(--color-secondary); }
         .summary-total{ display:flex; justify-content:space-between; font-family: var(--font-heading); font-size:22px; padding-top: var(--space-4); margin-top: var(--space-3); border-top: 1px solid var(--color-border); }
         .empty-cart{ text-align:center; padding: var(--space-10) var(--space-5); }
@@ -133,7 +139,9 @@
                             ${item.variacao ? `<p style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">Variação: ${item.variacao}</p>` : ''}
                             <div class="qty-control">
                                 <button class="qty-btn" onclick="alterarQuantidade('${item.id}', '${item.variacao || ''}', ${item.quantidade - 1})">−</button>
-                                <span style="font-size:13px; min-width:20px; text-align:center;">${item.quantidade}</span>
+                                <input type="number" class="aurora-input qty-input" min="1" value="${item.quantidade}"
+                                       onchange="alterarQuantidade('${item.id}', '${item.variacao || ''}', parseInt(this.value) || 1)"
+                                       onkeydown="if(event.key==='Enter'){this.blur();}">
                                 <button class="qty-btn" onclick="alterarQuantidade('${item.id}', '${item.variacao || ''}', ${item.quantidade + 1})">+</button>
                                 <button style="font-size:11px; color:var(--color-danger); background:none; border:none; cursor:pointer; margin-left:var(--space-3);" onclick="removerItem('${item.id}', '${item.variacao || ''}')">Remover</button>
                             </div>

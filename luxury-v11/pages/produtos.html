@@ -277,6 +277,7 @@
             const params = new URLSearchParams(window.location.search);
             const categoriaSlug = (params.get('categoria') || '').toString().trim();
             const subcategoriaSlug = (params.get('subcategoria') || params.get('sub') || '').toString().trim();
+            const buscaInicial = (params.get('busca') || '').toString().trim();
 
             grid.innerHTML = AuroraRender.skeletonGrid(8);
 
@@ -321,12 +322,14 @@
 
                 produtosDaPagina = filtrados;
 
-                document.getElementById('categoriaNome').innerText =
-                    subcategoriaSlug ? subcategoriaSlug.replace(/-/g, ' ') : (categoriaSlug ? categoriaSlug.replace(/-/g, ' ') : 'Todos os produtos');
+                document.getElementById('categoriaNome').innerText = buscaInicial
+                    ? `Resultados para "${buscaInicial}"`
+                    : (subcategoriaSlug ? subcategoriaSlug.replace(/-/g, ' ') : (categoriaSlug ? categoriaSlug.replace(/-/g, ' ') : 'Todos os produtos'));
 
                 const crumbs = [{ label: 'Home', href: 'index.html' }];
                 if (categoriaSlug) crumbs.push({ label: categoriaSlug.replace(/-/g, ' '), href: `subcategorias.html?categoria=${encodeURIComponent(categoriaSlug)}` });
                 if (subcategoriaSlug) crumbs.push({ label: subcategoriaSlug.replace(/-/g, ' ') });
+                if (buscaInicial) crumbs.push({ label: `Busca: ${buscaInicial}` });
                 if (crumbs.length === 1) crumbs.push({ label: 'Produtos' });
                 document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb(crumbs);
 
@@ -368,19 +371,56 @@
 
                 const inputBusca = document.getElementById('busca');
                 if (inputBusca) {
-                    inputBusca.addEventListener('input', (e) => {
-                        const termo = e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                    const normalizar = (txt) => String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+                    // Índice de busca universal: nome, SKU, código, descrição, categoria,
+                    // subcategoria, dizeres e iniciais — tudo num só texto por produto.
+                    const indiceBusca = new Map();
+                    filtrados.forEach(p => {
+                        const partes = [
+                            p.nome, p.sku, p.codigo, p.descricao,
+                            p.categoriaId, p.subcategoriaId,
+                            ...(Array.isArray(p.dizeres) ? p.dizeres : []),
+                            ...(Array.isArray(p.iniciais) ? p.iniciais : [])
+                        ];
+                        indiceBusca.set(p.id, normalizar(partes.filter(Boolean).join(' ')));
+                    });
+
+                    function aplicarFiltroBusca(valor) {
+                        const termo = normalizar(valor).trim();
                         const cards = grid.querySelectorAll('[data-produto-id]');
                         let achou = false;
                         cards.forEach(card => {
-                            const p = filtrados.find(item => item.id === card.getAttribute('data-produto-id'));
+                            const idProduto = card.getAttribute('data-produto-id');
+                            const p = filtrados.find(item => item.id === idProduto);
                             if (!p) return;
-                            const alvo = `${p.nome || ''} ${p.sku || ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            const alvo = indiceBusca.get(idProduto) || '';
                             const visivel = !termo || p._ehVitrine || alvo.includes(termo);
                             card.style.display = visivel ? '' : 'none';
                             if (visivel) achou = true;
                         });
-                        noResult.classList.toggle('hidden', achou);
+                        noResult.classList.toggle('hidden', achou || filtrados.length === 0);
+                    }
+
+                    // Link compartilhável: aplica o termo já vindo da URL (?busca=...)
+                    if (buscaInicial) {
+                        inputBusca.value = buscaInicial;
+                        aplicarFiltroBusca(buscaInicial);
+                    }
+
+                    // Atualiza a URL a cada letra digitada, sem recarregar a página —
+                    // assim, a qualquer momento, o link do navegador pode ser copiado
+                    // e enviado pro cliente com o resultado exato dessa busca.
+                    inputBusca.addEventListener('input', (e) => {
+                        aplicarFiltroBusca(e.target.value);
+
+                        const novaUrl = new URL(window.location.href);
+                        if (e.target.value.trim()) {
+                            novaUrl.searchParams.set('busca', e.target.value.trim());
+                        } else {
+                            novaUrl.searchParams.delete('busca');
+                        }
+                        window.history.replaceState({}, '', novaUrl);
                     });
                 }
 

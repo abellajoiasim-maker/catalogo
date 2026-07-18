@@ -107,10 +107,11 @@
         </section>
 
         <section class="aurora-section" id="categorias">
-            <div style="max-width:480px; margin: 0 auto var(--space-7); position:relative;">
-                <input type="search" id="busca" placeholder="Buscar categorias..." autocomplete="off" class="aurora-input" style="border-radius: var(--radius-xl); padding-left: var(--space-8); height:52px;">
+            <div style="max-width:480px; margin: 0 auto; position:relative;">
+                <input type="search" id="busca" placeholder="Buscar categorias ou produtos (ex: coração)..." autocomplete="off" class="aurora-input" style="border-radius: var(--radius-xl); padding-left: var(--space-8); height:52px;" onkeydown="if(event.key==='Enter'){ window.location.href = 'produtos.html?busca=' + encodeURIComponent(this.value.trim()); }">
                 <span style="position:absolute; left:var(--space-4); top:50%; transform:translateY(-50%); color:var(--color-secondary);">🔎</span>
             </div>
+            <p style="text-align:center; font-size:11px; color:var(--color-secondary); margin: var(--space-2) 0 var(--space-7);">Aperte Enter para buscar produtos em todo o catálogo</p>
 
             <div id="loading" style="text-align:center; padding: var(--space-6) 0;">
                 <p style="color:var(--color-primary-hover); font-weight:600;">⏳ Carregando categorias...</p>
@@ -270,10 +271,18 @@
                             const nomeEl = card.querySelector('.title');
                             const texto = (nomeEl?.innerText || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                             const visivel = texto.includes(termo);
-                            card.closest('[style*="grid-column"]').style.display = visivel ? '' : 'none';
+                            card.closest('.col-4').style.display = visivel ? '' : 'none';
                             if (visivel) achou = true;
                         });
                         noResult.classList.toggle('hidden', achou);
+                    });
+
+                    // Enter na busca da Home: manda pra busca de produtos em todo o
+                    // catálogo (link compartilhável, igual ao produtos.html).
+                    inputBusca.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && inputBusca.value.trim()) {
+                            window.location.href = `produtos.html?busca=${encodeURIComponent(inputBusca.value.trim())}`;
+                        }
                     });
                 }
 

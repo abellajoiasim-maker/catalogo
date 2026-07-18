@@ -12,6 +12,12 @@
 
     <link rel="stylesheet" href="../components/index.css">
     <style>
+        .prod-hero{
+            position: relative; aspect-ratio: 16/9; overflow:hidden;
+            border-radius: var(--radius-lg); margin: var(--space-4) auto var(--space-6);
+            max-width: 860px;
+        }
+        .prod-hero img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
         /* Nesta página especificamente: produtos ficam 2 por linha no celular
            (em vez do padrão "1 por linha" das outras grades) */
         @media (max-width: 600px){
@@ -55,6 +61,10 @@
     <main class="aurora-container">
 
         <div id="breadcrumb-slot"></div>
+
+        <section class="prod-hero hidden" id="produtoBannerWrap" data-aurora-reveal>
+            <img id="produtoBannerImg" src="" alt="" loading="lazy" onerror="this.parentElement.classList.add('hidden')">
+        </section>
 
         <section class="aurora-section" style="padding-top: var(--space-5);">
             <div style="display:flex; flex-direction:column; gap:var(--space-2); margin-bottom: var(--space-7);">
@@ -271,6 +281,19 @@
             grid.innerHTML = AuroraRender.skeletonGrid(8);
 
             try {
+                if (typeof db !== 'undefined') {
+                    const snapSettings = await db.ref('abella/settings').once('value').catch(() => null);
+                    if (snapSettings && snapSettings.exists()) {
+                        const cfg = snapSettings.val();
+                        const urlBannerProd = cfg.bannerProduto || cfg.banner_produto;
+                        if (urlBannerProd) {
+                            const img = document.getElementById('produtoBannerImg');
+                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(urlBannerProd) : urlBannerProd;
+                            document.getElementById('produtoBannerWrap').classList.remove('hidden');
+                        }
+                    }
+                }
+
                 let todos = [];
                 if (typeof produtoService !== 'undefined' && typeof produtoService.listarTodos === 'function') {
                     todos = await produtoService.listarTodos();

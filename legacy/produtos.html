@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Produtos • Abella Joias</title>
+
+    <script>window.AURORA_FALLBACK_IMAGE = './images/fallback.jpg';</script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <link rel="stylesheet" href="components/index.css">
+    <style>
+        .prod-hero{
+            position: relative; aspect-ratio: 16/9; overflow:hidden;
+            border-radius: var(--radius-lg); margin: var(--space-4) auto var(--space-6);
+            max-width: 860px;
+        }
+        .prod-hero img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        /* Nesta página especificamente: produtos ficam 2 por linha no celular
+           (em vez do padrão "1 por linha" das outras grades) */
+        @media (max-width: 600px){
+            #grid-produtos.aurora-grid{ grid-template-columns: repeat(4, 1fr); gap: var(--space-3); }
+            #grid-produtos .col-3{ grid-column: span 2; }
+        }
+        .toast{
+            position: fixed; bottom: var(--space-6); left: 50%; transform: translateX(-50%) translateY(20px);
+            background: var(--color-text); color: var(--color-bg);
+            padding: var(--space-4) var(--space-6); border-radius: var(--radius-md);
+            font-size: 13px; opacity: 0; pointer-events: none; z-index: 200;
+            transition: opacity var(--duration-base) var(--ease), transform var(--duration-base) var(--ease);
+        }
+        .toast.is-visible{ opacity: 1; transform: translateX(-50%) translateY(0); }
+        .qty-btn{
+            width:28px; height:28px; border-radius:50%; border:1px solid var(--color-border);
+            background:var(--color-surface); cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center;
+            flex-shrink:0;
+        }
+        .qty-btn:hover{ border-color: var(--color-primary); }
+    </style>
+</head>
+<body>
+
+    <div class="aurora-header">
+        <div class="bar aurora-container">
+            <nav class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="./galvanicas.html">Galvânicas</a>
+            </nav>
+            <div class="brand">
+                <div class="brand-logo"><span style="font-family:var(--font-heading);font-weight:600;">A</span></div>
+                <div><p class="brand-name">Abella</p></div>
+            </div>
+            <div class="actions">
+                <a href="carrinho.html" class="cart-btn"><span id="cart-count">0</span></a>
+            </div>
+        </div>
+    </div>
+
+    <main class="aurora-container">
+
+        <div id="breadcrumb-slot"></div>
+
+        <section class="prod-hero hidden" id="produtoBannerWrap" data-aurora-reveal>
+            <img id="produtoBannerImg" src="" alt="" loading="lazy" onerror="this.parentElement.classList.add('hidden')">
+        </section>
+
+        <section class="aurora-section" style="padding-top: var(--space-5);">
+            <div style="display:flex; flex-direction:column; gap:var(--space-2); margin-bottom: var(--space-7);">
+                <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary-hover); font-weight:700;" id="categoriaEyebrow">Coleção</p>
+                <h1 id="categoriaNome" style="font-size:clamp(26px,4.5vw,44px);"></h1>
+                <div style="max-width:420px; margin-top: var(--space-4); position:relative;">
+                    <input type="text" id="busca" placeholder="Buscar produto pelo nome ou SKU..." autocomplete="off"
+                           class="aurora-input" style="padding-left: var(--space-8);">
+                    <span style="position:absolute; left:var(--space-4); top:50%; transform:translateY(-50%); color:var(--color-secondary);">🔎</span>
+                </div>
+            </div>
+
+            <div id="loading" style="text-align:center; padding: var(--space-6) 0;">
+                <p style="color:var(--color-primary-hover); font-weight:600;">⏳ Carregando produtos...</p>
+            </div>
+
+            <div id="grid-produtos" class="aurora-grid"></div>
+
+            <div id="no-result" class="hidden" style="grid-column:1/-1; text-align:center; padding: var(--space-8) 0;">
+                <p style="font-size:14px; color:var(--color-secondary);">Nenhum produto encontrado nesta coleção.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="aurora-footer">
+        <div class="aurora-container">
+            <div class="bottom">
+                <span>© Abella Joias — atacado de joias no bruto</span>
+                <a href="index.html" style="color:var(--color-secondary);">← Voltar para a Home</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal único (Sprint 1) -->
+    <div class="aurora-modal-overlay" id="auroraModal">
+        <div class="aurora-modal" role="dialog" aria-modal="true">
+            <div class="header"><h3 class="title" id="auroraModalTitle"></h3><button class="close-btn" onclick="AuroraModal.close()">✕</button></div>
+            <div class="body" id="auroraModalBody"></div>
+            <div class="footer" id="auroraModalFooter"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="./js/firebase/firebase-config.js"></script>
+    <script src="./js/utils/money.js"></script>
+    <script src="./js/utils/peso.js"></script>
+    <script src="./js/utils/storage.js"></script>
+    <script src="./js/services/carrinhoService.js"></script>
+    <script src="./js/services/produtoService.js"></script>
+    <script src="./js/utils/image-helper.js"></script>
+    <script src="./js/utils/imagens.js"></script>
+
+    <script src="components/modal.js"></script>
+    <script src="engine/render.js"></script>
+    <script src="engine/animations.js"></script>
+    <script src="engine/mobile-nav.js"></script>
+
+    <script>
+        let produtosDaPagina = [];
+
+        function mostrarToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('is-visible');
+            setTimeout(() => toast.classList.remove('is-visible'), 2200);
+        }
+
+        function atualizarContadorSacola() {
+            const el = document.getElementById('cart-count');
+            if (el && window.carrinhoService) el.innerText = carrinhoService.obterContagem();
+        }
+
+        function abrirProduto(produtoId) {
+            const produto = produtosDaPagina.find(p => p.id === produtoId);
+            if (!produto) return;
+
+            const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(produto.preco) : `R$ ${produto.preco.toFixed(2)}`;
+
+            const ehVitrine = produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine';
+            if (ehVitrine) {
+                const bodyHTML = `
+                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:16/9; border: 1px solid var(--color-border); margin-bottom: var(--space-5);">
+                        <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <p style="font-size:13px; color:var(--color-secondary); line-height:1.7;">
+                        ${produto.legendaVitrine || produto.descricao || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
+                    </p>
+                `;
+                AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
+                return;
+            }
+
+            const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
+            const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
+
+            let combinacoes = [];
+            if (dizeres.length > 0 && iniciais.length > 0) {
+                dizeres.forEach(d => iniciais.forEach(i => combinacoes.push(`${d} • Letra ${i}`)));
+            } else if (dizeres.length > 0) {
+                combinacoes = [...dizeres];
+            } else if (iniciais.length > 0) {
+                combinacoes = iniciais.map(i => `Letra ${i}`);
+            }
+
+            let gradeHTML;
+            if (combinacoes.length === 0) {
+                gradeHTML = `
+                    <div class="aurora-field">
+                        <label class="aurora-label">Quantidade</label>
+                        <div style="display:flex; align-items:center; gap: var(--space-3);">
+                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
+                            <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="1" min="1"
+                                   data-variacao-nome="" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
+                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                gradeHTML = `
+                    <div class="aurora-field">
+                        <label class="aurora-label">Grade de Variações Disponíveis</label>
+                        <div style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap: var(--space-2);">
+                            ${combinacoes.map((variacao, idx) => `
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
+                                    <span style="font-size:13px;">${variacao}</span>
+                                    <div style="display:flex; align-items:center; gap: var(--space-2);">
+                                        <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
+                                        <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
+                                               data-variacao-nome="${variacao.replace(/"/g, '&quot;')}" oninput="calcularTotalGrade()"
+                                               style="width:52px; text-align:center; height:36px; padding-inline:0;">
+                                        <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <p style="font-size:12px; color:var(--color-secondary); margin-top: var(--space-2);">Total selecionado: <strong id="totalGradeQtd">0</strong> peças</p>
+                    </div>
+                `;
+            }
+
+            const bodyHTML = `
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">
+                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1; border: 1px solid var(--color-border);">
+                        <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <div>
+                        ${produto.descricao ? `<p style="font-size:13px; color:var(--color-secondary); line-height:1.7; margin-bottom: var(--space-4);">${produto.descricao}</p>` : ''}
+                        <p class="aurora-price" style="font-size:24px;">${precoFmt}</p>
+                        ${produto.peso ? `<p style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">Peso: ${produto.peso}g</p>` : ''}
+                        ${produto.sku ? `<p style="font-size:12px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
+                        <div style="margin-top: var(--space-5);">${gradeHTML}</div>
+                    </div>
+                </div>
+            `;
+
+            const footerHTML = `<button class="aurora-btn aurora-btn--primary aurora-btn--block" onclick="confirmarAdicionarCarrinho('${produto.id}')">Adicionar à sacola</button>`;
+
+            AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML });
+            calcularTotalGrade();
+        }
+
+        function alterarInputGrade(id, delta) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            const min = parseInt(input.getAttribute('min')) || 0;
+            input.value = Math.max(min, (parseInt(input.value) || 0) + delta);
+            calcularTotalGrade();
+        }
+
+        function calcularTotalGrade() {
+            const total = Array.from(document.querySelectorAll('.input-grade-qtd')).reduce((a, el) => a + (parseInt(el.value) || 0), 0);
+            const totalEl = document.getElementById('totalGradeQtd');
+            if (totalEl) totalEl.innerText = total;
+        }
+
+        function confirmarAdicionarCarrinho(produtoId) {
+            const produto = produtosDaPagina.find(p => p.id === produtoId);
+            if (!produto || !window.carrinhoService) return;
+
+            const itensParaAdicionar = [];
+            document.querySelectorAll('.input-grade-qtd').forEach(input => {
+                const qtd = parseInt(input.value) || 0;
+                if (qtd > 0) {
+                    itensParaAdicionar.push({ variacao: input.getAttribute('data-variacao-nome') || '', qtd });
+                }
+            });
+
+            if (itensParaAdicionar.length === 0) {
+                alert('Informe a quantidade desejada em pelo menos uma variação.');
+                return;
+            }
+
+            itensParaAdicionar.forEach(item => {
+                carrinhoService.adicionar(produto, item.qtd, item.variacao);
+            });
+
+            atualizarContadorSacola();
+            AuroraModal.close();
+            mostrarToast(`${produto.nome} adicionado à sacola.`);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const grid = document.getElementById('grid-produtos');
+            const loading = document.getElementById('loading');
+            const noResult = document.getElementById('no-result');
+
+            atualizarContadorSacola();
+
+            const params = new URLSearchParams(window.location.search);
+            const categoriaSlug = (params.get('categoria') || '').toString().trim();
+            const subcategoriaSlug = (params.get('subcategoria') || params.get('sub') || '').toString().trim();
+            const buscaInicial = (params.get('busca') || '').toString().trim();
+
+            grid.innerHTML = AuroraRender.skeletonGrid(8);
+
+            try {
+                if (typeof db !== 'undefined') {
+                    const snapSettings = await db.ref('abella/settings').once('value').catch(() => null);
+                    if (snapSettings && snapSettings.exists()) {
+                        const cfg = snapSettings.val();
+                        const urlBannerProd = cfg.bannerProduto || cfg.banner_produto;
+                        if (urlBannerProd) {
+                            const img = document.getElementById('produtoBannerImg');
+                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(urlBannerProd) : urlBannerProd;
+                            document.getElementById('produtoBannerWrap').classList.remove('hidden');
+                        }
+                    }
+                }
+
+                let todos = [];
+                if (typeof produtoService !== 'undefined' && typeof produtoService.listarTodos === 'function') {
+                    todos = await produtoService.listarTodos();
+                } else if (typeof db !== 'undefined') {
+                    const snap = await db.ref('abella/products').once('value');
+                    if (snap.exists()) todos = Object.entries(snap.val()).map(([id, p]) => ({ id, ...p }));
+                }
+
+                let filtrados = todos.filter(p => p && p.ativo !== false && p.paused !== true);
+                filtrados.forEach(p => {
+                    p._ehVitrine = p.vitrine === true || p.isVitrine === true || p.showcase === true || p.tipo === 'vitrine';
+                });
+                filtrados.sort((a, b) => (b._ehVitrine === true) - (a._ehVitrine === true));
+
+                if (categoriaSlug) {
+                    filtrados = filtrados.filter(p =>
+                        String(p.categoriaId || p.category || '').toLowerCase() === categoriaSlug.toLowerCase()
+                    );
+                }
+                if (subcategoriaSlug) {
+                    filtrados = filtrados.filter(p =>
+                        String(p.subcategoriaId || p.subcategory || '').toLowerCase() === subcategoriaSlug.toLowerCase()
+                    );
+                }
+
+                produtosDaPagina = filtrados;
+
+                document.getElementById('categoriaNome').innerText = buscaInicial
+                    ? `Resultados para "${buscaInicial}"`
+                    : (subcategoriaSlug ? subcategoriaSlug.replace(/-/g, ' ') : (categoriaSlug ? categoriaSlug.replace(/-/g, ' ') : 'Todos os produtos'));
+
+                const crumbs = [{ label: 'Home', href: 'index.html' }];
+                if (categoriaSlug) crumbs.push({ label: categoriaSlug.replace(/-/g, ' '), href: `subcategorias.html?categoria=${encodeURIComponent(categoriaSlug)}` });
+                if (subcategoriaSlug) crumbs.push({ label: subcategoriaSlug.replace(/-/g, ' ') });
+                if (buscaInicial) crumbs.push({ label: `Busca: ${buscaInicial}` });
+                if (crumbs.length === 1) crumbs.push({ label: 'Produtos' });
+                document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb(crumbs);
+
+                loading.classList.add('hidden');
+
+                if (filtrados.length === 0) {
+                    grid.innerHTML = '';
+                    noResult.classList.remove('hidden');
+                    return;
+                }
+
+                grid.innerHTML = filtrados.map(p => {
+                    if (p._ehVitrine) {
+                        const imgV = p.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg');
+                        const legenda = p.legendaVitrine || p.descricao || 'Toque para ver em detalhe como esta coleção fica no corpo.';
+                        return `
+                            <div class="col-12" data-produto-id="${p.id}" data-aurora-reveal style="max-width:860px; margin-inline:auto;">
+                                <div class="aurora-card" style="cursor:pointer;" onclick="abrirProduto('${p.id}')">
+                                    <div class="media" style="position:relative; aspect-ratio:16/9; overflow:hidden;">
+                                        <img src="${imgV}" alt="${p.nome}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg'}'">
+                                        <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(30,26,20,.85) 0%, rgba(30,26,20,.1) 55%, transparent 75%);"></div>
+                                        <div style="position:absolute; top:var(--space-4); left:var(--space-4); background:rgba(30,26,20,.7); border:1px solid rgba(var(--color-primary-rgb),.4); border-radius:999px; padding: var(--space-1) var(--space-4);">
+                                            <span style="font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--color-primary); font-weight:700;">✨ Veja como fica</span>
+                                        </div>
+                                        <div style="position:absolute; bottom:0; left:0; right:0; padding: var(--space-5);">
+                                            <p style="font-family:var(--font-heading); color:#fff; font-size:clamp(16px,2.4vw,26px); font-weight:600; max-width:600px;">${p.nome}</p>
+                                            <p style="color:rgba(255,255,255,.8); font-size:13px; margin-top:var(--space-1); max-width:600px;">${legenda}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    const html = AuroraRender.productCard(p, 'abrirProduto');
+                    return `<div class="col-3" data-produto-id="${p.id}" data-aurora-reveal>${html}</div>`;
+                }).join('');
+
+                if (window.AuroraAnimations) AuroraAnimations.initReveal();
+
+                const inputBusca = document.getElementById('busca');
+                if (inputBusca) {
+                    const normalizar = (txt) => String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+                    // Índice de busca universal: nome, SKU, código, descrição, categoria,
+                    // subcategoria, dizeres e iniciais — tudo num só texto por produto.
+                    const indiceBusca = new Map();
+                    filtrados.forEach(p => {
+                        const partes = [
+                            p.nome, p.sku, p.codigo, p.descricao,
+                            p.categoriaId, p.subcategoriaId,
+                            ...(Array.isArray(p.dizeres) ? p.dizeres : []),
+                            ...(Array.isArray(p.iniciais) ? p.iniciais : [])
+                        ];
+                        indiceBusca.set(p.id, normalizar(partes.filter(Boolean).join(' ')));
+                    });
+
+                    function aplicarFiltroBusca(valor) {
+                        const termo = normalizar(valor).trim();
+                        const cards = grid.querySelectorAll('[data-produto-id]');
+                        let achou = false;
+                        cards.forEach(card => {
+                            const idProduto = card.getAttribute('data-produto-id');
+                            const p = filtrados.find(item => item.id === idProduto);
+                            if (!p) return;
+                            const alvo = indiceBusca.get(idProduto) || '';
+                            const visivel = !termo || alvo.includes(termo);
+                            card.style.display = visivel ? '' : 'none';
+                            if (visivel) achou = true;
+                        });
+                        noResult.classList.toggle('hidden', achou || filtrados.length === 0);
+                    }
+
+                    // Link compartilhável: aplica o termo já vindo da URL (?busca=...)
+                    if (buscaInicial) {
+                        inputBusca.value = buscaInicial;
+                        aplicarFiltroBusca(buscaInicial);
+                    }
+
+                    // Atualiza a URL a cada letra digitada, sem recarregar a página —
+                    // assim, a qualquer momento, o link do navegador pode ser copiado
+                    // e enviado pro cliente com o resultado exato dessa busca.
+                    inputBusca.addEventListener('input', (e) => {
+                        aplicarFiltroBusca(e.target.value);
+
+                        const novaUrl = new URL(window.location.href);
+                        if (e.target.value.trim()) {
+                            novaUrl.searchParams.set('busca', e.target.value.trim());
+                        } else {
+                            novaUrl.searchParams.delete('busca');
+                        }
+                        window.history.replaceState({}, '', novaUrl);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
+                loading.classList.remove('hidden');
+                loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Erro técnico ao carregar produtos.</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

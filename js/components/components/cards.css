@@ -1,0 +1,162 @@
+/*
+==========================================================
+ABELLA JOIAS — LUXURY EXPERIENCE V11 (Project AURORA)
+Sprint 1 — Component Library
+Componente: Cards
+
+Arquivo:
+luxury-v11/components/cards.css
+
+Regra do documento mestre (item 17):
+"Existirão apenas: CategoryCard, SubcategoryCard, ProductCard,
+CollectionCard, BannerCard, LookbookCard. Todos reutilizados."
+
+Todos compartilham a mesma base (.aurora-card) — só o conteúdo
+interno muda por tipo. Nenhum card cria radius, sombra ou
+espaçamento próprio fora dos tokens.
+
+Depende de: tokens.css, badge.css
+==========================================================
+*/
+
+/* ================= BASE COMPARTILHADA ================= */
+
+.aurora-card{
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform var(--duration-slow) var(--ease),
+                box-shadow var(--duration-slow) var(--ease),
+                border-color var(--duration-slow) var(--ease);
+}
+
+.aurora-card:hover{
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary);
+}
+
+.aurora-card .media{
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: var(--color-bg);
+}
+
+.aurora-card .media img{
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform var(--duration-slower) var(--ease);
+}
+
+.aurora-card:hover .media img{ transform: scale(1.04); }
+
+.aurora-card .badges{
+    position: absolute; top: var(--space-3); left: var(--space-3);
+    display: flex; gap: var(--space-2); z-index: 2;
+}
+
+.aurora-card .body{ padding: var(--space-4) var(--space-4) var(--space-5); }
+
+.aurora-card .eyebrow{
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--color-secondary); margin-bottom: var(--space-1);
+}
+
+.aurora-card .title{
+    font-family: var(--font-heading);
+    font-size: 18px;
+    color: var(--color-text);
+}
+
+.aurora-card .meta{
+    font-size: 12px; color: var(--color-secondary); margin-top: var(--space-1);
+}
+
+/* ================= 1. CategoryCard ================= */
+/* Imagem grande, nome sobreposto na base — usada no grid da Home */
+
+.aurora-card--category .media{ aspect-ratio: 1/1; }
+.aurora-card--category .overlay{
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(30,26,20,.75) 0%, transparent 55%);
+    display: flex; align-items: flex-end;
+    padding: var(--space-4);
+}
+.aurora-card--category .overlay .title{ color: var(--color-surface); }
+
+/* ================= 2. SubcategoryCard ================= */
+/* Variante mais compacta do CategoryCard, usada dentro de uma categoria */
+
+.aurora-card--subcategory .media{ aspect-ratio: 1/1; }
+.aurora-card--subcategory .body{ padding: var(--space-3) var(--space-1) 0; }
+.aurora-card--subcategory .title{ font-size: 15px; text-align: center; }
+
+/* ================= 3. ProductCard ================= */
+/* Card de produto — imagem + preço + peso + PIX */
+
+.aurora-card--product .media{ aspect-ratio: 1/1; }
+.aurora-card--product .price-row{
+    display: flex; align-items: baseline; gap: var(--space-2); margin-top: var(--space-2);
+}
+.aurora-card--product .price{
+    font-family: var(--font-price);
+    font-weight: 600;
+    font-size: 20px;
+    color: var(--color-text);
+}
+.aurora-card--product .price-old{
+    font-size: 13px;
+    color: var(--color-secondary);
+    text-decoration: line-through;
+}
+.aurora-card--product .weight{
+    font-size: 11px; color: var(--color-secondary); margin-top: var(--space-1);
+}
+
+/* ================= 4. CollectionCard ================= */
+/* Card largo, horizontal — para destacar uma coleção inteira */
+
+.aurora-card--collection{ display: grid; grid-template-columns: 1fr 1fr; }
+.aurora-card--collection .media{ aspect-ratio: auto; height: 100%; min-height: 220px; }
+.aurora-card--collection .body{
+    display: flex; flex-direction: column; justify-content: center;
+    padding: var(--space-6);
+}
+.aurora-card--collection .title{ font-size: 26px; margin-bottom: var(--space-3); }
+.aurora-card--collection .description{ font-size: 14px; color: var(--color-secondary); line-height: 1.7; }
+
+@media (max-width: 700px){
+    .aurora-card--collection{ grid-template-columns: 1fr; }
+}
+
+/* ================= 5. BannerCard ================= */
+/* Full-bleed, usado em campanhas/hero secundário — sem card "flutuante" */
+
+.aurora-card--banner{
+    border-radius: var(--radius-lg);
+    position: relative;
+}
+.aurora-card--banner .media{ aspect-ratio: 21/9; }
+.aurora-card--banner .overlay{
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(30,26,20,.6) 0%, transparent 60%);
+    display: flex; align-items: center;
+    padding: var(--space-7);
+}
+.aurora-card--banner .title{ font-size: 32px; color: var(--color-surface); max-width: 420px; }
+
+/* ================= 6. LookbookCard ================= */
+/* Puramente editorial — sem preço, sem CTA, só atmosfera */
+
+.aurora-card--lookbook{ box-shadow: none; }
+.aurora-card--lookbook:hover{ transform: none; box-shadow: none; }
+.aurora-card--lookbook .media{ aspect-ratio: 3/4; border-radius: var(--radius-md); }
+.aurora-card--lookbook .body{ padding: var(--space-3) 0 0; }
+.aurora-card--lookbook .caption{
+    font-family: var(--font-heading);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--color-secondary);
+}

@@ -50,14 +50,15 @@
                 <p class="text-xs text-zinc-400 mt-1">Monitore faturamento, altere o status logístico e gerencie guias de expedição no bruto em tempo real.</p>
                 
                 <!-- Ações rápidas (Pedido Avulso e Guia) -->
-                <div class="flex items-center gap-3 mt-3">
-                    <button onclick="abrirModalPedidoAvulso()" class="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider bg-[#caa85c] hover:bg-[#b5944f] text-black px-3 py-1.5 rounded-lg transition-all shadow-md">
-                        ➕ Criar Pedido Avulso
-                    </button>
-                    <a href="guia-entrega.html" target="_blank" class="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-colors">
-                        🚚 Criar Guia de Entrega Avulsa ➔
-                    </a>
-                </div>
+               <!-- Ações rápidas (Pedido Avulso e Guia) -->
+<div class="flex items-center gap-3 mt-3">
+    <button onclick="abrirModalPedidoAvulso()" class="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider bg-[#caa85c] hover:bg-[#b5944f] text-black px-3 py-1.5 rounded-lg transition-all shadow-md">
+        ➕ Criar Pedido Avulso
+    </button>
+    <a href="guia-entrega.html" target="_blank" class="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-colors">
+        🚚 Criar Guia de Entrega Avulsa ➔
+    </a>
+</div>
             
             <div class="flex flex-wrap gap-1.5 bg-black/40 p-1 rounded-xl border border-zinc-800 self-start md:self-center" id="botoes-filtro-pedidos">
                 <button id="filter-ped-todos" onclick="mudarFiltroStatusPedido('Todos')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black">Todos</button>
@@ -214,6 +215,7 @@
                 </div>
             </div>
 
+           <!-- Botões de Ação do Modal de Edição -->
             <div class="flex items-center justify-between border-t border-zinc-800 pt-4 mt-2">
                 <button onclick="excluirPedidoCompleto()" class="bg-rose-950/20 hover:bg-rose-900/40 border border-rose-900/60 text-rose-400 font-bold px-3 py-2 rounded-xl text-[10px] transition-all uppercase font-mono tracking-wider">
                     🚨 Excluir Pedido
@@ -226,7 +228,153 @@
         </div>
     </div>
 
+    <!-- MODAL CRIAR PEDIDO AVULSO -->
+    <div id="modalPedidoAvulso" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-5 my-8 text-white relative">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <h3 class="text-xs font-black text-[#caa85c] uppercase font-mono tracking-wider flex items-center gap-1.5">
+                    ➕ Criar Novo Pedido Avulso
+                </h3>
+                <button onclick="fecharModalPedidoAvulso()" class="text-zinc-400 hover:text-white text-2xl font-light transition-colors leading-none">&times;</button>
+            </div>
 
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Dados do Cliente -->
+                <div class="space-y-3 bg-black/20 p-3 rounded-xl border border-zinc-800/40">
+                    <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800/60 pb-1">👤 Dados do Cliente</h4>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Nome do Cliente *</label>
+                        <input type="text" id="avulsoCliente" placeholder="Ex: João Silva" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">WhatsApp / Contato</label>
+                        <input type="text" id="avulsoContato" placeholder="Ex: (19) 99999-9999" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Cidade / Estado (Cliente)</label>
+                        <input type="text" id="avulsoCidadeCliente" placeholder="Ex: Limeira - SP" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Forma de Pagamento</label>
+                        <input type="text" id="avulsoPagamento" placeholder="Ex: PIX / Dinheiro / Cartão" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Observações</label>
+                        <textarea id="avulsoObservacoes" rows="2" placeholder="Observações do pedido..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors resize-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Local de Entrega / Galvânica -->
+                <div class="space-y-3 bg-black/20 p-3 rounded-xl border border-zinc-800/40">
+                    <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800/60 pb-1">📍 Local de Entrega / Galvânica</h4>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Nome do Destinatário / Galvânica</label>
+                        <input type="text" id="avulsoEntregaNome" placeholder="Ex: Galvânica X" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="col-span-2">
+                            <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Endereço</label>
+                            <input type="text" id="avulsoEntregaEndereco" placeholder="Rua / Av" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Número</label>
+                            <input type="text" id="avulsoEntregaNumero" placeholder="Nº" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Bairro</label>
+                            <input type="text" id="avulsoEntregaBairro" placeholder="Bairro" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Cidade / Estado</label>
+                            <input type="text" id="avulsoEntregaCidade" placeholder="Ex: Limeira - SP" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Itens do Pedido Avulso -->
+            <div class="space-y-2 pt-1">
+                <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800 pb-1 flex justify-between items-center">
+                    <span>💍 Itens e Peças no Pedido</span>
+                    <span class="flex items-center gap-3">
+                        <span id="contadorItensAvulso" class="text-[9px] font-mono text-zinc-500 normal-case">0 itens</span>
+                        <button onclick="mostrarFormAdicionarItemAvulso()" class="text-[9px] font-mono bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-[#caa85c] px-2 py-1 rounded-lg normal-case transition-all">+ Adicionar Item</button>
+                    </span>
+                </h4>
+
+                <div id="formAdicionarItemAvulso" class="hidden bg-zinc-950 border border-zinc-800 rounded-xl p-3 space-y-2">
+                    <div class="relative">
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">🔎 Buscar no catálogo (nome ou SKU)</label>
+                        <input type="text" id="buscaProdutoCatalogoAvulso" placeholder="Digite para buscar produtos cadastrados..." autocomplete="off" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        <div id="resultadosBuscaCatalogoAvulso" class="hidden absolute z-10 left-0 right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg max-h-56 overflow-y-auto shadow-2xl"></div>
+                        <p id="statusBuscaCatalogoAvulso" class="text-[9px] text-zinc-600 font-mono mt-1"></p>
+                    </div>
+
+                    <div class="border-t border-zinc-800/60 pt-2">
+                        <p class="text-[9px] font-mono text-zinc-500 uppercase mb-2">Ou preencha manualmente (peça avulsa fora do catálogo)</p>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <input type="text" id="novoItemNomeAvulso" placeholder="Nome do item" class="col-span-2 md:col-span-1 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="text" id="novoItemSkuAvulso" placeholder="SKU" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="number" id="novoItemPrecoAvulso" placeholder="Preço unit. (R$)" step="0.01" min="0" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="number" id="novoItemPesoAvulso" placeholder="Peso (g)" step="0.01" min="0" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="number" id="novoItemQtdAvulso" placeholder="Qtd" min="1" value="1" class="bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                            <input type="text" id="novoItemImagemAvulso" placeholder="URL da imagem (opcional)" class="col-span-2 md:col-span-3 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-[#caa85c]">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button onclick="ocultarFormAdicionarItemAvulso()" class="text-[10px] text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg transition-all">Cancelar</button>
+                        <button onclick="confirmarAdicionarItemAvulso()" class="text-[10px] font-bold bg-[#caa85c] hover:bg-[#b5944f] text-black px-3 py-1.5 rounded-lg transition-all">Adicionar à Lista</button>
+                    </div>
+                </div>
+
+                <div id="avulsoListaProdutos" class="border border-zinc-800/80 bg-zinc-950 rounded-xl p-2 max-h-[220px] overflow-y-auto space-y-1.5"></div>
+            </div>
+
+            <!-- Resumo Financeiro -->
+            <div class="bg-black/20 p-3 rounded-xl border border-zinc-800/40 space-y-2">
+                <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800/60 pb-1">💰 Resumo Financeiro</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Total de Peças</label>
+                        <p id="avulsoResumoPecas" class="font-bold text-zinc-200">0 pçs</p>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Peso Total</label>
+                        <p id="avulsoResumoPeso" class="font-bold text-zinc-200">0.00g</p>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Subtotal</label>
+                        <p id="avulsoResumoSubtotal" class="font-bold text-zinc-200">R$ 0,00</p>
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Total Final</label>
+                        <p id="avulsoResumoTotal" class="font-black text-[#caa85c] text-sm">R$ 0,00</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-xs pt-1">
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Desconto (R$)</label>
+                        <input type="number" id="avulsoDesconto" step="0.01" min="0" value="0" oninput="recalcularResumoFinanceiroAvulso()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Frete (R$)</label>
+                        <input type="number" id="avulsoFrete" step="0.01" min="0" value="0" oninput="recalcularResumoFinanceiroAvulso()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões de Ação do Pedido Avulso -->
+            <div class="flex items-center justify-end gap-2 border-t border-zinc-800 pt-4 mt-2">
+                <button onclick="fecharModalPedidoAvulso()" class="border border-zinc-800 hover:bg-zinc-800 text-zinc-400 font-medium px-4 py-2 rounded-xl text-xs transition-all">Cancelar</button>
+                <button onclick="salvarNovoPedidoAvulso()" class="bg-[#caa85c] hover:bg-[#b5944f] text-black font-black px-5 py-2 rounded-xl text-xs transition-all uppercase tracking-wider">Criar Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EMITIR ROMANEIO COMERCIAL -->
     <div id="modalRomaneioMenu" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full p-6 shadow-2xl text-white space-y-4">
             <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
@@ -912,6 +1060,279 @@ doc.text(`PEDIDO: ${p.numeroPedido || 'N/A'}`, 40, 14, { align: "center" });
         alert("Falha no motor gráfico jsPDF ao compilar bobina de 80mm.");
     }
 }
+       // ==========================================
+        // LÓGICA DO MODAL DE CRIAR PEDIDO AVULSO
+        // ==========================================
+        var _ITENS_PEDIDO_AVULSO = [];
+
+        function abrirModalPedidoAvulso() {
+            _ITENS_PEDIDO_AVULSO = [];
+            document.getElementById('avulsoCliente').value = '';
+            document.getElementById('avulsoContato').value = '';
+            document.getElementById('avulsoCidadeCliente').value = '';
+            document.getElementById('avulsoPagamento').value = '';
+            document.getElementById('avulsoObservacoes').value = '';
+            document.getElementById('avulsoEntregaNome').value = '';
+            document.getElementById('avulsoEntregaEndereco').value = '';
+            document.getElementById('avulsoEntregaNumero').value = '';
+            document.getElementById('avulsoEntregaBairro').value = '';
+            document.getElementById('avulsoEntregaCidade').value = '';
+            document.getElementById('avulsoDesconto').value = '0';
+            document.getElementById('avulsoFrete').value = '0';
+
+            ocultarFormAdicionarItemAvulso();
+            renderizarItensAvulso();
+            recalcularResumoFinanceiroAvulso();
+
+            // Configurar a busca de catálogo do modal avulso
+            var campoBuscaAvulso = document.getElementById('buscaProdutoCatalogoAvulso');
+            if (campoBuscaAvulso && !campoBuscaAvulso.dataset.bound) {
+                campoBuscaAvulso.dataset.bound = "true";
+                var _debounceAvulso = null;
+                campoBuscaAvulso.addEventListener('input', function() {
+                    clearTimeout(_debounceAvulso);
+                    var val = this.value;
+                    _debounceAvulso = setTimeout(function() { buscarProdutoCatalogoAvulso(val); }, 250);
+                });
+            }
+
+            document.getElementById('modalPedidoAvulso').classList.remove('hidden');
+        }
+
+        function fecharModalPedidoAvulso() {
+            document.getElementById('modalPedidoAvulso').classList.add('hidden');
+        }
+
+        function renderizarItensAvulso() {
+            var container = document.getElementById('avulsoListaProdutos');
+            container.innerHTML = '';
+            document.getElementById('contadorItensAvulso').innerText = `${_ITENS_PEDIDO_AVULSO.length} item(ns)`;
+
+            if (_ITENS_PEDIDO_AVULSO.length === 0) {
+                container.innerHTML = '<p class="text-[11px] text-zinc-500 italic text-center py-4">Nenhum item adicionado. Clique em "+ Adicionar Item".</p>';
+                return;
+            }
+
+            _ITENS_PEDIDO_AVULSO.forEach(function(item, idx) {
+                var div = document.createElement('div');
+                div.className = "flex items-center justify-between bg-zinc-900 border border-zinc-800/60 p-2 rounded-lg gap-2";
+                var img = item.image || item.imagem || 'https://placehold.co/80';
+                div.innerHTML = `
+                    <img src="${img}" onerror="this.src='https://placehold.co/80'" class="w-10 h-10 object-cover rounded-md border border-zinc-800 shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-zinc-100 truncate">${item.nome}</p>
+                        <p class="text-[10px] text-zinc-500 font-mono">SKU: ${item.sku || '-'} • Unid: ${formatarMoeda(item.preco)} • ${item.peso.toFixed(2)}g</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <input type="number" value="${item.quantidade}" min="1" onchange="atualizarQtdAvulso(${idx}, this.value)" class="w-14 bg-black border border-zinc-700 rounded-md text-center text-xs text-white p-1 font-mono outline-none focus:border-[#caa85c]">
+                        <button onclick="removerItemAvulso(${idx})" class="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 px-2 py-1 rounded text-xs transition-all">✕</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function atualizarQtdAvulso(idx, val) {
+            if (!_ITENS_PEDIDO_AVULSO[idx]) return;
+            _ITENS_PEDIDO_AVULSO[idx].quantidade = parseInt(val) || 1;
+            recalcularResumoFinanceiroAvulso();
+        }
+
+        function removerItemAvulso(idx) {
+            _ITENS_PEDIDO_AVULSO.splice(idx, 1);
+            renderizarItensAvulso();
+            recalcularResumoFinanceiroAvulso();
+        }
+
+        function mostrarFormAdicionarItemAvulso() {
+            document.getElementById('formAdicionarItemAvulso').classList.remove('hidden');
+            garantirProdutosCatalogoCarregados();
+        }
+
+        function ocultarFormAdicionarItemAvulso() {
+            document.getElementById('formAdicionarItemAvulso').classList.add('hidden');
+            ['novoItemNomeAvulso','novoItemSkuAvulso','novoItemPrecoAvulso','novoItemPesoAvulso','novoItemImagemAvulso','buscaProdutoCatalogoAvulso'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            document.getElementById('novoItemQtdAvulso').value = 1;
+            document.getElementById('resultadosBuscaCatalogoAvulso').classList.add('hidden');
+        }
+
+        async function buscarProdutoCatalogoAvulso(termo) {
+            var container = document.getElementById('resultadosBuscaCatalogoAvulso');
+            termo = (termo || '').trim().toLowerCase();
+            if (!termo) {
+                container.classList.add('hidden');
+                return;
+            }
+            var lista = await garantirProdutosCatalogoCarregados();
+            var filtrados = lista.filter(function(prod) {
+                var nome = (prod.nome || prod.name || '').toLowerCase();
+                var sku = (prod.sku || prod.codigo || '').toLowerCase();
+                return nome.includes(termo) || sku.includes(termo);
+            });
+            renderizarResultadosBuscaCatalogoAvulso(filtrados);
+        }
+
+        function renderizarResultadosBuscaCatalogoAvulso(lista) {
+            var container = document.getElementById('resultadosBuscaCatalogoAvulso');
+            if (!lista.length) {
+                container.classList.add('hidden');
+                return;
+            }
+            container.innerHTML = lista.slice(0, 8).map(function(prod, idx) {
+                var nome = prod.nome || prod.name || 'Sem nome';
+                var sku = prod.sku || prod.codigo || '-';
+                var preco = parseFloat(prod.precoFinal || prod.preco || prod.price || 0);
+                var imagem = prod.imagem || prod.image || 'https://placehold.co/60';
+                return `
+                    <div onclick="selecionarProdutoCatalogoAvulso(${idx})" class="flex items-center gap-2 p-2 hover:bg-zinc-800 cursor-pointer border-b border-zinc-800/60 last:border-0">
+                        <img src="${imagem}" onerror="this.src='https://placehold.co/60'" class="w-8 h-8 object-cover rounded-md border border-zinc-800 shrink-0">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-white font-bold truncate">${nome}</p>
+                            <p class="text-[10px] text-zinc-500 font-mono">SKU: ${sku} • ${formatarMoeda(preco)}</p>
+                        </div>
+                    </div>`;
+            }).join('');
+            container.dataset.resultados = JSON.stringify(lista.slice(0, 8));
+            container.classList.remove('hidden');
+        }
+
+        function selecionarProdutoCatalogoAvulso(idx) {
+            var container = document.getElementById('resultadosBuscaCatalogoAvulso');
+            var lista = JSON.parse(container.dataset.resultados || '[]');
+            var prod = lista[idx];
+            if (!prod) return;
+
+            document.getElementById('novoItemNomeAvulso').value = prod.nome || prod.name || '';
+            document.getElementById('novoItemSkuAvulso').value = prod.sku || prod.codigo || '';
+            document.getElementById('novoItemPrecoAvulso').value = parseFloat(prod.precoFinal || prod.preco || prod.price || 0);
+            document.getElementById('novoItemPesoAvulso').value = parseFloat(prod.peso || prod.weight || 0);
+            document.getElementById('novoItemImagemAvulso').value = prod.imagem || prod.image || '';
+
+            document.getElementById('buscaProdutoCatalogoAvulso').value = (prod.nome || prod.name || '') + ' — selecionado ✓';
+            container.classList.add('hidden');
+        }
+
+        function confirmarAdicionarItemAvulso() {
+            var nome = document.getElementById('novoItemNomeAvulso').value.trim();
+            if (!nome) {
+                alert("Informe ao menos o nome do item.");
+                return;
+            }
+
+            var item = {
+                nome: nome,
+                name: nome,
+                sku: document.getElementById('novoItemSkuAvulso').value.trim(),
+                preco: parseFloat(document.getElementById('novoItemPrecoAvulso').value) || 0,
+                price: parseFloat(document.getElementById('novoItemPrecoAvulso').value) || 0,
+                precoFinal: parseFloat(document.getElementById('novoItemPrecoAvulso').value) || 0,
+                peso: parseFloat(document.getElementById('novoItemPesoAvulso').value) || 0,
+                weight: parseFloat(document.getElementById('novoItemPesoAvulso').value) || 0,
+                quantidade: parseInt(document.getElementById('novoItemQtdAvulso').value) || 1,
+                image: document.getElementById('novoItemImagemAvulso').value.trim(),
+                imagem: document.getElementById('novoItemImagemAvulso').value.trim()
+            };
+
+            _ITENS_PEDIDO_AVULSO.push(item);
+            ocultarFormAdicionarItemAvulso();
+            renderizarItensAvulso();
+            recalcularResumoFinanceiroAvulso();
+        }
+
+        function recalcularResumoFinanceiroAvulso() {
+            var totais = calcularTotaisItens(_ITENS_PEDIDO_AVULSO);
+            var desconto = parseFloat(document.getElementById('avulsoDesconto').value) || 0;
+            var frete = parseFloat(document.getElementById('avulsoFrete').value) || 0;
+            var total = Math.max(0, totais.subtotal - desconto + frete);
+
+            document.getElementById('avulsoResumoPecas').innerText = `${totais.totalPecas} pçs`;
+            document.getElementById('avulsoResumoPeso').innerText = `${totais.pesoTotal.toFixed(2)}g`;
+            document.getElementById('avulsoResumoSubtotal').innerText = formatarMoeda(totais.subtotal);
+            document.getElementById('avulsoResumoTotal').innerText = formatarMoeda(total);
+        }
+
+        async function salvarNovoPedidoAvulso() {
+            var cliente = document.getElementById('avulsoCliente').value.trim();
+            if (!cliente) {
+                alert("Por favor, preencha o Nome do Cliente.");
+                return;
+            }
+
+            var contato = document.getElementById('avulsoContato').value.trim();
+            var cidadeCliente = document.getElementById('avulsoCidadeCliente').value.trim();
+            var pagamento = document.getElementById('avulsoPagamento').value.trim();
+            var obs = document.getElementById('avulsoObservacoes').value.trim();
+
+            var entregaNome = document.getElementById('avulsoEntregaNome').value.trim();
+            var entregaEnd = document.getElementById('avulsoEntregaEndereco').value.trim();
+            var entregaNum = document.getElementById('avulsoEntregaNumero').value.trim();
+            var entregaBairro = document.getElementById('avulsoEntregaBairro').value.trim();
+            var entregaCidade = document.getElementById('avulsoEntregaCidade').value.trim();
+
+            var totais = calcularTotaisItens(_ITENS_PEDIDO_AVULSO);
+            var desconto = parseFloat(document.getElementById('avulsoDesconto').value) || 0;
+            var frete = parseFloat(document.getElementById('avulsoFrete').value) || 0;
+            var total = Math.max(0, totais.subtotal - desconto + frete);
+
+            var timestamp = Date.now();
+            var numeroAleatorio = Math.floor(100000 + Math.random() * 900000);
+            var idPedido = 'PED-' + numeroAleatorio;
+
+            var novoPedido = {
+                idPedido: idPedido,
+                cliente: cliente,
+                nome: cliente,
+                whats: contato,
+                contato: contato,
+                formaPagamento: pagamento,
+                observacoes: obs,
+                cidade: cidadeCliente || entregaCidade || 'Limeira - SP',
+                status: 'Novo',
+                criadoEm: new Date().toISOString(),
+                timestamp: timestamp,
+                entrega: {
+                    nome: entregaNome,
+                    endereco: entregaEnd,
+                    numero: entregaNum,
+                    bairro: entregaBairro,
+                    cidade: entregaCidade
+                },
+                itens: _ITENS_PEDIDO_AVULSO,
+                produtos: _ITENS_PEDIDO_AVULSO,
+                subtotal: totais.subtotal,
+                desconto: desconto,
+                frete: frete,
+                total: total,
+                valorTotal: total,
+                totalPix: total,
+                pesoTotal: totais.pesoTotal,
+                totalPecas: totais.totalPecas,
+                romaneio: {
+                    subtotal: totais.subtotal,
+                    desconto: desconto,
+                    totalPix: total,
+                    pesoTotal: totais.pesoTotal,
+                    totalPecas: totais.totalPecas
+                }
+            };
+
+            try {
+                if (!window.db) throw new Error("Instância do Realtime Database não encontrada.");
+                var path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
+
+                await window.db.ref(path).push(novoPedido);
+
+                fecharModalPedidoAvulso();
+                alert("✅ Pedido avulso criado com sucesso!");
+                await carregarPainelPedidos();
+            } catch(e) {
+                console.error("Erro ao salvar pedido avulso:", e);
+                alert("Erro ao gravar novo pedido avulso no banco.");
+            }
+        }      
     </script>
 </body>
 </html>

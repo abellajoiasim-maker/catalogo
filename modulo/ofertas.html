@@ -649,49 +649,40 @@
             }
         }
 
-        // ---------- Ações principais ----------
-        async function aplicarCampanha() {
-            const categoria = document.getElementById('campanha-categoria').value;
-            const desconto = parseInt(document.getElementById('campanha-desconto').value) || 0;
-            const nome = document.getElementById('campanha-nome').value || 'Oferta';
-            const icone = document.getElementById('campanha-icone').value;
-            const corBg = document.getElementById('campanha-cor').value;
-            const corTexto = document.getElementById('campanha-cor-texto').value;
-            const validade = document.getElementById('campanha-validade').value || null;
+       // ---------- CRIAR CUPOM (PADRONIZADO) ----------
+async function criarCupom() {
+    const codigo = document.getElementById('cupom-codigo').value.trim().toUpperCase();
+    const valor = parseFloat(document.getElementById('cupom-valor').value);
+    const tipo = document.getElementById('cupom-tipo').value;
+    const validade = document.getElementById('cupom-validade').value || null;
 
-            if (!categoria) {
-                alert('Por favor, selecione uma Categoria Alvo para aplicar a ação comercial.');
-                return;
-            }
+    if (!codigo || !valor) {
+        alert('Preencha corretamente o código e o valor do cupom.');
+        return;
+    }
 
-            try {
-                const novaRegra = {
-                    ativo: true,
-                    porcentagem: desconto,
-                    nomeCampanha: nome,
-                    badgeIcone: icone,
-                    badgeColor: corBg,
-                    badgeTextColor: corTexto,
-                    validoAte: validade
-                };
+    try {
+        await window.db.ref(`${abellaPath('coupons')}/${codigo}`).set({
+            code: codigo,
+            value: valor,
+            type: tipo,
+            active: true,
+            expiraEm: validade,
+            validoAte: validade, // Salva ambos para garantir retrocompatibilidade no checkout
+            createdAt: new Date().toISOString()
+        });
 
-                // A chave da categoria em abella/categories já É o slug (conforme arquitetura oficial),
-                // por isso usamos a própria chave selecionada, sem inventar transformação adicional.
-                const updates = {};
-                updates[`${abellaPath('settings')}/descontos/regrasCategoria/${categoria}`] = novaRegra;
+        alert(`Cupom [ ${codigo} ] ativado com sucesso!`);
+        document.getElementById('cupom-codigo').value = '';
+        document.getElementById('cupom-valor').value = '';
+        document.getElementById('cupom-validade').value = '';
 
-                await window.db.ref().update(updates);
-                alert(`Sucesso! Campanha para a categoria "${nomeCategoria(categoria)}" ativada.`);
-
-                await carregarPainelOfertas();
-                limparCampos();
-
-            } catch (error) {
-                console.error("Falha ao propagar modificação de campanha:", error);
-                alert('Erro interno de processamento ao comunicar-se com o banco de dados.');
-            }
-        }
-
+        await carregarPainelOfertas();
+    } catch (error) {
+        console.error("Erro ao criar cupom:", error);
+        alert('Erro ao salvar o cupom.');
+    }
+}
         async function limparTodasOfertas() {
             if (!confirm('Esta ação desativará o desconto global e todas as campanhas de categoria (os cadastros continuam salvos, apenas inativos). Deseja prosseguir?')) return;
 
@@ -712,38 +703,40 @@
             }
         }
 
-        async function criarCupom() {
-            const codigo = document.getElementById('cupom-codigo').value.trim().toUpperCase();
-            const valor = parseFloat(document.getElementById('cupom-valor').value);
-            const tipo = document.getElementById('cupom-tipo').value;
-            const validade = document.getElementById('cupom-validade').value || null;
+       // ---------- CRIAR CUPOM (PADRONIZADO) ----------
+async function criarCupom() {
+    const codigo = document.getElementById('cupom-codigo').value.trim().toUpperCase();
+    const valor = parseFloat(document.getElementById('cupom-valor').value);
+    const tipo = document.getElementById('cupom-tipo').value;
+    const validade = document.getElementById('cupom-validade').value || null;
 
-            if (!codigo || !valor) {
-                alert('Preencha corretamente o código e o valor correspondente do cupom.');
-                return;
-            }
+    if (!codigo || !valor) {
+        alert('Preencha corretamente o código e o valor do cupom.');
+        return;
+    }
 
-            try {
-                await window.db.ref(`${abellaPath('coupons')}/${codigo}`).set({
-                    code: codigo,
-                    value: valor,
-                    type: tipo,
-                    active: true,
-                    expiraEm: validade,
-                    createdAt: new Date().toISOString()
-                });
+    try {
+        await window.db.ref(`${abellaPath('coupons')}/${codigo}`).set({
+            code: codigo,
+            value: valor,
+            type: tipo,
+            active: true,
+            expiraEm: validade,
+            validoAte: validade, // Salva ambos para garantir retrocompatibilidade no checkout
+            createdAt: new Date().toISOString()
+        });
 
-                alert(`Cupom [ ${codigo} ] inserido e ativado!`);
-                document.getElementById('cupom-codigo').value = '';
-                document.getElementById('cupom-valor').value = '';
-                document.getElementById('cupom-validade').value = '';
+        alert(`Cupom [ ${codigo} ] ativado com sucesso!`);
+        document.getElementById('cupom-codigo').value = '';
+        document.getElementById('cupom-valor').value = '';
+        document.getElementById('cupom-validade').value = '';
 
-                await carregarPainelOfertas();
-            } catch (error) {
-                console.error("Erro ao criar cupom:", error);
-                alert('Erro ao criar o cupom.');
-            }
-        }
+        await carregarPainelOfertas();
+    } catch (error) {
+        console.error("Erro ao criar cupom:", error);
+        alert('Erro ao salvar o cupom.');
+    }
+}
 
         function limparCampos() {
             document.getElementById('form-campanha').reset();

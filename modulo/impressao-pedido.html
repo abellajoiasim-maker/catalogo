@@ -153,87 +153,95 @@
         }
 
         async function carregarDadosRomaneio() {
-            try {
-                // Instância segura obtida após confirmação do Auth
-                const databaseInstancia = window.db || (window.firebase ? firebase.database() : null);
+    try {
+        const databaseInstancia = window.db || (window.firebase ? firebase.database() : null);
 
-                if (!databaseInstancia) {
-                    throw new Error("Instância do banco de dados não disponível.");
-                }
-
-                const snap = await databaseInstancia.ref('abella/orders/' + pedidoId).once('value');
-                if (!snap.exists()) {
-                    exibirErro("❌ Erro: Registro de pedido não localizado no Firebase.");
-                    return;
-                }
-
-                const p = snap.val();
-                
-                // Preenchimento do Cabeçalho
-                document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
-                document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
-                document.getElementById('cli-pagamento').innerText = p.formaPagamento || 'Não Informada';
-
-                // Preenchimento de Dados do Cliente
-                document.getElementById('cli-nome').innerText = p.cliente || p.nome || 'Não Identificado';
-                document.getElementById('cli-whats').innerText = p.whats || p.whatsapp || p.contato || 'N/I';
-                document.getElementById('cli-cidade').innerText = p.cidade || 'N/I';
-
-                // Preenchimento de Dados de Entrega
-                const end = p.enderecoEntrega || p.entrega || p.endereco || {};
-                document.getElementById('ent-nome').innerText = end.destinatario || end.nome || p.cliente || p.nome || 'Mesmo do Cadastro';
-                document.getElementById('ent-rua').innerText = end.rua || p.rua || end.logradouro || '-';
-                document.getElementById('ent-num').innerText = end.numero || p.numero || 'S/N';
-                document.getElementById('ent-bairro').innerText = end.bairro || p.bairro || '-';
-                
-                const cidadeEntrega = end.cidade || p.cidade || '-';
-                const ufEntrega = end.uf || p.uf || end.estado || 'SP';
-                document.getElementById('ent-cidade-uf').innerText = `${cidadeEntrega} - ${ufEntrega}`.toUpperCase();
-
-                // Totais do Rodapé
-                document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
-                document.getElementById('resumo-peso').innerText = formatarPesoLocal(p.pesoTotal || p.peso || 0);
-                document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
-                
-                if (tipo === 'conferencia') {
-                    const blocoFin = document.getElementById('bloco-financeiro-total');
-                    if (blocoFin) blocoFin.classList.add('invisible');
-                }
-
-                // Normalização do Array de Itens
-                let itens = p.itens || p.produtos || [];
-                if (typeof itens === 'object' && !Array.isArray(itens)) {
-                    itens = Object.values(itens);
-                }
-
-                // Seleção e Renderização da Grid/Lista
-                const modelo = `${layout}_${tipo}`;
-                const renderizadores = {
-                    lista_conferencia: renderListaConferencia,
-                    lista_financeiro: renderListaCompleto,
-                    lista_foto: renderListaCompletoFoto,
-                    grade_conferencia: renderGradeConferencia,
-                    grade_financeiro: renderGradeCompleto,
-                    grade_foto: renderGradeCompletoFoto
-                };
-
-                const renderizador = renderizadores[modelo];
-                if (!renderizador) {
-                    throw new Error(`Modelo estrutural não mapeado: ${modelo}`);
-                }
-
-                document.getElementById('render-target').innerHTML = renderizador(p, itens);
-
-                // Exibição Final sem flashes
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('romaneio-conteudo').style.display = 'block';
-
-            } catch (err) {
-                console.error("Erro ao carregar romaneio:", err);
-                exibirErro("❌ Ocorreu uma exceção crítica ao sincronizar o romaneio: " + err.message);
-            }
+        if (!databaseInstancia) {
+            throw new Error("Instância do banco de dados não disponível.");
         }
 
+        const snap = await databaseInstancia.ref('abella/orders/' + pedidoId).once('value');
+        if (!snap.exists()) {
+            exibirErro("❌ Erro: Registro de pedido não localizado no Firebase.");
+            return;
+        }
+
+        const p = snap.val();
+        
+        // Preenchimento do Cabeçalho
+        document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
+        document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
+        document.getElementById('cli-pagamento').innerText = p.formaPagamento || 'Não Informada';
+
+        // 1. DADOS DO CLIENTE
+        document.getElementById('cli-nome').innerText = p.cliente || p.nomeCliente || p.nome || '-';
+        document.getElementById('cli-whats').innerText = p.whats || p.whatsapp || p.contato || '-';
+        
+        // Trata cidade/estado do cliente
+        const cidadeCli = p.cidadeCliente || p.cidade || '-';
+        const estadoCli = p.estadoCliente || p.estado || p.uf || '';
+        document.getElementById('cli-cidade').innerText = estadoCli ? `${cidadeCli} - ${estadoCli}`.toUpperCase() : cidadeCli.toUpperCase();
+
+        // 2. DADOS DO LOCAL DE ENTREGA / GALVÂNICA
+        // Mapeia o objeto 'galvanica' ou 'entrega' ou as propriedades diretas do pedido
+        const g = p.galvanica || p.entrega || p.enderecoEntrega || {};
+
+        const destinatario = g.nome || g.destinatario || g.galvanicaNome || p.galvanicaNome || p.destinatario || 'Não Especificado';
+        const rua = g.rua || g.endereco || g.logradouro || p.galvanicaRua || p.rua || '-';
+        const numero = g.numero || p.galvanicaNumero || p.numero || 'S/N';
+        const bairro = g.bairro || p.galvanicaBairro || p.bairro || '-';
+        const cidadeEntrega = g.cidade || p.galvanicaCidade || p.cidadeEntrega || '-';
+        const ufEntrega = g.estado || g.uf || p.galvanicaEstado || p.ufEntrega || 'SP';
+
+        document.getElementById('ent-nome').innerText = destinatario.toUpperCase();
+        document.getElementById('ent-rua').innerText = rua.toUpperCase();
+        document.getElementById('ent-num').innerText = numero;
+        document.getElementById('ent-bairro').innerText = bairro.toUpperCase();
+        document.getElementById('ent-cidade-uf').innerText = `${cidadeEntrega} - ${ufEntrega}`.toUpperCase();
+
+        // Totais do Rodapé
+        document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
+        document.getElementById('resumo-peso').innerText = formatarPesoLocal(p.pesoTotal || p.peso || 0);
+        document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
+        
+        if (tipo === 'conferencia') {
+            const blocoFin = document.getElementById('bloco-financeiro-total');
+            if (blocoFin) blocoFin.classList.add('invisible');
+        }
+
+        // Normalização do Array de Itens
+        let itens = p.itens || p.produtos || [];
+        if (typeof itens === 'object' && !Array.isArray(itens)) {
+            itens = Object.values(itens);
+        }
+
+        // Seleção e Renderização da Grid/Lista
+        const modelo = `${layout}_${tipo}`;
+        const renderizadores = {
+            lista_conferencia: renderListaConferencia,
+            lista_financeiro: renderListaCompleto,
+            lista_foto: renderListaCompletoFoto,
+            grade_conferencia: renderGradeConferencia,
+            grade_financeiro: renderGradeCompleto,
+            grade_foto: renderGradeCompletoFoto
+        };
+
+        const renderizador = renderizadores[modelo];
+        if (!renderizador) {
+            throw new Error(`Modelo estrutural não mapeado: ${modelo}`);
+        }
+
+        document.getElementById('render-target').innerHTML = renderizador(p, itens);
+
+        // Exibição Final
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('romaneio-conteudo').style.display = 'block';
+
+    } catch (err) {
+        console.error("Erro ao carregar romaneio:", err);
+        exibirErro("❌ Ocorreu uma exceção crítica ao sincronizar o romaneio: " + err.message);
+    }
+}
         /* ==================== RENDERS DE COMPONENTES ==================== */
 
         function renderResumoFinanceiro(p, itens) {

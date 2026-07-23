@@ -84,25 +84,30 @@
             <input type="hidden" id="editPedidoId">
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-3 bg-black/20 p-3 rounded-xl border border-zinc-800/40">
-                    <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800/60 pb-1">👤 Dados do Cliente</h4>
-                    <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Nome do Cliente</label>
-                        <input type="text" id="editPedidoCliente" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">WhatsApp / Contato</label>
-                        <input type="text" id="editPedidoContato" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono text-white outline-none focus:border-[#caa85c] transition-colors">
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Forma de Pagamento</label>
-                        <input type="text" id="editPedidoPagamento" placeholder="Ex: PIX" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Observações</label>
-                        <textarea id="editPedidoObservacoes" rows="2" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors resize-none"></textarea>
-                    </div>
-                </div>
+               <div class="space-y-3 bg-black/20 p-3 rounded-xl border border-zinc-800/40">
+    <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800/60 pb-1">👤 Dados do Cliente</h4>
+    <div>
+        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Nome do Cliente</label>
+        <input type="text" id="editPedidoCliente" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+    </div>
+    <div>
+        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">WhatsApp / Contato</label>
+        <input type="text" id="editPedidoContato" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono text-white outline-none focus:border-[#caa85c] transition-colors">
+    </div>
+    <!-- NOVO CAMPO ADICIONADO ABAIXO -->
+    <div>
+        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Cidade / Estado (Cliente)</label>
+        <input type="text" id="editPedidoCidadeCliente" placeholder="Ex: Limeira - SP" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+    </div>
+    <div>
+        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Forma de Pagamento</label>
+        <input type="text" id="editPedidoPagamento" placeholder="Ex: PIX" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+    </div>
+    <div>
+        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Observações</label>
+        <textarea id="editPedidoObservacoes" rows="2" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors resize-none"></textarea>
+    </div>
+</div>
 
                 <div class="space-y-3 bg-black/20 p-3 rounded-xl border border-zinc-800/40">
                     <h4 class="text-[10px] font-black text-zinc-400 uppercase tracking-wider border-b border-zinc-800/60 pb-1">📍 Local de Entrega / Galvânica</h4>
@@ -468,17 +473,29 @@
 
             // Normaliza entrega: no banco é um objeto {nome, endereco, numero, bairro, cidade}.
             // Se vier como string legada, joga tudo no campo de endereço para não perder o dado.
-            var entrega = p.entrega;
-            if (!entrega || typeof entrega !== 'object') {
-                entrega = { nome: '', endereco: (typeof p.entrega === 'string' ? p.entrega : ''), numero: '', bairro: '', cidade: p.cidade || '' };
-            }
+            // 1. Normaliza e recupera o objeto de entrega antes de usar
+var entrega = p.entrega;
+if (!entrega || typeof entrega !== 'object') {
+    entrega = { 
+        nome: '', 
+        endereco: (typeof p.entrega === 'string' ? p.entrega : ''), 
+        numero: '', 
+        bairro: '', 
+        cidade: p.cidade || '' 
+    };
+}
 
-            document.getElementById('editPedidoId').value = id;
-            document.getElementById('editPedidoNumero').innerText = '#' + (p.numeroPedido || p.idPedido || id.substring(id.length - 6));
-            document.getElementById('editPedidoCliente').value = p.cliente || p.nome || '';
-            document.getElementById('editPedidoContato').value = p.whats || p.whatsapp || p.contato || '';
-            document.getElementById('editPedidoPagamento').value = p.formaPagamento || '';
-            document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
+// 2. Preenche os campos do modal
+document.getElementById('editPedidoId').value = id;
+document.getElementById('editPedidoNumero').innerText = '#' + (p.numeroPedido || p.idPedido || id.substring(id.length - 6));
+document.getElementById('editPedidoCliente').value = p.cliente || p.nome || '';
+document.getElementById('editPedidoContato').value = p.whats || p.whatsapp || p.contato || '';
+
+// SEU AJUSTE AQUI:
+document.getElementById('editPedidoCidadeCliente').value = p.cidade || (entrega ? entrega.cidade : '') || '';
+
+document.getElementById('editPedidoPagamento').value = p.formaPagamento || '';
+document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
 
             document.getElementById('editEntregaNome').value = entrega.nome || '';
             document.getElementById('editEntregaEndereco').value = entrega.endereco || '';
@@ -701,71 +718,71 @@
             document.getElementById('editResumoTotal').innerText = formatarMoeda(total);
         }
 
-        async function salvarAlteracoesPedido() {
-            var id = document.getElementById('editPedidoId').value;
-            var p = _PEDIDOS_CACHE[id];
-            if (!p) return;
+       async function salvarAlteracoesPedido() {
+    var id = document.getElementById('editPedidoId').value;
+    var p = _PEDIDOS_CACHE[id];
+    if (!p) return;
 
-            var itens = p.itens || [];
-            var totais = calcularTotaisItens(itens);
-            var desconto = parseFloat(document.getElementById('editPedidoDesconto').value) || 0;
-            var frete = parseFloat(document.getElementById('editPedidoFrete').value) || 0;
-            var total = Math.max(0, totais.subtotal - desconto + frete);
+    var itens = p.itens || [];
+    var totais = calcularTotaisItens(itens);
+    var desconto = parseFloat(document.getElementById('editPedidoDesconto').value) || 0;
+    var frete = parseFloat(document.getElementById('editPedidoFrete').value) || 0;
+    var total = Math.max(0, totais.subtotal - desconto + frete);
 
-            var entregaCidade = document.getElementById('editEntregaCidade').value.trim();
+    var entregaCidade = document.getElementById('editEntregaCidade').value.trim();
+    var cidadeCliente = document.getElementById('editPedidoCidadeCliente') ? document.getElementById('editPedidoCidadeCliente').value.trim() : '';
 
-            var entregaAtualizada = {
-                nome: document.getElementById('editEntregaNome').value.trim(),
-                endereco: document.getElementById('editEntregaEndereco').value.trim(),
-                numero: document.getElementById('editEntregaNumero').value.trim(),
-                bairro: document.getElementById('editEntregaBairro').value.trim(),
-                cidade: entregaCidade
-            };
+    var entregaAtualizada = {
+        nome: document.getElementById('editEntregaNome').value.trim(),
+        endereco: document.getElementById('editEntregaEndereco').value.trim(),
+        numero: document.getElementById('editEntregaNumero').value.trim(),
+        bairro: document.getElementById('editEntregaBairro').value.trim(),
+        cidade: entregaCidade
+    };
 
-            var dadosAtualizados = {
-                idPedido: p.idPedido || ('PED-' + id.slice(-6)),
-                cliente: document.getElementById('editPedidoCliente').value.trim(),
-                nome: document.getElementById('editPedidoCliente').value.trim(),
-                whats: document.getElementById('editPedidoContato').value.trim(),
-                contato: document.getElementById('editPedidoContato').value.trim(),
-                formaPagamento: document.getElementById('editPedidoPagamento').value.trim(),
-                observacoes: document.getElementById('editPedidoObservacoes').value.trim(),
-                cidade: entregaCidade,
-                entrega: entregaAtualizada,
-                itens: itens,
-                produtos: itens,
-                subtotal: totais.subtotal,
-                desconto: desconto,
-                frete: frete,
-                total: total,
-                valorTotal: total,
-                totalPix: total,
-                pesoTotal: totais.pesoTotal,
-                totalPecas: totais.totalPecas,
-                romaneio: {
-                    subtotal: totais.subtotal,
-                    desconto: desconto,
-                    totalPix: total,
-                    pesoTotal: totais.pesoTotal,
-                    totalPecas: totais.totalPecas
-                }
-            };
-
-            try {
-                if (!window.db) throw new Error("Instância do Realtime Database não encontrada.");
-                const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
-
-                await window.db.ref(path + '/' + id).update(dadosAtualizados);
-
-                fecharModalEditarPedido();
-                alert("✅ Ordem de compra sincronizada com sucesso!");
-                await carregarPainelPedidos();
-            } catch(e) {
-                console.error(e);
-                alert("Erro crítico ao salvar atualizações no banco remoto.");
-            }
+    var dadosAtualizados = {
+        idPedido: p.idPedido || ('PED-' + id.slice(-6)),
+        cliente: document.getElementById('editPedidoCliente').value.trim(),
+        nome: document.getElementById('editPedidoCliente').value.trim(),
+        whats: document.getElementById('editPedidoContato').value.trim(),
+        contato: document.getElementById('editPedidoContato').value.trim(),
+        formaPagamento: document.getElementById('editPedidoPagamento').value.trim(),
+        observacoes: document.getElementById('editPedidoObservacoes').value.trim(),
+        cidade: cidadeCliente || entregaCidade,
+        entrega: entregaAtualizada,
+        itens: itens,
+        produtos: itens,
+        subtotal: totais.subtotal,
+        desconto: desconto,
+        frete: frete,
+        total: total,
+        valorTotal: total,
+        totalPix: total,
+        pesoTotal: totais.pesoTotal,
+        totalPecas: totais.totalPecas,
+        romaneio: {
+            subtotal: totais.subtotal,
+            desconto: desconto,
+            totalPix: total,
+            pesoTotal: totais.pesoTotal,
+            totalPecas: totais.totalPecas
         }
+    };
 
+    try {
+        if (!window.db) throw new Error("Instância do Realtime Database não encontrada.");
+        const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
+
+        await window.db.ref(path + '/' + id).update(dadosAtualizados);
+
+        fecharModalEditarPedido();
+        alert("✅ Ordem de compra sincronizada com sucesso!");
+        await carregarPainelPedidos();
+    } catch(e) {
+        console.error(e);
+        alert("Erro crítico ao salvar atualizações no banco remoto.");
+    }
+}
 
         async function excluirPedidoCompleto() {
             var id = document.getElementById('editPedidoId').value;

@@ -139,13 +139,17 @@
         if (!pedidoId) {
             exibirErro("❌ Erro Crítico: ID do pedido ausente na URL.");
         } else {
-            firebase.auth().onAuthStateChanged((user) => {
-                if (user) {
-                    carregarDadosRomaneio();
-                } else {
-                    exibirErro("🔒 Erro de Permissão: Usuário não autenticado. Faça login no sistema.");
-                }
-            });
+            if (window.firebase && firebase.auth) {
+                firebase.auth().onAuthStateChanged((user) => {
+                    if (user) {
+                        carregarDadosRomaneio();
+                    } else {
+                        exibirErro("🔒 Erro de Permissão: Usuário não autenticado. Faça login no sistema.");
+                    }
+                });
+            } else {
+                carregarDadosRomaneio();
+            }
         }
 
         async function carregarDadosRomaneio() {
@@ -165,10 +169,6 @@
 
                 const p = snap.val();
                 
-                // Exibe a estrutura do romaneio e oculta o loader
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('romaneio-conteudo').style.display = 'block';
-
                 // Preenchimento do Cabeçalho
                 document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
                 document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
@@ -196,12 +196,9 @@
                 document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
                 
                 if (tipo === 'conferencia') {
-                    document.getElementById('bloco-financeiro-total').classList.add('invisible');
+                    const blocoFin = document.getElementById('bloco-financeiro-total');
+                    if (blocoFin) blocoFin.classList.add('invisible');
                 }
-            } catch (err) {
-                console.error(err);
-                exibirErro("❌ Falha ao carregar informações do pedido: " + err.message);
-            }
 
                 // Normalização do Array de Itens
                 let itens = p.itens || p.produtos || [];
@@ -232,8 +229,8 @@
                 document.getElementById('romaneio-conteudo').style.display = 'block';
 
             } catch (err) {
-                console.error(err);
-                exibirErro("❌ Ocorreu uma exceção crítica ao sincronizar o romaneio.");
+                console.error("Erro ao carregar romaneio:", err);
+                exibirErro("❌ Ocorreu uma exceção crítica ao sincronizar o romaneio: " + err.message);
             }
         }
 
@@ -246,7 +243,7 @@
                 <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
                     <div class="text-zinc-500">Total de Itens distintos:</div>
                     <div class="text-right font-mono">${itens.length || 0}</div>
-                    <div class="text-zinc-500">Total de Peças encaçapadas:</div>
+                    <div class="text-zinc-500">Total de Peças:</div>
                     <div class="text-right font-mono">${p.totalPecas || p.qtd || 0} pçs</div>
                     <div class="text-zinc-500">Massa Bruta Estimada:</div>
                     <div class="text-right font-mono">${formatarPesoLocal(p.pesoTotal || p.peso || 0)}</div>

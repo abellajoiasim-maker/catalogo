@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Impressão de Romaneio • Abella Joias</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    
+    <!-- SDKs do Firebase (Versão Compatível: App, Auth e Database) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background: white; color: black; }
@@ -27,12 +31,12 @@
         </button>
     </div>
 
-    <!-- Barra de Carregamento (Oculta nativamente no início se necessário, controlada via JS) -->
+    <!-- Barra de Carregamento -->
     <div id="loader" class="text-center py-12 text-xs font-mono uppercase tracking-widest text-zinc-500 animate-pulse">
         ⏳ Montando estrutura do romaneio...
     </div>
 
-    <!-- Área do Romaneio Comercial (Estilo inline garante que NUNCA pisque antes da hora) -->
+    <!-- Área do Romaneio Comercial -->
     <div id="romaneio-conteudo" style="display: none;" class="max-w-5xl mx-auto space-y-5">
         <!-- Cabeçalho Principal -->
         <div class="border-b-2 border-black pb-3 flex justify-between items-end">
@@ -91,7 +95,7 @@
         </div>
     </div>
 
-    <!-- Scripts de Conexão de Dependências -->
+    <!-- Scripts de Conexão de Dependências (Em Ordem Estrita) -->
     <script src="../js/firebase/firebase-config.js"></script>
     <script src="js/auth-guard.js"></script>
     <script src="../js/utils/money.js"></script>
@@ -102,9 +106,6 @@
         const pedidoId = urlParams.get('id');
         const layout = urlParams.get('layout') || 'lista'; 
         const tipo = urlParams.get('tipo') || 'financeiro'; 
-
-        // Instância segura do Firebase Database
-        const databaseInstancia = window.db || (window.firebase ? firebase.database() : null);
 
         // Atualiza rótulo visual do modo
         const layoutLabel = document.getElementById('layout-label');
@@ -125,7 +126,16 @@
             return g < 1000 ? `${g.toFixed(2)} grs` : `${(g / 1000).toFixed(3)} kg`;
         };
 
-        // Escuta Autenticação do Firebase com Proteção de Renderização
+        function exibirErro(mensagem) {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.innerText = mensagem;
+                loader.classList.remove('animate-pulse');
+                loader.classList.add('text-red-600', 'font-bold');
+            }
+        }
+
+        // Aguarda Inicialização do Auth antes de Carregar Dados
         if (!pedidoId) {
             exibirErro("❌ Erro Crítico: ID do pedido ausente na URL.");
         } else {
@@ -138,17 +148,11 @@
             });
         }
 
-        function exibirErro(mensagem) {
-            const loader = document.getElementById('loader');
-            if (loader) {
-                loader.innerText = mensagem;
-                loader.classList.remove('animate-pulse');
-                loader.classList.add('text-red-600', 'font-bold');
-            }
-        }
-
         async function carregarDadosRomaneio() {
             try {
+                // Instância segura obtida após confirmação do Auth
+                const databaseInstancia = window.db || (window.firebase ? firebase.database() : null);
+
                 if (!databaseInstancia) {
                     throw new Error("Instância do banco de dados não disponível.");
                 }
@@ -161,6 +165,10 @@
 
                 const p = snap.val();
                 
+                // Exibe a estrutura do romaneio e oculta o loader
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('romaneio-conteudo').style.display = 'block';
+
                 // Preenchimento do Cabeçalho
                 document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
                 document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
@@ -190,6 +198,10 @@
                 if (tipo === 'conferencia') {
                     document.getElementById('bloco-financeiro-total').classList.add('invisible');
                 }
+            } catch (err) {
+                console.error(err);
+                exibirErro("❌ Falha ao carregar informações do pedido: " + err.message);
+            }
 
                 // Normalização do Array de Itens
                 let itens = p.itens || p.produtos || [];

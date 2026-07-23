@@ -91,19 +91,21 @@
         </div>
     </div>
 
-    <!-- Scripts e Conexão de Dependências -->
+   <!-- Scripts e Conexão de Dependências -->
     <script src="../js/firebase/firebase-config.js"></script>
+    <script src="js/auth-guard.js"></script>
     <script src="../js/utils/money.js"></script>
 
     <script>
-        const databaseInstancia = window.db || (window.firebase ? firebase.database() : null);
-
         const urlParams = new URLSearchParams(window.location.search);
         const pedidoId = urlParams.get('id');
         const layout = urlParams.get('layout') || 'lista'; 
         const tipo = urlParams.get('tipo') || 'financeiro'; 
 
-        document.getElementById('layout-label').innerText = `Modo: ${layout} + ${tipo}`;
+        const layoutLabel = document.getElementById('layout-label');
+        if (layoutLabel) {
+            layoutLabel.innerText = `Modo: ${layout} + ${tipo}`;
+        }
 
         // REGRA 1: Formatação de Moeda BR fixa
         const formatarMoedaLocal = (v) => {
@@ -113,20 +115,27 @@
 
         // REGRA 2: Formatação de Peso Inteligente (Regra peso.js)
         const formatarPesoLocal = (gramas) => {
-    const g = parseFloat(gramas || 0);
-    if (g < 1000) {
-        return `${g.toFixed(2)} grs`;
-    } else {
-        return `${(g / 1000).toFixed(3)} kg`; // Alterado para .toFixed(3) para exibir o terceiro dígito (ex: 1.870 kg)
-    }
-};
+            const g = parseFloat(gramas || 0);
+            if (g < 1000) {
+                return `${g.toFixed(2)} grs`;
+            } else {
+                return `${(g / 1000).toFixed(3)} kg`;
+            }
+        };
 
+        // AGUARDA AUTENTICAÇÃO ANTES DE REALIZAR A CONSULTA NO FIREBASE
         if (!pedidoId) {
-            document.getElementById('loader').innerText = "❌ Erro Crítico: ID de pedido ausente na URL.";
-        } else if (!databaseInstancia) {
-            document.getElementById('loader').innerText = "❌ Erro Crítico: Conexão com o banco não disponível.";
+            const loader = document.getElementById('loader');
+            if (loader) loader.innerText = "❌ Erro Crítico: ID de pedido ausente na URL.";
         } else {
-            carregarDadosRomaneio();
+            firebase.auth().onAuthStateChanged((user) => {
+                if (user) {
+                    carregarDadosRomaneio();
+                } else {
+                    const loader = document.getElementById('loader');
+                    if (loader) loader.innerText = "🔒 Erro de Permissão: Usuário não autenticado. Faça login no sistema.";
+                }
+            });
         }
 
         async function carregarDadosRomaneio() {

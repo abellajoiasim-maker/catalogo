@@ -173,31 +173,43 @@
         document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
         document.getElementById('cli-pagamento').innerText = p.formaPagamento || 'Não Informada';
 
-        // 1. DADOS DO CLIENTE
-        document.getElementById('cli-nome').innerText = p.cliente || p.nomeCliente || p.nome || '-';
-        document.getElementById('cli-whats').innerText = p.whats || p.whatsapp || p.contato || '-';
+        // ==========================================
+        // 1. DADOS DO CLIENTE (ISOLADOS)
+        // ==========================================
+        const cliObj = p.dadosCliente || p.clienteObj || {};
         
-        // Trata cidade/estado do cliente
-        const cidadeCli = p.cidadeCliente || p.cidade || '-';
-        const estadoCli = p.estadoCliente || p.estado || p.uf || '';
-        document.getElementById('cli-cidade').innerText = estadoCli ? `${cidadeCli} - ${estadoCli}`.toUpperCase() : cidadeCli.toUpperCase();
+        const nomeCliente = p.nomeCliente || p.cliente || cliObj.nome || '-';
+        const whatsCliente = p.whatsapp || p.whats || p.contato || cliObj.whatsapp || '-';
+        
+        // Busca ESTRITAMENTE a cidade/estado do cliente
+        const cidadeCli = p.cidadeCliente || cliObj.cidade || (typeof p.clienteCidade !== 'undefined' ? p.clienteCidade : '-');
+        const estadoCli = p.estadoCliente || cliObj.estado || cliObj.uf || p.clienteUf || '';
+        
+        const cidadeEstadoCliente = estadoCli ? `${cidadeCli} - ${estadoCli}` : cidadeCli;
 
-        // 2. DADOS DO LOCAL DE ENTREGA / GALVÂNICA
-        // Mapeia o objeto 'galvanica' ou 'entrega' ou as propriedades diretas do pedido
-        const g = p.galvanica || p.entrega || p.enderecoEntrega || {};
+        document.getElementById('cli-nome').innerText = nomeCliente;
+        document.getElementById('cli-whats').innerText = whatsCliente;
+        document.getElementById('cli-cidade').innerText = cidadeEstadoCliente.toUpperCase();
 
-        const destinatario = g.nome || g.destinatario || g.galvanicaNome || p.galvanicaNome || p.destinatario || 'Não Especificado';
-        const rua = g.rua || g.endereco || g.logradouro || p.galvanicaRua || p.rua || '-';
-        const numero = g.numero || p.galvanicaNumero || p.numero || 'S/N';
-        const bairro = g.bairro || p.galvanicaBairro || p.bairro || '-';
-        const cidadeEntrega = g.cidade || p.galvanicaCidade || p.cidadeEntrega || '-';
-        const ufEntrega = g.estado || g.uf || p.galvanicaEstado || p.ufEntrega || 'SP';
+        // ==========================================
+        // 2. DADOS DE ENTREGA / GALVÂNICA (ISOLADOS)
+        // ==========================================
+        const galvObj = p.galvanica || p.localEntrega || p.entrega || {};
 
-        document.getElementById('ent-nome').innerText = destinatario.toUpperCase();
-        document.getElementById('ent-rua').innerText = rua.toUpperCase();
-        document.getElementById('ent-num').innerText = numero;
-        document.getElementById('ent-bairro').innerText = bairro.toUpperCase();
-        document.getElementById('ent-cidade-uf').innerText = `${cidadeEntrega} - ${ufEntrega}`.toUpperCase();
+        const destNome = p.galvanicaNome || galvObj.nome || galvObj.destinatario || galvObj.galvanica || 'Não Especificado';
+        const destRua = p.galvanicaRua || galvObj.rua || galvObj.endereco || galvObj.logradouro || '-';
+        const destNum = p.galvanicaNumero || galvObj.numero || 'S/N';
+        const destBairro = p.galvanicaBairro || galvObj.bairro || '-';
+        
+        // Busca ESTRITAMENTE a cidade/estado da entrega/galvânica
+        const destCidade = p.galvanicaCidade || galvObj.cidade || '-';
+        const destUF = p.galvanicaEstado || galvObj.estado || galvObj.uf || 'SP';
+
+        document.getElementById('ent-nome').innerText = destNome.toUpperCase();
+        document.getElementById('ent-rua').innerText = destRua.toUpperCase();
+        document.getElementById('ent-num').innerText = destNum;
+        document.getElementById('ent-bairro').innerText = destBairro.toUpperCase();
+        document.getElementById('ent-cidade-uf').innerText = `${destCidade} - ${destUF}`.toUpperCase();
 
         // Totais do Rodapé
         document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;

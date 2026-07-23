@@ -432,28 +432,29 @@
         }
 
         const p = snap.val();
+        console.log("📦 DADOS BRUTOS RECEBIDOS DO FIREBASE:", p); // Para inspecionar no F12 caso precise
 
-        // 1. Dados do Cliente
+        // 1. DADOS DO CLIENTE
         const nomeCliente = p.cliente || p.nome || p.nomeCliente || '';
         const cidadeCliente = p.cidade || p.cidadeCliente || '';
 
-        // 2. Local de Entrega / Galvânica (Prioriza os dados de entrega salvos no editor)
-        const end = p.enderecoEntrega || p.entrega || p.localEntrega || {};
-        const isObj = (typeof end === 'object' && end !== null);
+        // 2. BUSCA EXAUSTIVA DO LOCAL DE ENTREGA / GALVÂNICA
+        // Tenta pegar de objetos aninhados se existirem
+        const e = p.enderecoEntrega || p.entrega || p.localEntrega || p.galvanicaData || {};
 
-        // Destinatário: Pega Nome do Destinatário/Galvânica -> Objeto de entrega -> Fallback Cliente
-        const destinatario = p.destinatario || p.galvanica || (isObj ? (end.destinatario || end.galvanica || end.nome) : null) || nomeCliente;
-        
-        // Rua / Endereço
-        const rua = p.rua || p.endereco || (isObj ? (end.rua || end.endereco || end.logradouro) : end) || '';
-        
-        // Número
-        const numero = p.numero || (isObj ? end.numero : '') || '';
-        
-        // Bairro
-        const bairro = p.bairro || (isObj ? end.bairro : '') || '';
+        // DESTINATÁRIO / GALVÂNICA
+        const destinatario = p.destinatario || p.nomeDestinatario || p.galvanica || e.destinatario || e.galvanica || e.nome || nomeCliente;
 
-        // Preenche os campos do formulário
+        // ENDEREÇO / RUA
+        const rua = p.endereco || p.rua || p.logradouro || e.endereco || e.rua || e.logradouro || '';
+
+        // NÚMERO
+        const numero = p.numero || e.numero || '';
+
+        // BAIRRO
+        const bairro = p.bairro || e.bairro || '';
+
+        // 3. PREENCHIMENTO DOS CAMPOS DO FORMULÁRIO
         document.getElementById('in-cliente').value = nomeCliente;
         document.getElementById('in-cidade-orig').value = cidadeCliente;
         document.getElementById('in-destinatario').value = destinatario;
@@ -461,7 +462,7 @@
         document.getElementById('in-numero').value = numero;
         document.getElementById('in-bairro').value = bairro;
 
-        // Atualiza o documento impresso
+        // Sincroniza com a visualização do documento impresso
         sync();
 
         const numeroPedido = p.numeroPedido || p.idPedido || pedidoId;
@@ -470,7 +471,7 @@
         statusEl.classList.add('text-green-600');
 
     } catch (err) {
-        console.error(err);
+        console.error("Erro ao carregar pedido:", err);
         statusEl.innerText = '❌ Erro ao carregar o pedido. Preencha manualmente, se quiser.';
         statusEl.classList.add('text-red-600');
         sync();

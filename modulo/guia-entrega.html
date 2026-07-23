@@ -432,29 +432,40 @@
         }
 
         const p = snap.val();
-        console.log("📦 DADOS BRUTOS RECEBIDOS DO FIREBASE:", p); // Para inspecionar no F12 caso precise
 
         // 1. DADOS DO CLIENTE
         const nomeCliente = p.cliente || p.nome || p.nomeCliente || '';
         const cidadeCliente = p.cidade || p.cidadeCliente || '';
 
-        // 2. BUSCA EXAUSTIVA DO LOCAL DE ENTREGA / GALVÂNICA
-        // Tenta pegar de objetos aninhados se existirem
-        const e = p.enderecoEntrega || p.entrega || p.localEntrega || p.galvanicaData || {};
+        // 2. EXTRAÇÃO DOS DADOS DA GALVÂNICA / LOCAL DE ENTREGA
+        // Mapeia todas as estruturas possíveis salvas pelo modal de edição
+        const galvObj = (typeof p.galvanica === 'object' && p.galvanica !== null) ? p.galvanica : {};
+        const entObj = (typeof p.enderecoEntrega === 'object' && p.enderecoEntrega !== null) ? p.enderecoEntrega : {};
+        const localObj = (typeof p.localEntrega === 'object' && p.localEntrega !== null) ? p.localEntrega : {};
 
-        // DESTINATÁRIO / GALVÂNICA
-        const destinatario = p.destinatario || p.nomeDestinatario || p.galvanica || e.destinatario || e.galvanica || e.nome || nomeCliente;
+        // NOME DO DESTINATÁRIO / GALVÂNICA
+        // Prioridade: String direta -> Objeto galvanica -> Objeto enderecoEntrega -> Objeto localEntrega -> Nome do Cliente
+        const destinatario = (typeof p.galvanica === 'string' && p.galvanica.trim() !== '' ? p.galvanica : null) ||
+                             p.destinatario || p.nomeDestinatario ||
+                             galvObj.nome || galvObj.destinatario || galvObj.razaoSocial ||
+                             entObj.destinatario || entObj.nome ||
+                             localObj.destinatario || localObj.nome ||
+                             nomeCliente;
 
         // ENDEREÇO / RUA
-        const rua = p.endereco || p.rua || p.logradouro || e.endereco || e.rua || e.logradouro || '';
+        const rua = p.rua || p.endereco ||
+                    galvObj.rua || galvObj.endereco || galvObj.logradouro ||
+                    entObj.rua || entObj.endereco || entObj.logradouro ||
+                    localObj.rua || localObj.endereco ||
+                    (typeof p.enderecoEntrega === 'string' ? p.enderecoEntrega : '');
 
         // NÚMERO
-        const numero = p.numero || e.numero || '';
+        const numero = p.numero || galvObj.numero || entObj.numero || localObj.numero || '';
 
         // BAIRRO
-        const bairro = p.bairro || e.bairro || '';
+        const bairro = p.bairro || galvObj.bairro || entObj.bairro || localObj.bairro || '';
 
-        // 3. PREENCHIMENTO DOS CAMPOS DO FORMULÁRIO
+        // 3. INJEÇÃO NOS INPUTS DO FORMULÁRIO DA GUIA
         document.getElementById('in-cliente').value = nomeCliente;
         document.getElementById('in-cidade-orig').value = cidadeCliente;
         document.getElementById('in-destinatario').value = destinatario;
@@ -462,7 +473,7 @@
         document.getElementById('in-numero').value = numero;
         document.getElementById('in-bairro').value = bairro;
 
-        // Sincroniza com a visualização do documento impresso
+        // Atualiza os campos visualizáveis da guia em tempo real
         sync();
 
         const numeroPedido = p.numeroPedido || p.idPedido || pedidoId;

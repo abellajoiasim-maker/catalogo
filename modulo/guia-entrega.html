@@ -410,7 +410,7 @@
             return null;
         }
 
-        async function carregarPedido() {
+       async function carregarPedido() {
     if (!pedidoId) {
         statusEl.innerText = '📝 Guia avulsa — nenhum pedido vinculado. Preencha os campos manualmente.';
         sync();
@@ -432,40 +432,44 @@
         }
 
         const p = snap.val();
+        console.log("📦 DADOS BRUTOS RECEBIDOS DO FIREBASE:", p);
 
-        // 1. DADOS DO CLIENTE
+        // 1. DADOS DO CLIENTE (Prioriza Cidade de Origem/Cliente do cadastro)
         const nomeCliente = p.cliente || p.nome || p.nomeCliente || '';
-        const cidadeCliente = p.cidade || p.cidadeCliente || '';
+        const cidadeCliente = p.cidadeCliente || p.cidade || '';
 
-        // 2. EXTRAÇÃO DOS DADOS DA GALVÂNICA / LOCAL DE ENTREGA
-        // Mapeia todas as estruturas possíveis salvas pelo modal de edição
-        const galvObj = (typeof p.galvanica === 'object' && p.galvanica !== null) ? p.galvanica : {};
-        const entObj = (typeof p.enderecoEntrega === 'object' && p.enderecoEntrega !== null) ? p.enderecoEntrega : {};
-        const localObj = (typeof p.localEntrega === 'object' && p.localEntrega !== null) ? p.localEntrega : {};
+        // 2. OBTENÇÃO DOS OBJETOS DE ENTREGA/GALVÂNICA
+        const ent = (typeof p.entrega === 'object' && p.entrega !== null) ? p.entrega : {};
+        const endEntrega = (typeof p.enderecoEntrega === 'object' && p.enderecoEntrega !== null) ? p.enderecoEntrega : {};
+        const galv = (typeof p.galvanica === 'object' && p.galvanica !== null) ? p.galvanica : {};
+        const local = (typeof p.localEntrega === 'object' && p.localEntrega !== null) ? p.localEntrega : {};
 
-        // NOME DO DESTINATÁRIO / GALVÂNICA
-        // Prioridade: String direta -> Objeto galvanica -> Objeto enderecoEntrega -> Objeto localEntrega -> Nome do Cliente
-        const destinatario = (typeof p.galvanica === 'string' && p.galvanica.trim() !== '' ? p.galvanica : null) ||
-                             p.destinatario || p.nomeDestinatario ||
-                             galvObj.nome || galvObj.destinatario || galvObj.razaoSocial ||
-                             entObj.destinatario || entObj.nome ||
-                             localObj.destinatario || localObj.nome ||
+        // 3. DESTINATÁRIO / GALVÂNICA
+        // Pega do campo editado no modal primeiro
+        const destinatario = p.destinatario || 
+                             (typeof p.galvanica === 'string' ? p.galvanica : null) || 
+                             galv.nome || galv.destinatario || galv.razaoSocial ||
+                             ent.destinatario || ent.nome || ent.galvanica ||
+                             endEntrega.destinatario || endEntrega.nome ||
+                             local.destinatario || local.nome ||
                              nomeCliente;
 
-        // ENDEREÇO / RUA
+        // 4. ENDEREÇO / RUA
         const rua = p.rua || p.endereco ||
-                    galvObj.rua || galvObj.endereco || galvObj.logradouro ||
-                    entObj.rua || entObj.endereco || entObj.logradouro ||
-                    localObj.rua || localObj.endereco ||
+                    ent.rua || ent.endereco || ent.logradouro ||
+                    endEntrega.rua || endEntrega.endereco || endEntrega.logradouro ||
+                    galv.rua || galv.endereco || galv.logradouro ||
+                    local.rua || local.endereco ||
+                    (typeof p.entrega === 'string' ? p.entrega : '') ||
                     (typeof p.enderecoEntrega === 'string' ? p.enderecoEntrega : '');
 
-        // NÚMERO
-        const numero = p.numero || galvObj.numero || entObj.numero || localObj.numero || '';
+        // 5. NÚMERO
+        const numero = p.numero || ent.numero || endEntrega.numero || galv.numero || local.numero || '';
 
-        // BAIRRO
-        const bairro = p.bairro || galvObj.bairro || entObj.bairro || localObj.bairro || '';
+        // 6. BAIRRO
+        const bairro = p.bairro || ent.bairro || endEntrega.bairro || galv.bairro || local.bairro || '';
 
-        // 3. INJEÇÃO NOS INPUTS DO FORMULÁRIO DA GUIA
+        // 4. ATRIBUIÇÃO AOS INPUTS
         document.getElementById('in-cliente').value = nomeCliente;
         document.getElementById('in-cidade-orig').value = cidadeCliente;
         document.getElementById('in-destinatario').value = destinatario;
@@ -473,7 +477,7 @@
         document.getElementById('in-numero').value = numero;
         document.getElementById('in-bairro').value = bairro;
 
-        // Atualiza os campos visualizáveis da guia em tempo real
+        // Sincroniza os textos na guia
         sync();
 
         const numeroPedido = p.numeroPedido || p.idPedido || pedidoId;

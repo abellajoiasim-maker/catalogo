@@ -152,26 +152,106 @@
             }
         }
 
-        async function carregarDadosRomaneio() {
+       async function carregarDadosRomaneio() {
     try {
         const databaseInstancia = window.db || (window.firebase ? firebase.database() : null);
+
+        if (!databaseInstancia) {
+            throw new Error("Instância do banco de dados não disponível.");
+        }
+
         const snap = await databaseInstancia.ref('abella/orders/' + pedidoId).once('value');
-        
         if (!snap.exists()) {
-            exibirErro("❌ Registro não localizado.");
+            exibirErro("❌ Erro: Registro de pedido não localizado no Firebase.");
             return;
         }
 
         const p = snap.val();
-
-        // IMPRIME A ESTRUTURA REAL DO PEDIDO NO CONSOLE (F12)
-        console.log("=== ESTRUTURA DO PEDIDO NO FIREBASE ===", p);
         
-        // Exibe as chaves do objeto na tela para identificar os nomes exatos
-        alert("Chaves salvas no pedido:\n" + Object.keys(p).join("\n"));
+        // Cabeçalho
+        document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
+        document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : (p.data || new Date().toLocaleString('pt-BR'));
+        document.getElementById('cli-pagamento').innerText = p.formaPagamento || p.pagamento || 'PIX';
+
+        // ==========================================
+        // 1. DADOS DO CLIENTE
+        // ==========================================
+        const nomeCliente = p.cliente || p.nomeCliente || p.nome || '-';
+        const whatsCliente = p.contato || p.whatsapp || p.whats || p.clienteWhatsapp || '-';
+        
+        // No seu Firebase, 'cidade' contém "Bacamal - MA"
+        const cidadeCliente = p.cidade || p.cidadeClienteTexto || '-';
+
+        document.getElementById('cli-nome').innerText = nomeCliente;
+        document.getElementById('cli-whats').innerText = whatsCliente;
+        document.getElementById('cli-cidade').innerText = cidadeCliente.toUpperCase();
+
+        // ==========================================
+        // 2. LOCAL DE ENTREGA / GALVÂNICA
+        // ==========================================
+        const galvObj = p.galvanica || p.localEntrega || p.entrega || {};
+
+        const destNome = p.galvanicaNome || galvObj.nome || galvObj.destinatario || galvObj.galvanica || 'Langge Galvanica';
+        const destRua = p.galvanicaRua || galvObj.rua || galvObj.endereco || p.endereco || '-';
+        const destNum = p.galvanicaNumero || galvObj.numero || p.numero || 'S/N';
+        const destBairro = p.galvanicaBairro || galvObj.bairro || p.bairro || '-';
+        
+        // No seu Firebase, a entrega pega 'galvanicaCidade' ou o fallback de 'cidadeCliente' (Iracemápolis/Limeira)
+        const destCidade = p.galvanicaCidade || galvObj.cidade || p.cidadeCliente || 'Limeira';
+        const destUF = p.galvanicaEstado || galvObj.estado || galvObj.uf || p.estado || 'SP';
+
+        let textoEntrega = destCidade.toUpperCase();
+        if (destUF && !textoEntrega.includes(destUF.toUpperCase())) {
+            textoEntrega += ` - ${destUF.toUpperCase()}`;
+        }
+
+        document.getElementById('ent-nome').innerText = destNome.toUpperCase();
+        document.getElementById('ent-rua').innerText = destRua.toUpperCase();
+        document.getElementById('ent-num').innerText = destNum;
+        document.getElementById('ent-bairro').innerText = destBairro.toUpperCase();
+        document.getElementById('ent-cidade-uf').innerText = textoEntrega;
+
+        // Totais do Rodapé
+        document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
+        document.getElementById('resumo-peso').innerText = formatarPesoLocal(p.pesoTotal || p.peso || 0);
+        document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
+        
+        if (tipo === 'conferencia') {
+            const blocoFin = document.getElementById('bloco-financeiro-total');
+            if (blocoFin) blocoFin.classList.add('invisible');
+        }
+
+        // Normalização do Array de Itens
+        let itens = p.itens || p.produtos || [];
+        if (typeof itens === 'object' && !Array.isArray(itens)) {
+            itens = Object.values(itens);
+        }
+
+        // Seleção e Renderização
+        const modelo = `${layout}_${tipo}`;
+        const renderizadores = {
+            lista_conferencia: renderListaConferencia,
+            lista_financeiro: renderListaCompleto,
+            lista_foto: renderListaCompletoFoto,
+            grade_conferencia: renderGradeConferencia,
+            grade_financeiro: renderGradeCompleto,
+            grade_foto: renderGradeCompletoFoto
+        };
+
+        const renderizador = renderizadores[modelo];
+        if (!renderizador) {
+            throw new Error(`Modelo estrutural não mapeado: ${modelo}`);
+        }
+
+        document.getElementById('render-target').innerHTML = renderizador(p, itens);
+
+        // Exibição Final
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('romaneio-conteudo').style.display = 'block';
 
     } catch (err) {
-        console.error(err);
+        console.error("Erro ao carregar romaneio:", err);
+        exibirErro("❌ Ocorreu uma exceção crítica ao sincronizar o romaneio: " + err.message);
     }
 }
         /* ==================== RENDERS DE COMPONENTES ==================== */

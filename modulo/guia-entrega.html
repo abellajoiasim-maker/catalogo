@@ -411,63 +411,71 @@
         }
 
         async function carregarPedido() {
-            if (!pedidoId) {
-                statusEl.innerText = '📝 Guia avulsa — nenhum pedido vinculado. Preencha os campos manualmente.';
-                sync();
-                return;
-            }
+    if (!pedidoId) {
+        statusEl.innerText = '📝 Guia avulsa — nenhum pedido vinculado. Preencha os campos manualmente.';
+        sync();
+        return;
+    }
 
-            try {
-                const db = await obterInstanciaDB();
-                if (!db) throw new Error('Instância do Firebase indisponível.');
+    try {
+        const db = await obterInstanciaDB();
+        if (!db) throw new Error('Instância do Firebase indisponível.');
 
-                const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
-                const snap = await db.ref(path + '/' + pedidoId).once('value');
+        const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
+        const snap = await db.ref(path + '/' + pedidoId).once('value');
 
-                if (!snap.exists()) {
-                    statusEl.innerText = '❌ Pedido não encontrado no Firebase. Preencha manualmente, se quiser.';
-                    statusEl.classList.add('text-red-600');
-                    sync();
-                    return;
-                }
-
-                const p = snap.val();
-
-                // Tratamento seguro de fallback e tipos de dados
-                const nomeCliente = p.cliente || p.nome || '';
-                const cidadeCliente = p.cidade || p.cidadeCliente || '';
-
-                const end = p.enderecoEntrega || p.entrega || p.endereco || {};
-                const isObj = (typeof end === 'object' && end !== null);
-
-                const destinatario = (isObj ? (end.destinatario || end.nome) : null) || nomeCliente;
-                const rua = (isObj ? (end.rua || end.logradouro) : end) || p.rua || '';
-                const numero = (isObj ? end.numero : null) || p.numero || '';
-                const bairro = (isObj ? end.bairro : null) || p.bairro || '';
-
-                // Atribuição aos campos editáveis
-                document.getElementById('in-cliente').value = nomeCliente;
-                document.getElementById('in-cidade-orig').value = cidadeCliente;
-                document.getElementById('in-destinatario').value = destinatario;
-                document.getElementById('in-endereco').value = rua;
-                document.getElementById('in-numero').value = numero;
-                document.getElementById('in-bairro').value = bairro;
-
-                // Atualiza a pré-visualização
-                sync();
-
-                const numeroPedido = p.numeroPedido || p.idPedido || pedidoId;
-                statusEl.innerText = `✅ Pedido #${numeroPedido} — ${nomeCliente || 'sem nome'} (edite se precisar)`;
-                statusEl.classList.remove('text-red-600');
-                statusEl.classList.add('text-green-600');
-
-            } catch (err) {
-                console.error(err);
-                statusEl.innerText = '❌ Erro ao carregar o pedido. Preencha manualmente, se quiser.';
-                statusEl.classList.add('text-red-600');
-                sync();
-            }
+        if (!snap.exists()) {
+            statusEl.innerText = '❌ Pedido não encontrado no Firebase. Preencha manualmente, se quiser.';
+            statusEl.classList.add('text-red-600');
+            sync();
+            return;
         }
+
+        const p = snap.val();
+
+        // 1. Dados do Cliente
+        const nomeCliente = p.cliente || p.nome || p.nomeCliente || '';
+        const cidadeCliente = p.cidade || p.cidadeCliente || '';
+
+        // 2. Local de Entrega / Galvânica (Prioriza os dados de entrega salvos no editor)
+        const end = p.enderecoEntrega || p.entrega || p.localEntrega || {};
+        const isObj = (typeof end === 'object' && end !== null);
+
+        // Destinatário: Pega Nome do Destinatário/Galvânica -> Objeto de entrega -> Fallback Cliente
+        const destinatario = p.destinatario || p.galvanica || (isObj ? (end.destinatario || end.galvanica || end.nome) : null) || nomeCliente;
+        
+        // Rua / Endereço
+        const rua = p.rua || p.endereco || (isObj ? (end.rua || end.endereco || end.logradouro) : end) || '';
+        
+        // Número
+        const numero = p.numero || (isObj ? end.numero : '') || '';
+        
+        // Bairro
+        const bairro = p.bairro || (isObj ? end.bairro : '') || '';
+
+        // Preenche os campos do formulário
+        document.getElementById('in-cliente').value = nomeCliente;
+        document.getElementById('in-cidade-orig').value = cidadeCliente;
+        document.getElementById('in-destinatario').value = destinatario;
+        document.getElementById('in-endereco').value = rua;
+        document.getElementById('in-numero').value = numero;
+        document.getElementById('in-bairro').value = bairro;
+
+        // Atualiza o documento impresso
+        sync();
+
+        const numeroPedido = p.numeroPedido || p.idPedido || pedidoId;
+        statusEl.innerText = `✅ Pedido #${numeroPedido} — ${nomeCliente || 'sem nome'} (edite se precisar)`;
+        statusEl.classList.remove('text-red-600');
+        statusEl.classList.add('text-green-600');
+
+    } catch (err) {
+        console.error(err);
+        statusEl.innerText = '❌ Erro ao carregar o pedido. Preencha manualmente, se quiser.';
+        statusEl.classList.add('text-red-600');
+        sync();
+    }
+}
 
         window.addEventListener('DOMContentLoaded', () => {
             carregarLogoDaLoja();

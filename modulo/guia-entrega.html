@@ -209,7 +209,7 @@
         <div class="grid grid-cols-2 gap-6">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Logotipo (opcional, já vem das Configurações)</label>
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Logotipo (opcional)</label>
                     <input type="file" accept="image/*" onchange="loadFile(this, 'logo-view')" class="text-xs block w-full border rounded p-1">
                 </div>
                 <div>
@@ -327,6 +327,7 @@
             }
         }
 
+        // Sincroniza os inputs do formulário com a visualização do documento impresso
         function sync() {
             const mappings = {
                 'in-cliente': 'out-cliente',
@@ -337,11 +338,12 @@
                 'in-bairro': 'out-bairro'
             };
             for (const [inId, outId] of Object.entries(mappings)) {
-                document.getElementById(outId).innerText = document.getElementById(inId).value || '-';
+                const val = document.getElementById(inId).value;
+                document.getElementById(outId).innerText = val && val.trim() !== '' ? val : '-';
             }
         }
 
-        // FUNÇÃO DE IMPRESSÃO INFALÍVEL (idêntica ao modelo original)
+        // Função de Impressão Direta
         document.getElementById('btn-print').addEventListener('click', function() {
             sync();
 
@@ -376,7 +378,7 @@
         });
 
         // ================================================================
-        // CARREGA O PEDIDO E PREENCHE A GUIA AUTOMATICAMENTE
+        // INICIALIZAÇÃO E CARREGAMENTO DOS DADOS DO PEDIDO
         // ================================================================
         const urlParams = new URLSearchParams(window.location.search);
         const pedidoId = urlParams.get('id');
@@ -396,6 +398,17 @@
             }
         }
 
+        async function obterInstanciaDB() {
+            let retries = 0;
+            while (retries < 10) {
+                if (window.db) return window.db;
+                if (typeof firebase !== 'undefined' && firebase.database) return firebase.database();
+                await new Promise(resolve => setTimeout(resolve, 200));
+                retries++;
+            }
+            return null;
+        }
+
         async function carregarPedido() {
             if (!pedidoId) {
                 statusEl.innerText = '📝 Guia avulsa — nenhum pedido vinculado. Preencha os campos manualmente.';
@@ -404,7 +417,7 @@
             }
 
             try {
-                const db = window.db || (typeof firebase !== 'undefined' ? firebase.database() : null);
+                const db = await obterInstanciaDB();
                 if (!db) throw new Error('Instância do Firebase indisponível.');
 
                 const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
@@ -419,22 +432,27 @@
 
                 const p = snap.val();
 
-                // Mesma lógica de fallback usada em impressao-pedido.html
+                // Tratamento seguro de fallback e tipos de dados
                 const nomeCliente = p.cliente || p.nome || '';
-                const cidadeCliente = p.cidade || '';
+                const cidadeCliente = p.cidade || p.cidadeCliente || '';
 
                 const end = p.enderecoEntrega || p.entrega || p.endereco || {};
-                const destinatario = end.destinatario || end.nome || nomeCliente;
-                const rua = end.rua || p.rua || end.logradouro || '';
-                const numero = end.numero || p.numero || '';
-                const bairro = end.bairro || p.bairro || '';
+                const isObj = (typeof end === 'object' && end !== null);
 
+                const destinatario = (isObj ? (end.destinatario || end.nome) : null) || nomeCliente;
+                const rua = (isObj ? (end.rua || end.logradouro) : end) || p.rua || '';
+                const numero = (isObj ? end.numero : null) || p.numero || '';
+                const bairro = (isObj ? end.bairro : null) || p.bairro || '';
+
+                // Atribuição aos campos editáveis
                 document.getElementById('in-cliente').value = nomeCliente;
                 document.getElementById('in-cidade-orig').value = cidadeCliente;
                 document.getElementById('in-destinatario').value = destinatario;
                 document.getElementById('in-endereco').value = rua;
                 document.getElementById('in-numero').value = numero;
                 document.getElementById('in-bairro').value = bairro;
+
+                // Atualiza a pré-visualização
                 sync();
 
                 const numeroPedido = p.numeroPedido || p.idPedido || pedidoId;
@@ -450,10 +468,10 @@
             }
         }
 
-        window.onload = function() {
+        window.addEventListener('DOMContentLoaded', () => {
             carregarLogoDaLoja();
             carregarPedido();
-        };
+        });
     </script>
 </body>
 </html>

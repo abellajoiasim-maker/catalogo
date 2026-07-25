@@ -12,6 +12,17 @@
 
     <link rel="stylesheet" href="components/index.css">
     <style>
+        /* Modal de produto: imagem maior, dados empilhados, descrição embaixo */
+        .produto-modal-grid{
+            display:grid;
+            grid-template-columns: 1.15fr .85fr;
+            gap: var(--space-7);
+        }
+        .produto-modal-info p{ margin-bottom: var(--space-2); }
+        .aurora-modal:has(.produto-modal-grid){ width: min(100%, 820px); }
+        @media (max-width: 640px){
+            .produto-modal-grid{ grid-template-columns: 1fr; gap: var(--space-5); }
+        }
         .prod-hero{
             position: relative; aspect-ratio: 16/9; overflow:hidden;
             border-radius: var(--radius-lg); margin: var(--space-4) auto var(--space-6);
@@ -223,18 +234,22 @@
             }
 
             const bodyHTML = `
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-6);">
+                <div class="produto-modal-grid">
                     <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1; border: 1px solid var(--color-border);">
                         <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
                     </div>
-                    <div>
-                        ${produto.descricao ? `<p style="font-size:13px; color:var(--color-secondary); line-height:1.7; margin-bottom: var(--space-4);">${formatarDescricao(produto.descricao)}</p>` : ''}
-                        <p class="aurora-price" style="font-size:24px;">${precoFmt}</p>
-                        ${produto.peso ? `<p style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">Peso: ${produto.peso}g</p>` : ''}
-                        ${produto.sku ? `<p style="font-size:12px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
+                    <div class="produto-modal-info">
+                        <p class="aurora-price" style="font-size:28px;">${precoFmt}</p>
+                        ${produto.peso ? `<p style="font-size:13px; color:var(--color-secondary);">Peso: ${produto.peso}g</p>` : ''}
+                        ${produto.sku ? `<p style="font-size:13px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
                         <div style="margin-top: var(--space-5);">${gradeHTML}</div>
                     </div>
                 </div>
+                ${produto.descricao ? `
+                    <div style="margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--color-border);">
+                        <p style="font-size:13px; color:var(--color-secondary); line-height:1.8;">${formatarDescricao(produto.descricao)}</p>
+                    </div>
+                ` : ''}
             `;
 
             const footerHTML = `<button class="aurora-btn aurora-btn--primary aurora-btn--block" onclick="confirmarAdicionarCarrinho('${produto.id}')">Adicionar à sacola</button>`;

@@ -126,6 +126,22 @@
     <script>
         let produtosDaPagina = [];
 
+        function escaparHTML(texto) {
+            const div = document.createElement('div');
+            div.innerText = texto;
+            return div.innerHTML;
+        }
+
+        // Converte o texto digitado no editor (**negrito** + quebras de linha)
+        // em HTML de verdade, mantendo a formatação exatamente como foi escrita.
+        function formatarDescricao(texto) {
+            if (!texto) return '';
+            let seguro = escaparHTML(texto);
+            seguro = seguro.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            seguro = seguro.replace(/\n/g, '<br>');
+            return seguro;
+        }
+
         function mostrarToast(msg) {
             const toast = document.getElementById('toast');
             toast.innerText = msg;
@@ -151,7 +167,7 @@
                         <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
                     </div>
                     <p style="font-size:13px; color:var(--color-secondary); line-height:1.7;">
-                        ${produto.legendaVitrine || produto.descricao || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
+                        ${formatarDescricao(produto.legendaVitrine || produto.descricao) || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
                     </p>
                 `;
                 AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
@@ -212,7 +228,7 @@
                         <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
                     </div>
                     <div>
-                        ${produto.descricao ? `<p style="font-size:13px; color:var(--color-secondary); line-height:1.7; margin-bottom: var(--space-4);">${produto.descricao}</p>` : ''}
+                        ${produto.descricao ? `<p style="font-size:13px; color:var(--color-secondary); line-height:1.7; margin-bottom: var(--space-4);">${formatarDescricao(produto.descricao)}</p>` : ''}
                         <p class="aurora-price" style="font-size:24px;">${precoFmt}</p>
                         ${produto.peso ? `<p style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">Peso: ${produto.peso}g</p>` : ''}
                         ${produto.sku ? `<p style="font-size:12px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
@@ -356,7 +372,7 @@
                                         </div>
                                         <div style="position:absolute; bottom:0; left:0; right:0; padding: var(--space-5);">
                                             <p style="font-family:var(--font-heading); color:#fff; font-size:clamp(16px,2.4vw,26px); font-weight:600; max-width:600px;">${p.nome}</p>
-                                            <p style="color:rgba(255,255,255,.8); font-size:13px; margin-top:var(--space-1); max-width:600px;">${legenda}</p>
+                                            <p style="color:rgba(255,255,255,.8); font-size:13px; margin-top:var(--space-1); max-width:600px;">${formatarDescricao(legenda)}</p>
                                         </div>
                                     </div>
                                 </div>

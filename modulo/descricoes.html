@@ -329,50 +329,56 @@
         let processedProducts = [];
         let currentProject = null;
 
-        function switchTab(tabId) {
+        window.switchTab = function(tabId) {
             ['upload', 'ia', 'revisao', 'exportacao'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.add('hidden');
                 const navBtn = document.getElementById(`nav-${t}`);
-                navBtn.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition";
+                if (navBtn) {
+                    navBtn.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition";
+                }
             });
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
             const activeNav = document.getElementById(`nav-${tabId}`);
-            activeNav.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-black tracking-wider bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/30 transition";
-        }
+            if (activeNav) {
+                activeNav.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-black tracking-wider bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/30 transition";
+            }
+        };
 
-        function openProjectModal() { 
+        window.openProjectModal = function() { 
             document.getElementById('project-modal').classList.remove('hidden'); 
             document.getElementById('project-modal').classList.add('flex'); 
-        }
-        function closeProjectModal() { 
+        };
+
+        window.closeProjectModal = function() { 
             document.getElementById('project-modal').classList.add('hidden'); 
             document.getElementById('project-modal').classList.remove('flex'); 
-        }
+        };
 
-        function saveProject() {
+        window.saveProject = function() {
             const name = document.getElementById('proj-name').value || 'Projeto Abella Joias';
             const collection = document.getElementById('proj-collection').value || 'Geral';
             const resp = document.getElementById('proj-resp').value || 'Equipe';
             const obs = document.getElementById('proj-obs').value;
 
             currentProject = { name, collection, resp, obs };
-            document.getElementById('current-project-badgeinnerText'] = `${name} (${collection})`;
             document.getElementById('current-project-badge').innerText = `${name} (${collection})`;
             closeProjectModal();
-        }
+        };
 
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-[#caa85c]', 'bg-black/60'); });
-        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-[#caa85c]', 'bg-black/60'); });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('border-[#caa85c]', 'bg-black/60');
-            handleFiles(e.dataTransfer.files);
-        });
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        if (dropZone && fileInput) {
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-[#caa85c]', 'bg-black/60'); });
+            dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-[#caa85c]', 'bg-black/60'); });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-[#caa85c]', 'bg-black/60');
+                handleFiles(e.dataTransfer.files);
+            });
+            fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        }
 
         function handleFiles(files) {
             for (let file of files) {
@@ -413,17 +419,17 @@
             btn.className = "btn-gold h-12 px-6 rounded-2xl text-xs uppercase font-black tracking-[0.15em] transition-all";
         }
 
-        function removeFile(index) {
+        window.removeFile = function(index) {
             uploadedFiles.splice(index, 1);
             updateThumbnailUI();
-        }
+        };
 
-        function clearImages() {
+        window.clearImages = function() {
             uploadedFiles = [];
             updateThumbnailUI();
-        }
+        };
 
-        function processBatchAI() {
+        window.processBatchAI = function() {
             switchTab('ia');
             document.getElementById('processing-status').classList.remove('hidden');
             document.getElementById('ia-results-container').classList.add('hidden');
@@ -457,7 +463,7 @@
                 document.getElementById('processing-status').classList.add('hidden');
                 document.getElementById('ia-results-container').classList.remove('hidden');
             }, 1200);
-        }
+        };
 
         function renderIATable() {
             const tbody = document.getElementById('ia-table-body');
@@ -505,21 +511,21 @@
             });
         }
 
-        function updateProductField(index, field, value) {
+        window.updateProductField = function(index, field, value) {
             processedProducts[index][field] = value;
-        }
+        };
 
-        function updateStatus(index, status) {
+        window.updateStatus = function(index, status) {
             processedProducts[index].status = status;
             renderRevisaoList();
-        }
+        };
 
-        function approveAll() {
+        window.approveAll = function() {
             processedProducts.forEach(p => p.status = 'Aprovado');
             renderRevisaoList();
-        }
+        };
 
-        async function exportData(format) {
+        window.exportData = async function(format) {
             if (processedProducts.length === 0) {
                 alert('Nenhum dado processado para exportar.');
                 return;
@@ -559,7 +565,7 @@
             link.href = URL.createObjectURL(blob);
             link.download = filename;
             link.click();
-        }
+        };
     </script>
 </body>
 </html>

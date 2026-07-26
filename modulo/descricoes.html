@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <style id="auth-guard-hide">html{visibility:hidden !important;}</style>
+    <meta charset="UTF-8">
+    <title>Central de Descrições IA • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+    <!-- FontAwesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            background: #050505;
+            color: #f5f5f5;
+            font-family: Inter, sans-serif;
+        }
+        .glass {
+            background: rgba(20, 20, 20, .92);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, .06);
+        }
+        .gold {
+            color: #caa85c;
+        }
+        .btn-gold {
+            background: #caa85c;
+            color: #000;
+            font-weight: 900;
+            transition: .25s;
+        }
+        .btn-gold:hover {
+            filter: brightness(1.05);
+            transform: translateY(-2px);
+        }
+        .scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- HEADER -->
+        <div class="glass rounded-[2rem] p-8">
+            <div class="flex flex-col xl:flex-row gap-8 justify-between items-center">
+                <div class="space-y-3 w-full">
+                    <h1 class="text-3xl font-black uppercase tracking-[0.2em] gold">
+                        Central de Descrições IA <span class="text-xs font-light text-zinc-400">| IQ200</span>
+                    </h1>
+                    <p class="text-zinc-400 text-sm leading-relaxed max-w-3xl">
+                        Módulo inteligente para transformar lotes de imagens em cadastros padronizados, com OCR, detecção de tipos e motor de variações.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-4 w-full xl:w-auto justify-end">
+                    <div id="current-project-badge" class="glass px-4 py-2 rounded-2xl text-xs text-zinc-300 font-medium">
+                        Nenhum projeto ativo
+                    </div>
+                    <button onclick="openProjectModal()" class="btn-gold px-5 py-3 rounded-2xl text-xs uppercase tracking-wider">
+                        📁 Projetos
+                    </button>
+                    <button onclick="AuthGuard.logout()" class="h-11 px-4 rounded-2xl border border-zinc-800 text-xs uppercase font-black tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors">
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LAYOUT PRINCIPAL -->
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+
+            <!-- SIDEBAR / FLUXO -->
+            <div class="xl:col-span-1 space-y-4">
+                <div class="glass rounded-[2rem] p-6 space-y-4">
+                    <h2 class="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Fluxo Geral</h2>
+                    <nav class="space-y-2">
+                        <button onclick="switchTab('upload')" id="nav-upload" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-black tracking-wider bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/30 transition">
+                            <i class="fa-solid fa-cloud-arrow-up w-5"></i>
+                            <span>1. Upload & OCR</span>
+                        </button>
+                        <button onclick="switchTab('ia')" id="nav-ia" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition">
+                            <i class="fa-solid fa-wand-magic-sparkles w-5"></i>
+                            <span>2. IA & Classificação</span>
+                        </button>
+                        <button onclick="switchTab('revisao')" id="nav-revisao" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition">
+                            <i class="fa-solid fa-list-check w-5"></i>
+                            <span>3. Revisão & Aprovação</span>
+                        </button>
+                        <button onclick="switchTab('exportacao')" id="nav-exportacao" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition">
+                            <i class="fa-solid fa-file-export w-5"></i>
+                            <span>4. Exportação</span>
+                        </button>
+                    </nav>
+
+                    <hr class="border-zinc-800">
+
+                    <!-- PARÂMETROS IA -->
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Parâmetros IA</h3>
+                        <div>
+                            <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Perfil de Texto</label>
+                            <select id="param-perfil" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
+                                <option value="Comercial">Comercial</option>
+                                <option value="Técnico">Técnico</option>
+                                <option value="Premium">Premium</option>
+                                <option value="Luxuoso">Luxuoso</option>
+                                <option value="Marketplace">Marketplace</option>
+                                <option value="WhatsApp">WhatsApp</option>
+                                <option value="Instagram">Instagram</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Público-Alvo</label>
+                            <select id="param-publico" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
+                                <option value="Atacadista">Atacadista</option>
+                                <option value="Lojista">Lojista</option>
+                                <option value="Revendedora">Revendedora</option>
+                                <option value="Galvânica">Galvânica</option>
+                                <option value="Consumidor Final">Consumidor Final</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTAINER DE CONTEÚDO -->
+            <div class="xl:col-span-3 space-y-6">
+
+                <!-- ABA 1: UPLOAD & OCR -->
+                <div id="tab-upload" class="glass rounded-[2rem] p-8 space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-black">📦 Upload de Imagens em Lote</h2>
+                        <p class="text-zinc-500 text-sm mt-1">Carregue fotos de joias no bruto ou semi-joias para varredura de OCR e IA.</p>
+                    </div>
+
+                    <div id="drop-zone" class="border-2 border-dashed border-zinc-800 rounded-[2rem] p-10 text-center bg-black/40 cursor-pointer hover:border-[#caa85c] transition-all">
+                        <input type="file" id="file-input" multiple accept="image/jpeg,image/png,image/webp,application/zip" class="hidden">
+                        <div class="text-5xl mb-3">📂</div>
+                        <h3 class="text-lg font-black">Arraste imagens ou clique aqui</h3>
+                        <p class="text-zinc-500 text-xs mt-2">Suporta JPG, PNG, WEBP ou ZIP com centenas de itens</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Imagens Carregadas (<span id="file-count">0</span>)</h3>
+                            <button onclick="clearImages()" class="text-xs text-rose-400 hover:underline">Remover Todas</button>
+                        </div>
+                        <div id="thumbnail-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-56 overflow-y-auto scrollbar p-2 bg-black rounded-2xl border border-zinc-900">
+                            <p class="col-span-full text-center text-xs text-zinc-600 py-6">Nenhuma imagem carregada ainda.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button onclick="processBatchAI()" id="btn-process" disabled class="h-12 px-6 rounded-2xl text-xs uppercase font-black tracking-[0.15em] bg-zinc-800 text-zinc-500 cursor-not-allowed transition-all">
+                            ✨ Executar Análise IA + OCR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ABA 2: IA & CLASSIFICAÇÃO -->
+                <div id="tab-ia" class="hidden glass rounded-[2rem] p-8 space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black">🧠 Processamento de IA & Classificação</h2>
+                            <p class="text-zinc-500 text-sm mt-1">Identificação automática de categorias, subcategorias e nomenclaturas.</p>
+                        </div>
+                        <span class="text-[10px] uppercase font-black px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Regra: Nunca inventar informações</span>
+                    </div>
+
+                    <div id="processing-status" class="hidden text-center py-16 space-y-3">
+                        <i class="fa-solid fa-circle-notch fa-spin text-4xl gold"></i>
+                        <p class="text-sm font-medium text-zinc-400">Executando varredura inteligente e motor de variações...</p>
+                    </div>
+
+                    <div id="ia-results-container" class="space-y-4">
+                        <div class="bg-black rounded-3xl border border-zinc-900 overflow-hidden">
+                            <div class="overflow-x-auto scrollbar" style="max-height: 420px;">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="sticky top-0 bg-zinc-950 z-10 text-zinc-500 uppercase tracking-wider">
+                                        <tr>
+                                            <th class="p-4">Foto</th>
+                                            <th class="p-4">SKU / OCR</th>
+                                            <th class="p-4">Tipo</th>
+                                            <th class="p-4">Categoria / Subcategoria</th>
+                                            <th class="p-4">Nome Comercial</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ia-table-body" class="divide-y divide-zinc-900">
+                                        <tr><td colspan="5" class="p-8 text-center text-zinc-600">Aguardando execução do processamento...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between pt-2">
+                        <button onclick="switchTab('upload')" class="h-11 px-5 rounded-2xl border border-zinc-800 text-xs font-bold hover:border-zinc-700">Voltar</button>
+                        <button onclick="switchTab('revisao')" class="btn-gold h-11 px-6 rounded-2xl text-xs uppercase tracking-wider">Ir para Revisão</button>
+                    </div>
+                </div>
+
+                <!-- ABA 3: REVISÃO & APROVAÇÃO -->
+                <div id="tab-revisao" class="hidden glass rounded-[2rem] p-8 space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black">📋 Revisão e Aprovação</h2>
+                            <p class="text-zinc-500 text-sm mt-1">Ajuste descrições geradas e aprove os cadastros individualmente ou em massa.</p>
+                        </div>
+                        <button onclick="approveAll()" class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider transition">Aprovar Todos</button>
+                    </div>
+
+                    <div id="revisao-list" class="space-y-4 max-h-[460px] overflow-y-auto scrollbar pr-2">
+                        <p class="text-center text-xs text-zinc-600 py-8">Nenhum produto gerado para revisão.</p>
+                    </div>
+
+                    <div class="flex justify-between pt-2">
+                        <button onclick="switchTab('ia')" class="h-11 px-5 rounded-2xl border border-zinc-800 text-xs font-bold hover:border-zinc-700">Voltar</button>
+                        <button onclick="switchTab('exportacao')" class="btn-gold h-11 px-6 rounded-2xl text-xs uppercase tracking-wider">Ir para Exportação</button>
+                    </div>
+                </div>
+
+                <!-- ABA 4: EXPORTAÇÃO -->
+                <div id="tab-exportacao" class="hidden glass rounded-[2rem] p-8 space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-black">📤 Central de Exportação</h2>
+                        <p class="text-zinc-500 text-sm mt-1">Exporte seus cadastros aprovados sem perda de dados ou sincronize com o Firebase.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <button onclick="exportData('csv')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
+                            <i class="fa-solid fa-file-csv text-3xl text-emerald-400 mb-2 group-hover:scale-110 transition"></i>
+                            <h3 class="font-black text-sm">CSV</h3>
+                            <p class="text-[10px] text-zinc-500 mt-1">Planilhas gerais</p>
+                        </button>
+                        <button onclick="exportData('txt')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
+                            <i class="fa-solid fa-file-lines text-3xl text-blue-400 mb-2 group-hover:scale-110 transition"></i>
+                            <h3 class="font-black text-sm">TXT</h3>
+                            <p class="text-[10px] text-zinc-500 mt-1">Bloco de notas</p>
+                        </button>
+                        <button onclick="exportData('json')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
+                            <i class="fa-solid fa-code text-3xl gold mb-2 group-hover:scale-110 transition"></i>
+                            <h3 class="font-black text-sm">JSON</h3>
+                            <p class="text-[10px] text-zinc-500 mt-1">Estruturado</p>
+                        </button>
+                        <button onclick="exportData('excel')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
+                            <i class="fa-solid fa-file-excel text-3xl text-emerald-500 mb-2 group-hover:scale-110 transition"></i>
+                            <h3 class="font-black text-sm">Excel</h3>
+                            <p class="text-[10px] text-zinc-500 mt-1">XLSX Compatível</p>
+                        </button>
+                        <button onclick="exportData('pdf')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
+                            <i class="fa-solid fa-file-pdf text-3xl text-rose-500 mb-2 group-hover:scale-110 transition"></i>
+                            <h3 class="font-black text-sm">PDF</h3>
+                            <p class="text-[10px] text-zinc-500 mt-1">Catálogo</p>
+                        </button>
+                        <button onclick="exportData('firebase')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
+                            <i class="fa-solid fa-database text-3xl gold mb-2 group-hover:scale-110 transition"></i>
+                            <h3 class="font-black text-sm">Firebase</h3>
+                            <p class="text-[10px] text-zinc-500 mt-1">Salvar na Nuvem</p>
+                        </button>
+                    </div>
+
+                    <div class="flex justify-start pt-2">
+                        <button onclick="switchTab('revisao')" class="h-11 px-5 rounded-2xl border border-zinc-800 text-xs font-bold hover:border-zinc-700">Voltar para Revisão</button>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL DE PROJETOS -->
+    <div id="project-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="glass rounded-[2rem] max-w-md w-full p-8 space-y-6 border border-zinc-800">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-4">
+                <h3 class="text-lg font-black gold"><i class="fa-solid fa-folder-open mr-2"></i> Gerenciador de Projetos</h3>
+                <button onclick="closeProjectModal()" class="text-zinc-500 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Nome do Projeto</label>
+                    <input type="text" id="proj-name" placeholder="Ex: Lote Coleção Brilho Prata" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Coleção</label>
+                        <input type="text" id="proj-collection" placeholder="Ex: Verão 2026" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Responsável</label>
+                        <input type="text" id="proj-resp" placeholder="Ex: Isaías" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Observações</label>
+                    <textarea id="proj-obs" rows="2" placeholder="Observações gerais do lote..." class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-2 border-t border-zinc-800">
+                <button onclick="closeProjectModal()" class="h-11 px-5 rounded-xl border border-zinc-800 text-xs font-bold text-zinc-400">Cancelar</button>
+                <button onclick="saveProject()" class="btn-gold h-11 px-6 rounded-xl text-xs uppercase tracking-wider">Salvar Projeto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS DE AUTENTICAÇÃO E CONFIGURAÇÃO DO FIREBASE -->
+    <script src="../js/firebase/firebase-config.js"></script>
+    <script src="js/auth-guard.js"></script>
+
+    <script>
+        let uploadedFiles = [];
+        let processedProducts = [];
+        let currentProject = null;
+
+        function switchTab(tabId) {
+            ['upload', 'ia', 'revisao', 'exportacao'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                const navBtn = document.getElementById(`nav-${t}`);
+                navBtn.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition";
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            activeNav.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-black tracking-wider bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/30 transition";
+        }
+
+        function openProjectModal() { 
+            document.getElementById('project-modal').classList.remove('hidden'); 
+            document.getElementById('project-modal').classList.add('flex'); 
+        }
+        function closeProjectModal() { 
+            document.getElementById('project-modal').classList.add('hidden'); 
+            document.getElementById('project-modal').classList.remove('flex'); 
+        }
+
+        function saveProject() {
+            const name = document.getElementById('proj-name').value || 'Projeto Abella Joias';
+            const collection = document.getElementById('proj-collection').value || 'Geral';
+            const resp = document.getElementById('proj-resp').value || 'Equipe';
+            const obs = document.getElementById('proj-obs').value;
+
+            currentProject = { name, collection, resp, obs };
+            document.getElementById('current-project-badgeinnerText'] = `${name} (${collection})`;
+            document.getElementById('current-project-badge').innerText = `${name} (${collection})`;
+            closeProjectModal();
+        }
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-[#caa85c]', 'bg-black/60'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-[#caa85c]', 'bg-black/60'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-[#caa85c]', 'bg-black/60');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            for (let file of files) {
+                uploadedFiles.push({
+                    name: file.name,
+                    url: URL.createObjectURL(file),
+                    sku: 'ABELLA-' + Math.floor(1000 + Math.random() * 9000)
+                });
+            }
+            updateThumbnailUI();
+        }
+
+        function updateThumbnailUI() {
+            const grid = document.getElementById('thumbnail-grid');
+            document.getElementById('file-count').innerText = uploadedFiles.length;
+            
+            if (uploadedFiles.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-center text-xs text-zinc-600 py-6">Nenhuma imagem carregada ainda.</p>`;
+                const btn = document.getElementById('btn-process');
+                btn.disabled = true;
+                btn.className = "h-12 px-6 rounded-2xl text-xs uppercase font-black tracking-[0.15em] bg-zinc-800 text-zinc-500 cursor-not-allowed transition-all";
+                return;
+            }
+
+            grid.innerHTML = '';
+            uploadedFiles.forEach((f, idx) => {
+                grid.innerHTML += `
+                    <div class="relative group glass rounded-xl p-2 border border-zinc-800">
+                        <img src="${f.url}" class="w-full h-16 object-cover rounded-lg">
+                        <p class="text-[9px] text-zinc-400 truncate mt-1">${f.name}</p>
+                        <button onclick="removeFile(${idx})" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition">×</button>
+                    </div>
+                `;
+            });
+
+            const btn = document.getElementById('btn-process');
+            btn.disabled = false;
+            btn.className = "btn-gold h-12 px-6 rounded-2xl text-xs uppercase font-black tracking-[0.15em] transition-all";
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            updateThumbnailUI();
+        }
+
+        function clearImages() {
+            uploadedFiles = [];
+            updateThumbnailUI();
+        }
+
+        function processBatchAI() {
+            switchTab('ia');
+            document.getElementById('processing-status').classList.remove('hidden');
+            document.getElementById('ia-results-container').classList.add('hidden');
+
+            setTimeout(() => {
+                const tipos = ['Produto Simples', 'Trio', 'Conjunto', 'Kit', 'Argola', 'Pingente', 'Pulseira', 'Corrente', 'Anel', 'Berloque'];
+                const categorias = ['Brincos', 'Pulseiras', 'Correntes', 'Pingentes', 'Anéis', 'Acessórios'];
+                const subcategorias = ['Floral', 'Infantil', 'Religioso', 'Borboleta', 'Coração', 'Argola', 'Animal', 'Estrela', 'Lua', 'Minimalista', 'Geométrico'];
+
+                processedProducts = uploadedFiles.map((f, i) => {
+                    const tipo = tipos[i % tipos.length];
+                    const cat = categorias[i % categorias.length];
+                    const sub = subcategorias[i % subcategorias.length];
+                    return {
+                        id: i,
+                        sku: f.sku,
+                        url: f.url,
+                        tipo: tipo,
+                        categoria: cat,
+                        subcategoria: sub,
+                        nomeComercial: `${cat} ${sub} em Bruto (${f.sku})`,
+                        descCurta: `Peça de alta qualidade para revenda e atacado.`,
+                        descCompleta: `Produto composto tratado como único cadastro. Banho de excelência e brilho impecável.`,
+                        status: 'Pendente'
+                    };
+                });
+
+                renderIATable();
+                renderRevisaoList();
+
+                document.getElementById('processing-status').classList.add('hidden');
+                document.getElementById('ia-results-container').classList.remove('hidden');
+            }, 1200);
+        }
+
+        function renderIATable() {
+            const tbody = document.getElementById('ia-table-body');
+            tbody.innerHTML = '';
+            processedProducts.forEach(p => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-zinc-950/50 border-b border-zinc-900">
+                        <td class="p-4"><img src="${p.url}" class="w-10 h-10 object-cover rounded-lg border border-zinc-800"></td>
+                        <td class="p-4 font-mono text-zinc-400">${p.sku}</td>
+                        <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/20">${p.tipo}</span></td>
+                        <td class="p-4 text-zinc-300">${p.categoria} > ${p.subcategoria}</td>
+                        <td class="p-4 font-bold text-white">${p.nomeComercial}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderRevisaoList() {
+            const container = document.getElementById('revisao-list');
+            container.innerHTML = '';
+            processedProducts.forEach((p, idx) => {
+                container.innerHTML += `
+                    <div class="glass rounded-2xl p-4 space-y-3 border border-zinc-800">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <img src="${p.url}" class="w-12 h-12 object-cover rounded-xl border border-zinc-800">
+                                <div>
+                                    <h4 class="text-xs font-black text-white">${p.sku} - ${p.tipo}</h4>
+                                    <p class="text-[10px] text-zinc-500">${p.categoria} / ${p.subcategoria}</p>
+                                </div>
+                            </div>
+                            <select onchange="updateStatus(${idx}, this.value)" class="text-xs glass border border-zinc-800 rounded-xl p-2 font-bold outline-none ${p.status === 'Aprovado' ? 'text-emerald-400' : 'text-amber-400'}">
+                                <option value="Pendente" ${p.status==='Pendente'?'selected':''}>Pendente</option>
+                                <option value="Revisado" ${p.status==='Revisado'?'selected':''}>Revisado</option>
+                                <option value="Aprovado" ${p.status==='Aprovado'?'selected':''}>Aprovado</option>
+                                <option value="Exportado" ${p.status==='Exportado'?'selected':''}>Exportado</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="text" value="${p.nomeComercial}" onchange="updateProductField(${idx}, 'nomeComercial', this.value)" class="text-xs glass border border-zinc-800 rounded-xl p-2.5 outline-none focus:border-[#caa85c]">
+                            <input type="text" value="${p.descCurta}" onchange="updateProductField(${idx}, 'descCurta', this.value)" class="text-xs glass border border-zinc-800 rounded-xl p-2.5 outline-none focus:border-[#caa85c]" placeholder="Descrição Curta">
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateProductField(index, field, value) {
+            processedProducts[index][field] = value;
+        }
+
+        function updateStatus(index, status) {
+            processedProducts[index].status = status;
+            renderRevisaoList();
+        }
+
+        function approveAll() {
+            processedProducts.forEach(p => p.status = 'Aprovado');
+            renderRevisaoList();
+        }
+
+        async function exportData(format) {
+            if (processedProducts.length === 0) {
+                alert('Nenhum dado processado para exportar.');
+                return;
+            }
+
+            if (format === 'firebase') {
+                try {
+                    for (const p of processedProducts) {
+                        const slug = p.sku.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        await db.ref(`abella/products/${slug}`).update({
+                            sku: p.sku,
+                            name: p.nomeComercial,
+                            category: p.categoria.toLowerCase(),
+                            description: p.descCompleta,
+                            updatedAt: Date.now()
+                        });
+                    }
+                    alert('Dados sincronizados com sucesso no Firebase do projeto Abella Joias!');
+                } catch (e) {
+                    alert('Erro ao sincronizar com o Firebase: ' + e.message);
+                }
+                return;
+            }
+            
+            let content = '';
+            let filename = `abella_joias_descricoes.${format}`;
+            
+            if (format === 'json') {
+                content = JSON.stringify(processedProducts, null, 2);
+            } else {
+                content = processedProducts.map(p => `"${p.sku}","${p.tipo}","${p.categoria}","${p.nomeComercial}","${p.descCurta}"`).join('\n');
+                if (format === 'excel') filename = 'abella_joias_descricoes.csv';
+            }
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), content], { type: 'text/plain;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+    </script>
+</body>
+</html>

@@ -1,590 +1,742 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="h-full bg-slate-900 text-slate-100">
 <head>
-    <style id="auth-guard-hide">html{visibility:hidden !important;}</style>
-    <meta charset="UTF-8">
-    <title>Central de Descrições IA • Abella Joias</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Firebase SDKs Compat -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
-
-    <!-- FontAwesome para Ícones -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
-        body {
-            background: #050505;
-            color: #f5f5f5;
-            font-family: Inter, sans-serif;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abella Joias - Gerador de Descrições no Bruto em Lote</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            gold: {
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+            }
+          }
         }
-        .glass {
-            background: rgba(20, 20, 20, .92);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, .06);
-        }
-        .gold {
-            color: #caa85c;
-        }
-        .btn-gold {
-            background: #caa85c;
-            color: #000;
-            font-weight: 900;
-            transition: .25s;
-        }
-        .btn-gold:hover {
-            filter: brightness(1.05);
-            transform: translateY(-2px);
-        }
-        .scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .scrollbar::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 20px;
-        }
-    </style>
+      }
+    }
+  </script>
+  <style>
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+    .drag-over {
+      border-color: #f59e0b !important;
+      background-color: rgba(245, 158, 11, 0.08) !important;
+    }
+  </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
+<body class="h-full font-sans antialiased flex flex-col bg-slate-950 text-slate-100">
 
-    <div class="max-w-7xl mx-auto space-y-6">
+  <!-- Cabeçalho -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-300 flex items-center justify-center shadow-lg shadow-amber-500/20 font-bold text-slate-950 text-xl">
+          AJ
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
+            Abella Joias • Atacado no Bruto
+          </h1>
+          <p class="text-xs text-slate-400">Gerador Inteligente de Descrições em Lote (IA)</p>
+        </div>
+      </div>
+      
+      <!-- Botão de Configuração de Chave API (Opcional) -->
+      <div class="flex items-center gap-3">
+        <button id="btnOpenSettings" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-all flex items-center gap-2">
+          <i class="fa-solid fa-key text-amber-400"></i> API Key (Opcional)
+        </button>
+      </div>
+    </div>
+  </header>
 
-        <!-- HEADER -->
-        <div class="glass rounded-[2rem] p-8">
-            <div class="flex flex-col xl:flex-row gap-8 justify-between items-center">
-                <div class="space-y-3 w-full">
-                    <h1 class="text-3xl font-black uppercase tracking-[0.2em] gold">
-                        Central de Descrições IA <span class="text-xs font-light text-zinc-400">| IQ200</span>
-                    </h1>
-                    <p class="text-zinc-400 text-sm leading-relaxed max-w-3xl">
-                        Módulo inteligente para transformar lotes de imagens em cadastros padronizados, com OCR, detecção de tipos e motor de variações.
-                    </p>
-                </div>
-
-                <div class="flex items-center gap-4 w-full xl:w-auto justify-end">
-                    <div id="current-project-badge" class="glass px-4 py-2 rounded-2xl text-xs text-zinc-300 font-medium">
-                        Nenhum projeto ativo
-                    </div>
-                    <button onclick="openProjectModal()" class="btn-gold px-5 py-3 rounded-2xl text-xs uppercase tracking-wider">
-                        📁 Projetos
-                    </button>
-                    <button onclick="AuthGuard.logout()" class="h-11 px-4 rounded-2xl border border-zinc-800 text-xs uppercase font-black tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors">
-                        Sair
-                    </button>
-                </div>
-            </div>
+  <!-- Container Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+    
+    <!-- Barra de Configurações e Controles -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Painel Esquerdo: Parâmetros do Produto -->
+      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 shadow-xl">
+        <div class="flex items-center gap-2 border-b border-slate-800 pb-3">
+          <i class="fa-solid fa-sliders text-amber-400"></i>
+          <h2 class="font-semibold text-slate-200 text-sm">Parâmetros Padrão Abella Joias</h2>
         </div>
 
-        <!-- LAYOUT PRINCIPAL -->
-        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
-
-            <!-- SIDEBAR / FLUXO -->
-            <div class="xl:col-span-1 space-y-4">
-                <div class="glass rounded-[2rem] p-6 space-y-4">
-                    <h2 class="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Fluxo Geral</h2>
-                    <nav class="space-y-2">
-                        <button onclick="switchTab('upload')" id="nav-upload" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-black tracking-wider bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/30 transition">
-                            <i class="fa-solid fa-cloud-arrow-up w-5"></i>
-                            <span>1. Upload & OCR</span>
-                        </button>
-                        <button onclick="switchTab('ia')" id="nav-ia" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition">
-                            <i class="fa-solid fa-wand-magic-sparkles w-5"></i>
-                            <span>2. IA & Classificação</span>
-                        </button>
-                        <button onclick="switchTab('revisao')" id="nav-revisao" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition">
-                            <i class="fa-solid fa-list-check w-5"></i>
-                            <span>3. Revisão & Aprovação</span>
-                        </button>
-                        <button onclick="switchTab('exportacao')" id="nav-exportacao" class="w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition">
-                            <i class="fa-solid fa-file-export w-5"></i>
-                            <span>4. Exportação</span>
-                        </button>
-                    </nav>
-
-                    <hr class="border-zinc-800">
-
-                    <!-- PARÂMETROS IA -->
-                    <div class="space-y-3">
-                        <h3 class="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">Parâmetros IA</h3>
-                        <div>
-                            <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Perfil de Texto</label>
-                            <select id="param-perfil" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
-                                <option value="Comercial">Comercial</option>
-                                <option value="Técnico">Técnico</option>
-                                <option value="Premium">Premium</option>
-                                <option value="Luxuoso">Luxuoso</option>
-                                <option value="Marketplace">Marketplace</option>
-                                <option value="WhatsApp">WhatsApp</option>
-                                <option value="Instagram">Instagram</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Público-Alvo</label>
-                            <select id="param-publico" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
-                                <option value="Atacadista">Atacadista</option>
-                                <option value="Lojista">Lojista</option>
-                                <option value="Revendedora">Revendedora</option>
-                                <option value="Galvânica">Galvânica</option>
-                                <option value="Consumidor Final">Consumidor Final</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CONTAINER DE CONTEÚDO -->
-            <div class="xl:col-span-3 space-y-6">
-
-                <!-- ABA 1: UPLOAD & OCR -->
-                <div id="tab-upload" class="glass rounded-[2rem] p-8 space-y-6">
-                    <div>
-                        <h2 class="text-2xl font-black">📦 Upload de Imagens em Lote</h2>
-                        <p class="text-zinc-500 text-sm mt-1">Carregue fotos de joias no bruto ou semi-joias para varredura de OCR e IA.</p>
-                    </div>
-
-                    <div id="drop-zone" class="border-2 border-dashed border-zinc-800 rounded-[2rem] p-10 text-center bg-black/40 cursor-pointer hover:border-[#caa85c] transition-all">
-                        <input type="file" id="file-input" multiple accept="image/jpeg,image/png,image/webp,application/zip" class="hidden">
-                        <div class="text-5xl mb-3">📂</div>
-                        <h3 class="text-lg font-black">Arraste imagens ou clique aqui</h3>
-                        <p class="text-zinc-500 text-xs mt-2">Suporta JPG, PNG, WEBP ou ZIP com centenas de itens</p>
-                    </div>
-
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Imagens Carregadas (<span id="file-count">0</span>)</h3>
-                            <button onclick="clearImages()" class="text-xs text-rose-400 hover:underline">Remover Todas</button>
-                        </div>
-                        <div id="thumbnail-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-56 overflow-y-auto scrollbar p-2 bg-black rounded-2xl border border-zinc-900">
-                            <p class="col-span-full text-center text-xs text-zinc-600 py-6">Nenhuma imagem carregada ainda.</p>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end">
-                        <button onclick="processBatchAI()" id="btn-process" disabled class="h-12 px-6 rounded-2xl text-xs uppercase font-black tracking-[0.15em] bg-zinc-800 text-zinc-500 cursor-not-allowed transition-all">
-                            ✨ Executar Análise IA + OCR
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ABA 2: IA & CLASSIFICAÇÃO -->
-                <div id="tab-ia" class="hidden glass rounded-[2rem] p-8 space-y-6">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="text-2xl font-black">🧠 Processamento de IA & Classificação</h2>
-                            <p class="text-zinc-500 text-sm mt-1">Identificação automática de categorias, subcategorias e nomenclaturas.</p>
-                        </div>
-                        <span class="text-[10px] uppercase font-black px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Regra: Nunca inventar informações</span>
-                    </div>
-
-                    <div id="processing-status" class="hidden text-center py-16 space-y-3">
-                        <i class="fa-solid fa-circle-notch fa-spin text-4xl gold"></i>
-                        <p class="text-sm font-medium text-zinc-400">Executando varredura inteligente e motor de variações...</p>
-                    </div>
-
-                    <div id="ia-results-container" class="space-y-4">
-                        <div class="bg-black rounded-3xl border border-zinc-900 overflow-hidden">
-                            <div class="overflow-x-auto scrollbar" style="max-height: 420px;">
-                                <table class="w-full text-left text-xs">
-                                    <thead class="sticky top-0 bg-zinc-950 z-10 text-zinc-500 uppercase tracking-wider">
-                                        <tr>
-                                            <th class="p-4">Foto</th>
-                                            <th class="p-4">SKU / OCR</th>
-                                            <th class="p-4">Tipo</th>
-                                            <th class="p-4">Categoria / Subcategoria</th>
-                                            <th class="p-4">Nome Comercial</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="ia-table-body" class="divide-y divide-zinc-900">
-                                        <tr><td colspan="5" class="p-8 text-center text-zinc-600">Aguardando execução do processamento...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between pt-2">
-                        <button onclick="switchTab('upload')" class="h-11 px-5 rounded-2xl border border-zinc-800 text-xs font-bold hover:border-zinc-700">Voltar</button>
-                        <button onclick="switchTab('revisao')" class="btn-gold h-11 px-6 rounded-2xl text-xs uppercase tracking-wider">Ir para Revisão</button>
-                    </div>
-                </div>
-
-                <!-- ABA 3: REVISÃO & APROVAÇÃO -->
-                <div id="tab-revisao" class="hidden glass rounded-[2rem] p-8 space-y-6">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h2 class="text-2xl font-black">📋 Revisão e Aprovação</h2>
-                            <p class="text-zinc-500 text-sm mt-1">Ajuste descrições geradas e aprove os cadastros individualmente ou em massa.</p>
-                        </div>
-                        <button onclick="approveAll()" class="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider transition">Aprovar Todos</button>
-                    </div>
-
-                    <div id="revisao-list" class="space-y-4 max-h-[460px] overflow-y-auto scrollbar pr-2">
-                        <p class="text-center text-xs text-zinc-600 py-8">Nenhum produto gerado para revisão.</p>
-                    </div>
-
-                    <div class="flex justify-between pt-2">
-                        <button onclick="switchTab('ia')" class="h-11 px-5 rounded-2xl border border-zinc-800 text-xs font-bold hover:border-zinc-700">Voltar</button>
-                        <button onclick="switchTab('exportacao')" class="btn-gold h-11 px-6 rounded-2xl text-xs uppercase tracking-wider">Ir para Exportação</button>
-                    </div>
-                </div>
-
-                <!-- ABA 4: EXPORTAÇÃO -->
-                <div id="tab-exportacao" class="hidden glass rounded-[2rem] p-8 space-y-6">
-                    <div>
-                        <h2 class="text-2xl font-black">📤 Central de Exportação</h2>
-                        <p class="text-zinc-500 text-sm mt-1">Exporte seus cadastros aprovados sem perda de dados ou sincronize com o Firebase.</p>
-                    </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <button onclick="exportData('csv')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
-                            <i class="fa-solid fa-file-csv text-3xl text-emerald-400 mb-2 group-hover:scale-110 transition"></i>
-                            <h3 class="font-black text-sm">CSV</h3>
-                            <p class="text-[10px] text-zinc-500 mt-1">Planilhas gerais</p>
-                        </button>
-                        <button onclick="exportData('txt')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
-                            <i class="fa-solid fa-file-lines text-3xl text-blue-400 mb-2 group-hover:scale-110 transition"></i>
-                            <h3 class="font-black text-sm">TXT</h3>
-                            <p class="text-[10px] text-zinc-500 mt-1">Bloco de notas</p>
-                        </button>
-                        <button onclick="exportData('json')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
-                            <i class="fa-solid fa-code text-3xl gold mb-2 group-hover:scale-110 transition"></i>
-                            <h3 class="font-black text-sm">JSON</h3>
-                            <p class="text-[10px] text-zinc-500 mt-1">Estruturado</p>
-                        </button>
-                        <button onclick="exportData('excel')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
-                            <i class="fa-solid fa-file-excel text-3xl text-emerald-500 mb-2 group-hover:scale-110 transition"></i>
-                            <h3 class="font-black text-sm">Excel</h3>
-                            <p class="text-[10px] text-zinc-500 mt-1">XLSX Compatível</p>
-                        </button>
-                        <button onclick="exportData('pdf')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
-                            <i class="fa-solid fa-file-pdf text-3xl text-rose-500 mb-2 group-hover:scale-110 transition"></i>
-                            <h3 class="font-black text-sm">PDF</h3>
-                            <p class="text-[10px] text-zinc-500 mt-1">Catálogo</p>
-                        </button>
-                        <button onclick="exportData('firebase')" class="glass rounded-2xl p-6 text-center hover:border-[#caa85c] transition group">
-                            <i class="fa-solid fa-database text-3xl gold mb-2 group-hover:scale-110 transition"></i>
-                            <h3 class="font-black text-sm">Firebase</h3>
-                            <p class="text-[10px] text-zinc-500 mt-1">Salvar na Nuvem</p>
-                        </button>
-                    </div>
-
-                    <div class="flex justify-start pt-2">
-                        <button onclick="switchTab('revisao')" class="h-11 px-5 rounded-2xl border border-zinc-800 text-xs font-bold hover:border-zinc-700">Voltar para Revisão</button>
-                    </div>
-                </div>
-
-            </div>
-
+        <!-- Tipo de Peça Padrão -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Tipo Base do Lote (Opcional)</label>
+          <select id="selectCategory" onchange="toggleCustomCategoryInput()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <option value="Auto">Identificação Automática por IA (Recomendado)</option>
+            <option value="Conjunto Infantil">Conjunto Infantil (Brinco + Pingente)</option>
+            <option value="Conjunto Adulto">Conjunto Adulto (Brinco + Pingente)</option>
+            <option value="Brinco">Brinco Geral</option>
+            <option value="Trio de Brincos">Trio de Brincos</option>
+            <option value="Pingente">Pingente Geral</option>
+            <option value="Argola">Argola / Par de Argolas</option>
+            <option value="Anel">Anel</option>
+            <option value="Pulseira">Pulseira</option>
+            <option value="custom">Outro / Personalizado...</option>
+          </select>
         </div>
+
+        <!-- Tipo Personalizado Input -->
+        <div id="customCategoryGroup" class="hidden">
+          <label class="block text-xs font-medium text-amber-400 mb-1">Especifique o Tipo</label>
+          <input type="text" id="inputCustomCategory" placeholder="Ex: Choker, Tornozeleira..." class="w-full bg-slate-950 border border-amber-500/50 rounded-lg px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+
+        <!-- Processo de Fabricação -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Processo de Fabricação</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg cursor-pointer hover:border-slate-700">
+              <input type="radio" name="manufacturing" value="Estamparia" checked class="text-amber-500 focus:ring-amber-500">
+              <span class="text-xs text-slate-300">Estamparia</span>
+            </label>
+            <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg cursor-pointer hover:border-slate-700">
+              <input type="radio" name="manufacturing" value="Fundição" class="text-amber-500 focus:ring-amber-500">
+              <span class="text-xs text-slate-300">Fundição</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Ajustes de Medida -->
+        <div class="flex flex-col gap-2 pt-2 border-t border-slate-800">
+          <label class="block text-xs font-medium text-slate-300 flex items-center justify-between">
+            <span>Ajustes de Medidas</span>
+            <span class="text-[10px] text-amber-400 font-normal"><i class="fa-solid fa-ruler-combined mr-1"></i>Especial</span>
+          </label>
+
+          <!-- Pendurado com Base -->
+          <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg cursor-pointer hover:border-slate-700">
+            <input type="checkbox" id="chkHangingBase" onchange="toggleBaseInput()" class="rounded border-slate-700 text-amber-500 focus:ring-amber-500">
+            <span class="text-xs text-slate-300">Brinco/Peça Pendurada (Somar com Base)</span>
+          </label>
+
+          <div id="baseInputGroup" class="hidden pl-2 flex flex-col gap-1">
+            <label class="block text-[11px] text-slate-400">Medida da Base/Pino (ex: 0,5 cm ou 1 cm):</label>
+            <input type="text" id="inputBaseSize" placeholder="Ex: 0,5 cm" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+          </div>
+
+          <!-- Medidas em Branco -->
+          <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg cursor-pointer hover:border-slate-700">
+            <input type="checkbox" id="chkBlankMeasurements" class="rounded border-slate-700 text-amber-500 focus:ring-amber-500">
+            <span class="text-xs text-slate-300">Deixar Medidas em Branco (Preencher depois)</span>
+          </label>
+        </div>
+
+        <!-- Acompanhamentos / Acessórios -->
+        <div class="flex flex-col gap-2 pt-2 border-t border-slate-800">
+          <label class="block text-xs font-medium text-slate-300 flex items-center justify-between">
+            <span>Acompanhamentos / Acessórios</span>
+            <span class="text-[10px] text-slate-500 font-normal">(Opcional)</span>
+          </label>
+
+          <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg cursor-pointer hover:border-slate-700">
+            <input type="checkbox" id="chkTarrachaBaby" checked class="rounded border-slate-700 text-amber-500 focus:ring-amber-500">
+            <span class="text-xs text-slate-300">Tarracha Baby nos brincos</span>
+          </label>
+
+          <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-lg cursor-pointer hover:border-slate-700">
+            <input type="checkbox" id="chkPassador" checked class="rounded border-slate-700 text-amber-500 focus:ring-amber-500">
+            <span class="text-xs text-slate-300">Passador de corrente no pingente</span>
+          </label>
+
+          <div class="mt-1">
+            <label class="block text-[11px] text-slate-400 mb-1">Outro acompanhamento personalizado:</label>
+            <input type="text" id="inputCustomAcc" placeholder="Ex: Corrente veneziana 40cm..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+          </div>
+        </div>
+
+        <!-- Detalhes Especiais / Observações -->
+        <div class="pt-2 border-t border-slate-800">
+          <label class="block text-xs font-medium text-slate-300 flex items-center justify-between mb-1">
+            <span>Detalhes Especiais / Observações</span>
+            <span class="text-[10px] text-amber-400 font-normal"><i class="fa-solid fa-gem mr-1"></i>Descrição</span>
+          </label>
+          <input type="text" id="inputExtraDetails" placeholder="Ex: Base de strass, formato orgânico..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+        </div>
+
+        <div class="mt-auto pt-3 border-t border-slate-800">
+          <p class="text-[11px] text-slate-500 leading-relaxed">
+            <i class="fa-solid fa-wand-magic-sparkles text-amber-400 mr-1"></i>
+            Cada item na fila identificará automaticamente ou respeitará o tipo selecionado individualmente.
+          </p>
+        </div>
+      </div>
+
+      <!-- Painel Direito: Área de Upload e Barra de Ações -->
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl gap-4">
+        
+        <!-- Dropzone de Arquivos -->
+        <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-amber-500/70 bg-slate-950/50 hover:bg-slate-950 rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer group flex-1 min-h-[220px]">
+          <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+          <div class="w-14 h-14 rounded-full bg-slate-800 group-hover:bg-amber-500/10 flex items-center justify-center text-slate-400 group-hover:text-amber-400 transition-all mb-3">
+            <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+          </div>
+          <h3 class="text-sm font-semibold text-slate-200 group-hover:text-amber-300">Arraste as fotos das joias no bruto aqui</h3>
+          <p class="text-xs text-slate-400 mt-1">ou <span class="text-amber-400 underline font-medium">clique para selecionar</span> no seu computador</p>
+          <span class="mt-3 px-2.5 py-1 bg-slate-800 text-[11px] text-slate-400 rounded-full border border-slate-700">
+            Suporta JPG, PNG, WEBP • Lotes mistos (Brincos, Anéis, Pingentes...)
+          </span>
+        </div>
+
+        <!-- Barra de Ação da Fila -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-slate-800">
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <button id="btnStartBatch" disabled class="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2">
+              <i class="fa-solid fa-bolt"></i>
+              Gerar Descrições (<span id="countSelected">0</span>)
+            </button>
+
+            <button id="btnClearAll" disabled class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 text-xs rounded-xl border border-slate-700 transition-all">
+              Limpar Tudo
+            </button>
+          </div>
+
+          <!-- Barra de Progresso -->
+          <div id="progressContainer" class="w-full sm:w-64 hidden flex-col gap-1">
+            <div class="flex justify-between text-[11px] text-slate-400 font-medium">
+              <span id="progressText">Processando 0/0...</span>
+              <span id="progressPercent">0%</span>
+            </div>
+            <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+              <div id="progressBar" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full w-0 transition-all duration-300"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <!-- MODAL DE PROJETOS -->
-    <div id="project-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="glass rounded-[2rem] max-w-md w-full p-8 space-y-6 border border-zinc-800">
-            <div class="flex justify-between items-center border-b border-zinc-800 pb-4">
-                <h3 class="text-lg font-black gold"><i class="fa-solid fa-folder-open mr-2"></i> Gerenciador de Projetos</h3>
-                <button onclick="closeProjectModal()" class="text-zinc-500 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Nome do Projeto</label>
-                    <input type="text" id="proj-name" placeholder="Ex: Lote Coleção Brilho Prata" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Coleção</label>
-                        <input type="text" id="proj-collection" placeholder="Ex: Verão 2026" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Responsável</label>
-                        <input type="text" id="proj-resp" placeholder="Ex: Isaías" class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[10px] uppercase font-black text-zinc-400 mb-1">Observações</label>
-                    <textarea id="proj-obs" rows="2" placeholder="Observações gerais do lote..." class="w-full text-xs glass border border-zinc-800 rounded-xl p-3 outline-none focus:border-[#caa85c]"></textarea>
-                </div>
-            </div>
-
-            <div class="flex justify-end space-x-3 pt-2 border-t border-zinc-800">
-                <button onclick="closeProjectModal()" class="h-11 px-5 rounded-xl border border-zinc-800 text-xs font-bold text-zinc-400">Cancelar</button>
-                <button onclick="saveProject()" class="btn-gold h-11 px-6 rounded-xl text-xs uppercase tracking-wider">Salvar Projeto</button>
-            </div>
+    <!-- Lista de Itens do Lote -->
+    <div class="flex flex-col gap-4">
+      <div class="flex items-center justify-between flex-wrap gap-3 bg-slate-900 px-5 py-3 border border-slate-800 rounded-xl">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-list-check text-amber-400"></i>
+          <h2 class="font-bold text-slate-200 text-sm">Fila de Produtos (<span id="totalItemsCount">0</span>)</h2>
         </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="btnCopyAll" disabled class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 text-xs rounded-lg border border-slate-700 transition-all flex items-center gap-1.5">
+            <i class="fa-regular fa-copy text-amber-400"></i> Copiar Todas
+          </button>
+          <button id="btnExportCSV" disabled class="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 disabled:opacity-40 text-emerald-200 text-xs rounded-lg transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv text-emerald-400"></i> Exportar CSV
+          </button>
+          <button id="btnExportTXT" disabled class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 text-slate-200 text-xs rounded-lg transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-file-lines text-amber-400"></i> Exportar TXT
+          </button>
+        </div>
+      </div>
+
+      <!-- Container das Cartas de Itens -->
+      <div id="itemsContainer" class="flex flex-col gap-4">
+        <!-- Estado Vazio -->
+        <div id="emptyState" class="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-12 flex flex-col items-center justify-center text-center">
+          <div class="w-16 h-16 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-500 mb-4">
+            <i class="fa-solid fa-images text-2xl"></i>
+          </div>
+          <h4 class="text-slate-300 font-semibold text-sm">Nenhuma foto adicionada ainda</h4>
+          <p class="text-xs text-slate-500 mt-1 max-w-sm">
+            Arraste fotos de brincos, anéis ou pingentes para iniciar a geração em lote inteligente.
+          </p>
+        </div>
+      </div>
     </div>
 
-    <!-- SCRIPTS DE AUTENTICAÇÃO E CONFIGURAÇÃO DO FIREBASE -->
-    <script src="../js/firebase/firebase-config.js"></script>
-    <script src="js/auth-guard.js"></script>
+  </main>
 
-    <script>
-        let uploadedFiles = [];
-        let processedProducts = [];
-        let currentProject = null;
+  <!-- Modal de Configuração de Chave API -->
+  <div id="settingsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 flex flex-col gap-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-key text-amber-400"></i> Configurar Chave de API Gemini
+        </h3>
+        <button id="btnCloseModal" class="text-slate-400 hover:text-slate-200 text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-300 mb-1">Chave da API Gemini</label>
+        <input type="password" id="inputApiKey" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btnSaveApiKey" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg transition-all">Salvar</button>
+      </div>
+    </div>
+  </div>
 
-        window.switchTab = function(tabId) {
-            ['upload', 'ia', 'revisao', 'exportacao'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.add('hidden');
-                const navBtn = document.getElementById(`nav-${t}`);
-                if (navBtn) {
-                    navBtn.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-semibold tracking-wide text-zinc-400 hover:bg-zinc-900 transition";
-                }
-            });
-            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            const activeNav = document.getElementById(`nav-${tabId}`);
-            if (activeNav) {
-                activeNav.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-2xl text-xs font-black tracking-wider bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/30 transition";
+  <!-- Toast de Notificação -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 border border-slate-700 text-slate-100 text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-12 opacity-0 z-50 pointer-events-none">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toastMessage">Operação realizada com sucesso.</span>
+  </div>
+
+  <script>
+    let items = [];
+    let isProcessing = false;
+    let customApiKey = localStorage.getItem('abella_gemini_key') || "";
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const emptyState = document.getElementById('emptyState');
+    const btnStartBatch = document.getElementById('btnStartBatch');
+    const btnClearAll = document.getElementById('btnClearAll');
+    const countSelected = document.getElementById('countSelected');
+    const totalItemsCount = document.getElementById('totalItemsCount');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressPercent = document.getElementById('progressPercent');
+    const btnCopyAll = document.getElementById('btnCopyAll');
+    const btnExportCSV = document.getElementById('btnExportCSV');
+    const btnExportTXT = document.getElementById('btnExportTXT');
+    const settingsModal = document.getElementById('settingsModal');
+    const btnOpenSettings = document.getElementById('btnOpenSettings');
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    const btnSaveApiKey = document.getElementById('btnSaveApiKey');
+    const inputApiKey = document.getElementById('inputApiKey');
+    const selectCategory = document.getElementById('selectCategory');
+    const customCategoryGroup = document.getElementById('customCategoryGroup');
+    const inputCustomCategory = document.getElementById('inputCustomCategory');
+
+    if (customApiKey) inputApiKey.value = customApiKey;
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+      if (!toast) return;
+      toastMsg.textContent = message;
+      toastIcon.className = type === 'error' ? 'fa-solid fa-circle-xmark text-red-400' : 'fa-solid fa-circle-check text-emerald-400';
+      toast.classList.remove('translate-y-12', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-12', 'opacity-0');
+      }, 3000);
+    }
+
+    function copyToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try { document.execCommand('copy'); } catch (err) { console.error(err); }
+      document.body.removeChild(textarea);
+    }
+
+    window.toggleCustomCategoryInput = function() {
+      if (selectCategory.value === 'custom') {
+        customCategoryGroup.classList.remove('hidden');
+      } else {
+        customCategoryGroup.classList.add('hidden');
+      }
+    };
+
+    window.toggleBaseInput = function() {
+      const chkHangingBase = document.getElementById('chkHangingBase');
+      const baseInputGroup = document.getElementById('baseInputGroup');
+      if (chkHangingBase.checked) baseInputGroup.classList.remove('hidden');
+      else baseInputGroup.classList.add('hidden');
+    };
+
+    btnOpenSettings.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    btnCloseModal.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    btnSaveApiKey.addEventListener('click', () => {
+      customApiKey = inputApiKey.value.trim();
+      localStorage.setItem('abella_gemini_key', customApiKey);
+      settingsModal.classList.add('hidden');
+      showToast('Chave de API salva com sucesso!', 'success');
+    });
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleFiles(e.target.files);
+        fileInput.value = '';
+      }
+    });
+
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); dropzone.classList.remove('drag-over'); });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
+    });
+
+    async function handleFiles(files) {
+      const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      if (validFiles.length === 0) {
+        showToast('Selecione arquivos de imagem válidos (JPG, PNG, WEBP).', 'error');
+        return;
+      }
+
+      // Se houver um tipo padrão selecionado no topo (que não seja Auto), aplicamos ele inicialmente, senão Auto
+      let defaultGlobalType = selectCategory.value;
+      if (defaultGlobalType === 'custom') defaultGlobalType = inputCustomCategory.value.trim() || 'Brinco';
+
+      for (const file of validFiles) {
+        try {
+          const base64 = await fileToBase64(file);
+          items.push({
+            id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+            file: file,
+            base64: base64,
+            status: 'pending',
+            itemCategory: defaultGlobalType,
+            description: '',
+            errorMsg: ''
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      renderList();
+    }
+
+    function fileToBase64(file, maxDimension = 1200) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width, height = img.height;
+            if (width > maxDimension || height > maxDimension) {
+              if (width > height) { height = Math.round((height * maxDimension) / width); width = maxDimension; }
+              else { width = Math.round((width * maxDimension) / height); height = maxDimension; }
             }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          };
+          img.onerror = () => reject(new Error('Falha ao processar imagem.'));
+          img.src = e.target.result;
         };
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
 
-        window.openProjectModal = function() { 
-            document.getElementById('project-modal').classList.remove('hidden'); 
-            document.getElementById('project-modal').classList.add('flex'); 
-        };
+    async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const res = await fetch(url, options);
+          if (res.ok) return res;
+          const errData = await res.json().catch(() => ({}));
+          if (res.status === 429 || res.status >= 500) {
+            await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+            continue;
+          }
+          throw new Error(errData?.error?.message || `Erro HTTP ${res.status}`);
+        } catch (err) {
+          if (i === retries - 1) throw err;
+          await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
+        }
+      }
+    }
 
-        window.closeProjectModal = function() { 
-            document.getElementById('project-modal').classList.add('hidden'); 
-            document.getElementById('project-modal').classList.remove('flex'); 
-        };
+    function renderList() {
+      totalItemsCount.textContent = items.length;
+      countSelected.textContent = items.filter(i => i.status === 'pending').length;
 
-        window.saveProject = function() {
-            const name = document.getElementById('proj-name').value || 'Projeto Abella Joias';
-            const collection = document.getElementById('proj-collection').value || 'Geral';
-            const resp = document.getElementById('proj-resp').value || 'Equipe';
-            const obs = document.getElementById('proj-obs').value;
+      if (items.length === 0) {
+        emptyState.classList.remove('hidden');
+        itemsContainer.querySelectorAll('.item-card').forEach(el => el.remove());
+        btnStartBatch.disabled = true;
+        btnClearAll.disabled = true;
+        btnCopyAll.disabled = true;
+        btnExportCSV.disabled = true;
+        btnExportTXT.disabled = true;
+        return;
+      }
 
-            currentProject = { name, collection, resp, obs };
-            document.getElementById('current-project-badge').innerText = `${name} (${collection})`;
-            closeProjectModal();
-        };
+      emptyState.classList.add('hidden');
+      btnStartBatch.disabled = isProcessing || !items.some(i => i.status === 'pending');
+      btnClearAll.disabled = isProcessing;
 
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
+      const hasDone = items.some(i => i.status === 'done');
+      btnCopyAll.disabled = !hasDone;
+      btnExportCSV.disabled = !hasDone;
+      btnExportTXT.disabled = !hasDone;
 
-        if (dropZone && fileInput) {
-            // Força o clique direto no input de forma segura
-            dropZone.onclick = function(e) {
-                e.stopPropagation();
-                fileInput.click();
-            };
-
-            dropZone.addEventListener('dragover', (e) => { 
-                e.preventDefault(); 
-                dropZone.classList.add('border-[#caa85c]', 'bg-black/60'); 
-            });
-
-            dropZone.addEventListener('dragleave', () => { 
-                dropZone.classList.remove('border-[#caa85c]', 'bg-black/60'); 
-            });
-
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('border-[#caa85c]', 'bg-black/60');
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                    handleFiles(e.dataTransfer.files);
-                }
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length > 0) {
-                    handleFiles(e.target.files);
-                }
-            });
+      items.forEach((item, index) => {
+        let existingCard = document.getElementById(item.id);
+        if (!existingCard) {
+          existingCard = document.createElement('div');
+          existingCard.id = item.id;
+          existingCard.className = 'item-card bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center shadow-lg transition-all';
+          itemsContainer.appendChild(existingCard);
         }
 
-        function handleFiles(files) {
-            for (let file of files) {
-                uploadedFiles.push({
-                    name: file.name,
-                    url: URL.createObjectURL(file),
-                    sku: 'ABELLA-' + Math.floor(1000 + Math.random() * 9000)
-                });
-            }
-            updateThumbnailUI();
-        }
+        let badgeStatus = '';
+        if (item.status === 'pending') badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-medium border border-slate-700">Aguardando</span>`;
+        else if (item.status === 'loading') badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-medium border border-amber-500/30 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[10px]"></i> Analisando...</span>`;
+        else if (item.status === 'done') badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-medium border border-emerald-500/30 flex items-center gap-1"><i class="fa-solid fa-check text-[10px]"></i> Concluído</span>`;
+        else if (item.status === 'error') badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-medium border border-red-500/30 flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Erro</span>`;
 
-        function updateThumbnailUI() {
-            const grid = document.getElementById('thumbnail-grid');
-            document.getElementById('file-count').innerText = uploadedFiles.length;
-            
-            if (uploadedFiles.length === 0) {
-                grid.innerHTML = `<p class="col-span-full text-center text-xs text-zinc-600 py-6">Nenhuma imagem carregada ainda.</p>`;
-                const btn = document.getElementById('btn-process');
-                btn.disabled = true;
-                btn.className = "h-12 px-6 rounded-2xl text-xs uppercase font-black tracking-[0.15em] bg-zinc-800 text-zinc-500 cursor-not-allowed transition-all";
-                return;
-            }
+        existingCard.innerHTML = `
+          <div class="relative w-24 h-24 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center group">
+            <img src="${item.base64}" class="object-contain w-full h-full p-1">
+            <div class="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+              <button onclick="removeItem('${item.id}')" class="w-7 h-7 rounded-lg bg-red-600 hover:bg-red-500 text-white flex items-center justify-center text-xs shadow"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </div>
 
-            grid.innerHTML = '';
-            uploadedFiles.forEach((f, idx) => {
-                grid.innerHTML += `
-                    <div class="relative group glass rounded-xl p-2 border border-zinc-800">
-                        <img src="${f.url}" class="w-full h-16 object-cover rounded-lg">
-                        <p class="text-[9px] text-zinc-400 truncate mt-1">${f.name}</p>
-                        <button onclick="removeFile(${idx})" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition">×</button>
-                    </div>
-                `;
-            });
+          <div class="flex-1 w-full flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-bold text-slate-300">#${index + 1}</span>
+                <span class="text-xs text-slate-400 truncate max-w-[130px]">${item.file.name}</span>
+                ${badgeStatus}
+                
+                <!-- Seletor do Tipo Específico por Item -->
+                <select onchange="updateItemCategory('${item.id}', this.value)" class="bg-slate-950 border border-amber-500/40 text-amber-300 text-[11px] rounded-lg px-2 py-1 focus:border-amber-500 focus:outline-none">
+                  <option value="Auto" ${item.itemCategory === 'Auto' ? 'selected' : ''}>🔍 IA Identificar Tipo</option>
+                  <option value="Brinco" ${item.itemCategory === 'Brinco' ? 'selected' : ''}>Brinco</option>
+                  <option value="Anel" ${item.itemCategory === 'Anel' ? 'selected' : ''}>Anel</option>
+                  <option value="Pingente" ${item.itemCategory === 'Pingente' ? 'selected' : ''}>Pingente</option>
+                  <option value="Pulseira" ${item.itemCategory === 'Pulseira' ? 'selected' : ''}>Pulseira</option>
+                  <option value="Argola" ${item.itemCategory === 'Argola' ? 'selected' : ''}>Argola</option>
+                  <option value="Trio de Brincos" ${item.itemCategory === 'Trio de Brincos' ? 'selected' : ''}>Trio de Brincos</option>
+                  <option value="Conjunto Infantil" ${item.itemCategory === 'Conjunto Infantil' ? 'selected' : ''}>Conjunto Infantil</option>
+                  <option value="Conjunto Adulto" ${item.itemCategory === 'Conjunto Adulto' ? 'selected' : ''}>Conjunto Adulto</option>
+                </select>
+              </div>
 
-            const btn = document.getElementById('btn-process');
-            btn.disabled = false;
-            btn.className = "btn-gold h-12 px-6 rounded-2xl text-xs uppercase font-black tracking-[0.15em] transition-all";
-        }
+              ${item.status === 'done' ? `
+                <div class="flex items-center gap-2">
+                  <button onclick="copySingleItem('${item.id}')" class="px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-all flex items-center gap-1"><i class="fa-regular fa-copy text-amber-400"></i> Copiar</button>
+                  <button onclick="regenerateSingleItem('${item.id}')" class="px-2.5 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-all flex items-center gap-1"><i class="fa-solid fa-rotate-right text-slate-400"></i> Recriar</button>
+                </div>
+              ` : ''}
+            </div>
 
-        window.removeFile = function(index) {
-            uploadedFiles.splice(index, 1);
-            updateThumbnailUI();
+            ${item.status === 'done' ? `
+              <textarea oninput="updateDescription('${item.id}', this.value)" rows="4" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl p-3 text-xs text-slate-200 font-sans focus:outline-none custom-scrollbar leading-relaxed">${item.description}</textarea>
+            ` : item.status === 'error' ? `
+              <div class="p-3 rounded-xl bg-red-950/30 border border-red-900/50 text-red-300 text-xs">${item.errorMsg || 'Erro ao processar.'}</div>
+            ` : `
+              <div class="p-3 rounded-xl bg-slate-950/50 border border-slate-800 text-slate-500 text-xs italic">Aguardando lote...</div>
+            `}
+          </div>
+        `;
+      });
+    }
+
+    window.updateItemCategory = function(id, val) {
+      const item = items.find(i => i.id === id);
+      if (item) item.itemCategory = val;
+    };
+
+    window.removeItem = function(id) {
+      items = items.filter(i => i.id !== id);
+      const card = document.getElementById(id);
+      if (card) card.remove();
+      renderList();
+    };
+
+    window.updateDescription = function(id, text) {
+      const item = items.find(i => i.id === id);
+      if (item) item.description = text;
+    };
+
+    window.copySingleItem = function(id) {
+      const item = items.find(i => i.id === id);
+      if (!item || !item.description) return;
+      copyToClipboard(item.description);
+      showToast('Descrição copiada!', 'success');
+    };
+
+    window.regenerateSingleItem = async function(id) {
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      item.status = 'pending';
+      renderList();
+      await processSingleItem(item);
+      renderList();
+    };
+
+    btnClearAll.addEventListener('click', () => {
+      items = [];
+      itemsContainer.querySelectorAll('.item-card').forEach(el => el.remove());
+      renderList();
+    });
+
+    btnCopyAll.addEventListener('click', () => {
+      const doneItems = items.filter(i => i.status === 'done' && i.description);
+      if (doneItems.length === 0) return;
+      const combinedText = doneItems.map(i => i.description).join('\n\n-----------------------------------\n\n');
+      copyToClipboard(combinedText);
+      showToast(`Todas as ${doneItems.length} descrições foram copiadas!`, 'success');
+    });
+
+    btnExportTXT.addEventListener('click', () => {
+      const doneItems = items.filter(i => i.status === 'done' && i.description);
+      if (doneItems.length === 0) return;
+      const combinedText = doneItems.map((item) => `[ ARQUIVO: ${item.file.name} ]\n${item.description}`).join('\n\n===================================\n\n');
+      const blob = new Blob([combinedText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `descricoes_abella_${Date.now()}.txt`; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    btnExportCSV.addEventListener('click', () => {
+      const doneItems = items.filter(i => i.status === 'done' && i.description);
+      if (doneItems.length === 0) return;
+      let csvContent = "\uFEFFItem;Nome do Arquivo;Título;Medida;Material;Descrição Curta;Acompanha;Descrição Completa\n";
+      doneItems.forEach((item, idx) => {
+        const lines = item.description.split('\n');
+        const rawTitulo = (lines[0] || '').replace(/\*\*/g, '').trim();
+        const getField = (p) => { const l = lines.find(x => x.startsWith(p)); return l ? l.replace(p, '').trim() : ''; };
+        const medida = getField('Medida:'), material = getField('Material:'), descCurta = getField('Descrição:'), acompanha = getField('Acompanha:');
+        const cleanVal = (val) => `"${(val || '').replace(/"/g, '""')}"`;
+        csvContent += `${idx + 1};${cleanVal(item.file.name)};${cleanVal(rawTitulo)};${cleanVal(medida)};${cleanVal(material)};${cleanVal(descCurta)};${cleanVal(acompanha)};${cleanVal(item.description)}\n`;
+      });
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `descricoes_abella_${Date.now()}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    btnStartBatch.addEventListener('click', async () => {
+      const pendingItems = items.filter(i => i.status === 'pending');
+      if (pendingItems.length === 0) return;
+
+      isProcessing = true;
+      btnStartBatch.disabled = true;
+      btnClearAll.disabled = true;
+      progressContainer.classList.remove('hidden');
+
+      const totalPending = pendingItems.length;
+      for (let i = 0; i < totalPending; i++) {
+        const item = pendingItems[i];
+        item.status = 'loading';
+        renderList();
+
+        progressText.textContent = `Processando ${i + 1}/${totalPending}...`;
+        const pct = Math.round(((i) / totalPending) * 100);
+        progressBar.style.width = pct + '%';
+        progressPercent.textContent = pct + '%';
+
+        await processSingleItem(item);
+        renderList();
+      }
+
+      progressBar.style.width = '100%';
+      progressPercent.textContent = '100%';
+      progressText.textContent = 'Finalizado!';
+      showToast('Geração em lote concluída com sucesso!', 'success');
+      setTimeout(() => progressContainer.classList.add('hidden'), 3000);
+      isProcessing = false;
+      renderList();
+    });
+
+    async function processSingleItem(item) {
+      try {
+        const manufacturingRadio = document.querySelector('input[name="manufacturing"]:checked');
+        const manufacturingVal = manufacturingRadio ? manufacturingRadio.value : "Estamparia";
+        const chkTarrachaBaby = document.getElementById('chkTarrachaBaby').checked;
+        const chkPassador = document.getElementById('chkPassador').checked;
+        const customAcc = document.getElementById('inputCustomAcc').value.trim();
+        const extraDetails = document.getElementById('inputExtraDetails').value.trim();
+        const chkHangingBase = document.getElementById('chkHangingBase').checked;
+        const inputBaseSize = document.getElementById('inputBaseSize').value.trim();
+        const chkBlankMeasurements = document.getElementById('chkBlankMeasurements').checked;
+
+        const base64Clean = item.base64.split(',')[1];
+        const mimeType = item.base64.split(';')[0].split(':')[1];
+
+        let accParts = [];
+        if (chkTarrachaBaby) accParts.push("tarracha Baby nos brincos");
+        if (chkPassador) accParts.push("passador de corrente no pingente");
+        if (customAcc) accParts.push(customAcc);
+
+        let accInstruction = accParts.length > 0 ? `Mencione obrigatoriamente no campo 'Acompanha': "${accParts.join(" e ")}".` : `Omitir campo 'Acompanha'.`;
+        let targetCategoryInstruction = item.itemCategory === 'Auto' 
+          ? `Identifique automaticamente se a peça na foto é Brinco, Anel, Pingente, Pulseira, Argola ou Trio e defina o título adequado.` 
+          : `O tipo desta peça é obrigatoriamente: "${item.itemCategory}".`;
+
+        const systemPrompt = `Você é um especialista em e-commerce e joias no bruto para atacado B2B da "Abella Joias".
+Analise a foto da joia enviada e retorne estritamente um JSON com as chaves:
+{
+  "tipo_identificado": "Brinco, Anel, Pingente, Pulseira, etc.",
+  "titulo": "Título em negrito, ex: **Brinco Coração**",
+  "medida": "Medida em X,X cm x Y,Y cm",
+  "material": "Latão no Bruto (Sem Banho)",
+  "descricao_curta": "Frase comercial ultracurta (8 a 12 palavras)",
+  "acompanha": "Texto do acompanhamento ou vazio"
+}
+REGRAS:
+1. TIPO: ${targetCategoryInstruction}
+2. MATERIAL: Sempre "Latão no Bruto (Sem Banho)".
+3. MEDIDA: ${chkBlankMeasurements ? 'Deixe vazio ""' : 'Informe largura x altura aproximada'}.
+4. ACOMPANHA: ${accInstruction}`;
+
+        const payload = {
+          contents: [{ role: "user", parts: [{ text: "Gere a descrição B2B." }, { inlineData: { mimeType: mimeType, data: base64Clean } }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          generationConfig: { responseMimeType: "application/json" }
         };
 
-        window.clearImages = function() {
-            uploadedFiles = [];
-            updateThumbnailUI();
-        };
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${customApiKey}`;
+        const response = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const result = await response.json();
+        const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
-        window.processBatchAI = function() {
-            switchTab('ia');
-            document.getElementById('processing-status').classList.remove('hidden');
-            document.getElementById('ia-results-container').classList.add('hidden');
+        if (!jsonText) throw new Error('Falha na resposta da IA.');
 
-            setTimeout(() => {
-                const tipos = ['Produto Simples', 'Trio', 'Conjunto', 'Kit', 'Argola', 'Pingente', 'Pulseira', 'Corrente', 'Anel', 'Berloque'];
-                const categorias = ['Brincos', 'Pulseiras', 'Correntes', 'Pingentes', 'Anéis', 'Acessórios'];
-                const subcategorias = ['Floral', 'Infantil', 'Religioso', 'Borboleta', 'Coração', 'Argola', 'Animal', 'Estrela', 'Lua', 'Minimalista', 'Geométrico'];
+        const data = JSON.parse(jsonText);
+        let titulo = data.titulo || `**${item.itemCategory} Especial**`;
+        let medida = chkBlankMeasurements ? "" : (data.medida || "0,8 cm x 0,8 cm");
+        let descCurta = data.descricao_curta || "Peça no bruto de alto padrão para revenda.";
+        let acompanha = data.acompanha || (accParts.length > 0 ? accParts.join(" e ") : "");
 
-                processedProducts = uploadedFiles.map((f, i) => {
-                    const tipo = tipos[i % tipos.length];
-                    const cat = categorias[i % categorias.length];
-                    const sub = subcategorias[i % subcategorias.length];
-                    return {
-                        id: i,
-                        sku: f.sku,
-                        url: f.url,
-                        tipo: tipo,
-                        categoria: cat,
-                        subcategoria: sub,
-                        nomeComercial: `${cat} ${sub} em Bruto (${f.sku})`,
-                        descCurta: `Peça de alta qualidade para revenda e atacado.`,
-                        descCompleta: `Produto composto tratado como único cadastro. Banho de excelência e brilho impecável.`,
-                        status: 'Pendente'
-                    };
-                });
+        let descText = `${titulo}\nMedida: ${medida}\nMaterial: Latão no Bruto (Sem Banho)\nDescrição: ${descCurta}`;
+        if (accParts.length > 0 && acompanha) descText += `\nAcompanha: ${acompanha}`;
 
-                renderIATable();
-                renderRevisaoList();
-
-                document.getElementById('processing-status').classList.add('hidden');
-                document.getElementById('ia-results-container').classList.remove('hidden');
-            }, 1200);
-        };
-
-        function renderIATable() {
-            const tbody = document.getElementById('ia-table-body');
-            tbody.innerHTML = '';
-            processedProducts.forEach(p => {
-                tbody.innerHTML += `
-                    <tr class="hover:bg-zinc-950/50 border-b border-zinc-900">
-                        <td class="p-4"><img src="${p.url}" class="w-10 h-10 object-cover rounded-lg border border-zinc-800"></td>
-                        <td class="p-4 font-mono text-zinc-400">${p.sku}</td>
-                        <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#caa85c]/10 text-[#caa85c] border border-[#caa85c]/20">${p.tipo}</span></td>
-                        <td class="p-4 text-zinc-300">${p.categoria} > ${p.subcategoria}</td>
-                        <td class="p-4 font-bold text-white">${p.nomeComercial}</td>
-                    </tr>
-                `;
-            });
-        }
-
-        function renderRevisaoList() {
-            const container = document.getElementById('revisao-list');
-            container.innerHTML = '';
-            processedProducts.forEach((p, idx) => {
-                container.innerHTML += `
-                    <div class="glass rounded-2xl p-4 space-y-3 border border-zinc-800">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center space-x-3">
-                                <img src="${p.url}" class="w-12 h-12 object-cover rounded-xl border border-zinc-800">
-                                <div>
-                                    <h4 class="text-xs font-black text-white">${p.sku} - ${p.tipo}</h4>
-                                    <p class="text-[10px] text-zinc-500">${p.categoria} / ${p.subcategoria}</p>
-                                </div>
-                            </div>
-                            <select onchange="updateStatus(${idx}, this.value)" class="text-xs glass border border-zinc-800 rounded-xl p-2 font-bold outline-none ${p.status === 'Aprovado' ? 'text-emerald-400' : 'text-amber-400'}">
-                                <option value="Pendente" ${p.status==='Pendente'?'selected':''}>Pendente</option>
-                                <option value="Revisado" ${p.status==='Revisado'?'selected':''}>Revisado</option>
-                                <option value="Aprovado" ${p.status==='Aprovado'?'selected':''}>Aprovado</option>
-                                <option value="Exportado" ${p.status==='Exportado'?'selected':''}>Exportado</option>
-                            </select>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <input type="text" value="${p.nomeComercial}" onchange="updateProductField(${idx}, 'nomeComercial', this.value)" class="text-xs glass border border-zinc-800 rounded-xl p-2.5 outline-none focus:border-[#caa85c]">
-                            <input type="text" value="${p.descCurta}" onchange="updateProductField(${idx}, 'descCurta', this.value)" class="text-xs glass border border-zinc-800 rounded-xl p-2.5 outline-none focus:border-[#caa85c]" placeholder="Descrição Curta">
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        window.updateProductField = function(index, field, value) {
-            processedProducts[index][field] = value;
-        };
-
-        window.updateStatus = function(index, status) {
-            processedProducts[index].status = status;
-            renderRevisaoList();
-        };
-
-        window.approveAll = function() {
-            processedProducts.forEach(p => p.status = 'Aprovado');
-            renderRevisaoList();
-        };
-
-        window.exportData = async function(format) {
-            if (processedProducts.length === 0) {
-                alert('Nenhum dado processado para exportar.');
-                return;
-            }
-
-            if (format === 'firebase') {
-                try {
-                    for (const p of processedProducts) {
-                        const slug = p.sku.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                        await db.ref(`abella/products/${slug}`).update({
-                            sku: p.sku,
-                            name: p.nomeComercial,
-                            category: p.categoria.toLowerCase(),
-                            description: p.descCompleta,
-                            updatedAt: Date.now()
-                        });
-                    }
-                    alert('Dados sincronizados com sucesso no Firebase do projeto Abella Joias!');
-                } catch (e) {
-                    alert('Erro ao sincronizar com o Firebase: ' + e.message);
-                }
-                return;
-            }
-            
-            let content = '';
-            let filename = `abella_joias_descricoes.${format}`;
-            
-            if (format === 'json') {
-                content = JSON.stringify(processedProducts, null, 2);
-            } else {
-                content = processedProducts.map(p => `"${p.sku}","${p.tipo}","${p.categoria}","${p.nomeComercial}","${p.descCurta}"`).join('\n');
-                if (format === 'excel') filename = 'abella_joias_descricoes.csv';
-            }
-
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), content], { type: 'text/plain;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            link.click();
-        };
-    </script>
+        item.description = descText;
+        item.status = 'done';
+      } catch (err) {
+        item.status = 'error';
+        item.errorMsg = err.message || 'Erro ao processar.';
+      }
+    }
+  </script>
 </body>
 </html>

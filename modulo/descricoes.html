@@ -43,14 +43,17 @@
           <h1 class="text-lg font-bold bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
             Abella Joias • Atacado no Bruto
           </h1>
-          <p class="text-xs text-slate-400">Central de Descrições IA • IQ200 (Modo Servidor Seguro)</p>
+          <p class="text-xs text-slate-400">Central de Descrições IA • IQ200 (Autônomo Client-Side)</p>
         </div>
       </div>
       
-      <div class="flex items-center gap-2">
-        <span class="px-3 py-1 bg-emerald-950 border border-emerald-800 text-emerald-300 text-xs rounded-lg flex items-center gap-1.5 font-medium">
-          <i class="fa-solid fa-shield-halved text-emerald-400"></i> Backend Conectado
-        </span>
+      <div class="flex items-center gap-3">
+        <!-- Chave de API Embutida / Configurável -->
+        <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg">
+          <i class="fa-solid fa-key text-amber-400 text-xs"></i>
+          <input type="password" id="inputApiKey" placeholder="Gemini API Key..." class="bg-transparent text-xs text-slate-200 focus:outline-none w-36 sm:w-44">
+          <button onclick="saveApiKey()" class="text-[11px] bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-2 py-0.5 rounded transition-all">Salvar</button>
+        </div>
       </div>
     </div>
   </header>
@@ -71,7 +74,7 @@
         <div>
           <label class="block text-xs font-medium text-slate-400 mb-1">Categoria Base do Lote</label>
           <select id="selectCategory" onchange="toggleCustomCategoryInput()" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
-            <option value="Auto">🔍 Identificação Automática por IA (OCR/Visual)</option>
+            <option value="Auto">🔍 Identificação Automática por IA</option>
             <option value="Brinco">Brinco</option>
             <option value="Pulseira">Pulseira</option>
             <option value="Corrente">Corrente</option>
@@ -144,7 +147,7 @@
         <div class="mt-auto pt-3 border-t border-slate-800">
           <p class="text-[11px] text-slate-500 leading-relaxed">
             <i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1"></i>
-            <strong>Regra Anti-Alucinação:</strong> A IA está restrita a descrever estritamente o que consta na imagem do bruto[cite: 8].
+            <strong>Regra Anti-Alucinação:</strong> A IA está restrita a descrever estritamente o que consta na imagem do bruto.
           </p>
         </div>
       </div>
@@ -160,7 +163,7 @@
           <h3 class="text-sm font-semibold text-slate-200 group-hover:text-amber-300">Arraste as fotos das joias no bruto aqui</h3>
           <p class="text-xs text-slate-400 mt-1">ou <span class="text-amber-400 underline font-medium">clique para selecionar</span> os arquivos</p>
           <span class="mt-3 px-2.5 py-1 bg-slate-800 text-[11px] text-slate-400 rounded-full border border-slate-700">
-            Suporta lotes massivos • JPG, PNG, WEBP[cite: 8]
+            Suporta lotes massivos • JPG, PNG, WEBP
           </span>
         </div>
 
@@ -202,10 +205,10 @@
             <i class="fa-regular fa-copy text-amber-400"></i> Copiar Todas
           </button>
           <button id="btnExportCSV" disabled class="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 disabled:opacity-40 text-emerald-200 text-xs rounded-lg transition-all flex items-center gap-1.5">
-            <i class="fa-solid fa-file-csv text-emerald-400"></i> Exportar CSV[cite: 8]
+            <i class="fa-solid fa-file-csv text-emerald-400"></i> Exportar CSV
           </button>
           <button id="btnExportTXT" disabled class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 text-slate-200 text-xs rounded-lg transition-all flex items-center gap-1.5">
-            <i class="fa-solid fa-file-lines text-amber-400"></i> Exportar TXT[cite: 8]
+            <i class="fa-solid fa-file-lines text-amber-400"></i> Exportar TXT
           </button>
         </div>
       </div>
@@ -233,6 +236,23 @@
   <script>
     let items = [];
     let isProcessing = false;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedKey = localStorage.getItem('abella_gemini_key');
+      if (savedKey) {
+        document.getElementById('inputApiKey').value = savedKey;
+      }
+    });
+
+    window.saveApiKey = function() {
+      const key = document.getElementById('inputApiKey').value.trim();
+      if (!key) {
+        showToast('Digite uma chave válida.', 'error');
+        return;
+      }
+      localStorage.setItem('abella_gemini_key', key);
+      showToast('API Key salva com sucesso!', 'success');
+    };
 
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
@@ -520,6 +540,12 @@
     });
 
     btnStartBatch.addEventListener('click', async () => {
+      const apiKey = localStorage.getItem('abella_gemini_key') || document.getElementById('inputApiKey').value.trim();
+      if (!apiKey) {
+        showToast('Insira sua chave de API do Gemini para prosseguir.', 'error');
+        return;
+      }
+
       const pendingItems = items.filter(i => i.status === 'pending');
       if (pendingItems.length === 0) return;
 
@@ -539,7 +565,7 @@
         progressBar.style.width = pct + '%';
         progressPercent.textContent = pct + '%';
 
-        await processSingleItem(item);
+        await processSingleItem(item, apiKey);
         renderList();
       }
 
@@ -552,8 +578,11 @@
       renderList();
     });
 
-    async function processSingleItem(item) {
+    async function processSingleItem(item, overrideApiKey) {
       try {
+        const apiKey = overrideApiKey || localStorage.getItem('abella_gemini_key') || document.getElementById('inputApiKey').value.trim();
+        if (!apiKey) throw new Error('API Key não informada.');
+
         const subCategoryVal = document.getElementById('selectSubCategory').value;
         const audienceVal = document.getElementById('selectAudience').value;
         const profileVal = document.getElementById('selectProfile').value;
@@ -568,35 +597,74 @@
         if (chkTarrachaBaby) accParts.push("tarracha Baby nos brincos");
         if (chkPassador) accParts.push("passador de corrente no pingente");
 
-        // Chamada segura direto para o endpoint POST do seu servidor backend
-        const response = await fetch('/api/gerar-descricao-lote', {
+        let targetCategoryInstruction = item.itemCategory === 'Auto' 
+          ? `Identifique exatamente se a peça na foto é Brinco, Pulseira, Corrente, Pingente, Anel ou Trio e defina o título.` 
+          : `O tipo desta peça é obrigatoriamente: "${item.itemCategory}".`;
+
+        const promptText = `Você é o assistente especialista do sistema Abella Joias (Atacado de Joias no Bruto).
+Analise a imagem da peça enviada. Siga estritamente a Regra de Negócio: NUNCA inventar informações, descreva rigorosamente o que está visível na peça do bruto.
+Parâmetros:
+- Categoria: ${targetCategoryInstruction}
+- Subestética: ${subCategoryVal}
+- Público: ${audienceVal}
+- Perfil: ${profileVal}
+- Acessórios obrigatórios a citar se aplicável: ${accParts.join(' e ')}
+
+Retorne a resposta EXATAMENTE no seguinte formato JSON puro (sem markdown extra, sem blocos de código):
+{
+  "titulo": "**[Nome Comercial Claro da Peça]**",
+  "medida": "${chkBlankMeasurements ? '' : '1,0 cm x 1,0 cm'}",
+  "descricao_curta": "[Descrição comercial de até duas linhas focada no bruto para revenda]",
+  "acompanha": "${accParts.join(' e ')}"
+}`;
+
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            imageBase64: base64Clean,
-            mimeType: mimeType,
-            parameters: {
-              category: item.itemCategory,
-              subCategory: subCategoryVal,
-              audience: audienceVal,
-              profile: profileVal,
-              accessories: accParts.join(' e '),
-              blankMeasurements: chkBlankMeasurements
-            }
+            contents: [
+              {
+                parts: [
+                  { text: promptText },
+                  {
+                    inline_data: {
+                      mime_type: mimeType,
+                      data: base64Clean
+                    }
+                  }
+                ]
+              }
+            ]
           })
         });
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.message || `Erro no servidor (${response.status})`);
+          throw new Error(errData.error?.message || 'Erro ao conectar com a API do Gemini.');
         }
 
         const data = await response.json();
+        const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
         
-        let titulo = data.titulo || `**${item.itemCategory} Especial**`;
-        let medida = chkBlankMeasurements ? "" : (data.medida || "1,0 cm x 1,0 cm");
-        let descCurta = data.descricao_curta || "Peça no bruto de alto padrão para revenda.";
-        let acompanha = data.acompanha || (accParts.length > 0 ? accParts.join(" e ") : "");
+        const cleanJsonStr = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
+        let parsedData = {};
+        try {
+          parsedData = JSON.parse(cleanJsonStr);
+        } catch (e) {
+          parsedData = {
+            titulo: `**${item.itemCategory} • Estilo ${subCategoryVal}**`,
+            medida: chkBlankMeasurements ? "" : "1,0 cm x 1,0 cm",
+            descricao_curta: "Peça no bruto de alto padrão para revenda em Limeira.",
+            acompanha: accParts.join(" e ")
+          };
+        }
+        
+        let titulo = parsedData.titulo || `**${item.itemCategory} Especial**`;
+        let medida = chkBlankMeasurements ? "" : (parsedData.medida || "1,0 cm x 1,0 cm");
+        let descCurta = parsedData.descricao_curta || "Peça no bruto de alto padrão para revenda.";
+        let acompanha = parsedData.acompanha || (accParts.length > 0 ? accParts.join(" e ") : "");
 
         let descText = `${titulo}\nMedida: ${medida}\nMaterial: Latão no Bruto (Sem Banho)\nDescrição: ${descCurta}`;
         if (accParts.length > 0 && acompanha) descText += `\nAcompanha: ${acompanha}`;

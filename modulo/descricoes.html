@@ -369,15 +369,34 @@
         const fileInput = document.getElementById('file-input');
 
         if (dropZone && fileInput) {
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-[#caa85c]', 'bg-black/60'); });
-            dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-[#caa85c]', 'bg-black/60'); });
+            // Força o clique direto no input de forma segura
+            dropZone.onclick = function(e) {
+                e.stopPropagation();
+                fileInput.click();
+            };
+
+            dropZone.addEventListener('dragover', (e) => { 
+                e.preventDefault(); 
+                dropZone.classList.add('border-[#caa85c]', 'bg-black/60'); 
+            });
+
+            dropZone.addEventListener('dragleave', () => { 
+                dropZone.classList.remove('border-[#caa85c]', 'bg-black/60'); 
+            });
+
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 dropZone.classList.remove('border-[#caa85c]', 'bg-black/60');
-                handleFiles(e.dataTransfer.files);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFiles(e.dataTransfer.files);
+                }
             });
-            fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleFiles(e.target.files);
+                }
+            });
         }
 
         function handleFiles(files) {

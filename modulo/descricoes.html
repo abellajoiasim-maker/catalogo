@@ -1549,33 +1549,17 @@ EXPORTAÇÃO CSV
 =========================================================
 */
 IQ200.exportCSV=function(){
-let csv =
-"﻿"+
-"Nome;SEO;Descrição Curta;Descrição Completa;Categoria;Tags
-";
-IQ200.products.forEach(
-product=>{
-if(
-product.status!=="Aprovado"
-&&
-product.status!=="Exportado"
-)
-return;
-csv +=
-`"${product.content.nomeComercial}";`+
-`"${product.content.nomeSEO}";`+
-`"${product.content.descricaoCurta}";`+
-`"${product.content.descricaoCompleta.replace(/"/g,'""')}";`+
-`"${product.classification.categoria}";`+
-`"${product.content.tags.join(', ')}"
-`;
-}
-);
-IQ200.downloadFile(
-csv,
-"abella_descricoes.csv",
-"text/csv"
-);
+let csv = "\uFEFFNome;SEO;Descrição Curta;Descrição Completa;Categoria;Tags\n";
+IQ200.products.forEach(product=>{
+if(product.status!=="Aprovado" && product.status!=="Exportado") return;
+csv += `"${product.content.nomeComercial}";` +
+`"${product.content.nomeSEO}";` +
+`"${product.content.descricaoCurta}";` +
+`"${product.content.descricaoCompleta.replace(/"/g,'""')}";` +
+`"${product.classification.categoria}";` +
+`"${product.content.tags.join(', ')}\n`;
+});
+IQ200.downloadFile(csv, "abella_descricoes.csv", "text/csv");
 };
 /*
 =========================================================
@@ -1584,21 +1568,10 @@ EXPORTAÇÃO TXT
 */
 IQ200.exportTXT=function(){
 let txt="";
-IQ200.products.forEach(
-product=>{
-txt +=
-`
-================================
-${product.content.nomeComercial}
-${product.content.descricaoCompleta}
-`;
-}
-);
-IQ200.downloadFile(
-txt,
-"abella_descricoes.txt",
-"text/plain"
-);
+IQ200.products.forEach(product=>{
+txt += `\n================================\n${product.content.nomeComercial}\n${product.content.descricaoCompleta}\n`;
+});
+IQ200.downloadFile(txt, "abella_descricoes.txt", "text/plain");
 };
 /*
 =========================================================

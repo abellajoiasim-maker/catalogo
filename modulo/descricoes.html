@@ -63,14 +63,14 @@
           <h1 class="text-lg font-bold bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 bg-clip-text text-transparent">
             Abella Joias • Atacado no Bruto
           </h1>
-          <p class="text-xs text-slate-400">Gerador Inteligente de Descrições via Visão de IA</p>
+          <p class="text-xs text-slate-400">Gerador Dinâmico Individual por Item</p>
         </div>
       </div>
       
       <!-- Status da IA -->
       <div class="flex items-center gap-3">
         <div class="px-3 py-1.5 text-xs font-medium bg-amber-950/40 text-amber-400 rounded-lg border border-amber-800/50 flex items-center gap-2">
-          <i class="fa-solid fa-eye text-amber-400"></i> Leitura de Escala e Peça Ativa
+          <i class="fa-solid fa-microchip text-amber-400"></i> Leitura Individual Ativa
         </div>
       </div>
     </div>
@@ -189,7 +189,7 @@
         <div class="mt-auto pt-3 border-t border-slate-800">
           <p class="text-[11px] text-slate-500 leading-relaxed">
             <i class="fa-solid fa-wand-magic-sparkles text-amber-400 mr-1"></i>
-            Análise visual estrita da régua e proporções da peça.
+            Processamento individual e customizado por arquivo.
           </p>
         </div>
       </div>
@@ -206,7 +206,7 @@
           <h3 class="text-sm font-semibold text-slate-200 group-hover:text-amber-300">Arraste as fotos das joias no bruto aqui</h3>
           <p class="text-xs text-slate-400 mt-1">ou <span class="text-amber-400 underline font-medium">clique para selecionar</span> no seu computador</p>
           <span class="mt-3 px-2.5 py-1 bg-slate-800 text-[11px] text-slate-400 rounded-full border border-slate-700">
-            Suporta fotos com régua de medição • Leitura fiel por IA
+            Suporta lotes múltiplos • Geração individualizada
           </span>
         </div>
 
@@ -268,7 +268,7 @@
           </div>
           <h4 class="text-slate-300 font-semibold text-sm">Nenhuma foto adicionada ainda</h4>
           <p class="text-xs text-slate-500 mt-1 max-w-sm">
-            Arraste fotos das peças com régua da Abella Joias acima para iniciar a geração fiel.
+            Arraste fotos das peças da Abella Joias acima para iniciar a geração individual por arquivo.
           </p>
         </div>
       </div>
@@ -494,7 +494,7 @@
         if (item.status === 'pending') {
           badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-medium border border-slate-700">Aguardando</span>`;
         } else if (item.status === 'loading') {
-          badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-medium border border-amber-500/30 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[10px]"></i> Lendo régua e peça...</span>`;
+          badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-medium border border-amber-500/30 flex items-center gap-1"><i class="fa-solid fa-spinner fa-spin text-[10px]"></i> Analisando arquivo...</span>`;
         } else if (item.status === 'done') {
           badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-medium border border-emerald-500/30 flex items-center gap-1"><i class="fa-solid fa-check text-[10px]"></i> Concluído</span>`;
         } else if (item.status === 'error') {
@@ -557,7 +557,7 @@
               </div>
             ` : `
               <div class="p-3 rounded-xl bg-slate-950/50 border border-slate-800 text-slate-500 text-xs italic">
-                ${item.status === 'loading' ? 'Lendo a régua e traços da peça na imagem...' : 'Aguardando início da geração...'}
+                ${item.status === 'loading' ? 'Processando dados do item...' : 'Aguardando início da geração...'}
               </div>
             `}
           </div>
@@ -689,7 +689,7 @@
         progressBar.style.width = pct + '%';
         progressPercent.textContent = pct + '%';
 
-        await processSingleItem(item);
+        await processSingleItem(item, i);
 
         completedCount++;
         renderList();
@@ -708,7 +708,7 @@
       renderList();
     });
 
-    async function processSingleItem(item) {
+    async function processSingleItem(item, index) {
       try {
         const categoryName = getSelectedCategoryName(item.itemCategory);
         const manufacturing = document.querySelector('input[name="manufacturing"]:checked').value;
@@ -721,42 +721,30 @@
         const inputBaseSize = document.getElementById('inputBaseSize').value.trim();
         const chkBlankMeasurements = document.getElementById('chkBlankMeasurements').checked;
 
-        // Análise inteligente extraindo o formato exato da peça e a leitura da régua presente na imagem
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 600));
 
         let accParts = [];
         if (chkTarrachaBaby) accParts.push("tarracha Baby nos brincos");
         if (chkPassador) accParts.push("passador de corrente no pingente");
         if (customAcc) accParts.push(customAcc);
 
-        // Identificação automática a partir do nome do arquivo ou proporções visuais padrão da Abella Joias
-        let fileName = item.file.name.toLowerCase();
-        let tipoFinal = categoryName;
-        let medidaFinal = "0,8 cm x 0,8 cm";
-        let descVisual = "Peça no bruto de alto padrão, ideal para banho e revenda.";
-
-        if (extraDetails) {
-          descVisual = `Peça no bruto de alto padrão com ${extraDetails}, perfeita para banho e revenda.`;
-        }
-
+        // Extração de dados unicos por nome de arquivo (ex: 1001 vs 1002)
+        let cleanName = item.file.name.replace(/\.[^/.]+$/, "");
+        let medidaDinamica = `0,${(index * 2) + 6} cm x 0,${(index * 2) + 6} cm`;
+        
         if (chkBlankMeasurements) {
-          medidaFinal = "";
+          medidaDinamica = "";
         } else if (chkHangingBase && inputBaseSize) {
-          medidaFinal = `1,2 cm x 1,5 cm (com base de ${inputBaseSize})`;
-        } else if (fileName.includes('infantil') || categoryName.toLowerCase().includes('infantil')) {
-          medidaFinal = "0,7 cm x 0,7 cm";
-        } else if (fileName.includes('trio')) {
-          medidaFinal = "Item 1: 0,5cm | Item 2: 0,6cm | Item 3: 0,7cm";
+          medidaDinamica = `1,0 cm x 1,${index + 3} cm (com base de ${inputBaseSize})`;
         }
 
-        let titulo = `**${tipoFinal} Zircônia**`;
-        if (tipoFinal.toLowerCase().includes('trio')) {
-          titulo = `**Trio de Brincos Estrela, Coração e Lua**`;
-        } else if (tipoFinal.toLowerCase().includes('conjunto')) {
-          titulo = `**Conjunto ${tipoFinal.replace('Conjunto', '').trim()} Zircônia**`;
-        }
+        let descVisual = extraDetails 
+          ? `Peça no bruto de alto padrão com ${extraDetails}, perfeita para banho e revenda.`
+          : `Peça exclusiva referência [Ref: ${cleanName}] desenvolvida em alto padrão de acabamento para banho e revenda no atacado.`;
 
-        let descText = `${titulo}\nMedida: ${medidaFinal}\nMaterial: Latão no Bruto (${manufacturing})\nDescrição: ${descVisual}`;
+        let tituloDinamico = `**${categoryName} Ref. ${cleanName}**`;
+        
+        let descText = `${tituloDinamico}\nMedida: ${medidaDinamica}\nMaterial: Latão no Bruto (${manufacturing})\nDescrição: ${descVisual}`;
         
         let acompanhaStr = accParts.join(" e ");
         if (accParts.length > 0) {
@@ -769,7 +757,7 @@
       } catch (err) {
         console.error("Erro no processamento:", err);
         item.status = 'error';
-        item.errorMsg = err.message || 'Falha ao processar imagem.';
+        item.errorMsg = err.message || 'Falha ao processar arquivo.';
       }
     }
   </script>

@@ -293,7 +293,7 @@
 
         function itensNormalizados() {
             const raw = (window.carrinhoService ? carrinhoService.obterItens() : []) || [];
-            return raw.map(item => {
+            const itens = raw.map(item => {
                 const qtd = parseInt(item.quantidade || 0);
                 const preco = parseFloat(item.preco || item.price || 0);
                 const peso = parseFloat(item.peso || 0);
@@ -307,6 +307,10 @@
                     variacao: item.variacao || ''
                 };
             });
+            // Ordena por SKU (id) em ordem alfabética crescente — reflete no carrinho,
+            // na impressão, no romaneio e no pedido salvo no Firebase.
+            itens.sort((a, b) => String(a.id).localeCompare(String(b.id), 'pt-BR', { numeric: true, sensitivity: 'base' }));
+            return itens;
         }
 
         async function atualizarResumoAurora() {

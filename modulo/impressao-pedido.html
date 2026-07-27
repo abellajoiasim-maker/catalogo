@@ -190,16 +190,23 @@
         // ==========================================
         // 2. LOCAL DE ENTREGA / GALVÂNICA
         // ==========================================
-        const galvObj = p.galvanica || p.localEntrega || p.entrega || {};
+        // "enderecoEntrega" é o objeto real gravado pelo checkout do cliente
+        // ({local, rua, numero, bairro, cidade}). "galvanica"/"localEntrega"/"entrega"
+        // (objeto) são usados por outros fluxos (ex.: edição manual em pedidos.html,
+        // que grava {nome, endereco, numero, bairro, cidade}). Note que "entrega"
+        // também pode vir como STRING legada — nesse caso é ignorada aqui de propósito.
+        const entregaObjOuVazio = (typeof p.entrega === 'object' && p.entrega) ? p.entrega : {};
+        const galvObj = p.galvanica || p.localEntrega || entregaObjOuVazio || {};
+        const end = p.enderecoEntrega || {};
 
-        const destNome = p.galvanicaNome || galvObj.nome || galvObj.destinatario || galvObj.galvanica || 'Langge Galvanica';
-        const destRua = p.galvanicaRua || galvObj.rua || galvObj.endereco || p.endereco || '-';
-        const destNum = p.galvanicaNumero || galvObj.numero || p.numero || 'S/N';
-        const destBairro = p.galvanicaBairro || galvObj.bairro || p.bairro || '-';
+        const destNome = p.galvanicaNome || galvObj.nome || galvObj.destinatario || galvObj.galvanica || end.local || 'Langge Galvanica';
+        const destRua = p.galvanicaRua || galvObj.rua || galvObj.endereco || end.rua || p.endereco || '-';
+        const destNum = p.galvanicaNumero || galvObj.numero || end.numero || p.numero || 'S/N';
+        const destBairro = p.galvanicaBairro || galvObj.bairro || end.bairro || p.bairro || '-';
         
         // No seu Firebase, a entrega pega 'galvanicaCidade' ou o fallback de 'cidadeCliente' (Iracemápolis/Limeira)
-        const destCidade = p.galvanicaCidade || galvObj.cidade || p.cidadeCliente || 'Limeira';
-        const destUF = p.galvanicaEstado || galvObj.estado || galvObj.uf || p.estado || 'SP';
+        const destCidade = p.galvanicaCidade || galvObj.cidade || end.cidade || p.cidadeCliente || 'Limeira';
+        const destUF = p.galvanicaEstado || galvObj.estado || galvObj.uf || end.estado || p.estado || 'SP';
 
         let textoEntrega = destCidade.toUpperCase();
         if (destUF && !textoEntrega.includes(destUF.toUpperCase())) {
@@ -227,6 +234,9 @@
         if (typeof itens === 'object' && !Array.isArray(itens)) {
             itens = Object.values(itens);
         }
+        // O checkout do cliente salva o identificador do produto no campo "id",
+        // não em "sku". Normaliza aqui para que o SKU sempre apareça na impressão.
+        itens = itens.map(item => ({ ...item, sku: item.sku || item.id || item.codigo || '-' }));
 
         // Seleção e Renderização
         const modelo = `${layout}_${tipo}`;

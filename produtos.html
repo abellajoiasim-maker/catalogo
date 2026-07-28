@@ -364,7 +364,7 @@
                 if (crumbs.length === 1) crumbs.push({ label: 'Produtos' });
                 document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb(crumbs);
 
-               loading.classList.add('hidden');
+                loading.classList.add('hidden');
 
                 if (filtrados.length === 0) {
                     grid.innerHTML = '';
@@ -372,44 +372,31 @@
                     return;
                 }
 
-                // Filtra para isolar a vitrine e retirá-la da grade de vendas
-               // Filtra para isolar a vitrine e retirá-la da grade de vendas
-const produtosParaGrade = filtrados.filter(p => !p._ehVitrine);
-const vitrineUnica = filtrados.find(p => p._ehVitrine);
-
-let htmlFinal = '';
-
-// 1. Renderiza o banner da vitrine (caso exista)
-if (vitrineUnica) {
-    htmlFinal += `
-        <div class="banner-vitrine">
-            <img src="${vitrineUnica.imagem || vitrineUnica.foto}" alt="${vitrineUnica.nome}">
-            <div class="banner-info">
-                <h3>${vitrineUnica.nome}</h3>
-                <p>${vitrineUnica.descricao || ''}</p>
-            </div>
-        </div>
-    `;
-}
-
-// 2. Inicia o container da grade de produtos
-htmlFinal += `<div class="grid-produtos">`;
-
-// 3. Renderiza somente os produtos limpos na grade (sem o item da vitrine)[cite: 1]
-produtosParaGrade.forEach(produto => {
-    htmlFinal += `
-        <div class="card-produto">
-            <img src="${produto.imagem || produto.foto}" alt="${produto.nome}">
-            <h4>${produto.nome}</h4>
-            <span>R$ ${produto.preco}</span>
-        </div>
-    `;
-});
-
-htmlFinal += `</div>`;
-
-// Aplica o HTML gerado no elemento correspondente da sua página
-document.getElementById('catalogo-container').innerHTML = htmlFinal;
+                grid.innerHTML = filtrados.map(p => {
+                    if (p._ehVitrine) {
+                        const imgV = p.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg');
+                        const legenda = p.legendaVitrine || p.descricao || 'Toque para ver em detalhe como esta coleção fica no corpo.';
+                        return `
+                            <div class="col-12" data-produto-id="${p.id}" data-aurora-reveal style="max-width:860px; margin-inline:auto;">
+                                <div class="aurora-card" style="cursor:pointer;" onclick="abrirProduto('${p.id}')">
+                                    <div class="media" style="position:relative; aspect-ratio:16/9; overflow:hidden;">
+                                        <img src="${imgV}" alt="${p.nome}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg'}'">
+                                        <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(30,26,20,.85) 0%, rgba(30,26,20,.1) 55%, transparent 75%);"></div>
+                                        <div style="position:absolute; top:var(--space-4); left:var(--space-4); background:rgba(30,26,20,.7); border:1px solid rgba(var(--color-primary-rgb),.4); border-radius:999px; padding: var(--space-1) var(--space-4);">
+                                            <span style="font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--color-primary); font-weight:700;">✨ Veja como fica</span>
+                                        </div>
+                                        <div style="position:absolute; bottom:0; left:0; right:0; padding: var(--space-5);">
+                                            <p style="font-family:var(--font-heading); color:#fff; font-size:clamp(16px,2.4vw,26px); font-weight:600; max-width:600px;">${p.nome}</p>
+                                            <p style="color:rgba(255,255,255,.8); font-size:13px; margin-top:var(--space-1); max-width:600px;">${formatarDescricao(legenda)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    const html = AuroraRender.productCard(p, 'abrirProduto');
+                    return `<div class="col-3" data-produto-id="${p.id}" data-aurora-reveal>${html}</div>`;
+                }).join('');
 
                 if (window.AuroraAnimations) AuroraAnimations.initReveal();
 

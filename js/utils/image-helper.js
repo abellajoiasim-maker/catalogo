@@ -201,4 +201,31 @@ Object.defineProperty(window, 'obterImagemSubcategoriaGrid', { value: ImageHelpe
 Object.defineProperty(window, 'obterLogo', { value: ImageHelper.obterLogo, writable: false, configurable: false });
 Object.defineProperty(window, 'obterImagemFallback', { value: ImageHelper.obterImagemFallback, writable: false, configurable: false });
 
+// ==========================================================
+// PONTE GLOBAL: resolverImagemFirebase
+// Usada pelo engine/render.js e várias páginas (produtos.html,
+// carrinho.html, index.html, checkout.html, subcategorias.html)
+// para converter o valor salvo no banco (nome de arquivo simples
+// como "SKU.png", caminho relativo, gs:// ou URL completa) na
+// URL real e carregável do Firebase Storage.
+// Antes desta função não existir em lugar nenhum do projeto,
+// causando 404 em todas as imagens de produto.
+// ==========================================================
+function resolverImagemFirebase(valor) {
+    if (typeof valor !== 'string' || !valor.trim()) {
+        return CLOUD_FALLBACK;
+    }
+    if (ImageHelper.isHttpUrl(valor) || ImageHelper.isGsUrl(valor)) {
+        return ImageHelper.converterGsUrl(valor);
+    }
+    // Sem barra "/" = nome de arquivo de produto (ex: "SKU.png")
+    if (!valor.includes('/')) {
+        return ImageHelper.obterImagemProduto(valor);
+    }
+    // Com barra = caminho relativo (categorias, banners, logo, etc.)
+    return ImageHelper.converterGsUrl(valor);
+}
+
+Object.defineProperty(window, 'resolverImagemFirebase', { value: resolverImagemFirebase, writable: false, configurable: false });
+
 console.info('[PMA V8] 🖼️ ImageHelper v3.0 unificado, fixado e blindado globalmente.');

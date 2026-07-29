@@ -371,23 +371,38 @@
     `;
   }
 
+ // ============================================================
+  // CARREGAR DADOS DO BANCO (COM TEMPO REAL / ON)
   // ============================================================
-  // CARREGAR DADOS DO BANCO
-  // ============================================================
-  async function carregarTudo() {
+  function carregarTudo() {
     try {
-      const snapCat = await STATE.db.ref(window.getAbellaPath('categories')).once('value');
-      STATE.categorias = snapCat.val() || {};
+      const pathCat = window.getAbellaPath('categories');
+      const pathProd = window.getAbellaPath('products');
 
-      const snapProd = await STATE.db.ref(window.getAbellaPath('products')).once('value');
-      const dados = snapProd.val() || {};
-      STATE.produtos = Object.entries(dados).map(([id, p]) => ({ id, ...p }));
+      // Escuta mudanças nas categorias em tempo real
+      STATE.db.ref(pathCat).on('value', (snapCat) => {
+        STATE.categorias = snapCat.val() || {};
+        popularFiltros();
+        renderAll();
+      }, (err) => {
+        console.error(err);
+        setStatus('❌ Erro de conexão com o Firebase nas categorias', 'error');
+      });
 
-      popularFiltros();
-      renderAll();
-      setStatus('✅ Catálogo sincronizado com as páginas de venda', 'ok');
+      // Escuta mudanças nos produtos em tempo real
+      STATE.db.ref(pathProd).on('value', (snapProd) => {
+        const dados = snapProd.val() || {};
+        STATE.produtos = Object.entries(dados).map(([id, p]) => ({ id, ...p }));
+        atualizarEstatisticas();
+        renderCurrentTab();
+        setStatus('✅ Catálogo sincronizado em tempo real', 'ok');
+      }, (err) => {
+        console.error(err);
+        setStatus('❌ Erro de conexão com o Firebase nos produtos', 'error');
+      });
+
     } catch(err) {
-      setStatus('❌ Erro de conexão com o Firebase', 'error');
+      setStatus('❌ Erro crítico ao iniciar conexões', 'error');
     }
   }
 

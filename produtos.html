@@ -174,10 +174,9 @@
                 ${formatarDescricao(produto.legendaVitrine || produto.descricao) || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
             </p>
         `;
-        AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
+        AuroraModal.open({ title: produto.nome || produto.title, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
         return;
     }
-
     const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
     const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
     const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
@@ -206,7 +205,7 @@
     } else if (dizeres.length > 0) {
         combinacoes = dizeres.map((d, idx) => {
             let nomeD = typeof d === 'object' && d !== null ? (d.medida || d.nome || d.label || d.titulo || '') : String(d);
-            if (!nomeD || nomeD === 'undefined' || nomeD === '[object Object]') nomeD = `Opção ${idx + 1}`;
+            if (!nomeD || nomeD === 'undefined' || nomeD === '[object Object]') nomeD = `Modelo ${idx + 1}`;
             const precoD = typeof d === 'object' && d !== null && d.preco !== undefined && d.preco !== null && d.preco !== '' ? Number(d.preco) : precoBase;
             return { nome: nomeD, preco: precoD };
         });
@@ -271,7 +270,7 @@
     const bodyHTML = `
         <div class="produto-modal-grid">
             <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1; border: 1px solid var(--color-border);">
-                <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
+                <img src="${produto.imagem || produto.image || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome || produto.title}" style="width:100%;height:100%;object-fit:cover;">
             </div>
             <div class="produto-modal-info">
                 <p class="aurora-price" id="modalPrecoDinamico" style="font-size:28px;">${precoFmt}</p>

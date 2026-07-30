@@ -188,13 +188,11 @@
 
             const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
             const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
-            // Suporta medidas cadastradas como array de objetos (ex: { medida: '40cm', preco: 45.00 }) ou array de strings/números
             const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
 
             let combinacoes = [];
             
             if (medidas.length > 0) {
-                // Se houver medidas com valores diferenciados
                 combinacoes = medidas.map((m, idx) => {
                     const nomeMedida = typeof m === 'object' ? (m.medida || m.nome || `Medida ${idx+1}`) : String(m);
                     const precoMedida = typeof m === 'object' && m.preco !== undefined ? Number(m.preco) : precoBase;
@@ -203,7 +201,7 @@
             } else if (dizeres.length > 0 && iniciais.length > 0) {
                 dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase })));
             } else if (dizeres.length > 0) {
-                combinacoes = dizeres.map(d => ({ nome: d, preco: precoBase }));
+                combinacoes = dizeres.map(d => ({ nome: typeof d === 'object' ? (d.nome || d.medida) : d, preco: typeof d === 'object' && d.preco ? Number(d.preco) : precoBase }));
             } else if (iniciais.length > 0) {
                 combinacoes = iniciais.map(i => ({ nome: `Letra ${i}`, preco: precoBase }));
             }
@@ -238,7 +236,7 @@
                                         <div style="display:flex; align-items:center; gap: var(--space-2);">
                                             <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
                                             <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
-                                                   data-variacao-nome="${item.nome.replace(/"/g, '&quot;')}"
+                                                   data-variacao-nome="${String(item.nome).replace(/"/g, '&quot;')}"
                                                    data-variacao-preco="${item.preco}"
                                                    oninput="calcularTotalGrade()"
                                                    style="width:52px; text-align:center; height:36px; padding-inline:0;">

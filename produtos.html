@@ -159,121 +159,137 @@
         }
 
         function abrirProduto(produtoId) {
-            const produto = produtosDaPagina.find(p => p.id === produtoId);
-            if (!produto) return;
+    const produto = produtosDaPagina.find(p => p.id === produtoId);
+    if (!produto) return;
 
-            const precoBase = Number(produto.preco) || 0;
-            const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(precoBase) : `R$ ${precoBase.toFixed(2)}`;
+    const precoBase = Number(produto.preco) || 0;
 
-            const ehVitrine = produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine';
-            if (ehVitrine) {
-                const bodyHTML = `
-                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:16/9; border: 1px solid var(--color-border); margin-bottom: var(--space-5);">
-                        <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
-                    </div>
-                    <p style="font-size:13px; color:var(--color-secondary); line-height:1.7;">
-                        ${formatarDescricao(produto.legendaVitrine || produto.descricao) || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
-                    </p>
-                `;
-                AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
-                return;
-            }
+    const ehVitrine = produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine';
+    if (ehVitrine) {
+        const bodyHTML = `
+            <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:16/9; border: 1px solid var(--color-border); margin-bottom: var(--space-5);">
+                <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
+            </div>
+            <p style="font-size:13px; color:var(--color-secondary); line-height:1.7;">
+                ${formatarDescricao(produto.legendaVitrine || produto.descricao) || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
+            </p>
+        `;
+        AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
+        return;
+    }
 
-            const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
-            const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
-            const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
+    const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
+    const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
+    const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
 
-            let combinacoes = [];
-            
-            if (medidas.length > 0) {
-                combinacoes = medidas.map((m, idx) => {
-                    const nomeMedida = typeof m === 'object' ? (m.medida || m.nome || m.label || `Medida ${idx+1}`) : String(m);
-                    const precoMedida = typeof m === 'object' && (m.preco !== undefined && m.preco !== null && m.preco !== '') ? Number(m.preco) : precoBase;
-                    return { nome: nomeMedida, preco: precoMedida };
-                });
-            } else if (dizeres.length > 0 && iniciais.length > 0) {
-                dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase })));
-            } else if (dizeres.length > 0) {
-                combinacoes = dizeres.map(d => ({ 
-                    nome: typeof d === 'object' ? (d.nome || d.medida || d.label) : d, 
-                    preco: typeof d === 'object' && (d.preco !== undefined && d.preco !== null && d.preco !== '') ? Number(d.preco) : precoBase 
-                }));
-            } else if (iniciais.length > 0) {
-                combinacoes = iniciais.map(i => ({ nome: `Letra ${i}`, preco: precoBase }));
-            }
-
-            let gradeHTML;
-            if (combinacoes.length === 0) {
-                gradeHTML = `
-                    <div class="aurora-field">
-                        <label class="aurora-label">Quantidade</label>
-                        <div style="display:flex; align-items:center; gap: var(--space-3);">
-                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
-                            <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="1" min="1"
-                                   data-variacao-nome="" data-variacao-preco="${precoBase}" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
-                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
-                        </div>
-                    </div>
-                `;
+    let combinacoes = [];
+    
+    if (medidas.length > 0) {
+        combinacoes = medidas.map((m, idx) => {
+            let nomeMedida = '';
+            if (typeof m === 'object' && m !== null) {
+                nomeMedida = m.medida || m.nome || m.label || m.titulo || '';
             } else {
-                const tituloGrade = medidas.length > 0 ? 'Medidas e Valores Disponíveis' : 'Grade de Variações Disponíveis';
-                gradeHTML = `
-                    <div class="aurora-field">
-                        <label class="aurora-label">${tituloGrade}</label>
-                        <div style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap: var(--space-2);">
-                            ${combinacoes.map((item, idx) => {
-                                const precoItemFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(item.preco) : `R$ ${item.preco.toFixed(2)}`;
-                                return `
-                                    <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
-                                        <div style="display:flex; flex-direction:column;">
-                                            <span style="font-size:13px; font-weight:600;">${item.nome}</span>
-                                            <span style="font-size:11px; color:var(--color-primary-hover);">${precoItemFmt}</span>
-                                        </div>
-                                        <div style="display:flex; align-items:center; gap: var(--space-2);">
-                                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
-                                            <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
-                                                   data-variacao-nome="${String(item.nome).replace(/"/g, '&quot;')}"
-                                                   data-variacao-preco="${item.preco}"
-                                                   oninput="calcularTotalGrade()"
-                                                   style="width:52px; text-align:center; height:36px; padding-inline:0;">
-                                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-3);">
-                            <p style="font-size:12px; color:var(--color-secondary);">Total selecionado: <strong id="totalGradeQtd">0</strong> peças</p>
-                            <p style="font-size:14px; font-weight:700;" id="totalGradeValor">R$ 0,00</p>
-                        </div>
-                    </div>
-                `;
+                nomeMedida = String(m);
+            }
+            if (!nomeMedida || nomeMedida === 'undefined') {
+                nomeMedida = `Opção ${idx + 1}`;
             }
 
-            const bodyHTML = `
-                <div class="produto-modal-grid">
-                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1; border: 1px solid var(--color-border);">
-                        <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
-                    </div>
-                    <div class="produto-modal-info">
-                        <p class="aurora-price" id="modalPrecoDinamico" style="font-size:28px;">${precoFmt}</p>
-                        ${produto.peso ? `<p style="font-size:13px; color:var(--color-secondary);">Peso: ${produto.peso}g</p>` : ''}
-                        ${produto.sku ? `<p style="font-size:13px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
-                        <div style="margin-top: var(--space-5);">${gradeHTML}</div>
-                    </div>
+            const precoMedida = (typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '') ? Number(m.preco) : precoBase;
+            return { nome: nomeMedida, preco: precoMedida };
+        });
+    } else if (dizeres.length > 0 && iniciais.length > 0) {
+        dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase })));
+    } else if (dizeres.length > 0) {
+        combinacoes = dizeres.map((d, idx) => {
+            let nomeD = typeof d === 'object' && d !== null ? (d.nome || d.medida || d.label || '') : String(d);
+            if (!nomeD || nomeD === 'undefined') nomeD = `Opção ${idx + 1}`;
+            const precoD = typeof d === 'object' && d !== null && d.preco !== undefined && d.preco !== null && d.preco !== '' ? Number(d.preco) : precoBase;
+            return { nome: nomeD, preco: precoD };
+        });
+    } else if (iniciais.length > 0) {
+        combinacoes = iniciais.map(i => ({ nome: `Letra ${i}`, preco: precoBase }));
+    }
+
+    let precoExibicaoModal = precoBase;
+    if ((!precoExibicaoModal || precoExibicaoModal === 0) && combinacoes.length > 0) {
+        precoExibicaoModal = combinacoes[0].preco;
+    }
+    const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(precoExibicaoModal) : `R$ ${precoExibicaoModal.toFixed(2)}`;
+
+    let gradeHTML;
+    if (combinacoes.length === 0) {
+        gradeHTML = `
+            <div class="aurora-field">
+                <label class="aurora-label">Quantidade</label>
+                <div style="display:flex; align-items:center; gap: var(--space-3);">
+                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
+                    <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="1" min="1"
+                           data-variacao-nome="" data-variacao-preco="${precoBase}" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
+                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
                 </div>
-                ${produto.descricao ? `
-                    <div style="margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--color-border);">
-                        <p style="font-size:13px; color:var(--color-secondary); line-height:1.8;">${formatarDescricao(produto.descricao)}</p>
-                    </div>
-                ` : ''}
-            `;
+            </div>
+        `;
+    } else {
+        const tituloGrade = medidas.length > 0 ? 'Medidas e Valores Disponíveis' : 'Grade de Variações Disponíveis';
+        gradeHTML = `
+            <div class="aurora-field">
+                <label class="aurora-label">${tituloGrade}</label>
+                <div style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap: var(--space-2);">
+                    ${combinacoes.map((item, idx) => {
+                        const precoItemFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(item.preco) : `R$ ${item.preco.toFixed(2)}`;
+                        return `
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
+                                <div style="display:flex; flex-direction:column;">
+                                    <span style="font-size:13px; font-weight:600;">${item.nome}</span>
+                                    <span style="font-size:11px; color:var(--color-primary-hover);">${precoItemFmt}</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap: var(--space-2);">
+                                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
+                                    <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
+                                           data-variacao-nome="${String(item.nome).replace(/"/g, '&quot;')}"
+                                           data-variacao-preco="${item.preco}"
+                                           oninput="calcularTotalGrade()"
+                                           style="width:52px; text-align:center; height:36px; padding-inline:0;">
+                                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-3);">
+                    <p style="font-size:12px; color:var(--color-secondary);">Total selecionado: <strong id="totalGradeQtd">0</strong> peças</p>
+                    <p style="font-size:14px; font-weight:700;" id="totalGradeValor">R$ 0,00</p>
+                </div>
+            </div>
+        `;
+    }
 
-            const footerHTML = `<button class="aurora-btn aurora-btn--primary aurora-btn--block" onclick="confirmarAdicionarCarrinho('${produto.id}')">Adicionar à sacola</button>`;
+    const bodyHTML = `
+        <div class="produto-modal-grid">
+            <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1; border: 1px solid var(--color-border);">
+                <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
+            </div>
+            <div class="produto-modal-info">
+                <p class="aurora-price" id="modalPrecoDinamico" style="font-size:28px;">${precoFmt}</p>
+                ${produto.peso ? `<p style="font-size:13px; color:var(--color-secondary);">Peso: ${produto.peso}g</p>` : ''}
+                ${produto.sku ? `<p style="font-size:13px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
+                <div style="margin-top: var(--space-5);">${gradeHTML}</div>
+            </div>
+        </div>
+        ${produto.descricao ? `
+            <div style="margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--color-border);">
+                <p style="font-size:13px; color:var(--color-secondary); line-height:1.8;">${formatarDescricao(produto.descricao)}</p>
+            </div>
+        ` : ''}
+    `;
 
-            AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML });
-            calcularTotalGrade();
-        }
+    const footerHTML = `<button class="aurora-btn aurora-btn--primary aurora-btn--block" onclick="confirmarAdicionarCarrinho('${produto.id}')">Adicionar à sacola</button>`;
+
+    AuroraModal.open({ title: produto.nome, bodyHTML, footerHTML });
+    calcularTotalGrade();
+}
 
         function alterarInputGrade(id, delta) {
             const input = document.getElementById(id);
@@ -286,10 +302,14 @@
         function calcularTotalGrade() {
             let totalQtd = 0;
             let totalValor = 0;
+            let primeiroPrecoEncontrado = null;
 
             document.querySelectorAll('.input-grade-qtd').forEach(input => {
                 const qtd = parseInt(input.value) || 0;
                 const preco = parseFloat(input.getAttribute('data-variacao-preco')) || 0;
+                if (qtd > 0 && primeiroPrecoEncontrado === null) {
+                    primeiroPrecoEncontrado = preco;
+                }
                 totalQtd += qtd;
                 totalValor += (qtd * preco);
             });
@@ -300,6 +320,19 @@
             const totalValorEl = document.getElementById('totalGradeValor');
             if (totalValorEl) {
                 totalValorEl.innerText = window.MoneyUtils?.format ? window.MoneyUtils.format(totalValor) : `R$ ${totalValor.toFixed(2)}`;
+            }
+
+            // Atualiza o preço em destaque no topo do modal com base na seleção ou primeira variação
+            const modalPrecoDinamico = document.getElementById('modalPrecoDinamico');
+            if (modalPrecoDinamico) {
+                let precoParaMostrar = primeiroPrecoEncontrado;
+                if (precoParaMostrar === null) {
+                    const primeiroInput = document.querySelector('.input-grade-qtd');
+                    if (primeiroInput) precoParaMostrar = parseFloat(primeiroInput.getAttribute('data-variacao-preco')) || 0;
+                }
+                if (precoParaMostrar > 0) {
+                    modalPrecoDinamico.innerText = window.MoneyUtils?.format ? window.MoneyUtils.format(precoParaMostrar) : `R$ ${precoParaMostrar.toFixed(2)}`;
+                }
             }
         }
 

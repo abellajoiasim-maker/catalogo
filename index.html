@@ -210,96 +210,111 @@
                 ]);
 
                 if (snapSettings && snapSettings.exists()) {
-                    const cfg = snapSettings.val();
+                const cfg = snapSettings.val();
 
-                    const logoUrlReal = cfg.logoUrl || cfg.logo;
-                    if (logoUrlReal) {
-                        const img = document.getElementById('abellaLogoImg');
-                        const fallback = document.getElementById('abellaLogoFallback');
-                        if (img) {
-                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
-                            img.style.display = 'block';
-                            if (fallback) fallback.style.display = 'none';
-                        }
-                    }
-
-                    const heroBannerUrlReal = cfg.bannerHeroUrl || cfg.heroBannerUrl;
-                    if (heroBannerUrlReal) {
-                        const hero = document.getElementById('heroBannerImg');
-                        if (hero) hero.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(heroBannerUrlReal) : heroBannerUrlReal;
-                    }
-
-                    if (cfg.name) document.getElementById('nome').innerText = cfg.name;
-                    if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;
-                    if (cfg.parcelas) document.getElementById('parcelamento').innerText = `${cfg.parcelas}x sem juros`;
-                    if (cfg.pix) document.getElementById('pix').innerText = `${cfg.pix}% OFF`;
-                    if (cfg.whatsapp) {
-                        const link = `https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}`;
-                        const w1 = document.getElementById('whats'); if (w1) w1.href = link;
-                        const w2 = document.getElementById('whatsFooter'); if (w2) w2.href = link;
-                    }
-                    if (cfg.bannerAtivo && cfg.bannerTexto) {
-                        document.getElementById('banner').classList.remove('hidden');
-                        document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
+                const logoUrlReal = cfg.logoUrl || cfg.logo;
+                if (logoUrlReal) {
+                    const img = document.getElementById('abellaLogoImg');
+                    const fallback = document.getElementById('abellaLogoFallback');
+                    if (img) {
+                        img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
+                        img.style.display = 'block';
+                        if (fallback) fallback.style.display = 'none';
                     }
                 }
 
-                let listaCategorias = [];
-                if (snapCategories && snapCategories.exists() && snapCategories.val()) {
-                    const dados = snapCategories.val();
-                    listaCategorias = Array.isArray(dados)
-                        ? dados.filter(Boolean)
-                        : Object.entries(dados).map(([slug, val]) => ({ slug, ...val }));
-                }
-                listaCategorias = listaCategorias.filter(c => c && c.paused !== true);
-
-                if (loading) loading.classList.add('hidden');
-
-                if (listaCategorias.length === 0) {
-                    if (noResult) noResult.classList.remove('hidden');
-                    return;
+                const heroBannerUrlReal = cfg.bannerHeroUrl || cfg.heroBannerUrl;
+                if (heroBannerUrlReal) {
+                    const hero = document.getElementById('heroBannerImg');
+                    if (hero) hero.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(heroBannerUrlReal) : heroBannerUrlReal;
                 }
 
-                grid.innerHTML = listaCategorias.map(cat => {
-                    const html = AuroraRender.categoryCard(cat);
-                    return `<div class="col-4" data-aurora-reveal>${html}</div>`;
-                }).join('');
+                if (cfg.name) document.getElementById('nome').innerText = cfg.name;
+                if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;
+                if (cfg.parcelas) document.getElementById('parcelamento').innerText = `${cfg.parcelas}x sem juros`;
+                if (cfg.pix) document.getElementById('pix').innerText = `${cfg.pix}% OFF`;
+                if (cfg.whatsapp) {
+                    const link = `https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}`;
+                    const w1 = document.getElementById('whats'); if (w1) w1.href = link;
+                    const w2 = document.getElementById('whatsFooter'); if (w2) w2.href = link;
+                }
+                if (cfg.bannerAtivo && cfg.bannerTexto) {
+                    document.getElementById('banner').classList.remove('hidden');
+                    document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
+                }
 
-                const inputBusca = document.getElementById('busca');
-                if (inputBusca) {
-                    inputBusca.addEventListener('input', (e) => {
-                        const termo = e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-                        let achou = false;
-                        grid.querySelectorAll('.aurora-card--category').forEach(card => {
-                            const nomeEl = card.querySelector('.title');
-                            const texto = (nomeEl?.innerText || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                            const visivel = texto.includes(termo);
-                            card.closest('.col-4').style.display = visivel ? '' : 'none';
-                            if (visivel) achou = true;
-                        });
-                        noResult.classList.toggle('hidden', achou);
+                // 🚀 INTEGRAÇÃO CENTRAL SEO IQ200 (Atualização dinâmica do SEO e Open Graph)
+                if (typeof CentralSeoIQ200 !== 'undefined') {
+                    const seoHome = new CentralSeoIQ200({ 
+                        siteName: cfg.name || "Abella Joias",
+                        defaultImage: logoUrlReal || ""
                     });
-
-                    // Enter na busca da Home: manda pra busca de produtos em todo o
-                    // catálogo (link compartilhável, igual ao produtos.html).
-                    inputBusca.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' && inputBusca.value.trim()) {
-                            window.location.href = `produtos.html?busca=${encodeURIComponent(inputBusca.value.trim())}`;
-                        }
+                    
+                    seoHome.atualizarMetaProduto({
+                        nome: cfg.name ? `${cfg.name} — Atacado de Joias` : "Abella Joias",
+                        descricao: cfg.slogan || "Plataforma corporativa premium de pedidos no atacado.",
+                        imagemUrl: logoUrlReal,
+                        preco: "0.00"
                     });
-                }
-
-                // Recarrega o reveal-on-scroll pros cards recém-criados
-                if (window.AuroraAnimations) AuroraAnimations.initReveal();
-
-            } catch (error) {
-                console.error('Falha ao carregar Home:', error);
-                if (loading) {
-                    loading.classList.remove('hidden');
-                    loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Erro técnico ao carregar categorias.</p>`;
                 }
             }
-        });
-    </script>
+
+            let listaCategorias = [];
+            if (snapCategories && snapCategories.exists() && snapCategories.val()) {
+                const dados = snapCategories.val();
+                listaCategorias = Array.isArray(dados)
+                    ? dados.filter(Boolean)
+                    : Object.entries(dados).map(([slug, val]) => ({ slug, ...val }));
+            }
+            listaCategorias = listaCategorias.filter(c => c && c.paused !== true);
+
+            if (loading) loading.classList.add('hidden');
+
+            if (listaCategorias.length === 0) {
+                if (noResult) noResult.classList.remove('hidden');
+                return;
+            }
+
+            grid.innerHTML = listaCategorias.map(cat => {
+                const html = AuroraRender.categoryCard(cat);
+                return `<div class="col-4" data-aurora-reveal>${html}</div>`;
+            }).join('');
+
+            const inputBusca = document.getElementById('busca');
+            if (inputBusca) {
+                inputBusca.addEventListener('input', (e) => {
+                    const termo = e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                    let achou = false;
+                    grid.querySelectorAll('.aurora-card--category').forEach(card => {
+                        const nomeEl = card.querySelector('.title');
+                        const texto = (nomeEl?.innerText || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                        const visivel = texto.includes(termo);
+                        card.closest('.col-4').style.display = visivel ? '' : 'none';
+                        if (visivel) achou = true;
+                    });
+                    noResult.classList.toggle('hidden', achou);
+                });
+
+                // Enter na busca da Home: manda pra busca de produtos em todo o
+                // catálogo (link compartilhável, igual ao produtos.html).
+                inputBusca.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && inputBusca.value.trim()) {
+                        window.location.href = `produtos.html?busca=${encodeURIComponent(inputBusca.value.trim())}`;
+                    }
+                });
+            }
+
+            // Recarrega o reveal-on-scroll pros cards recém-criados
+            if (window.AuroraAnimations) AuroraAnimations.initReveal();
+
+        } catch (error) {
+            console.error('Falha ao carregar Home:', error);
+            if (loading) {
+                loading.classList.remove('hidden');
+                loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Erro técnico ao carregar categorias.</p>`;
+            }
+        }
+    });
+</script>
 </body>
 </html>

@@ -212,8 +212,11 @@ Object.defineProperty(window, 'obterImagemFallback', { value: ImageHelper.obterI
 // causando 404 em todas as imagens de produto.
 // ==========================================================
 function resolverImagemFirebase(valor) {
+    // Define um fallback seguro caso a constante global não exista
+    const fallbackUrl = (typeof CLOUD_FALLBACK !== 'undefined') ? CLOUD_FALLBACK : '';
+
     if (typeof valor !== 'string' || !valor.trim()) {
-        return CLOUD_FALLBACK;
+        return fallbackUrl;
     }
     if (ImageHelper.isHttpUrl(valor) || ImageHelper.isGsUrl(valor)) {
         return ImageHelper.converterGsUrl(valor);

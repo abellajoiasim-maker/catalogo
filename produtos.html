@@ -188,12 +188,14 @@
         combinacoes = medidas.map((m, idx) => {
             let nomeMedida = '';
             if (typeof m === 'object' && m !== null) {
-                nomeMedida = m.medida || m.nome || m.label || m.titulo || '';
-            } else {
-                nomeMedida = String(m);
+                // Tenta pegar todas as variações possíveis de nomes de propriedade usadas no painel
+                nomeMedida = m.medida || m.nome || m.label || m.titulo || m.texto || '';
             }
             if (!nomeMedida || nomeMedida === 'undefined') {
-                nomeMedida = `Opção ${idx + 1}`;
+                nomeMedida = String(m);
+            }
+            if (!nomeMedida || nomeMedida === 'undefined' || nomeMedida === '[object Object]') {
+                nomeMedida = `Variação ${idx + 1}`;
             }
 
             const precoMedida = (typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '') ? Number(m.preco) : precoBase;
@@ -203,8 +205,8 @@
         dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase })));
     } else if (dizeres.length > 0) {
         combinacoes = dizeres.map((d, idx) => {
-            let nomeD = typeof d === 'object' && d !== null ? (d.nome || d.medida || d.label || '') : String(d);
-            if (!nomeD || nomeD === 'undefined') nomeD = `Opção ${idx + 1}`;
+            let nomeD = typeof d === 'object' && d !== null ? (d.nome || d.medida || d.label || d.titulo || '') : String(d);
+            if (!nomeD || nomeD === 'undefined' || nomeD === '[object Object]') nomeD = `Variação ${idx + 1}`;
             const precoD = typeof d === 'object' && d !== null && d.preco !== undefined && d.preco !== null && d.preco !== '' ? Number(d.preco) : precoBase;
             return { nome: nomeD, preco: precoD };
         });

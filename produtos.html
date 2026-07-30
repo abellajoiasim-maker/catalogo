@@ -169,7 +169,8 @@
             const produto = produtosDaPagina.find(p => p.id === produtoId);
             if (!produto) return;
 
-            const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(produto.preco) : `R$ ${produto.preco.toFixed(2)}`;
+            const precoBase = Number(produto.preco) || 0;
+            const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(precoBase) : `R$ ${precoBase.toFixed(2)}`;
 
             const ehVitrine = produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine';
             if (ehVitrine) {
@@ -187,14 +188,24 @@
 
             const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
             const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
+            // Suporta medidas cadastradas como array de objetos (ex: { medida: '40cm', preco: 45.00 }) ou array de strings/números
+            const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
 
             let combinacoes = [];
-            if (dizeres.length > 0 && iniciais.length > 0) {
-                dizeres.forEach(d => iniciais.forEach(i => combinacoes.push(`${d} • Letra ${i}`)));
+            
+            if (medidas.length > 0) {
+                // Se houver medidas com valores diferenciados
+                combinacoes = medidas.map((m, idx) => {
+                    const nomeMedida = typeof m === 'object' ? (m.medida || m.nome || `Medida ${idx+1}`) : String(m);
+                    const precoMedida = typeof m === 'object' && m.preco !== undefined ? Number(m.preco) : precoBase;
+                    return { nome: nomeMedida, preco: precoMedida };
+                });
+            } else if (dizeres.length > 0 && iniciais.length > 0) {
+                dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase })));
             } else if (dizeres.length > 0) {
-                combinacoes = [...dizeres];
+                combinacoes = dizeres.map(d => ({ nome: d, preco: precoBase }));
             } else if (iniciais.length > 0) {
-                combinacoes = iniciais.map(i => `Letra ${i}`);
+                combinacoes = iniciais.map(i => ({ nome: `Letra ${i}`, preco: precoBase }));
             }
 
             let gradeHTML;
@@ -205,30 +216,42 @@
                         <div style="display:flex; align-items:center; gap: var(--space-3);">
                             <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
                             <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="1" min="1"
-                                   data-variacao-nome="" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
+                                   data-variacao-nome="" data-variacao-preco="${precoBase}" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
                             <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
                         </div>
                     </div>
                 `;
             } else {
+                const tituloGrade = medidas.length > 0 ? 'Medidas e Valores Disponíveis' : 'Grade de Variações Disponíveis';
                 gradeHTML = `
                     <div class="aurora-field">
-                        <label class="aurora-label">Grade de Variações Disponíveis</label>
+                        <label class="aurora-label">${tituloGrade}</label>
                         <div style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap: var(--space-2);">
-                            ${combinacoes.map((variacao, idx) => `
-                                <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
-                                    <span style="font-size:13px;">${variacao}</span>
-                                    <div style="display:flex; align-items:center; gap: var(--space-2);">
-                                        <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
-                                        <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
-                                               data-variacao-nome="${variacao.replace(/"/g, '&quot;')}" oninput="calcularTotalGrade()"
-                                               style="width:52px; text-align:center; height:36px; padding-inline:0;">
-                                        <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
+                            ${combinacoes.map((item, idx) => {
+                                const precoItemFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(item.preco) : `R$ ${item.preco.toFixed(2)}`;
+                                return `
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
+                                        <div style="display:flex; flex-direction:column;">
+                                            <span style="font-size:13px; font-weight:600;">${item.nome}</span>
+                                            <span style="font-size:11px; color:var(--color-primary-hover);">${precoItemFmt}</span>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap: var(--space-2);">
+                                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
+                                            <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
+                                                   data-variacao-nome="${item.nome.replace(/"/g, '&quot;')}"
+                                                   data-variacao-preco="${item.preco}"
+                                                   oninput="calcularTotalGrade()"
+                                                   style="width:52px; text-align:center; height:36px; padding-inline:0;">
+                                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
+                                        </div>
                                     </div>
-                                </div>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </div>
-                        <p style="font-size:12px; color:var(--color-secondary); margin-top: var(--space-2);">Total selecionado: <strong id="totalGradeQtd">0</strong> peças</p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-3);">
+                            <p style="font-size:12px; color:var(--color-secondary);">Total selecionado: <strong id="totalGradeQtd">0</strong> peças</p>
+                            <p style="font-size:14px; font-weight:700;" id="totalGradeValor">R$ 0,00</p>
+                        </div>
                     </div>
                 `;
             }
@@ -239,7 +262,7 @@
                         <img src="${produto.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg')}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
                     </div>
                     <div class="produto-modal-info">
-                        <p class="aurora-price" style="font-size:28px;">${precoFmt}</p>
+                        <p class="aurora-price" id="modalPrecoDinamico" style="font-size:28px;">${precoFmt}</p>
                         ${produto.peso ? `<p style="font-size:13px; color:var(--color-secondary);">Peso: ${produto.peso}g</p>` : ''}
                         ${produto.sku ? `<p style="font-size:13px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
                         <div style="margin-top: var(--space-5);">${gradeHTML}</div>
@@ -267,9 +290,23 @@
         }
 
         function calcularTotalGrade() {
-            const total = Array.from(document.querySelectorAll('.input-grade-qtd')).reduce((a, el) => a + (parseInt(el.value) || 0), 0);
+            let totalQtd = 0;
+            let totalValor = 0;
+
+            document.querySelectorAll('.input-grade-qtd').forEach(input => {
+                const qtd = parseInt(input.value) || 0;
+                const preco = parseFloat(input.getAttribute('data-variacao-preco')) || 0;
+                totalQtd += qtd;
+                totalValor += (qtd * preco);
+            });
+
             const totalEl = document.getElementById('totalGradeQtd');
-            if (totalEl) totalEl.innerText = total;
+            if (totalEl) totalEl.innerText = totalQtd;
+
+            const totalValorEl = document.getElementById('totalGradeValor');
+            if (totalValorEl) {
+                totalValorEl.innerText = window.MoneyUtils?.format ? window.MoneyUtils.format(totalValor) : `R$ ${totalValor.toFixed(2)}`;
+            }
         }
 
         function confirmarAdicionarCarrinho(produtoId) {
@@ -280,7 +317,9 @@
             document.querySelectorAll('.input-grade-qtd').forEach(input => {
                 const qtd = parseInt(input.value) || 0;
                 if (qtd > 0) {
-                    itensParaAdicionar.push({ variacao: input.getAttribute('data-variacao-nome') || '', qtd });
+                    const variacaoNome = input.getAttribute('data-variacao-nome') || '';
+                    const variacaoPreco = parseFloat(input.getAttribute('data-variacao-preco')) || produto.preco;
+                    itensParaAdicionar.push({ variacao: variacaoNome, qtd, preco: variacaoPreco });
                 }
             });
 
@@ -290,7 +329,9 @@
             }
 
             itensParaAdicionar.forEach(item => {
-                carrinhoService.adicionar(produto, item.qtd, item.variacao);
+                // Passa o preço específico da variação ao adicionar ao carrinho
+                const produtoComPrecoAjustado = { ...produto, preco: item.preco };
+                carrinhoService.adicionar(produtoComPrecoAjustado, item.qtd, item.variacao);
             });
 
             atualizarContadorSacola();
@@ -404,8 +445,6 @@
                 if (inputBusca) {
                     const normalizar = (txt) => String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-                    // Índice de busca universal: nome, SKU, código, descrição, categoria,
-                    // subcategoria, dizeres e iniciais — tudo num só texto por produto.
                     const indiceBusca = new Map();
                     filtrados.forEach(p => {
                         const partes = [
@@ -433,15 +472,11 @@
                         noResult.classList.toggle('hidden', achou || filtrados.length === 0);
                     }
 
-                    // Link compartilhável: aplica o termo já vindo da URL (?busca=...)
                     if (buscaInicial) {
                         inputBusca.value = buscaInicial;
                         aplicarFiltroBusca(buscaInicial);
                     }
 
-                    // Atualiza a URL a cada letra digitada, sem recarregar a página —
-                    // assim, a qualquer momento, o link do navegador pode ser copiado
-                    // e enviado pro cliente com o resultado exato dessa busca.
                     inputBusca.addEventListener('input', (e) => {
                         aplicarFiltroBusca(e.target.value);
 
@@ -457,7 +492,7 @@
 
             } catch (error) {
                 console.error('Erro ao carregar produtos:', error);
-                loading.classList.remove('hidden');
+                loading.classList.add('hidden');
                 loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Erro técnico ao carregar produtos.</p>`;
             }
         });

@@ -706,7 +706,7 @@ const DataService = {
     });
   }
 
-  async function salvarNovoProduto() {
+ async function salvarNovoProduto() {
     try {
       const nome = document.getElementById('newNome').value.trim();
       const sku  = document.getElementById('newSku').value.trim();
@@ -723,10 +723,10 @@ const DataService = {
       const legendaVitrine = document.getElementById('newLegendaVitrine')?.value.trim() || '';
 
       await STATE.db.ref(window.getAbellaPath('products')).push({
-        name: nome, sku, category: cat,
+        name: nome, title: nome, sku, category: cat,
         subcategory: subcat, subCategory: subcat,
-        price: preco, preco,
-        weight: peso, peso,
+        price: preco, preco: preco,
+        weight: peso, peso: peso,
         image: img, imagem: img,
         description: document.getElementById('newDescricao').value,
         descricao:   document.getElementById('newDescricao').value,
@@ -947,6 +947,7 @@ const DataService = {
 
   async function salvarProduto(id) {
     try {
+      const nomeVal = document.getElementById('editNome').value;
       const img    = document.getElementById('editImagem').value.trim();
       const preco  = parseFloat(document.getElementById('editPreco').value) || 0;
       const peso   = parseFloat(document.getElementById('editPeso').value)  || 0;
@@ -958,12 +959,13 @@ const DataService = {
       const legendaVitrine = document.getElementById('editLegendaVitrine')?.value.trim() || '';
 
       await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({
-        name: document.getElementById('editNome').value,
+        name: nomeVal,
+        title: nomeVal,
         sku:  document.getElementById('editSku').value,
         category:    document.getElementById('editCategoria').value,
         subcategory: subcat, subCategory: subcat,
-        price: preco, preco,
-        weight: peso, peso,
+        price: preco, preco: preco,
+        weight: peso, peso: peso,
         image: img, imagem: img,
         description: document.getElementById('editDescricao').value,
         descricao:   document.getElementById('editDescricao').value,

@@ -87,12 +87,29 @@
             ? Math.round(lista.reduce((acc, i) => acc + i.score, 0) / lista.length)
             : 0;
 
+        // Ranking de falhas — qual regra mais derruba o catálogo inteiro (para saber onde focar primeiro)
+        const contagemFalhas = {};
+        lista.forEach(item => {
+            item.regras.forEach(r => {
+                if (r.ok) return;
+                const chave = r.id + '|' + r.label + '|' + r.dica;
+                contagemFalhas[chave] = (contagemFalhas[chave] || 0) + 1;
+            });
+        });
+        const rankingFalhas = Object.entries(contagemFalhas)
+            .map(([chave, total]) => {
+                const [id, label, dica] = chave.split('|');
+                return { id, label, dica, total, percentual: lista.length ? Math.round((total / lista.length) * 100) : 0 };
+            })
+            .sort((a, b) => b.total - a.total);
+
         return {
             itens: lista,
             scoreMedio,
             criticos: lista.filter(i => i.nivel === NIVEL.CRITICO).length,
             atencao: lista.filter(i => i.nivel === NIVEL.ATENCAO).length,
-            bons: lista.filter(i => i.nivel === NIVEL.BOM).length
+            bons: lista.filter(i => i.nivel === NIVEL.BOM).length,
+            rankingFalhas
         };
     }
 

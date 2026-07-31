@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <style id="auth-guard-hide">html{visibility:hidden !important;}</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard SEO IQ200 • Abella Joias</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script src="../js/firebase/firebase-config.js"></script>
+    <script src="js/auth-guard.js"></script>
+    <script src="../js/services/seoValidator.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #070707; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        .barra-score { height: 6px; border-radius: 999px; background: #27272a; overflow: hidden; }
+        .barra-score > div { height: 100%; border-radius: 999px; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #090909; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 p-4 md:p-6 min-h-screen">
+
+    <div class="max-w-7xl mx-auto flex flex-col gap-6">
+
+        <!-- CABEÇALHO -->
+        <div class="w-full bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800/80 backdrop-blur-md flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                    <span class="text-[#caa85c]">📊</span> Dashboard SEO IQ200
+                </h2>
+                <p class="text-xs text-zinc-400 mt-1">Auditoria automática de SEO por produto — motor de regras 100% gratuito, sem IA.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <input id="filtroTexto" type="text" placeholder="Buscar por nome ou SKU..." class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 w-56">
+                <select id="filtroNivel" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200">
+                    <option value="">Todos os níveis</option>
+                    <option value="critico">🔴 Crítico</option>
+                    <option value="atencao">🟡 Atenção</option>
+                    <option value="bom">🟢 Bom</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- CARDS RESUMO -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="cards-resumo">
+            <div class="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-5">
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">Score Médio</p>
+                <p id="resumoScoreMedio" class="text-3xl font-cinzel text-[#caa85c] mt-1">—</p>
+            </div>
+            <div class="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-5">
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">🟢 Bons (≥80)</p>
+                <p id="resumoBons" class="text-3xl font-cinzel text-emerald-400 mt-1">—</p>
+            </div>
+            <div class="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-5">
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">🟡 Atenção (50–79)</p>
+                <p id="resumoAtencao" class="text-3xl font-cinzel text-amber-400 mt-1">—</p>
+            </div>
+            <div class="bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-5">
+                <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold">🔴 Críticos (&lt;50)</p>
+                <p id="resumoCriticos" class="text-3xl font-cinzel text-rose-400 mt-1">—</p>
+            </div>
+        </div>
+
+        <!-- LISTA -->
+        <div class="w-full bg-zinc-900/50 rounded-2xl border border-zinc-800/80 backdrop-blur-md overflow-hidden">
+            <div id="loading" class="p-8 text-center text-zinc-500 text-sm">⏳ Carregando produtos e calculando IQ200 Score...</div>
+            <div id="lista-produtos" class="divide-y divide-zinc-800/80"></div>
+            <div id="vazio" class="hidden p-8 text-center text-zinc-500 text-sm">Nenhum produto encontrado com esse filtro.</div>
+        </div>
+
+    </div>
+
+    <script>
+        let AVALIACOES = [];
+
+        function corNivel(nivel) {
+            return { bom: '#34d399', atencao: '#fbbf24', critico: '#fb7185' }[nivel] || '#71717a';
+        }
+        function labelNivel(nivel) {
+            return { bom: '🟢 Bom', atencao: '🟡 Atenção', critico: '🔴 Crítico' }[nivel] || nivel;
+        }
+
+        function renderLista() {
+            const termo = (document.getElementById('filtroTexto').value || '').toLowerCase().trim();
+            const nivelFiltro = document.getElementById('filtroNivel').value;
+
+            let itens = AVALIACOES.filter(({ produto }) => {
+                const nome = (produto.nome || produto.name || '').toLowerCase();
+                const sku = (produto.sku || produto.codigo || '').toLowerCase();
+                return !termo || nome.includes(termo) || sku.includes(termo);
+            });
+            if (nivelFiltro) itens = itens.filter(i => i.nivel === nivelFiltro);
+
+            // Piores primeiro — é o que precisa de atenção
+            itens.sort((a, b) => a.score - b.score);
+
+            const container = document.getElementById('lista-produtos');
+            const vazio = document.getElementById('vazio');
+
+            if (itens.length === 0) {
+                container.innerHTML = '';
+                vazio.classList.remove('hidden');
+                return;
+            }
+            vazio.classList.add('hidden');
+
+            container.innerHTML = itens.map(({ produto, score, nivel, regras, ehVitrine }) => {
+                const nome = produto.nome || produto.name || '(sem nome)';
+                const sku = produto.sku || produto.codigo || produto.id || '—';
+                const cor = corNivel(nivel);
+                const falhas = regras.filter(r => !r.ok);
+
+                return `
+                    <details class="group">
+                        <summary class="list-none cursor-pointer flex items-center gap-4 px-5 py-4 hover:bg-zinc-900/60 transition-colors">
+                            <img src="${produto.imagem || produto.image || ''}" onerror="this.style.visibility='hidden'" class="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-zinc-100 truncate">${nome} ${ehVitrine ? '<span class="text-[9px] uppercase tracking-wider text-[#caa85c] border border-[#caa85c]/40 rounded-full px-2 py-0.5 ml-1">vitrine</span>' : ''}</p>
+                                <p class="text-[11px] text-zinc-500">SKU: ${sku}</p>
+                            </div>
+                            <div class="hidden sm:block w-32">
+                                <div class="barra-score"><div style="width:${score}%; background:${cor};"></div></div>
+                            </div>
+                            <div class="text-xs font-bold w-28 text-right" style="color:${cor};">${labelNivel(nivel)}</div>
+                            <div class="text-lg font-cinzel w-10 text-right" style="color:${cor};">${score}</div>
+                        </summary>
+                        <div class="px-5 pb-4 pl-[4.5rem]">
+                            ${falhas.length === 0
+                                ? `<p class="text-xs text-emerald-400">✅ Todas as regras de SEO passaram para este item.</p>`
+                                : `<ul class="text-xs text-zinc-400 space-y-1.5">
+                                    ${falhas.map(f => `<li>⚠️ <span class="text-zinc-200">${f.label}</span> — <span class="text-zinc-500">${f.dica}</span></li>`).join('')}
+                                   </ul>`
+                            }
+                        </div>
+                    </details>
+                `;
+            }).join('');
+        }
+
+        function renderResumo(relatorio) {
+            document.getElementById('resumoScoreMedio').innerText = relatorio.scoreMedio;
+            document.getElementById('resumoBons').innerText = relatorio.bons;
+            document.getElementById('resumoAtencao').innerText = relatorio.atencao;
+            document.getElementById('resumoCriticos').innerText = relatorio.criticos;
+        }
+
+        async function iniciar() {
+            const loading = document.getElementById('loading');
+            try {
+                const snap = await db.ref('abella/products').once('value');
+                const produtosObj = snap.val() || {};
+                const produtos = Object.values(produtosObj).filter(p => p && p.ativo !== false);
+
+                const relatorio = window.SeoValidator.avaliarCatalogo(produtos);
+                AVALIACOES = relatorio.itens;
+
+                renderResumo(relatorio);
+                renderLista();
+
+                loading.classList.add('hidden');
+            } catch (error) {
+                console.error('[Dashboard SEO] Erro ao carregar produtos:', error);
+                loading.innerHTML = '<p class="text-rose-400">⚠️ Erro ao carregar produtos do Firebase.</p>';
+            }
+        }
+
+        document.getElementById('filtroTexto').addEventListener('input', renderLista);
+        document.getElementById('filtroNivel').addEventListener('change', renderLista);
+
+        document.addEventListener('DOMContentLoaded', iniciar);
+    </script>
+</body>
+</html>

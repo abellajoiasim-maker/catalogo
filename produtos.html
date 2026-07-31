@@ -123,6 +123,7 @@
     <script src="./js/services/produtoService.js"></script>
     <script src="./js/utils/image-helper.js"></script>
     <script src="./js/utils/imagens.js"></script>
+    <script src="./js/utils/seoAltGenerator.js"></script>
 
     <script src="components/modal.js"></script>
     <script src="engine/render.js"></script>
@@ -421,9 +422,14 @@
 
                 produtosDaPagina = filtrados;
 
-                document.getElementById('categoriaNome').innerText = buscaInicial
+                const tituloCase = (slug) => String(slug || '').replace(/-/g, ' ')
+                    .replace(/\b\w/g, c => c.toUpperCase());
+
+                const nomeExibicao = buscaInicial
                     ? `Resultados para "${buscaInicial}"`
-                    : (subcategoriaSlug ? subcategoriaSlug.replace(/-/g, ' ') : (categoriaSlug ? categoriaSlug.replace(/-/g, ' ') : 'Todos os produtos'));
+                    : (subcategoriaSlug ? tituloCase(subcategoriaSlug) : (categoriaSlug ? tituloCase(categoriaSlug) : 'Todos os produtos'));
+
+                document.getElementById('categoriaNome').innerText = nomeExibicao;
 
                 const crumbs = [{ label: 'Home', href: 'index.html' }];
                 if (categoriaSlug) crumbs.push({ label: categoriaSlug.replace(/-/g, ' '), href: `subcategorias.html?categoria=${encodeURIComponent(categoriaSlug)}` });
@@ -431,6 +437,102 @@
                 if (buscaInicial) crumbs.push({ label: `Busca: ${buscaInicial}` });
                 if (crumbs.length === 1) crumbs.push({ label: 'Produtos' });
                 document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb(crumbs);
+
+                // SEO IQ200 — title, description, canonical, OG e schemas dinâmicos por categoria/subcategoria
+                (function seoDinamicoListagem() {
+                    if (buscaInicial) return; // páginas de busca interna não precisam competir por indexação
+
+                    const setMeta = (attr, val, content) => {
+                        let el = document.querySelector(`meta[${attr}="${val}"]`);
+                        if (!el) { el = document.createElement('meta'); el.setAttribute(attr, val); document.head.appendChild(el); }
+                        el.setAttribute('content', content);
+                    };
+                    const setLink = (rel, href) => {
+                        let el = document.querySelector(`link[rel="${rel}"]`);
+                        if (!el) { el = document.createElement('link'); el.setAttribute('rel', rel); document.head.appendChild(el); }
+                        el.setAttribute('href', href);
+                    };
+
+                    const qtd = filtrados.length;
+                    const tituloSeo = subcategoriaSlug
+                        ? `${tituloCase(subcategoriaSlug)} Atacado | Abella Joias`
+                        : (categoriaSlug ? `${tituloCase(categoriaSlug)} Atacado | Abella Joias` : 'Catálogo Completo Atacado | Abella Joias');
+                    const descSeo = subcategoriaSlug
+                        ? `Compre ${tituloCase(subcategoriaSlug)} no atacado direto de fábrica em Limeira-SP. ${qtd} modelos disponíveis, preço de fábrica e entrega para todo o Brasil. Abella Joias.`
+                        : (categoriaSlug
+                            ? `Confira todos os modelos de ${tituloCase(categoriaSlug)} no atacado da Abella Joias. Preço de fábrica, qualidade garantida e envio para todo o Brasil.`
+                            : `Catálogo completo Abella Joias: semijoias e joias no bruto no atacado, direto de fábrica em Limeira-SP.`);
+
+                    const baseUrl = window.location.origin + window.location.pathname;
+                    const canonicalUrl = categoriaSlug
+                        ? `${baseUrl}?categoria=${encodeURIComponent(categoriaSlug)}${subcategoriaSlug ? `&subcategoria=${encodeURIComponent(subcategoriaSlug)}` : ''}`
+                        : baseUrl;
+
+                    // Usa a imagem vitrine desta subcategoria como imagem social, se existir
+                    const vitrineDaPagina = filtrados.find(p => p._ehVitrine);
+                    const imagemSeo = (vitrineDaPagina && vitrineDaPagina.imagem) || window.AURORA_FALLBACK_IMAGE;
+
+                    document.title = tituloSeo;
+                    setMeta('name', 'description', descSeo);
+                    setMeta('name', 'robots', 'index, follow');
+                    setLink('canonical', canonicalUrl);
+
+                    setMeta('property', 'og:title', tituloSeo);
+                    setMeta('property', 'og:description', descSeo);
+                    setMeta('property', 'og:image', imagemSeo);
+                    setMeta('property', 'og:url', canonicalUrl);
+                    setMeta('property', 'og:type', 'website');
+                    setMeta('name', 'twitter:card', 'summary_large_image');
+                    setMeta('name', 'twitter:title', tituloSeo);
+                    setMeta('name', 'twitter:description', descSeo);
+                    setMeta('name', 'twitter:image', imagemSeo);
+
+                    // BreadcrumbList — reaproveita os mesmos crumbs já usados no visual
+                    const breadcrumbSchema = {
+                        "@context": "https://schema.org",
+                        "@type": "BreadcrumbList",
+                        "itemListElement": crumbs.map((c, i) => ({
+                            "@type": "ListItem",
+                            "position": i + 1,
+                            "name": c.label.replace(/\b\w/g, ch => ch.toUpperCase()),
+                            ...(c.href ? { "item": window.location.origin + '/' + c.href } : {})
+                        }))
+                    };
+
+                    // ItemList — os produtos vendáveis exibidos nesta listagem (não inclui a peça vitrine)
+                    const itemListSchema = {
+                        "@context": "https://schema.org",
+                        "@type": "ItemList",
+                        "name": tituloSeo,
+                        "numberOfItems": filtrados.filter(p => !p._ehVitrine).length,
+                        "itemListElement": filtrados.filter(p => !p._ehVitrine).slice(0, 50).map((p, i) => ({
+                            "@type": "ListItem",
+                            "position": i + 1,
+                            "item": {
+                                "@type": "Product",
+                                "name": p.nome,
+                                "image": p.imagem || imagemSeo,
+                                "sku": p.sku || p.codigo || p.id,
+                                "brand": { "@type": "Brand", "name": "Abella Joias" },
+                                "offers": {
+                                    "@type": "Offer",
+                                    "priceCurrency": "BRL",
+                                    "price": Number(p.preco) || 0,
+                                    "availability": (p.estoque > 0 || p.paused === false) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                                }
+                            }
+                        }))
+                    };
+
+                    let scriptTag = document.getElementById('iq200-listagem-schema');
+                    if (!scriptTag) {
+                        scriptTag = document.createElement('script');
+                        scriptTag.id = 'iq200-listagem-schema';
+                        scriptTag.type = 'application/ld+json';
+                        document.head.appendChild(scriptTag);
+                    }
+                    scriptTag.textContent = JSON.stringify([breadcrumbSchema, itemListSchema]);
+                })();
 
                 loading.classList.add('hidden');
 
@@ -444,21 +546,36 @@
                     if (p._ehVitrine) {
                         const imgV = p.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg');
                         const legenda = p.legendaVitrine || p.descricao || 'Toque para ver em detalhe como esta coleção fica no corpo.';
+
+                        // Categoria/subcategoria reais desta peça, para o link levar ao catálogo já filtrado
+                        const catDaPeca = String(p.categoriaId || p.category || '').trim();
+                        const subDaPeca = String(p.subcategoriaId || p.subcategory || '').trim();
+                        const hrefVitrine = catDaPeca
+                            ? `produtos.html?categoria=${encodeURIComponent(catDaPeca)}${subDaPeca ? `&subcategoria=${encodeURIComponent(subDaPeca)}` : ''}`
+                            : `produtos.html`;
+
+                        // Alt text rico em contexto, via motor de regras compartilhado (ALT automático)
+                        const altVitrine = (typeof window.SeoAltGenerator !== 'undefined')
+                            ? window.SeoAltGenerator.gerarAltVitrine(p)
+                            : p.nome;
+
                         return `
                             <div class="col-12" data-produto-id="${p.id}" data-aurora-reveal style="max-width:860px; margin-inline:auto;">
-                                <div class="aurora-card" style="cursor:pointer;" onclick="abrirProduto('${p.id}')">
-                                    <div class="media" style="position:relative; aspect-ratio:16/9; overflow:hidden;">
-                                        <img src="${imgV}" alt="${p.nome}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg'}'">
+                                <a class="aurora-card" href="${hrefVitrine}" style="display:block; cursor:pointer; text-decoration:none;" aria-label="Ver catálogo de ${p.nome}">
+                                    <figure class="media" style="position:relative; aspect-ratio:16/9; overflow:hidden; margin:0;">
+                                        <img src="${imgV}" alt="${altVitrine}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg'}'">
                                         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(30,26,20,.85) 0%, rgba(30,26,20,.1) 55%, transparent 75%);"></div>
                                         <div style="position:absolute; top:var(--space-4); left:var(--space-4); background:rgba(30,26,20,.7); border:1px solid rgba(var(--color-primary-rgb),.4); border-radius:999px; padding: var(--space-1) var(--space-4);">
                                             <span style="font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--color-primary); font-weight:700;">✨ Veja como fica</span>
                                         </div>
                                         <div style="position:absolute; bottom:0; left:0; right:0; padding: var(--space-5);">
-                                            <p style="font-family:var(--font-heading); color:#fff; font-size:clamp(16px,2.4vw,26px); font-weight:600; max-width:600px;">${p.nome}</p>
-                                            <p style="color:rgba(255,255,255,.8); font-size:13px; margin-top:var(--space-1); max-width:600px;">${formatarDescricao(legenda)}</p>
+                                            <figcaption>
+                                                <p style="font-family:var(--font-heading); color:#fff; font-size:clamp(16px,2.4vw,26px); font-weight:600; max-width:600px;">${p.nome}</p>
+                                                <p style="color:rgba(255,255,255,.8); font-size:13px; margin-top:var(--space-1); max-width:600px;">${formatarDescricao(legenda)}</p>
+                                            </figcaption>
                                         </div>
-                                    </div>
-                                </div>
+                                    </figure>
+                                </a>
                             </div>
                         `;
                     }
@@ -467,6 +584,41 @@
                 }).join('');
 
                 if (window.AuroraAnimations) AuroraAnimations.initReveal();
+
+                // SEO IQ200 — ImageObject para as fotos vitrine exibidas nesta página (Google Imagens)
+                (function injetarImageObjectVitrine() {
+                    const vitrinesDaPagina = filtrados.filter(p => p._ehVitrine);
+                    if (vitrinesDaPagina.length === 0) return;
+
+                    const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
+                    const imageList = vitrinesDaPagina.map(p => {
+                        const catDaPeca = String(p.categoriaId || p.category || '').trim();
+                        const subDaPeca = String(p.subcategoriaId || p.subcategory || '').trim();
+                        const href = catDaPeca
+                            ? `${baseUrl}produtos.html?categoria=${encodeURIComponent(catDaPeca)}${subDaPeca ? `&subcategoria=${encodeURIComponent(subDaPeca)}` : ''}`
+                            : `${baseUrl}produtos.html`;
+                        return {
+                            "@type": "ImageObject",
+                            "contentUrl": p.imagem || window.AURORA_FALLBACK_IMAGE,
+                            "name": p.nome,
+                            "caption": p.legendaVitrine || p.descricao || p.nome,
+                            "representativeOfPage": true,
+                            "url": href
+                        };
+                    });
+
+                    let scriptTag = document.getElementById('iq200-vitrine-schema');
+                    if (!scriptTag) {
+                        scriptTag = document.createElement('script');
+                        scriptTag.id = 'iq200-vitrine-schema';
+                        scriptTag.type = 'application/ld+json';
+                        document.head.appendChild(scriptTag);
+                    }
+                    scriptTag.textContent = JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@graph": imageList
+                    });
+                })();
 
                 const inputBusca = document.getElementById('busca');
                 if (inputBusca) {

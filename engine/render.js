@@ -118,10 +118,14 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
 
             const clickAttr = onClickHandlerName ? `onclick="${onClickHandlerName}('${data.id || ''}')"` : '';
 
+            const altTexto = (typeof window.SeoAltGenerator !== 'undefined')
+                ? window.SeoAltGenerator.gerarAltProduto(data)
+                : nome;
+
             return `
                 <div class="aurora-card aurora-card--product" ${clickAttr}>
                     <div class="media">
-                        <img src="${img}" alt="${nome}" loading="lazy" onerror="this.src='${fallbackImg()}'">
+                        <img src="${img}" alt="${altTexto}" loading="lazy" onerror="this.src='${fallbackImg()}'">
                         ${badgeHTML}
                     </div>
                     <div class="body">

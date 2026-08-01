@@ -160,141 +160,143 @@
         }
 
         function abrirProduto(produtoId) {
-    const produto = produtosDaPagina.find(p => p.id === produtoId);
-    if (!produto) return;
+            const produto = produtosDaPagina.find(p => p.id === produtoId);
+            if (!produto) return;
 
-    const precoBase = Number(produto.preco) || 0;
+            const precoBase = Number(produto.preco) || 0;
 
-    const ehVitrine = produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine';
-    if (ehVitrine) {
-        const imgVitrine = produto.imagem || produto.image || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg');
-        const bodyHTML = `
-            <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:16/9; border: 1px solid var(--color-border); margin-bottom: var(--space-5);">
-                <img src="${imgVitrine}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
-            </div>
-            <p style="font-size:13px; color:var(--color-secondary); line-height:1.7;">
-                ${formatarDescricao(produto.legendaVitrine || produto.descricao) || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
-            </p>
-        `;
-        AuroraModal.open({ title: produto.nome || produto.title, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
-        return;
-    }
-    const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
-    const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
-    const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
-
-    let combinacoes = [];
-    
-    if (medidas.length > 0) {
-        combinacoes = medidas.map((m, idx) => {
-            let nomeMedida = '';
-            if (typeof m === 'object' && m !== null) {
-                nomeMedida = m.medida || m.nome || m.label || m.titulo || m.texto || '';
-            }
-            if (!nomeMedida || typeof m !== 'object') {
-                nomeMedida = String(m);
-            }
-            if (!nomeMedida || nomeMedida === 'undefined' || nomeMedida === '[object Object]') {
-                nomeMedida = `Medida ${idx + 1}`;
+            const ehVitrine = produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine';
+            if (ehVitrine) {
+                const imgBruta = produto.imagem || produto.image;
+                const imgVitrine = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(imgBruta) : (imgBruta || window.AURORA_FALLBACK_IMAGE);
+                const bodyHTML = `
+                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:16/9; border: 1px solid var(--color-border); margin-bottom: var(--space-5);">
+                        <img src="${imgVitrine}" alt="${produto.nome}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <p style="font-size:13px; color:var(--color-secondary); line-height:1.7;">
+                        ${formatarDescricao(produto.legendaVitrine || produto.descricao) || 'Imagem ilustrativa para você ter uma ideia aproximada de como as peças desta coleção ficam no corpo. Os modelos disponíveis para compra estão no restante da grade.'}
+                    </p>
+                `;
+                AuroraModal.open({ title: produto.nome || produto.title, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
+                return;
             }
 
-            const precoMedida = (typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '') ? Number(m.preco) : precoBase;
-            return { nome: nomeMedida, preco: precoMedida };
-        });
-    } else if (dizeres.length > 0 && iniciais.length > 0) {
-        dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase })));
-    } else if (dizeres.length > 0) {
-        combinacoes = dizeres.map((d, idx) => {
-            let nomeD = typeof d === 'object' && d !== null ? (d.texto || d.medida || d.nome || d.label || d.titulo || '') : String(d);
-            if (!nomeD || nomeD === 'undefined' || nomeD === '[object Object]') nomeD = `Modelo ${idx + 1}`;
-            const precoD = typeof d === 'object' && d !== null && d.preco !== undefined && d.preco !== null && d.preco !== '' ? Number(d.preco) : precoBase;
-            return { nome: nomeD, preco: precoD };
-        });
-    } else if (iniciais.length > 0) {
-        combinacoes = iniciais.map(i => ({ nome: `Letra ${i}`, preco: precoBase }));
-    }
+            const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
+            const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
+            const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
 
-    let precoExibicaoModal = precoBase;
-    if ((!precoExibicaoModal || precoExibicaoModal === 0) && combinacoes.length > 0) {
-        precoExibicaoModal = combinacoes[0].preco;
-    }
-    const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(precoExibicaoModal) : `R$ ${precoExibicaoModal.toFixed(2)}`;
+            let combinacoes = [];
+            
+            if (medidas.length > 0) {
+                combinacoes = medidas.map((m, idx) => {
+                    let nomeMedida = '';
+                    if (typeof m === 'object' && m !== null) {
+                        nomeMedida = m.medida || m.nome || m.label || m.titulo || m.texto || '';
+                    }
+                    if (!nomeMedida || typeof m !== 'object') {
+                        nomeMedida = String(m);
+                    }
+                    if (!nomeMedida || nomeMedida === 'undefined' || nomeMedida === '[object Object]') {
+                        nomeMedida = `Medida ${idx + 1}`;
+                    }
 
-    let gradeHTML;
-    if (combinacoes.length === 0) {
-        gradeHTML = `
-            <div class="aurora-field">
-                <label class="aurora-label">Quantidade</label>
-                <div style="display:flex; align-items:center; gap: var(--space-3);">
-                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
-                    <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="1" min="1"
-                           data-variacao-nome="" data-variacao-preco="${precoBase}" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
-                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
+                    const precoMedida = (typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '') ? Number(m.preco) : precoBase;
+                    return { nome: nomeMedida, preco: precoMedida };
+                });
+            } else if (dizeres.length > 0 && iniciais.length > 0) {
+                dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase })));
+            } else if (dizeres.length > 0) {
+                combinacoes = dizeres.map((d, idx) => {
+                    let nomeD = typeof d === 'object' && d !== null ? (d.texto || d.medida || d.nome || d.label || d.titulo || '') : String(d);
+                    if (!nomeD || nomeD === 'undefined' || nomeD === '[object Object]') nomeD = `Modelo ${idx + 1}`;
+                    const precoD = typeof d === 'object' && d !== null && d.preco !== undefined && d.preco !== null && d.preco !== '' ? Number(d.preco) : precoBase;
+                    return { nome: nomeD, preco: precoD };
+                });
+            } else if (iniciais.length > 0) {
+                combinacoes = iniciais.map(i => ({ nome: `Letra ${i}`, preco: precoBase }));
+            }
+
+            let precoExibicaoModal = precoBase;
+            if ((!precoExibicaoModal || precoExibicaoModal === 0) && combinacoes.length > 0) {
+                precoExibicaoModal = combinacoes[0].preco;
+            }
+            const precoFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(precoExibicaoModal) : `R$ ${precoExibicaoModal.toFixed(2)}`;
+
+            let gradeHTML;
+            if (combinacoes.length === 0) {
+                gradeHTML = `
+                    <div class="aurora-field">
+                        <label class="aurora-label">Quantidade</label>
+                        <div style="display:flex; align-items:center; gap: var(--space-3);">
+                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
+                            <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="1" min="1"
+                                   data-variacao-nome="" data-variacao-preco="${precoBase}" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
+                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const tituloGrade = medidas.length > 0 ? 'Medidas e Valores Disponíveis' : 'Grade de Variações Disponíveis';
+                gradeHTML = `
+                    <div class="aurora-field">
+                        <label class="aurora-label">${tituloGrade}</label>
+                        <div style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap: var(--space-2);">
+                            ${combinacoes.map((item, idx) => {
+                                const precoItemFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(item.preco) : `R$ ${item.preco.toFixed(2)}`;
+                                return `
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
+                                        <div style="display:flex; flex-direction:column;">
+                                            <span style="font-size:13px; font-weight:600;">${item.nome}</span>
+                                            <span style="font-size:11px; color:var(--color-primary-hover);">${precoItemFmt}</span>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap: var(--space-2);">
+                                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
+                                            <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
+                                                   data-variacao-nome="${String(item.nome).replace(/"/g, '&quot;')}"
+                                                   data-variacao-preco="${item.preco}"
+                                                   oninput="calcularTotalGrade()"
+                                                   style="width:52px; text-align:center; height:36px; padding-inline:0;">
+                                            <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-3);">
+                            <p style="font-size:12px; color:var(--color-secondary);">Total selecionado: <strong id="totalGradeQtd">0</strong> peças</p>
+                            <p style="font-size:14px; font-weight:700;" id="totalGradeValor">R$ 0,00</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const imgBrutaModal = produto.imagem || produto.image;
+            const imgProdutoModal = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(imgBrutaModal) : (imgBrutaModal || window.AURORA_FALLBACK_IMAGE);
+
+            const bodyHTML = `
+                <div class="produto-modal-grid">
+                    <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1; border: 1px solid var(--color-border);">
+                        <img src="${imgProdutoModal}" alt="${produto.nome || produto.title}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                    <div class="produto-modal-info">
+                        <p class="aurora-price" id="modalPrecoDinamico" style="font-size:28px;">${precoFmt}</p>
+                        ${produto.peso ? `<p style="font-size:13px; color:var(--color-secondary);">Peso: ${produto.peso}g</p>` : ''}
+                        ${produto.sku ? `<p style="font-size:13px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
+                        <div style="margin-top: var(--space-5);">${gradeHTML}</div>
+                    </div>
                 </div>
-            </div>
-        `;
-    } else {
-        const tituloGrade = medidas.length > 0 ? 'Medidas e Valores Disponíveis' : 'Grade de Variações Disponíveis';
-        gradeHTML = `
-            <div class="aurora-field">
-                <label class="aurora-label">${tituloGrade}</label>
-                <div style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap: var(--space-2);">
-                    ${combinacoes.map((item, idx) => {
-                        const precoItemFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(item.preco) : `R$ ${item.preco.toFixed(2)}`;
-                        return `
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
-                                <div style="display:flex; flex-direction:column;">
-                                    <span style="font-size:13px; font-weight:600;">${item.nome}</span>
-                                    <span style="font-size:11px; color:var(--color-primary-hover);">${precoItemFmt}</span>
-                                </div>
-                                <div style="display:flex; align-items:center; gap: var(--space-2);">
-                                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
-                                    <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
-                                           data-variacao-nome="${String(item.nome).replace(/"/g, '&quot;')}"
-                                           data-variacao-preco="${item.preco}"
-                                           oninput="calcularTotalGrade()"
-                                           style="width:52px; text-align:center; height:36px; padding-inline:0;">
-                                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-3);">
-                    <p style="font-size:12px; color:var(--color-secondary);">Total selecionado: <strong id="totalGradeQtd">0</strong> peças</p>
-                    <p style="font-size:14px; font-weight:700;" id="totalGradeValor">R$ 0,00</p>
-                </div>
-            </div>
-        `;
-    }
+                ${produto.descricao ? `
+                    <div style="margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--color-border);">
+                        <p style="font-size:13px; color:var(--color-secondary); line-height:1.8;">${formatarDescricao(produto.descricao)}</p>
+                    </div>
+                ` : ''}
+            `;
 
-    // Corrige a leitura da imagem aceitando tanto .imagem quanto .image, com fallback seguro
-    const imgProdutoModal = produto.imagem || produto.image || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg');
+            const footerHTML = `<button class="aurora-btn aurora-btn--primary aurora-btn--block" onclick="confirmarAdicionarCarrinho('${produto.id}')">Adicionar à sacola</button>`;
 
-    const bodyHTML = `
-        <div class="produto-modal-grid">
-            <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:1/1; border: 1px solid var(--color-border);">
-                <img src="${imgProdutoModal}" alt="${produto.nome || produto.title}" style="width:100%;height:100%;object-fit:cover;">
-            </div>
-            <div class="produto-modal-info">
-                <p class="aurora-price" id="modalPrecoDinamico" style="font-size:28px;">${precoFmt}</p>
-                ${produto.peso ? `<p style="font-size:13px; color:var(--color-secondary);">Peso: ${produto.peso}g</p>` : ''}
-                ${produto.sku ? `<p style="font-size:13px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
-                <div style="margin-top: var(--space-5);">${gradeHTML}</div>
-            </div>
-        </div>
-        ${produto.descricao ? `
-            <div style="margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--color-border);">
-                <p style="font-size:13px; color:var(--color-secondary); line-height:1.8;">${formatarDescricao(produto.descricao)}</p>
-            </div>
-        ` : ''}
-    `;
-
-    const footerHTML = `<button class="aurora-btn aurora-btn--primary aurora-btn--block" onclick="confirmarAdicionarCarrinho('${produto.id}')">Adicionar à sacola</button>`;
-
-    AuroraModal.open({ title: produto.nome || produto.title, bodyHTML, footerHTML });
-    calcularTotalGrade();
-}
+            AuroraModal.open({ title: produto.nome || produto.title, bodyHTML, footerHTML });
+            calcularTotalGrade();
+        }
 
         function alterarInputGrade(id, delta) {
             const input = document.getElementById(id);
@@ -327,7 +329,6 @@
                 totalValorEl.innerText = window.MoneyUtils?.format ? window.MoneyUtils.format(totalValor) : `R$ ${totalValor.toFixed(2)}`;
             }
 
-            // Atualiza o preço em destaque no topo do modal com base na seleção ou primeira variação
             const modalPrecoDinamico = document.getElementById('modalPrecoDinamico');
             if (modalPrecoDinamico) {
                 let precoParaMostrar = primeiroPrecoEncontrado;
@@ -409,6 +410,9 @@
                 let filtrados = todos.filter(p => p && p.ativo !== false && p.paused !== true);
                 filtrados.forEach(p => {
                     p._ehVitrine = p.vitrine === true || p.isVitrine === true || p.showcase === true || p.tipo === 'vitrine';
+                    // Garante padronização da imagem para o AuroraRender e ImageHelper
+                    if (!p.imagem && p.image) p.imagem = p.image;
+                    if (!p.image && p.imagem) p.image = p.imagem;
                 });
                 filtrados.sort((a, b) => (b._ehVitrine === true) - (a._ehVitrine === true));
 
@@ -441,9 +445,8 @@
                 if (crumbs.length === 1) crumbs.push({ label: 'Produtos' });
                 document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb(crumbs);
 
-                // SEO IQ200 — title, description, canonical, OG e schemas dinâmicos por categoria/subcategoria
                 (function seoDinamicoListagem() {
-                    if (buscaInicial) return; // páginas de busca interna não precisam competir por indexação
+                    if (buscaInicial) return;
 
                     const setMeta = (attr, val, content) => {
                         let el = document.querySelector(`meta[${attr}="${val}"]`);
@@ -471,9 +474,9 @@
                         ? `${baseUrl}?categoria=${encodeURIComponent(categoriaSlug)}${subcategoriaSlug ? `&subcategoria=${encodeURIComponent(subcategoriaSlug)}` : ''}`
                         : baseUrl;
 
-                    // Usa a imagem vitrine desta subcategoria como imagem social, se existir
                     const vitrineDaPagina = filtrados.find(p => p._ehVitrine);
-                    const imagemSeo = (vitrineDaPagina && vitrineDaPagina.imagem) || window.AURORA_FALLBACK_IMAGE;
+                    const imgVitrineRaw = (vitrineDaPagina && (vitrineDaPagina.imagem || vitrineDaPagina.image)) || window.AURORA_FALLBACK_IMAGE;
+                    const imagemSeo = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(imgVitrineRaw) : imgVitrineRaw;
 
                     document.title = tituloSeo;
                     setMeta('name', 'description', descSeo);
@@ -490,7 +493,6 @@
                     setMeta('name', 'twitter:description', descSeo);
                     setMeta('name', 'twitter:image', imagemSeo);
 
-                    // BreadcrumbList — reaproveita os mesmos crumbs já usados no visual
                     const breadcrumbSchema = {
                         "@context": "https://schema.org",
                         "@type": "BreadcrumbList",
@@ -502,29 +504,32 @@
                         }))
                     };
 
-                    // ItemList — os produtos vendáveis exibidos nesta listagem (não inclui a peça vitrine)
                     const itemListSchema = {
                         "@context": "https://schema.org",
                         "@type": "ItemList",
                         "name": tituloSeo,
                         "numberOfItems": filtrados.filter(p => !p._ehVitrine).length,
-                        "itemListElement": filtrados.filter(p => !p._ehVitrine).slice(0, 50).map((p, i) => ({
-                            "@type": "ListItem",
-                            "position": i + 1,
-                            "item": {
-                                "@type": "Product",
-                                "name": p.nome,
-                                "image": p.imagem || imagemSeo,
-                                "sku": p.sku || p.codigo || p.id,
-                                "brand": { "@type": "Brand", "name": "Abella Joias" },
-                                "offers": {
-                                    "@type": "Offer",
-                                    "priceCurrency": "BRL",
-                                    "price": Number(p.preco) || 0,
-                                    "availability": (p.estoque > 0 || p.paused === false) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                        "itemListElement": filtrados.filter(p => !p._ehVitrine).slice(0, 50).map((p, i) => {
+                            const imgItemRaw = p.imagem || p.image;
+                            const imgItemUrl = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(imgItemRaw) : (imgItemRaw || imagemSeo);
+                            return {
+                                "@type": "ListItem",
+                                "position": i + 1,
+                                "item": {
+                                    "@type": "Product",
+                                    "name": p.nome,
+                                    "image": imgItemUrl,
+                                    "sku": p.sku || p.codigo || p.id,
+                                    "brand": { "@type": "Brand", "name": "Abella Joias" },
+                                    "offers": {
+                                        "@type": "Offer",
+                                        "priceCurrency": "BRL",
+                                        "price": Number(p.preco) || 0,
+                                        "availability": (p.estoque > 0 || p.paused === false) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+                                    }
                                 }
-                            }
-                        }))
+                            };
+                        })
                     };
 
                     let scriptTag = document.getElementById('iq200-listagem-schema');
@@ -547,17 +552,16 @@
 
                 grid.innerHTML = filtrados.map(p => {
                     if (p._ehVitrine) {
-                        const imgV = p.imagem || (window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg');
+                        const imgVRaw = p.imagem || p.image;
+                        const imgV = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(imgVRaw) : (imgVRaw || window.AURORA_FALLBACK_IMAGE);
                         const legenda = p.legendaVitrine || p.descricao || 'Toque para ver em detalhe como esta coleção fica no corpo.';
 
-                        // Categoria/subcategoria reais desta peça, para o link levar ao catálogo já filtrado
                         const catDaPeca = String(p.categoriaId || p.category || '').trim();
                         const subDaPeca = String(p.subcategoriaId || p.subcategory || '').trim();
                         const hrefVitrine = catDaPeca
                             ? `produtos.html?categoria=${encodeURIComponent(catDaPeca)}${subDaPeca ? `&subcategoria=${encodeURIComponent(subDaPeca)}` : ''}`
                             : `produtos.html`;
 
-                        // Alt text rico em contexto, via motor de regras compartilhado (ALT automático)
                         const altVitrine = (typeof window.SeoAltGenerator !== 'undefined')
                             ? window.SeoAltGenerator.gerarAltVitrine(p)
                             : p.nome;
@@ -566,7 +570,7 @@
                             <div class="col-12" data-produto-id="${p.id}" data-aurora-reveal style="max-width:860px; margin-inline:auto;">
                                 <a class="aurora-card" href="${hrefVitrine}" style="display:block; cursor:pointer; text-decoration:none;" aria-label="Ver catálogo de ${p.nome}">
                                     <figure class="media" style="position:relative; aspect-ratio:16/9; overflow:hidden; margin:0;">
-                                        <img src="${imgV}" alt="${altVitrine}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg'}'">
+                                        <img src="${imgV}" alt="${altVitrine}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${window.AURORA_FALLBACK_IMAGE}'">
                                         <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(30,26,20,.85) 0%, rgba(30,26,20,.1) 55%, transparent 75%);"></div>
                                         <div style="position:absolute; top:var(--space-4); left:var(--space-4); background:rgba(30,26,20,.7); border:1px solid rgba(var(--color-primary-rgb),.4); border-radius:999px; padding: var(--space-1) var(--space-4);">
                                             <span style="font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--color-primary); font-weight:700;">✨ Veja como fica</span>
@@ -588,7 +592,6 @@
 
                 if (window.AuroraAnimations) AuroraAnimations.initReveal();
 
-                // SEO IQ200 — ImageObject para as fotos vitrine exibidas nesta página (Google Imagens)
                 (function injetarImageObjectVitrine() {
                     const vitrinesDaPagina = filtrados.filter(p => p._ehVitrine);
                     if (vitrinesDaPagina.length === 0) return;
@@ -600,9 +603,11 @@
                         const href = catDaPeca
                             ? `${baseUrl}produtos.html?categoria=${encodeURIComponent(catDaPeca)}${subDaPeca ? `&subcategoria=${encodeURIComponent(subDaPeca)}` : ''}`
                             : `${baseUrl}produtos.html`;
+                        const imgRaw = p.imagem || p.image;
+                        const imgUrl = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(imgRaw) : (imgRaw || window.AURORA_FALLBACK_IMAGE);
                         return {
                             "@type": "ImageObject",
-                            "contentUrl": p.imagem || window.AURORA_FALLBACK_IMAGE,
+                            "contentUrl": imgUrl,
                             "name": p.nome,
                             "caption": p.legendaVitrine || p.descricao || p.nome,
                             "representativeOfPage": true,

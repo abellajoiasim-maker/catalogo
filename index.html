@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <script src="./js/analytics.js"></script>
     <meta name="description" content="Abella Joias — Plataforma corporativa premium de pedidos. Compre joias com clareza, segurança e total transparência.">
     <title>Abella Joias • Catálogo Premium</title>
 
@@ -21,21 +22,21 @@
       "@graph": [
         {
           "@type": "Organization",
-          "@id": "https://www.abellajoias.com.br/#organization",
+          "@id": "https://catalogo.abellajoias.com.br/#organization",
           "name": "Abella Joias",
-          "url": "https://www.abellajoias.com.br/",
+          "url": "https://catalogo.abellajoias.com.br/",
           "logo": "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media",
           "description": "Atacado de Joias no Bruto e Semijoias, direto de fábrica em Limeira-SP."
         },
         {
           "@type": "WebSite",
-          "@id": "https://www.abellajoias.com.br/#website",
-          "url": "https://www.abellajoias.com.br/",
+          "@id": "https://catalogo.abellajoias.com.br/#website",
+          "url": "https://catalogo.abellajoias.com.br/",
           "name": "Abella Joias",
-          "publisher": { "@id": "https://www.abellajoias.com.br/#organization" },
+          "publisher": { "@id": "https://catalogo.abellajoias.com.br/#organization" },
           "potentialAction": {
             "@type": "SearchAction",
-            "target": "https://www.abellajoias.com.br/produtos.html?busca={search_term_string}",
+            "target": "https://catalogo.abellajoias.com.br/produtos.html?busca={search_term_string}",
             "query-input": "required name=search_term_string"
           }
         }
@@ -43,7 +44,7 @@
     }
     </script>
 
-    <link rel="canonical" href="https://www.abellajoias.com.br/">
+    <link rel="canonical" href="https://catalogo.abellajoias.com.br/">
 
     <link rel="stylesheet" href="components/index.css">
     <style>
@@ -284,20 +285,13 @@
                     document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
                 }
 
-                // 🚀 INTEGRAÇÃO CENTRAL SEO IQ200 (Atualização dinâmica do SEO e Open Graph)
-                if (typeof CentralSeoIQ200 !== 'undefined') {
-                    const seoHome = new CentralSeoIQ200({ 
-                        siteName: cfg.name || "Abella Joias",
-                        defaultImage: logoUrlReal || ""
-                    });
-                    
-                    seoHome.atualizarMetaProduto({
-                        nome: cfg.name ? `${cfg.name} — Atacado de Joias` : "Abella Joias",
-                        descricao: cfg.slogan || "Plataforma corporativa premium de pedidos no atacado.",
-                        imagemUrl: logoUrlReal,
-                        preco: "0.00"
-                    });
-                }
+                // Observação: o antigo bloco "CentralSeoIQ200.atualizarMetaProduto" foi removido daqui.
+                // Ele ficou anos sem rodar (o <script> apontava pro caminho errado). Ao corrigir o
+                // caminho, ele passou a executar e sobrescrevia o title/description/og:type corretos
+                // da home com dados genéricos, além de injetar um schema Product inválido (preço 0)
+                // para o site inteiro. O SEO da home já é feito pelo Organization/WebSite JSON-LD
+                // no <head>. Esse orquestrador (modulo/js/central-seo-iq200.js) continua disponível
+                // para uso futuro em páginas de produto individual, se algum dia existirem.
             }
 
             let listaCategorias = [];

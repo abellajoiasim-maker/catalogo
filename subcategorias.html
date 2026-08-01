@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <script src="./js/analytics.js"></script>
     <title>Subcategorias • Abella Joias</title>
 
     <script>window.AURORA_FALLBACK_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';</script>
@@ -144,10 +145,59 @@
                 }
 
                 const nomeCategoria = categoriaAtual.nome || categoriaAtual.name || categoriaSlug;
-                document.getElementById('categoriaNome').innerText = nomeCategoria;
                 document.title = `${nomeCategoria} • Subcategorias • Abella Joias`;
-                document.getElementById('categoriaDescricao').innerText =
-                    categoriaAtual.descricao || categoriaAtual.description || `Explore a coleção completa de ${nomeCategoria}.`;
+                document.getElementById('categoriaNome').innerText = nomeCategoria;
+                const descricaoCategoria = categoriaAtual.descricao || categoriaAtual.description || `Explore a coleção completa de ${nomeCategoria}.`;
+                document.getElementById('categoriaDescricao').innerText = descricaoCategoria;
+
+                // SEO IQ200 — meta description, canonical, OG e BreadcrumbList dinâmicos por categoria
+                (function seoDinamicoCategoria() {
+                    const setMeta = (attr, val, content) => {
+                        let el = document.querySelector(`meta[${attr}="${val}"]`);
+                        if (!el) { el = document.createElement('meta'); el.setAttribute(attr, val); document.head.appendChild(el); }
+                        el.setAttribute('content', content);
+                    };
+                    const setLink = (rel, href) => {
+                        let el = document.querySelector(`link[rel="${rel}"]`);
+                        if (!el) { el = document.createElement('link'); el.setAttribute('rel', rel); document.head.appendChild(el); }
+                        el.setAttribute('href', href);
+                    };
+
+                    const descSeo = `${descricaoCategoria} Modelos de ${nomeCategoria} no atacado, direto de fábrica em Limeira-SP. Abella Joias.`;
+                    const canonicalUrl = `${window.location.origin}${window.location.pathname}?categoria=${encodeURIComponent(categoriaSlug)}`;
+                    const imagemSeo = (categoriaAtual.imagem || categoriaAtual.image) || window.AURORA_FALLBACK_IMAGE;
+
+                    setMeta('name', 'description', descSeo);
+                    setMeta('name', 'robots', 'index, follow');
+                    setLink('canonical', canonicalUrl);
+
+                    setMeta('property', 'og:title', document.title);
+                    setMeta('property', 'og:description', descSeo);
+                    setMeta('property', 'og:image', imagemSeo);
+                    setMeta('property', 'og:url', canonicalUrl);
+                    setMeta('property', 'og:type', 'website');
+                    setMeta('name', 'twitter:card', 'summary_large_image');
+                    setMeta('name', 'twitter:title', document.title);
+                    setMeta('name', 'twitter:description', descSeo);
+                    setMeta('name', 'twitter:image', imagemSeo);
+
+                    const breadcrumbSchema = {
+                        "@context": "https://schema.org",
+                        "@type": "BreadcrumbList",
+                        "itemListElement": [
+                            { "@type": "ListItem", "position": 1, "name": "Home", "item": window.location.origin + '/' + 'index.html' },
+                            { "@type": "ListItem", "position": 2, "name": nomeCategoria }
+                        ]
+                    };
+                    let scriptTag = document.getElementById('iq200-categoria-schema');
+                    if (!scriptTag) {
+                        scriptTag = document.createElement('script');
+                        scriptTag.id = 'iq200-categoria-schema';
+                        scriptTag.type = 'application/ld+json';
+                        document.head.appendChild(scriptTag);
+                    }
+                    scriptTag.textContent = JSON.stringify(breadcrumbSchema);
+                })();
 
                 document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb([
                     { label: 'Home', href: 'index.html' },

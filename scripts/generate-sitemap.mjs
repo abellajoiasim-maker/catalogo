@@ -6,7 +6,7 @@
 import { writeFileSync } from 'fs';
 
 const DB_URL = 'https://catalogo-abella-joias-default-rtdb.firebaseio.com';
-const SITE_URL = 'https://www.abellajoias.com.br';
+const SITE_URL = 'https://catalogo.abellajoias.com.br';
 
 async function fetchJson(path) {
   const res = await fetch(`${DB_URL}/${path}.json`);

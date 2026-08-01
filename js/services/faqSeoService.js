@@ -22,7 +22,7 @@
             },
             {
                 pergunta: 'Existe pedido mínimo para comprar no atacado?',
-                resposta: 'Não tem minimo de quantidade ou valor.'
+                resposta: 'Não existe minimo de quantidade ou valor.'
             },
             {
                 pergunta: 'Quais as formas de pagamento aceitas?',

@@ -1033,9 +1033,21 @@ const DataService = {
     const imgGrid = sub.grid || sub.gridImage || sub.imagem || '';
     const imgHero = sub.hero || sub.heroImage || sub.imagem || '';
 
+    let catsHtml = '';
+    Object.entries(STATE.categorias).forEach(([slug, cat]) => {
+      catsHtml += `<option value="${escapeHtml(slug)}" ${catSlug === slug ? 'selected' : ''}>${escapeHtml(cat.name || slug)}</option>`
+    });
+
     abrirDrawer('✏️ Editar Subcategoria', `
+      <label class="text-xs text-zinc-400 block mb-1">Categoria Pai</label>
+      <select id="editSubCatPai" class="input-dark">${catsHtml}</select>
+
       <label class="text-xs text-zinc-400 block mb-1">Nome da Subcategoria</label>
       <input id="subName" class="input-dark" value="${escapeHtml(sub.name || sub.title || '')}">
+
+      <label class="text-xs text-zinc-400 block mb-1">Slug da Subcategoria</label>
+      <input id="subSlugNovo" class="input-dark bg-zinc-900 text-zinc-400" value="${escapeHtml(subSlug)}" disabled>
+      <p class="text-[10px] text-zinc-500 mb-2">O slug de identificação técnica não pode ser alterado diretamente para preservar os vínculos dos produtos.</p>
 
       <label class="text-xs text-zinc-400 block mb-1">Descrição</label>
       <textarea id="subDesc" class="input-dark h-20">${escapeHtml(sub.description || '')}</textarea>
@@ -1071,22 +1083,43 @@ const DataService = {
     `);
   }
 
-  async function salvarSubcategoria(catSlug, subSlug) {
+  async function salvarSubcategoria(catSlugAntigo, subSlug) {
     try {
+      const novoCatPai = document.getElementById('editSubCatPai').value;
       const gridVal = document.getElementById('subGrid').value.trim();
       const heroVal = document.getElementById('subHero').value.trim();
       const paused  = document.getElementById('subPaused')?.checked || false;
-      await STATE.db.ref(window.getAbellaPath(`categories/${catSlug}/subcategories/${subSlug}`)).update({
-        name:        document.getElementById('subName').value,
-        description: document.getElementById('subDesc').value,
+      const nomeVal = document.getElementById('subName').value;
+      const descVal = document.getElementById('subDesc').value;
+
+      const dadosAtualizados = {
+        name: nomeVal,
+        description: descVal,
         imagem: gridVal, grid: gridVal, gridImage: gridVal,
         hero: heroVal, heroImage: heroVal,
         paused,
         updatedAt: Date.now()
-      });
+      };
+
+      // Se alterou a categoria pai, move o nó no Firebase
+      if (novoCatPai !== catSlugAntigo) {
+        const subAtualRef = STATE.db.ref(window.getAbellaPath(`categories/${catSlugAntigo}/subcategories/${subSlug}`));
+        const subNovoRef = STATE.db.ref(window.getAbellaPath(`categories/${novoCatPai}/subcategories/${subSlug}`));
+        
+        const snap = await subAtualRef.once('value');
+        if (snap.exists()) {
+          await subNovoRef.set({ ...snap.val(), ...dadosAtualizados });
+          await subAtualRef.remove();
+        }
+      } else {
+        await STATE.db.ref(window.getAbellaPath(`categories/${catSlugAntigo}/subcategories/${subSlug}`)).update(dadosAtualizados);
+      }
+
       fecharDrawer();
       await carregarTudo();
-    } catch(e) { setStatus('❌ Erro ao salvar subcategoria', 'error'); }
+    } catch(e) { 
+      setStatus('❌ Erro ao salvar subcategoria', 'error'); 
+    }
   }
 
   // ============================================================

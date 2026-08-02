@@ -5,364 +5,243 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <script src="./js/analytics.js"></script>
+    <meta name="description" content="Abella Joias — Plataforma corporativa premium de pedidos. Compre joias com clareza, segurança e total transparência.">
+    <title>Abella Joias • Catálogo Premium</title>
 
-    <title>Abella Joias — Atacado de Semijoias Direto de Fábrica | Limeira-SP</title>
-    <meta name="description" content="Abella Joias: atacado de joias no bruto e semijoias direto de fábrica em Limeira-SP, a capital nacional da joia folheada. Sem pedido mínimo. Peça pelo catálogo online.">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.abellajoias.com.br/">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    <script>window.AURORA_FALLBACK_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';</script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script src="./js/firebase/firebase-config.js"></script>
-    <script src="./js/services/faqSeoService.js"></script>
+    
+    <!-- Central SEO IQ200 - Orquestrador de Metadados e SEO -->
+    <script src="modulo/js/central-seo-iq200.js"></script>
 
+    <!-- SEO IQ200 — Identidade da marca para o Google (logo nos resultados, sitelinks search box) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://catalogo.abellajoias.com.br/#organization",
+          "name": "Abella Joias",
+          "url": "https://catalogo.abellajoias.com.br/",
+          "logo": "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media",
+          "description": "Atacado de Joias no Bruto e Semijoias, direto de fábrica em Limeira-SP."
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://catalogo.abellajoias.com.br/#website",
+          "url": "https://catalogo.abellajoias.com.br/",
+          "name": "Abella Joias",
+          "publisher": { "@id": "https://catalogo.abellajoias.com.br/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://catalogo.abellajoias.com.br/produtos.html?busca={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
+
+    <link rel="canonical" href="https://catalogo.abellajoias.com.br/">
+
+    <link rel="stylesheet" href="components/index.css">
     <style>
-        :root{
-            --color-bg:        #F8F4EC;
-            --color-surface:   #FFFFFF;
-            --color-primary:   #B8892B;
-            --color-primary-rgb: 184,137,43;
-            --color-primary-hover: #8C6A1E;
-            --color-text:      #1E1A14;
-            --color-secondary: #6B6252;
-            --color-border:    #E5DDC9;
-
-            --font-heading: 'Cormorant Garamond', serif;
-            --font-body: 'Jost', sans-serif;
-
-            --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px;
-            --space-6: 32px; --space-7: 48px; --space-8: 64px; --space-9: 96px; --space-10: 128px;
-
-            --radius-md: 10px; --radius-lg: 16px; --radius-xl: 24px;
-            --shadow-md: 0 4px 12px rgba(30,26,20,.08);
-            --shadow-lg: 0 12px 28px rgba(30,26,20,.10);
-            --ease: cubic-bezier(.22,1,.36,1);
+        .hero-full{
+            position: relative; aspect-ratio: 16/9; overflow: hidden;
+            border-radius: var(--radius-lg); margin: var(--space-5) auto 0;
+            max-width: 860px;
         }
-
-        *{ box-sizing:border-box; }
-        html{ scroll-behavior:smooth; }
-        body{
-            margin:0; background:var(--color-bg); color:var(--color-text);
-            font-family:var(--font-body); font-weight:300; line-height:1.6;
-            -webkit-font-smoothing:antialiased;
-        }
-        h1,h2,h3{ font-family:var(--font-heading); font-weight:600; margin:0; color:var(--color-text); }
-        p{ margin:0; }
-        a{ color:inherit; text-decoration:none; }
-        img{ max-width:100%; display:block; }
-        .wrap{ max-width:1180px; margin:0 auto; padding-inline:var(--space-5); }
-        .eyebrow{ font-family:var(--font-body); font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--color-primary-hover); font-weight:600; }
-
-        /* -------- Header -------- */
-        header.site{
-            position:sticky; top:0; z-index:50; background:rgba(248,244,236,.92);
-            backdrop-filter:blur(8px); border-bottom:1px solid var(--color-border);
-        }
-        .nav-row{ display:flex; align-items:center; justify-content:space-between; padding-block:var(--space-3); gap:var(--space-4); }
-        .brand{ display:flex; align-items:center; gap:var(--space-3); }
-        .brand img{ width:38px; height:38px; border-radius:50%; object-fit:cover; }
-        .brand .word{ font-family:var(--font-heading); font-size:20px; letter-spacing:.08em; }
-        nav.links{ display:flex; gap:var(--space-6); font-size:13px; letter-spacing:.03em; }
-        nav.links a:hover{ color:var(--color-primary-hover); }
-        .btn{
-            display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border-radius:999px;
-            font-size:13px; letter-spacing:.03em; font-weight:500; transition:all var(--ease) .25s; cursor:pointer; border:1px solid transparent;
-        }
-        .btn-primary{ background:var(--color-primary); color:#fff; }
-        .btn-primary:hover{ background:var(--color-primary-hover); transform:translateY(-1px); box-shadow:var(--shadow-md); }
-        .btn-outline{ border-color:var(--color-primary); color:var(--color-primary-hover); }
-        .btn-outline:hover{ background:var(--color-primary); color:#fff; }
-        .btn-wa{ background:#25D366; color:#fff; }
-        .btn-wa:hover{ background:#1EBE57; transform:translateY(-1px); box-shadow:var(--shadow-md); }
-        #navToggle{ display:none; background:none; border:none; font-size:24px; cursor:pointer; color:var(--color-text); }
-
-        /* -------- Hero -------- */
-        .hero{ position:relative; padding:var(--space-9) 0 var(--space-8); overflow:hidden; }
-        .hero-grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:var(--space-8); align-items:center; }
-        .hero h1{ font-size:clamp(34px,5.4vw,58px); line-height:1.08; margin-top:var(--space-3); }
-        .hero h1 em{ font-style:italic; color:var(--color-primary-hover); }
-        .hero p.lead{ font-size:16px; color:var(--color-secondary); max-width:480px; margin-top:var(--space-4); }
-        .hero .ctas{ display:flex; gap:var(--space-4); margin-top:var(--space-6); flex-wrap:wrap; }
-        .hero-visual{ position:relative; aspect-ratio:4/5; border-radius:var(--radius-xl); overflow:hidden; box-shadow:var(--shadow-lg); background:linear-gradient(160deg,#EFE6D2,#F8F4EC); }
-        .hero-visual img{ width:100%; height:100%; object-fit:cover; }
-        .hero-badge{
-            position:absolute; bottom:var(--space-5); left:var(--space-5); background:rgba(30,26,20,.82); color:#fff;
-            padding:var(--space-3) var(--space-5); border-radius:var(--radius-md); backdrop-filter:blur(4px);
-        }
-        .hero-badge .num{ font-family:var(--font-heading); font-size:26px; color:var(--color-primary); line-height:1; }
-        .hero-badge .label{ font-size:11px; letter-spacing:.05em; color:#e9e2d0; margin-top:4px; }
-
-        /* -------- Trust strip -------- */
-        .trust{ background:var(--color-text); padding:var(--space-6) 0; }
-        .trust-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-5); }
-        .trust-item{ text-align:center; color:#f2ede1; padding-inline:var(--space-3); }
-        .trust-item .seal{
-            width:52px; height:52px; margin:0 auto var(--space-3); border-radius:50%; border:1.5px solid var(--color-primary);
-            display:flex; align-items:center; justify-content:center; font-family:var(--font-heading); font-size:20px; color:var(--color-primary);
-        }
-        .trust-item .txt{ font-size:12.5px; letter-spacing:.02em; color:#cfc6b0; }
-        .trust-item strong{ display:block; font-size:14px; color:#fff; margin-bottom:4px; }
-
-        /* -------- Generic section -------- */
-        section{ padding:var(--space-9) 0; }
-        .section-head{ max-width:600px; margin:0 auto var(--space-8); text-align:center; }
-        .section-head h2{ font-size:clamp(26px,3.6vw,38px); margin-top:var(--space-2); }
-        .section-head p{ color:var(--color-secondary); margin-top:var(--space-3); font-size:14.5px; }
-
-        /* -------- Como funciona -------- */
-        .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-6); }
-        .step{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-lg); padding:var(--space-6); }
-        .step .n{ font-family:var(--font-heading); font-size:34px; color:var(--color-primary); }
-        .step h3{ font-size:19px; margin-top:var(--space-3); }
-        .step p{ font-size:13.5px; color:var(--color-secondary); margin-top:var(--space-2); }
-
-        /* -------- Categorias -------- */
-        .cat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-5); }
-        .cat-card{ position:relative; aspect-ratio:1/1; border-radius:var(--radius-lg); overflow:hidden; box-shadow:var(--shadow-md); }
-        .cat-card img{ width:100%; height:100%; object-fit:cover; transition:transform .4s var(--ease); }
-        .cat-card:hover img{ transform:scale(1.06); }
-        .cat-card .ov{ position:absolute; inset:0; background:linear-gradient(to top, rgba(30,26,20,.78), transparent 60%); display:flex; align-items:flex-end; padding:var(--space-4); }
-        .cat-card .ov span{ color:#fff; font-family:var(--font-heading); font-size:16px; }
-        .cat-empty{ grid-column:1/-1; text-align:center; color:var(--color-secondary); font-size:13px; padding:var(--space-6); }
-
-        /* -------- Galvânicas -------- */
-        .galv{ background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-xl); padding:var(--space-8); display:grid; grid-template-columns:1fr auto; gap:var(--space-6); align-items:center; }
-        .galv h2{ font-size:clamp(24px,3vw,32px); }
-        .galv p{ color:var(--color-secondary); font-size:14px; margin-top:var(--space-3); max-width:520px; }
-
-        /* -------- FAQ -------- */
-        .faq-item{ border-bottom:1px solid var(--color-border); padding:var(--space-5) 0; }
-        .faq-item summary{ cursor:pointer; font-family:var(--font-heading); font-size:17px; list-style:none; display:flex; justify-content:space-between; align-items:center; }
-        .faq-item summary::-webkit-details-marker{ display:none; }
-        .faq-item summary::after{ content:'+'; color:var(--color-primary); font-size:22px; }
-        .faq-item[open] summary::after{ content:'–'; }
-        .faq-item p{ font-size:13.5px; color:var(--color-secondary); margin-top:var(--space-3); line-height:1.7; }
-
-        /* -------- Contato / Social -------- */
-        .contato{ background:var(--color-text); border-radius:var(--radius-xl); padding:var(--space-8); display:grid; grid-template-columns:1fr 1fr; gap:var(--space-7); }
-        .contato h2{ color:#fff; font-size:clamp(24px,3vw,32px); }
-        .contato .loc{ color:#cfc6b0; font-size:13.5px; margin-top:var(--space-3); }
-        .social-row{ display:flex; gap:var(--space-3); margin-top:var(--space-6); }
-        .social-row a{
-            width:44px; height:44px; border-radius:50%; border:1px solid rgba(var(--color-primary-rgb),.5);
-            display:flex; align-items:center; justify-content:center; color:var(--color-primary); font-size:16px; transition:all .2s;
-        }
-        .social-row a:hover{ background:var(--color-primary); color:#fff; }
-        .contato-cta{ display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:var(--space-4); }
-        .contato-cta p{ color:#cfc6b0; font-size:13.5px; }
-
-        /* -------- Footer -------- */
-        footer{ padding:var(--space-6) 0; border-top:1px solid var(--color-border); }
-        .foot-row{ display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--color-secondary); flex-wrap:wrap; gap:var(--space-3); }
-
-        /* -------- WhatsApp flutuante -------- */
-        .wa-float{
-            position:fixed; bottom:22px; right:22px; z-index:60; background:#25D366; color:#fff; width:58px; height:58px;
-            border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; box-shadow:0 6px 18px rgba(0,0,0,.25);
-            transition:transform .2s;
-        }
-        .wa-float:hover{ transform:scale(1.08); }
-
-        @media (max-width: 900px){
-            nav.links, .hero .ctas .btn-outline-desktop{ display:none; }
-            #navToggle{ display:block; }
-            .hero-grid{ grid-template-columns:1fr; }
-            .hero-visual{ order:-1; aspect-ratio:16/10; }
-            .trust-grid{ grid-template-columns:repeat(2,1fr); }
-            .steps{ grid-template-columns:1fr; }
-            .cat-grid{ grid-template-columns:repeat(2,1fr); }
-            .galv{ grid-template-columns:1fr; text-align:center; }
-            .contato{ grid-template-columns:1fr; }
+        .hero-full img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        .hero-rule{ width:64px; height:1px; background: var(--color-primary); margin: 0 auto; }
+        .trust-strip{ display:flex; border-top:1px solid var(--color-border); border-bottom:1px solid var(--color-border); }
+        .trust-item{ flex:1; text-align:center; padding: var(--space-6) var(--space-4); }
+        .trust-item + .trust-item{ border-left:1px solid var(--color-border); }
+        @media (max-width:768px){
+            .trust-strip{ flex-direction:column; }
+            .trust-item + .trust-item{ border-left:0; border-top:1px solid var(--color-border); }
         }
     </style>
 </head>
 <body>
 
-    <header class="site">
-        <div class="wrap nav-row">
-            <a class="brand" href="#topo">
-                <img id="logoImg" src="" alt="Abella Joias" style="display:none;">
-                <span class="word">ABELLA JOIAS</span>
-            </a>
-            <nav class="links">
-                <a href="#diferenciais">Diferenciais</a>
-                <a href="#categorias">Categorias</a>
-                <a href="#galvanicas">Galvânicas</a>
-                <a href="#faq">Dúvidas</a>
-                <a href="#contato">Contato</a>
+    <div class="aurora-header">
+        <div class="util-bar">Abella Joias • Catálogo Premium</div>
+        <div class="bar aurora-container">
+            <nav class="nav-links">
+                <a href="#categorias">Coleções</a>
+                <a href="./galvanicas.html">Galvânicas</a>
             </nav>
-            <a id="btnWhatsHeader" class="btn btn-wa" href="#" target="_blank" rel="noopener">💬 WhatsApp</a>
-            <button id="navToggle" aria-label="Abrir menu">☰</button>
-        </div>
-    </header>
-
-    <main id="topo">
-
-        <!-- HERO -->
-        <section class="hero">
-            <div class="wrap hero-grid">
+            <div class="brand">
+                <div class="brand-logo" id="abellaLogoContainer">
+                    <span id="abellaLogoFallback" style="font-family:var(--font-heading); font-weight:600;">A</span>
+                    <img id="abellaLogoImg" src="" alt="Abella Joias" style="width:100%;height:100%;object-fit:contain;display:none;">
+                </div>
                 <div>
-                    <p class="eyebrow">Atacado direto de fábrica · Limeira-SP</p>
-                    <h1>Semijoias e joias no bruto <em>direto de quem fabrica.</em></h1>
-                    <p class="lead" id="heroSlogan">Peça pelo catálogo online, sem pedido mínimo, com preço de fábrica — de Limeira, a capital nacional da joia folheada, para o Brasil inteiro.</p>
-                    <div class="ctas">
-                        <a id="btnCatalogo" class="btn btn-primary" href="https://catalogo.abellajoias.com.br" target="_blank" rel="noopener">Explorar Catálogo Completo →</a>
-                        <a class="btn btn-outline btn-outline-desktop" href="#galvanicas">Galvânicas Parceiras</a>
-                    </div>
+                    <p class="brand-name" id="nome">Abella</p>
+                    <p class="brand-slogan" id="slogan">Catálogo Premium</p>
                 </div>
-                <div class="hero-visual">
-                    <img id="heroImg" src="" alt="Coleção Abella Joias" onerror="this.style.display='none'">
-                    <div class="hero-badge">
-                        <div class="num" id="heroPix">—</div>
-                        <div class="label">de desconto no PIX</div>
-                    </div>
-                </div>
+            </div>
+            <div class="actions">
+                <a id="whats" href="#" target="_blank" rel="noopener noreferrer" class="hidden-mobile" style="font-size:12px;color:var(--color-secondary); margin-right: var(--space-2);">WhatsApp</a>
+                <a href="carrinho.html" class="cart-btn"><span id="cart-count">0</span></a>
+            </div>
+        </div>
+    </div>
+
+    <div id="banner" class="hidden" style="background:var(--color-text); text-align:center; padding-block: var(--space-3);">
+        <p id="bannerTexto" style="color: var(--color-primary); font-weight:700; text-transform:uppercase; letter-spacing:.2em; font-size:12px;"></p>
+    </div>
+
+    <main class="aurora-container">
+
+        <section class="hero-full" data-aurora-reveal>
+            <img id="heroBannerImg"
+                 src="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20251123_210246643.jpg?alt=media"
+                 alt="Banner Abella Joias" loading="lazy" onerror="this.style.display='none'">
+        </section>
+
+        <section style="text-align:center; padding: var(--space-7) var(--space-5) var(--space-6); max-width:640px; margin: 0 auto;">
+            <p style="font-size:12px; letter-spacing:.3em; text-transform:uppercase; color: var(--color-primary-hover); margin-bottom: var(--space-3);">Catálogo Corporativo Online</p>
+            <h1 style="font-size: clamp(26px, 4.5vw, 48px); line-height:1.08;">Sua próxima coleção <em style="font-style:italic;">começa aqui</em>.</h1>
+            <div class="hero-rule" style="margin: var(--space-5) auto 0;"></div>
+            <p style="font-size:14px; color:var(--color-secondary); margin: var(--space-4) auto var(--space-6);">Plataforma inteligente de pedidos. Compre com clareza, segurança e total transparência.</p>
+            <a href="#categorias" class="aurora-btn aurora-btn--outline">Explorar Coleções</a>
+        </section>
+
+        <section class="aurora-section" style="padding-block: var(--space-6);">
+            <div style="background: var(--color-primary-tint, rgba(var(--color-primary-rgb),.08)); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-6); text-align:center;">
+                <p style="font-family: var(--font-heading); font-size: clamp(18px,2.6vw,26px); color: var(--color-primary-hover); display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
+                    <svg width="26" height="18" viewBox="0 0 26 18" style="flex-shrink:0; display:inline-block; border-radius:2px;" aria-hidden="true">
+                        <rect width="26" height="18" fill="#009739"/>
+                        <polygon points="13,2.5 24,9 13,15.5 2,9" fill="#FEDD00"/>
+                        <circle cx="13" cy="9" r="4" fill="#012169"/>
+                    </svg>
+                    100% Nacional — sua reposição nunca vai faltar.
+                </p>
+                <p style="font-size:13px; color:var(--color-secondary); margin-top: var(--space-2);">
+                    Fabricação própria, sem depender de importação. O que você vende hoje, você repõe amanhã.
+                </p>
             </div>
         </section>
 
-        <!-- TRUST STRIP -->
-        <section class="trust" id="diferenciais" style="padding-block:var(--space-6);">
-            <div class="wrap trust-grid">
-                <div class="trust-item">
-                    <div class="seal">∅</div>
-                    <strong>Sem pedido mínimo</strong>
-                    <p class="txt">Compre qualquer valor ou quantidade</p>
-                </div>
-                <div class="trust-item">
-                    <div class="seal">🚚</div>
-                    <strong>Frete grátis</strong>
-                    <p class="txt">Para galvânicas de Limeira acima de R$100</p>
-                </div>
-                <div class="trust-item">
-                    <div class="seal" id="parcelasSeal">6x</div>
-                    <strong id="parcelasLabel">Parcelamento em 6x</strong>
-                    <p class="txt">Sem juros no cartão</p>
-                </div>
-                <div class="trust-item">
-                    <div class="seal">🏭</div>
-                    <strong>Direto de fábrica</strong>
-                    <p class="txt">Sem intermediários no preço</p>
-                </div>
+        <section class="trust-strip">
+            <div class="trust-item">
+                <p style="font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--color-secondary); font-weight:600;">Parcelamento</p>
+                <p id="parcelamento" style="font-family:var(--font-heading); font-size:20px; color:var(--color-primary-hover); margin-top: var(--space-1);">6x sem juros</p>
+            </div>
+            <div class="trust-item">
+                <p style="font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--color-secondary); font-weight:600;">PIX</p>
+                <p id="pix" style="font-family:var(--font-heading); font-size:20px; color:var(--color-success); margin-top: var(--space-1);">10% OFF</p>
+            </div>
+            <div class="trust-item">
+                <p style="font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--color-secondary); font-weight:600;">Atendimento</p>
+                <p style="font-family:var(--font-heading); font-size:20px; color:var(--color-primary-hover); margin-top: var(--space-1);">WhatsApp</p>
             </div>
         </section>
 
-        <!-- COMO FUNCIONA -->
-        <section>
-            <div class="wrap">
-                <div class="section-head">
-                    <p class="eyebrow">Como funciona</p>
-                    <h2>Do catálogo ao seu pedido, em 3 passos.</h2>
-                </div>
-                <div class="steps">
-                    <div class="step">
-                        <div class="n">01</div>
-                        <h3>Explore o catálogo</h3>
-                        <p>Navegue pelas coleções completas, com fotos técnicas, peso e preço de cada peça.</p>
-                    </div>
-                    <div class="step">
-                        <div class="n">02</div>
-                        <h3>Monte seu pedido</h3>
-                        <p>Adicione as peças no carrinho, sem valor ou quantidade mínima exigida.</p>
-                    </div>
-                    <div class="step">
-                        <div class="n">03</div>
-                        <h3>Finalize pelo WhatsApp</h3>
-                        <p>Nossa equipe confirma pagamento (PIX ou cartão) e prazo de entrega direto com você.</p>
-                    </div>
-                </div>
+        <section class="aurora-section" id="categorias">
+            <div style="max-width:480px; margin: 0 auto; position:relative;">
+                <input type="search" id="busca" placeholder="Buscar categorias ou produtos (ex: coração)..." autocomplete="off" class="aurora-input" style="border-radius: var(--radius-xl); padding-left: var(--space-8); height:52px;" onkeydown="if(event.key==='Enter'){ window.location.href = 'produtos.html?busca=' + encodeURIComponent(this.value.trim()); }">
+                <span style="position:absolute; left:var(--space-4); top:50%; transform:translateY(-50%); color:var(--color-secondary);">🔎</span>
+            </div>
+            <p style="text-align:center; font-size:11px; color:var(--color-secondary); margin: var(--space-2) 0 var(--space-7);">Aperte Enter para buscar produtos em todo o catálogo</p>
+
+            <div id="loading" style="text-align:center; padding: var(--space-6) 0;">
+                <p style="color:var(--color-primary-hover); font-weight:600;">⏳ Carregando categorias...</p>
+            </div>
+
+            <div style="text-align:center; margin-bottom: var(--space-7);">
+                <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary-hover); font-weight:700;">Catálogo Premium</p>
+                <h2 style="font-size: clamp(26px,4vw,44px); margin-top: var(--space-2);">Categorias Oficiais</h2>
+            </div>
+
+            <div id="grid-categorias" class="aurora-grid"></div>
+
+            <div id="no-result" class="hidden" style="grid-column:1/-1; text-align:center; padding: var(--space-8) 0;">
+                <p style="font-size:14px; color:var(--color-secondary);">Nenhuma categoria encontrada.</p>
             </div>
         </section>
 
-        <!-- CATEGORIAS -->
-        <section id="categorias">
-            <div class="wrap">
-                <div class="section-head">
-                    <p class="eyebrow">Coleções</p>
-                    <h2>Categorias em destaque</h2>
-                    <p>Uma amostra do catálogo completo — brincos, anéis, pulseiras, colares e muito mais.</p>
-                </div>
-                <div class="cat-grid" id="catGrid">
-                    <div class="cat-empty">Carregando categorias...</div>
-                </div>
-                <div style="text-align:center; margin-top:var(--space-7);">
-                    <a class="btn btn-primary" href="https://catalogo.abellajoias.com.br" target="_blank" rel="noopener">Ver Catálogo Completo →</a>
-                </div>
+        <section class="aurora-section" id="faq-seo" style="max-width:760px; margin:0 auto;">
+            <div style="text-align:center; margin-bottom: var(--space-6);">
+                <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary-hover); font-weight:700;">Dúvidas Frequentes</p>
+                <h2 style="font-size: clamp(22px,3.4vw,32px); margin-top: var(--space-2);">Perguntas sobre o atacado Abella Joias</h2>
             </div>
+            <div id="faq-lista"></div>
         </section>
-
-        <!-- GALVÂNICAS -->
-        <section id="galvanicas">
-            <div class="wrap">
-                <div class="galv">
-                    <div>
-                        <p class="eyebrow">Parceria local</p>
-                        <h2>Galvânicas parceiras de Limeira</h2>
-                        <p>Trabalhamos junto com galvânicas da região pra oferecer acabamento e frete grátis pra quem compra acima de R$100. Confira quem são nossas parceiras e as condições especiais.</p>
-                    </div>
-                    <a class="btn btn-primary" href="https://catalogo.abellajoias.com.br/galvanicas.html" target="_blank" rel="noopener">Ver Galvânicas Parceiras →</a>
-                </div>
-            </div>
-        </section>
-
-        <!-- FAQ -->
-        <section id="faq">
-            <div class="wrap" style="max-width:720px;">
-                <div class="section-head">
-                    <p class="eyebrow">Dúvidas frequentes</p>
-                    <h2>Perguntas sobre o atacado Abella Joias</h2>
-                </div>
-                <div id="faqLista"></div>
-            </div>
-        </section>
-
-        <!-- CONTATO -->
-        <section id="contato">
-            <div class="wrap">
-                <div class="contato">
-                    <div>
-                        <p class="eyebrow" style="color:var(--color-primary);">Fale com a gente</p>
-                        <h2>Vamos conversar sobre o seu pedido.</h2>
-                        <p class="loc" id="localizacaoTxt">Atendimento 100% online — sem loja física.</p>
-                        <div class="social-row" id="socialRow"></div>
-                    </div>
-                    <div class="contato-cta">
-                        <p>Atendimento rápido, direto com nossa equipe comercial.</p>
-                        <a id="btnWhatsContato" class="btn btn-wa" href="#" target="_blank" rel="noopener">💬 Chamar no WhatsApp</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
     </main>
 
-    <footer>
-        <div class="wrap foot-row">
-            <span>© <span id="anoAtual"></span> Abella Joias — Atacado de Joias no Bruto e Semijoias.</span>
-            <span>Limeira-SP · <a href="https://catalogo.abellajoias.com.br" target="_blank" rel="noopener" style="text-decoration:underline;">Catálogo Online</a></span>
+    <footer class="aurora-footer">
+        <div class="aurora-container">
+            <div class="grid">
+                <div>
+                    <p class="brand-name">Abella Joias</p>
+                    <p class="description">Atacado de Joias no Bruto — Especialista em joias no bruto no atacado — acabamento impecável e estrutura perfeita para alto padrão de folheação em ouro 18k."</p>
+                </div>
+                <div>
+                    <p class="col-title">Navegação</p>
+                    <ul><li><a href="#categorias">Coleções</a></li><li><a href="./galvanicas.html">Galvânicas</a></li><li><a href="carrinho.html">Sacola</a></li></ul>
+                </div>
+                <div>
+                    <p class="col-title">Atendimento</p>
+                    <ul><li><a id="whatsFooter" href="#" target="_blank" rel="noopener noreferrer">WhatsApp</a></li></ul>
+                </div>
+                <div>
+                    <p class="col-title">Redes</p>
+                    <ul><li><a href="#">Instagram</a></li></ul>
+                </div>
+            </div>
+            <div class="bottom">
+                <span>© Abella Joias — atacado de joias no bruto</span>
+                <span>Luxury V11</span>
+            </div>
         </div>
     </footer>
 
-    <a id="waFloat" class="wa-float" href="#" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">💬</a>
+    <!-- Modal único (Sprint 1) -->
+    <div class="aurora-modal-overlay" id="auroraModal">
+        <div class="aurora-modal" role="dialog" aria-modal="true">
+            <div class="header"><h3 class="title" id="auroraModalTitle"></h3><button class="close-btn" onclick="AuroraModal.close()">✕</button></div>
+            <div class="body" id="auroraModalBody"></div>
+            <div class="footer" id="auroraModalFooter"></div>
+        </div>
+    </div>
+
+    <script src="./js/firebase/firebase-config.js"></script>
+    <script src="./js/utils/money.js"></script>
+    <script src="./js/utils/peso.js"></script>
+    <script src="./js/utils/storage.js"></script>
+    <script src="./js/services/carrinhoService.js"></script>
+    <script src="./js/services/faqSeoService.js"></script>
+    <script src="./js/utils/image-helper.js"></script>
+    <script src="./js/utils/imagens.js"></script>
+    <script src="./js/utils/seoAltGenerator.js"></script>
+
+    <script src="components/modal.js"></script>
+    <script src="engine/render.js"></script>
+    <script src="engine/animations.js"></script>
+    <script src="engine/mobile-nav.js"></script>
 
     <script>
-        document.getElementById('anoAtual').innerText = new Date().getFullYear();
-
-        // Menu mobile simples: reaproveita a nav já existente
-        document.getElementById('navToggle').addEventListener('click', () => {
-            const nav = document.querySelector('nav.links');
-            const visivel = nav.style.display === 'flex';
-            nav.style.cssText = visivel
-                ? ''
-                : 'display:flex; flex-direction:column; position:absolute; top:100%; left:0; right:0; background:var(--color-bg); padding:16px 24px; border-bottom:1px solid var(--color-border); gap:16px;';
-        });
-
         document.addEventListener('DOMContentLoaded', async () => {
+            const grid = document.getElementById('grid-categorias');
+            const loading = document.getElementById('loading');
+            const noResult = document.getElementById('no-result');
+
+            // Atualiza o contador da sacola a partir do serviço real
+            function atualizarContadorSacola() {
+                const el = document.getElementById('cart-count');
+                if (el && window.carrinhoService && typeof carrinhoService.obterContagem === 'function') {
+                    el.innerText = carrinhoService.obterContagem();
+                }
+            }
+            atualizarContadorSacola();
+
             if (typeof db === 'undefined') {
-                console.error('[Institucional] Firebase indisponível.');
+                console.error('Instância global "db" do Firebase não encontrada.');
+                if (loading) loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Conexão com o banco de dados não configurada.</p>`;
                 return;
             }
 
@@ -372,150 +251,144 @@
                     db.ref('abella/categories').once('value').catch(() => null)
                 ]);
 
-                let whatsNumero = '';
-
                 if (snapSettings && snapSettings.exists()) {
-                    const cfg = snapSettings.val();
+                const cfg = snapSettings.val();
 
-                    // Logo
-                    const logoUrl = cfg.logoUrl || cfg.logo;
-                    if (logoUrl) {
-                        const img = document.getElementById('logoImg');
-                        img.src = logoUrl;
+                const logoUrlReal = cfg.logoUrl || cfg.logo;
+                if (logoUrlReal) {
+                    const img = document.getElementById('abellaLogoImg');
+                    const fallback = document.getElementById('abellaLogoFallback');
+                    if (img) {
+                        img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
                         img.style.display = 'block';
+                        if (fallback) fallback.style.display = 'none';
                     }
+                }
 
-                    // Hero: usa o banner principal já configurado no painel
-                    const heroUrl = cfg.bannerHeroUrl;
-                    if (heroUrl) document.getElementById('heroImg').src = heroUrl;
+                const heroBannerUrlReal = cfg.bannerHeroUrl || cfg.heroBannerUrl;
+                if (heroBannerUrlReal) {
+                    const hero = document.getElementById('heroBannerImg');
+                    if (hero) hero.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(heroBannerUrlReal) : heroBannerUrlReal;
+                }
 
-                    if (cfg.slogan) document.getElementById('heroSlogan').innerText = cfg.slogan;
-                    if (cfg.pix) document.getElementById('heroPix').innerText = `${cfg.pix}%`;
-                    if (cfg.parcelas) {
-                        document.getElementById('parcelasSeal').innerText = `${cfg.parcelas}x`;
-                        document.getElementById('parcelasLabel').innerText = `Parcelamento em ${cfg.parcelas}x`;
+                if (cfg.name) document.getElementById('nome').innerText = cfg.name;
+                if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;
+                if (cfg.parcelas) document.getElementById('parcelamento').innerText = `${cfg.parcelas}x sem juros`;
+                if (cfg.pix) document.getElementById('pix').innerText = `${cfg.pix}% OFF`;
+                if (cfg.whatsapp) {
+                    const link = `https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}`;
+                    const w1 = document.getElementById('whats'); if (w1) w1.href = link;
+                    const w2 = document.getElementById('whatsFooter'); if (w2) w2.href = link;
+                }
+                if (cfg.bannerAtivo && cfg.bannerTexto) {
+                    document.getElementById('banner').classList.remove('hidden');
+                    document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
+                }
+
+                // Observação: o antigo bloco "CentralSeoIQ200.atualizarMetaProduto" foi removido daqui.
+                // Ele ficou anos sem rodar (o <script> apontava pro caminho errado). Ao corrigir o
+                // caminho, ele passou a executar e sobrescrevia o title/description/og:type corretos
+                // da home com dados genéricos, além de injetar um schema Product inválido (preço 0)
+                // para o site inteiro. O SEO da home já é feito pelo Organization/WebSite JSON-LD
+                // no <head>. Esse orquestrador (modulo/js/central-seo-iq200.js) continua disponível
+                // para uso futuro em páginas de produto individual, se algum dia existirem.
+            }
+
+            let listaCategorias = [];
+            if (snapCategories && snapCategories.exists() && snapCategories.val()) {
+                const dados = snapCategories.val();
+                listaCategorias = Array.isArray(dados)
+                    ? dados.filter(Boolean)
+                    : Object.entries(dados).map(([slug, val]) => ({ slug, ...val }));
+            }
+            listaCategorias = listaCategorias.filter(c => c && c.paused !== true);
+
+            if (loading) loading.classList.add('hidden');
+
+            if (listaCategorias.length === 0) {
+                if (noResult) noResult.classList.remove('hidden');
+                return;
+            }
+
+            grid.innerHTML = listaCategorias.map(cat => {
+                const html = AuroraRender.categoryCard(cat);
+                return `<div class="col-4" data-aurora-reveal>${html}</div>`;
+            }).join('');
+
+            const inputBusca = document.getElementById('busca');
+            if (inputBusca) {
+                inputBusca.addEventListener('input', (e) => {
+                    const termo = e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                    let achou = false;
+                    grid.querySelectorAll('.aurora-card--category').forEach(card => {
+                        const nomeEl = card.querySelector('.title');
+                        const texto = (nomeEl?.innerText || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                        const visivel = texto.includes(termo);
+                        card.closest('.col-4').style.display = visivel ? '' : 'none';
+                        if (visivel) achou = true;
+                    });
+                    noResult.classList.toggle('hidden', achou);
+                });
+
+                // Enter na busca da Home: manda pra busca de produtos em todo o
+                // catálogo (link compartilhável, igual ao produtos.html).
+                inputBusca.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && inputBusca.value.trim()) {
+                        window.location.href = `produtos.html?busca=${encodeURIComponent(inputBusca.value.trim())}`;
                     }
+                });
+            }
 
-                    // Localização (texto livre — sem loja física)
-                    if (cfg.enderecoTexto) {
-                        document.getElementById('localizacaoTxt').innerText = cfg.enderecoTexto;
-                    }
+            // Recarrega o reveal-on-scroll pros cards recém-criados
+            if (window.AuroraAnimations) AuroraAnimations.initReveal();
 
-                    // WhatsApp — todos os botões
-                    if (cfg.whatsapp) {
-                        whatsNumero = String(cfg.whatsapp).replace(/\D/g, '');
-                        const link = `https://wa.me/${whatsNumero}?text=${encodeURIComponent('Olá! Vim pelo site institucional e quero conhecer o catálogo Abella Joias.')}`;
-                        ['btnWhatsHeader', 'btnWhatsContato', 'waFloat'].forEach(id => {
-                            const el = document.getElementById(id);
-                            if (el) el.href = link;
-                        });
-                    }
+        } catch (error) {
+            console.error('Falha ao carregar Home:', error);
+            if (loading) {
+                loading.classList.remove('hidden');
+                loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Erro técnico ao carregar categorias.</p>`;
+            }
+        }
 
-                    // Redes sociais
-                    const social = [
-                        { url: cfg.instagram, icon: '📷', label: 'Instagram' },
-                        { url: cfg.facebook, icon: 'f', label: 'Facebook' },
-                        { url: cfg.tiktok, icon: '♪', label: 'TikTok' }
-                    ].filter(s => s.url);
+        // SEO IQ200 — FAQ Schema (renderiza visível + injeta FAQPage JSON-LD)
+        // Independente do bloco acima: uma falha ao carregar categorias não deve impedir o FAQ.
+        try {
+            const faqLista = document.getElementById('faq-lista');
+            if (faqLista && window.FaqSeoService) {
+                const faqs = await window.FaqSeoService.obterFaqs();
 
-                    const socialRow = document.getElementById('socialRow');
-                    socialRow.innerHTML = social.map(s =>
-                        `<a href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">${s.icon}</a>`
-                    ).join('');
+                if (faqs.length > 0) {
+                    faqLista.innerHTML = faqs.map((f, i) => `
+                        <details style="border-bottom:1px solid var(--color-border); padding: var(--space-4) 0;" ${i === 0 ? 'open' : ''}>
+                            <summary style="cursor:pointer; font-family:var(--font-heading); font-size:15px; color:var(--color-primary-hover);">${f.pergunta}</summary>
+                            <p style="font-size:13px; color:var(--color-secondary); margin-top: var(--space-2); line-height:1.7;">${f.resposta}</p>
+                        </details>
+                    `).join('');
 
-                    // SEO — Organization + WebSite (a marca "mãe" fica melhor aqui do que no catálogo)
-                    const orgSchema = {
+                    const faqSchema = {
                         "@context": "https://schema.org",
-                        "@graph": [
-                            {
-                                "@type": "Organization",
-                                "@id": "https://www.abellajoias.com.br/#organization",
-                                "name": "Abella Joias",
-                                "url": "https://www.abellajoias.com.br/",
-                                "logo": logoUrl || undefined,
-                                "description": "Atacado de joias no bruto e semijoias, direto de fábrica em Limeira-SP.",
-                                "sameAs": social.map(s => s.url)
-                            },
-                            {
-                                "@type": "WebSite",
-                                "@id": "https://www.abellajoias.com.br/#website",
-                                "url": "https://www.abellajoias.com.br/",
-                                "name": "Abella Joias",
-                                "publisher": { "@id": "https://www.abellajoias.com.br/#organization" }
-                            }
-                        ]
+                        "@type": "FAQPage",
+                        "mainEntity": faqs.map(f => ({
+                            "@type": "Question",
+                            "name": f.pergunta,
+                            "acceptedAnswer": { "@type": "Answer", "text": f.resposta }
+                        }))
                     };
-                    const orgTag = document.createElement('script');
-                    orgTag.type = 'application/ld+json';
-                    orgTag.textContent = JSON.stringify(orgSchema);
-                    document.head.appendChild(orgTag);
-                }
 
-                // Categorias em destaque (até 8, linkando pro catálogo)
-                let categorias = [];
-                if (snapCategories && snapCategories.exists()) {
-                    const dados = snapCategories.val();
-                    categorias = Array.isArray(dados)
-                        ? dados.map((val, i) => ({ slug: val?.slug || String(i), ...val })).filter(Boolean)
-                        : Object.entries(dados).map(([slug, val]) => ({ slug, ...val }));
-                }
-                categorias = categorias.filter(c => c && c.paused !== true).slice(0, 8);
-
-                const catGrid = document.getElementById('catGrid');
-                if (categorias.length === 0) {
-                    catGrid.innerHTML = '<div class="cat-empty">Categorias em atualização — confira o catálogo completo.</div>';
-                } else {
-                    catGrid.innerHTML = categorias.map(cat => {
-                        const nome = cat.nome || cat.name || 'Coleção';
-                        const slug = cat.slug || '';
-                        const img = cat.imagem || cat.image || '';
-                        const href = `https://catalogo.abellajoias.com.br/subcategorias.html?categoria=${encodeURIComponent(slug)}`;
-                        return `
-                            <a class="cat-card" href="${href}" target="_blank" rel="noopener">
-                                <img src="${img}" alt="${nome} — Abella Joias atacado" loading="lazy" onerror="this.parentElement.style.background='linear-gradient(160deg,#EFE6D2,#F8F4EC)'">
-                                <div class="ov"><span>${nome}</span></div>
-                            </a>
-                        `;
-                    }).join('');
-                }
-            } catch (error) {
-                console.error('[Institucional] Erro ao carregar dados:', error);
-            }
-
-            // FAQ — mesmo conteúdo/schema compartilhado com o catálogo
-            try {
-                const faqLista = document.getElementById('faqLista');
-                if (faqLista && window.FaqSeoService) {
-                    const faqs = await window.FaqSeoService.obterFaqs();
-
-                    if (faqs.length > 0) {
-                        faqLista.innerHTML = faqs.map((f, i) => `
-                            <details class="faq-item" ${i === 0 ? 'open' : ''}>
-                                <summary>${f.pergunta}</summary>
-                                <p>${f.resposta}</p>
-                            </details>
-                        `).join('');
-
-                        const faqSchema = {
-                            "@context": "https://schema.org",
-                            "@type": "FAQPage",
-                            "mainEntity": faqs.map(f => ({
-                                "@type": "Question",
-                                "name": f.pergunta,
-                                "acceptedAnswer": { "@type": "Answer", "text": f.resposta }
-                            }))
-                        };
-                        const faqTag = document.createElement('script');
-                        faqTag.type = 'application/ld+json';
-                        faqTag.textContent = JSON.stringify(faqSchema);
-                        document.head.appendChild(faqTag);
+                    let faqScriptTag = document.getElementById('iq200-faq-schema');
+                    if (!faqScriptTag) {
+                        faqScriptTag = document.createElement('script');
+                        faqScriptTag.id = 'iq200-faq-schema';
+                        faqScriptTag.type = 'application/ld+json';
+                        document.head.appendChild(faqScriptTag);
                     }
+                    faqScriptTag.textContent = JSON.stringify(faqSchema);
                 }
-            } catch (faqError) {
-                console.error('[Institucional] Falha ao renderizar FAQ:', faqError);
             }
-        });
-    </script>
-
+        } catch (faqError) {
+            console.error('[SEO IQ200] Falha ao renderizar FAQ:', faqError);
+        }
+    });
+</script>
 </body>
 </html>

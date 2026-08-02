@@ -1,19 +1,15 @@
 // ======================================================================
 // js/analytics.js
 // SEO IQ200 — Rastreamento gratuito (GA4 + Microsoft Clarity)
-// Específico do subdomínio do catálogo (catalogo.abellajoias.com.br).
-// Centralizado aqui para trocar o ID em um único lugar no futuro.
+// Específico do site institucional (www.abellajoias.com.br).
 // ======================================================================
 
 (function () {
     'use strict';
 
-    var GA4_MEASUREMENT_ID = 'G-C8M4VV60CZ';
-    var CLARITY_PROJECT_ID = 'xvsc3y0wc3';
+    var GA4_MEASUREMENT_ID = 'G-5E1DFV4YMQ';
+    var CLARITY_PROJECT_ID = 'xvs3aht3ue';
 
-    // ---------------------------------------------------------------
-    // Google Analytics 4
-    // ---------------------------------------------------------------
     (function carregarGA4() {
         var script = document.createElement('script');
         script.async = true;
@@ -28,9 +24,6 @@
         gtag('config', GA4_MEASUREMENT_ID);
     })();
 
-    // ---------------------------------------------------------------
-    // Microsoft Clarity
-    // ---------------------------------------------------------------
     (function carregarClarity() {
         (function (c, l, a, r, i, t, y) {
             c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); };

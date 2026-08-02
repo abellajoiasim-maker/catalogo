@@ -12,17 +12,17 @@
     const FAQ_PATH = 'abella/seo_faq';
 
     function faqsPadrao(settings) {
-        const parcelas = settings?.parcelasMax || 3;
+        const parcelas = settings?.parcelasMax || 6;
         const pix = settings?.pixDesc || 5;
 
         return [
             {
                 pergunta: 'A Abella Joias vende no atacado ou no varejo?',
-                resposta: 'A Abella Joias trabalha exclusivamente com venda no atacado de joias no bruto, direto de fábrica em Limeira-SP.'
+                resposta: 'A Abella Joias trabalha exclusivamente com venda no atacado de semijoias e joias no bruto, direto de fábrica em Limeira-SP.'
             },
             {
                 pergunta: 'Existe pedido mínimo para comprar no atacado?',
-                resposta: 'Não existe minimo de quantidade ou valor.'
+                resposta: 'As condições de pedido mínimo são combinadas via WhatsApp com nossa equipe comercial, de acordo com a categoria de produtos escolhida.'
             },
             {
                 pergunta: 'Quais as formas de pagamento aceitas?',
@@ -30,7 +30,7 @@
             },
             {
                 pergunta: 'As peças são banhadas ou folheadas?',
-                resposta: 'Trabalhamos com semijoias de diversos acabamentos, com informações detalhadas do material descritas em cada produto do catálogo.'
+                resposta: 'Trabalhamos com semijoias de diversos acabamentos, com informações detalhadas de banho e material descritas em cada produto do catálogo.'
             },
             {
                 pergunta: 'Como faço um pedido no catálogo?',

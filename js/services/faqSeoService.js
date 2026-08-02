@@ -22,7 +22,7 @@
             },
             {
                 pergunta: 'Existe pedido mínimo para comprar no atacado?',
-                resposta: 'As condições de pedido mínimo são combinadas via WhatsApp com nossa equipe comercial, de acordo com a categoria de produtos escolhida.'
+                resposta: 'Não trabalhamos com pedido mínimo! Na Abella Joias você pode comprar exatamente a quantidade que precisa, seja para testar modelos ou repor o seu estoque'
             },
             {
                 pergunta: 'Quais as formas de pagamento aceitas?',
@@ -30,7 +30,7 @@
             },
             {
                 pergunta: 'As peças são banhadas ou folheadas?',
-                resposta: 'Trabalhamos com semijoias de diversos acabamentos, com informações detalhadas de banho e material descritas em cada produto do catálogo.'
+                resposta: 'Nossas peças são vendidas totalmente no bruto (sem banho), permitindo que você escolha o padrão de acabamento e a espessura de galvanoplastia ideais para a sua marca.'
             },
             {
                 pergunta: 'Como faço um pedido no catálogo?',

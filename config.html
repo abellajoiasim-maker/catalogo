@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <style id="auth-guard-hide">html{visibility:hidden !important;}</style>
+    <meta charset="UTF-8">
+    <title>Configurações da Loja • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --gold: #caa85c;
+            --gold-hover: #b5944a;
+            --bg-dark: #070707;
+            --card-dark: #121212;
+            --border-dark: #222222;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .serif    { font-family: 'Cinzel', serif; }
+        .gold-text { color: var(--gold); }
+
+        .glass-panel {
+            background: rgba(18, 18, 18, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-dark);
+        }
+
+        input, select, textarea {
+            background: #181818 !important;
+            border: 1px solid #282828 !important;
+            color: #ffffff !important;
+            transition: all 0.25s ease;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--gold) !important;
+            box-shadow: 0 0 0 3px rgba(202, 168, 92, 0.15);
+            outline: none;
+        }
+
+        /* TOGGLE SWITCH — corrigido */
+        .toggle-wrapper { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
+        .toggle-wrapper input[type="checkbox"] { opacity: 0; width: 0; height: 0; position: absolute; }
+        .toggle-track {
+            position: absolute; inset: 0;
+            background: #3f3f46;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background .25s ease;
+        }
+        .toggle-track::after {
+            content: '';
+            position: absolute;
+            top: 3px; left: 3px;
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform .25s ease;
+        }
+        .toggle-wrapper input:checked + .toggle-track { background: var(--gold); }
+        .toggle-wrapper input:checked + .toggle-track::after { transform: translateX(22px); }
+
+        /* LOADER */
+        #hud-loader {
+            background: rgba(7, 7, 7, 0.97);
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #caa85c; border-radius: 2px; }
+
+        /* Preview de imagem placeholder */
+        .preview-box {
+            background: #0a0a0a;
+            border: 1px solid #282828;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-box img.hidden { display: none; }
+        .tema-card.ativo {
+            border-color: var(--gold) !important;
+            background: rgba(202, 168, 92, 0.10) !important;
+        }
+        .tema-card.ativo::after {
+            content: '✓ Selecionado';
+            display: block;
+            font-size: 9px;
+            color: var(--gold);
+            margin-top: 6px;
+            font-weight: 700;
+            letter-spacing: .05em;
+        }
+
+        .preview-box .placeholder-label {
+            position: absolute;
+            font-size: 10px;
+            color: #52525b;
+            font-family: monospace;
+            text-align: center;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="pb-28">
+
+<!-- LOADER -->
+<div id="hud-loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center">
+    <div class="w-12 h-12 border-4 border-zinc-800 border-t-[#caa85c] rounded-full animate-spin mb-4"></div>
+    <p class="serif gold-text tracking-[0.2em] text-xs uppercase animate-pulse">Carregando Configurações...</p>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container" class="fixed bottom-6 right-4 z-50 pointer-events-none space-y-3 max-w-sm w-full"></div>
+
+<!-- HEADER -->
+<header class="border-b border-zinc-900 bg-zinc-950/90 sticky top-0 backdrop-blur-md z-40">
+    <div class="max-w-7xl mx-auto px-4 md:px-6 h-20 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+            <a href="editor.html"
+               class="shrink-0 h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-white hover:border-zinc-700 transition-colors gap-1.5 whitespace-nowrap">
+                ← Editor
+            </a>
+            <div class="min-w-0">
+                <h1 class="serif gold-text text-base md:text-xl uppercase tracking-[0.15em] truncate">Configurações da Loja</h1>
+                <p class="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Identidade, Financeiro, Banners</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 bg-zinc-900/60 px-3 py-2 rounded-xl border border-zinc-800/50 shrink-0">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-[10px] font-mono text-zinc-400 tracking-wider hidden sm:block">PAINEL ADMIN</span>
+        </div>
+        <button onclick="AuthGuard.logout()" class="shrink-0 h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors whitespace-nowrap">
+            Sair
+        </button>
+    </div>
+</header>
+
+<!-- CONTEÚDO -->
+<main class="max-w-5xl mx-auto px-4 md:px-6 py-8">
+    <form id="form-configuracoes" onsubmit="salvarConfiguracoesAdmin(event)" class="space-y-8">
+
+        <!-- ══════════════════════════════════════════════
+             SEÇÃO 1 — IDENTIDADE DA MARCA
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">🏷️ Identidade da Marca</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Nome -->
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Nome da Loja *</label>
+                    <input type="text" id="cfg-name" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm"
+                           placeholder="Ex: Abella Joias">
+                </div>
+
+                <!-- Slogan -->
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Slogan</label>
+                    <input type="text" id="cfg-slogan"
+                           class="w-full rounded-xl px-4 py-3.5 text-sm"
+                           placeholder="Ex: Atacado de Joias no Bruto">
+                </div>
+
+                <!-- WhatsApp -->
+                <div class="md:col-span-2">
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">WhatsApp de Vendas (com DDD, só números) *</label>
+                    <input type="text" id="cfg-whatsapp" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono"
+                           placeholder="Ex: 19999999999" maxlength="15">
+                    <p class="text-[10px] text-zinc-500 mt-1.5">Este número recebe os pedidos finalizados pelo checkout.</p>
+                </div>
+            </div>
+
+            <!-- Logo -->
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-3">Logo da Empresa (formato quadrado 1:1)</label>
+                <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-black/30 p-4 rounded-2xl border border-zinc-900">
+                    <div class="preview-box w-24 h-24 shrink-0 rounded-xl">
+                        <img id="previewLogo" src="" alt="Preview Logo" class="hidden"
+                             onerror="this.classList.add('hidden'); document.getElementById('placeholderLogo').classList.remove('hidden')">
+                        <span id="placeholderLogo" class="placeholder-label">1:1<br>Logo</span>
+                    </div>
+                    <div class="flex-1 w-full">
+                        <input type="text" id="cfg-logoUrl"
+                               class="w-full rounded-xl px-4 py-3 text-sm font-mono"
+                               placeholder="https://... ou gs://..."
+                               oninput="atualizarPreview('cfg-logoUrl','previewLogo','placeholderLogo')">
+                        <p class="text-[10px] text-zinc-500 mt-1.5">Cole a URL da logomarca. Aparece no header de todas as páginas e nos romaneios.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
+             SEÇÃO 1.5 — REDES SOCIAIS & PÁGINA INSTITUCIONAL
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">🌐 Redes Sociais &amp; Página Institucional</h2>
+            </div>
+            <p class="text-[11px] text-zinc-500 -mt-2">Usado pela página institucional (abellajoias.com.br) e pelos schemas de SEO. Cole os links completos.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Instagram</label>
+                    <input type="text" id="cfg-instagram"
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono"
+                           placeholder="https://instagram.com/abellajoias">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Facebook</label>
+                    <input type="text" id="cfg-facebook"
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono"
+                           placeholder="https://facebook.com/abellajoias">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">TikTok</label>
+                    <input type="text" id="cfg-tiktok"
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono"
+                           placeholder="https://tiktok.com/@abellajoias">
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Localização (texto livre — sem loja física)</label>
+                    <input type="text" id="cfg-enderecoTexto"
+                           class="w-full rounded-xl px-4 py-3.5 text-sm"
+                           placeholder="Ex: Fábrica em Limeira-SP • Atendemos todo o Brasil">
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
+             SEÇÃO 2 — BANNERS DAS PÁGINAS
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">🖼️ Banners das Páginas</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- Banner Hero (Página inicial / principal) -->
+                <div>
+                    <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">Banner Principal (16:9)</label>
+                    <div class="preview-box aspect-video mb-3 rounded-xl">
+                        <img id="previewHero" src="" class="hidden"
+                             onerror="this.classList.add('hidden')">
+                        <span class="placeholder-label">16:9<br>Hero</span>
+                    </div>
+                    <input type="text" id="cfg-bannerHeroUrl"
+                           class="w-full h-11 rounded-xl px-4 text-sm font-mono"
+                           placeholder="https://... ou gs://..."
+                           oninput="atualizarPreview('cfg-bannerHeroUrl','previewHero')">
+                </div>
+
+                <!-- Banner Subcategorias -->
+                <div>
+                    <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">Banner Subcategorias (16:9)</label>
+                    <div class="preview-box aspect-video mb-3 rounded-xl">
+                        <img id="previewSubcategoria" src="" class="hidden"
+                             onerror="this.classList.add('hidden')">
+                        <span class="placeholder-label">16:9<br>Subcategorias</span>
+                    </div>
+                    <input type="text" id="cfg-bannerSubcategoria"
+                           class="w-full h-11 rounded-xl px-4 text-sm font-mono"
+                           placeholder="https://... ou gs://..."
+                           oninput="atualizarPreview('cfg-bannerSubcategoria','previewSubcategoria')">
+                </div>
+
+                <!-- Banner Produtos -->
+                <div>
+                    <label class="block text-xs uppercase tracking-[0.2em] text-zinc-400 font-bold mb-2">Banner Produtos (16:9)</label>
+                    <div class="preview-box aspect-video mb-3 rounded-xl">
+                        <img id="previewProduto" src="" class="hidden"
+                             onerror="this.classList.add('hidden')">
+                        <span class="placeholder-label">16:9<br>Produtos</span>
+                    </div>
+                    <input type="text" id="cfg-bannerProduto"
+                           class="w-full h-11 rounded-xl px-4 text-sm font-mono"
+                           placeholder="https://... ou gs://..."
+                           oninput="atualizarPreview('cfg-bannerProduto','previewProduto')">
+                </div>
+            </div>
+
+            <!-- Banner Topo (alerta global) -->
+            <div class="border-t border-zinc-900 pt-5 space-y-4">
+                <div class="flex items-center justify-between bg-zinc-900/40 p-4 rounded-xl border border-zinc-800 gap-4">
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-bold text-white">Exibir Alerta no Topo do Catálogo</h3>
+                        <p class="text-xs text-zinc-500 mt-0.5">Ativa a faixa superior de promoções e recados.</p>
+                    </div>
+                    <label class="toggle-wrapper shrink-0">
+                        <input type="checkbox" id="cfg-bannerAtivo">
+                        <div class="toggle-track"></div>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Texto do Alerta</label>
+                    <textarea id="cfg-bannerTexto" rows="3"
+                              class="w-full rounded-xl px-4 py-3.5 text-sm"
+                              placeholder="Ex: 🔥 Frete Grátis nas compras acima de R$100,00!"></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
+             SEÇÃO 2.5 — TEMA VISUAL DA LOJA
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">🎨 Tema Visual da Loja</h2>
+            </div>
+            <p class="text-xs text-zinc-500 -mt-2">Escolha a identidade visual do catálogo. A troca vale para todas as páginas na próxima vez que forem abertas.</p>
+
+            <input type="hidden" id="cfg-theme" value="dark">
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                <button type="button" data-theme="modern" onclick="selecionarTema('modern')"
+                        class="tema-card text-left rounded-2xl p-4 border-2 border-zinc-800 bg-zinc-900/40 transition-all hover:border-zinc-600">
+                    <div class="flex gap-1.5 mb-3">
+                        <span class="w-5 h-5 rounded-full" style="background:#2563EB"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#F8FAFC;border:1px solid #33415522"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#0F172A"></span>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-white">Modern</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">Azul e branco, clean</p>
+                </button>
+
+                <button type="button" data-theme="luxury" onclick="selecionarTema('luxury')"
+                        class="tema-card text-left rounded-2xl p-4 border-2 border-zinc-800 bg-zinc-900/40 transition-all hover:border-zinc-600">
+                    <div class="flex gap-1.5 mb-3">
+                        <span class="w-5 h-5 rounded-full" style="background:#B8935B"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#FBF7F1;border:1px solid #33415522"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#2B2620"></span>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-white">Luxury</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">Dourado e creme</p>
+                </button>
+
+                <button type="button" data-theme="minimal" onclick="selecionarTema('minimal')"
+                        class="tema-card text-left rounded-2xl p-4 border-2 border-zinc-800 bg-zinc-900/40 transition-all hover:border-zinc-600">
+                    <div class="flex gap-1.5 mb-3">
+                        <span class="w-5 h-5 rounded-full" style="background:#171717"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#FFFFFF;border:1px solid #33415522"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#EAEAEA"></span>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-white">Minimal</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">Preto e branco</p>
+                </button>
+
+                <button type="button" data-theme="dark" onclick="selecionarTema('dark')"
+                        class="tema-card text-left rounded-2xl p-4 border-2 border-zinc-800 bg-zinc-900/40 transition-all hover:border-zinc-600">
+                    <div class="flex gap-1.5 mb-3">
+                        <span class="w-5 h-5 rounded-full" style="background:#CAA85C"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#111111;border:1px solid #33415522"></span>
+                        <span class="w-5 h-5 rounded-full" style="background:#070707"></span>
+                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-white">Dark</p>
+                    <p class="text-[10px] text-zinc-500 mt-0.5">Visual clássico atual</p>
+                </button>
+
+            </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
+             SEÇÃO 3 — FINANCEIRO & LOGÍSTICA
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">💰 Financeiro & Logística</h2>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Pedido Mínimo (R$) *</label>
+                    <input type="number" id="cfg-pedidoMinimo" step="0.01" min="0" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="300.00">
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Frete Fixo (R$) *</label>
+                    <input type="number" id="cfg-freteFixo" step="0.01" min="0" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="15.00">
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Frete Grátis acima de (R$) *</label>
+                    <input type="number" id="cfg-freteGratisAlvo" step="0.01" min="0" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="100.00">
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Desconto PIX (%) *</label>
+                    <input type="number" id="cfg-pix" step="1" min="0" max="100" required
+                           class="w-full rounded-xl px-4 py-3.5 text-sm font-mono" placeholder="5">
+                    <p class="text-[10px] text-zinc-500 mt-1">Aplicado automaticamente no checkout e exibido na vitrine.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Máx. Parcelas no Cartão *</label>
+                    <select id="cfg-parcelas" required class="w-full rounded-xl px-4 py-3.5 text-sm">
+                        <option value="1">1x sem juros</option>
+                        <option value="2">2x sem juros</option>
+                        <option value="3">3x sem juros</option>
+                        <option value="4">4x sem juros</option>
+                        <option value="5">5x sem juros</option>
+                        <option value="6" selected>6x sem juros</option>
+                        <option value="7">7x sem juros</option>
+                        <option value="8">8x sem juros</option>
+                        <option value="9">9x sem juros</option>
+                        <option value="10">10x sem juros</option>
+                        <option value="12">12x sem juros</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Status da Loja *</label>
+                    <select id="cfg-statusLoja" required class="w-full rounded-xl px-4 py-3.5 text-sm">
+                        <option value="aberto">🔓 Aberta para Pedidos</option>
+                        <option value="fechado">🔒 Fechada / Manutenção</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- BARRA DE AÇÃO FIXA -->
+        <div class="glass-panel rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-4 shadow-2xl">
+            <div>
+                <p class="text-[10px] text-zinc-500 uppercase tracking-wider">Última atualização:</p>
+                <p id="cfg-ultimaAtualizacao" class="text-xs font-mono font-bold text-[#caa85c] mt-0.5">Sincronizando...</p>
+            </div>
+            <button type="submit"
+                    class="w-full sm:w-auto h-13 px-8 py-4 rounded-xl bg-[#caa85c] hover:bg-[#b5944a] text-black font-black uppercase tracking-[0.15em] text-xs transition-all active:scale-95 shadow-lg shadow-[#caa85c]/10 whitespace-nowrap">
+                💾 Salvar Configurações
+            </button>
+        </div>
+
+    </form>
+</main>
+
+<!-- SCRIPTS -->
+<script src="../js/firebase/firebase-config.js"></script>
+<script src="js/auth-guard.js"></script>
+
+<script>
+// ================================================================
+// FIREBASE
+// ================================================================
+function _db() {
+    return window.db || (typeof firebase !== 'undefined' ? firebase.database() : null);
+}
+
+if (typeof window.getAbellaPath !== 'function') {
+    window.getAbellaPath = function(node) {
+        const root = window.ABELLA_DB_ROOT || 'abella';
+        return node ? `${root}/${node}` : root;
+    };
+}
+
+// ================================================================
+// UTILITÁRIOS
+// ================================================================
+function atualizarPreview(inputId, imgId, placeholderId) {
+    const url = document.getElementById(inputId)?.value?.trim() || '';
+    const img = document.getElementById(imgId);
+    const ph  = placeholderId ? document.getElementById(placeholderId) : null;
+
+    if (!img) return;
+
+    if (url) {
+        img.src = url;
+        img.classList.remove('hidden');
+        if (ph) ph.classList.add('hidden');
+    } else {
+        img.src = '';
+        img.classList.add('hidden');
+        if (ph) ph.classList.remove('hidden');
+    }
+}
+
+function selecionarTema(tema, silencioso = false) {
+    const hidden = document.getElementById('cfg-theme');
+    if (hidden) hidden.value = tema;
+    document.querySelectorAll('.tema-card').forEach(card => {
+        card.classList.toggle('ativo', card.dataset.theme === tema);
+    });
+    if (!silencioso) spawnToast(`Tema "${tema}" selecionado. Clique em "Salvar Configurações" para aplicar no site.`);
+}
+
+function spawnToast(msg, isError = false) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `px-5 py-4 rounded-xl text-xs font-bold uppercase tracking-wider
+        transition-all duration-300 transform translate-y-4 opacity-0
+        flex items-center gap-3 border shadow-xl pointer-events-auto
+        ${isError
+            ? 'bg-rose-950/90 text-rose-300 border-rose-800'
+            : 'bg-zinc-900/95 text-emerald-400 border-zinc-800'}`;
+    toast.innerHTML = `<span>${isError ? '⚠️' : '✅'}</span><span>${msg}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 50);
+    setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+function _setVal(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.value = val ?? '';
+}
+
+function _getVal(id) {
+    return document.getElementById(id)?.value?.trim() ?? '';
+}
+
+// ================================================================
+// CARREGAR CONFIGURAÇÕES DO FIREBASE
+// ================================================================
+async function carregarConfiguracoes() {
+    const loader = document.getElementById('hud-loader');
+    try {
+        const snap = await _db().ref(window.getAbellaPath('settings')).once('value');
+        const d    = snap.exists() ? (snap.val() || {}) : {};
+
+        // Identidade
+        _setVal('cfg-name',     d.name    ?? 'Abella Joias');
+        _setVal('cfg-slogan',   d.slogan  ?? '');
+        _setVal('cfg-whatsapp', d.whatsapp ?? '');
+
+        // Redes sociais & institucional
+        _setVal('cfg-instagram',     d.instagram     ?? '');
+        _setVal('cfg-facebook',      d.facebook      ?? '');
+        _setVal('cfg-tiktok',        d.tiktok        ?? '');
+        _setVal('cfg-enderecoTexto', d.enderecoTexto ?? '');
+
+        // Logo
+        const logoUrl = d.logoUrl ?? d.logo ?? '';
+        _setVal('cfg-logoUrl', logoUrl);
+        if (logoUrl) atualizarPreview('cfg-logoUrl', 'previewLogo', 'placeholderLogo');
+
+        // Banners
+        const bannerHero = d.bannerHeroUrl ?? '';
+        const bannerSub  = d.bannerSubcategoria ?? d.banner_subcategoria ?? '';
+        const bannerProd = d.bannerProduto ?? d.banner_produto ?? '';
+
+        _setVal('cfg-bannerHeroUrl',      bannerHero);
+        _setVal('cfg-bannerSubcategoria', bannerSub);
+        _setVal('cfg-bannerProduto',      bannerProd);
+
+        if (bannerHero) atualizarPreview('cfg-bannerHeroUrl',      'previewHero');
+        if (bannerSub)  atualizarPreview('cfg-bannerSubcategoria', 'previewSubcategoria');
+        if (bannerProd) atualizarPreview('cfg-bannerProduto',      'previewProduto');
+
+        // Banner alerta topo
+        const bannerAtivoEl = document.getElementById('cfg-bannerAtivo');
+        if (bannerAtivoEl) bannerAtivoEl.checked = d.bannerAtivo ?? false;
+        _setVal('cfg-bannerTexto', d.bannerTexto ?? '');
+
+        // Financeiro
+        _setVal('cfg-pedidoMinimo',    d.pedidoMinimo    ?? 300);
+        _setVal('cfg-freteFixo',       d.freteFixo       ?? 15);
+        _setVal('cfg-freteGratisAlvo', d.freteGratisAlvo ?? 100);
+        _setVal('cfg-pix',             d.pix             ?? 5);
+
+        const selParcelas = document.getElementById('cfg-parcelas');
+        if (selParcelas) selParcelas.value = String(d.parcelas ?? 6);
+
+        const selStatus = document.getElementById('cfg-statusLoja');
+        if (selStatus) selStatus.value = d.statusLoja ?? 'aberto';
+
+        // Tema visual
+        selecionarTema(d.theme ?? 'dark', true);
+
+        const ultimaAtualizacaoEl = document.getElementById('cfg-ultimaAtualizacao');
+        if (ultimaAtualizacaoEl) ultimaAtualizacaoEl.innerText = d.ultimaAtualizacao ?? 'Nenhum registro encontrado';
+
+    } catch (err) {
+        console.error('[config.html] Falha ao carregar configurações:', err);
+        spawnToast('Erro ao carregar configurações do Firebase.', true);
+    } finally {
+        if (loader) {
+            loader.style.opacity = '0';
+            loader.style.visibility = 'hidden';
+            setTimeout(() => loader.classList.add('hidden'), 420);
+        }
+    }
+}
+
+// ================================================================
+// SALVAR CONFIGURAÇÕES NO FIREBASE
+// ================================================================
+async function salvarConfiguracoesAdmin(e) {
+    e.preventDefault();
+
+    const nomeLoja = _getVal('cfg-name');
+    const whatsRaw = _getVal('cfg-whatsapp').replace(/\D/g, '');
+
+    if (!nomeLoja) { spawnToast('Informe o nome da loja.', true); return; }
+    if (whatsRaw.length < 10) { spawnToast('Número de WhatsApp inválido.', true); return; }
+
+    const sanitize = str => String(str).replace(/</g, '&lt;').replace(/>/g, '&gt;').trim();
+
+    const payload = {
+        // Identidade
+        name:     sanitize(nomeLoja),
+        slogan:   sanitize(_getVal('cfg-slogan')),
+        whatsapp: whatsRaw,
+        logoUrl:  _getVal('cfg-logoUrl'),
+        logo:     _getVal('cfg-logoUrl'),   // compatibilidade com páginas antigas
+
+        // Redes sociais & institucional
+        instagram:     sanitize(_getVal('cfg-instagram')),
+        facebook:      sanitize(_getVal('cfg-facebook')),
+        tiktok:        sanitize(_getVal('cfg-tiktok')),
+        enderecoTexto: sanitize(_getVal('cfg-enderecoTexto')),
+
+        // Banners
+        bannerHeroUrl:      _getVal('cfg-bannerHeroUrl'),
+        bannerSubcategoria: _getVal('cfg-bannerSubcategoria'),
+        banner_subcategoria: _getVal('cfg-bannerSubcategoria'), // compat. legado
+        bannerProduto:      _getVal('cfg-bannerProduto'),
+        banner_produto:     _getVal('cfg-bannerProduto'),       // compat. legado
+
+        // Tema visual
+        theme: _getVal('cfg-theme') || 'dark',
+
+        // Alerta topo
+        bannerAtivo:  document.getElementById('cfg-bannerAtivo')?.checked ?? false,
+        bannerTexto:  sanitize(_getVal('cfg-bannerTexto')),
+
+        // Financeiro
+        pedidoMinimo:    Math.abs(parseFloat(_getVal('cfg-pedidoMinimo'))    || 0),
+        freteFixo:       Math.abs(parseFloat(_getVal('cfg-freteFixo'))       || 0),
+        freteGratisAlvo: Math.abs(parseFloat(_getVal('cfg-freteGratisAlvo')) || 0),
+        pix:             Math.abs(parseInt(_getVal('cfg-pix'), 10)           || 0),
+        discountPix:     Math.abs(parseInt(_getVal('cfg-pix'), 10)           || 0), // compat. checkout.js
+        parcelas:        parseInt(_getVal('cfg-parcelas'), 10)               || 6,
+        statusLoja:      _getVal('cfg-statusLoja') || 'aberto',
+
+        ultimaAtualizacao: new Date().toLocaleString('pt-BR') + ' (Painel Config)'
+    };
+
+    const btn = e.submitter || document.querySelector('button[type="submit"]');
+    if (btn) { btn.disabled = true; btn.innerText = '⏳ Salvando...'; }
+
+    try {
+        await _db().ref(window.getAbellaPath('settings')).set(payload);
+        const el = document.getElementById('cfg-ultimaAtualizacao');
+        if (el) el.innerText = payload.ultimaAtualizacao;
+        spawnToast('Configurações salvas com sucesso!');
+    } catch (err) {
+        console.error('[config.html] Erro ao salvar:', err);
+        spawnToast('Erro ao gravar no Firebase. Verifique o console.', true);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = '💾 Salvar Configurações'; }
+    }
+}
+
+// ================================================================
+// INIT
+// ================================================================
+document.addEventListener('DOMContentLoaded', carregarConfiguracoes);
+</script>
+</body>
+</html>

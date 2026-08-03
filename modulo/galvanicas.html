@@ -182,7 +182,9 @@
     <script src="../js/services/galvanicaService.js"></script>
 
     <script>
-        const db = window.db || firebase.database();
+        // "db" já pode estar declarado em firebase-config.js (escopo global do documento).
+        // Usamos um nome próprio aqui para evitar "Identifier 'db' has already been declared".
+        const dbGalv = window.db || firebase.database();
 
         // Escopo Dinâmico Isolado Multilojas
         if (typeof window.getAbellaPath !== 'function') {
@@ -196,18 +198,18 @@
         if (typeof window.galvanicaService !== 'object') {
             window.galvanicaService = {
                 async listarTodas() {
-                    const snap = await db.ref(window.getAbellaPath('galvanicas')).once('value');
+                    const snap = await dbGalv.ref(window.getAbellaPath('galvanicas')).once('value');
                     return snap.val() || {};
                 },
                 async salvar(id, data) {
                     if (id) {
-                        return db.ref(window.getAbellaPath(`galvanicas/${id}`)).update(data);
+                        return dbGalv.ref(window.getAbellaPath(`galvanicas/${id}`)).update(data);
                     } else {
-                        return db.ref(window.getAbellaPath('galvanicas')).push(data);
+                        return dbGalv.ref(window.getAbellaPath('galvanicas')).push(data);
                     }
                 },
                 async deletar(id) {
-                    return db.ref(window.getAbellaPath(`galvanicas/${id}`)).remove();
+                    return dbGalv.ref(window.getAbellaPath(`galvanicas/${id}`)).remove();
                 }
             };
             window.galvanicaService.excluir = window.galvanicaService.deletar;
@@ -215,7 +217,7 @@
         }
 
         // Monitor de Estado de Conexão Firebase
-        db.ref('.info/connected').on('value', snap => {
+        dbGalv.ref('.info/connected').on('value', snap => {
             const el = document.getElementById('statusFirebase');
             if (!el) return;
             if (snap.val() === true) {

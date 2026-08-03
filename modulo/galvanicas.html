@@ -106,6 +106,33 @@
                         <textarea id="galvEnd" required rows="3" placeholder="Av. Industrial, 450 - Distrito Industrial, Limeira - SP" class="input-dark resize-none"></textarea>
                     </div>
 
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Logo da Galvânica</label>
+                        <div class="flex items-center gap-3">
+                            <div id="previewLogo" class="w-16 h-16 rounded-xl bg-white border border-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+                                <span class="text-zinc-400 text-[9px] text-center px-1">SEM LOGO</span>
+                            </div>
+                            <input type="url" id="galvImagem" placeholder="Cole a URL do Firebase Storage" class="input-dark">
+                        </div>
+                        <p class="text-[9px] text-zinc-600 font-mono">Faça upload da imagem no Firebase Storage e cole aqui a URL de download.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Selo</label>
+                            <input type="text" id="galvSelo" placeholder="PARCEIRO" class="input-dark">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Telefone Fixo</label>
+                            <input type="tel" id="galvTelefone" placeholder="(19) 3451-6246" class="input-dark">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] uppercase text-zinc-400 font-bold tracking-wider">Descrição / Slogan</label>
+                        <textarea id="galvDescricao" rows="2" placeholder="Ex: Mais de 20 anos de tradição — banhos de Ouro, Prata e Ródio" class="input-dark resize-none"></textarea>
+                    </div>
+
                     <div class="flex items-center justify-between gap-4 p-3 rounded-xl border border-zinc-900 bg-zinc-950/40">
                         <div>
                             <p class="text-[11px] font-bold text-white uppercase">Parceiro Ativo</p>
@@ -183,6 +210,8 @@
                     return db.ref(window.getAbellaPath(`galvanicas/${id}`)).remove();
                 }
             };
+            window.galvanicaService.excluir = window.galvanicaService.deletar;
+            window.galvanicaService.delete = window.galvanicaService.deletar;
         }
 
         // Monitor de Estado de Conexão Firebase
@@ -208,12 +237,25 @@
             document.getElementById('galvWhats').addEventListener('input', e => {
                 e.target.value = e.target.value.replace(/\D/g, '');
             });
+            document.getElementById('galvImagem').addEventListener('input', e => {
+                atualizarPreviewLogo(e.target.value.trim());
+            });
+        }
+
+        function atualizarPreviewLogo(url) {
+            const preview = document.getElementById('previewLogo');
+            if (!url) {
+                preview.innerHTML = '<span class="text-zinc-400 text-[9px] text-center px-1">SEM LOGO</span>';
+                return;
+            }
+            preview.innerHTML = `<img src="${url}" class="w-full h-full object-contain p-1" onerror="this.parentElement.innerHTML='<span class=\\'text-rose-400 text-[9px] text-center px-1\\'>URL INVÁLIDA</span>'">`;
         }
 
         function limparFormulario() {
             document.getElementById('formGalv').reset();
             document.getElementById('galvId').value = '';
             document.getElementById('galvActive').checked = true;
+            atualizarPreviewLogo('');
             document.getElementById('formTitulo').innerText = 'Cadastrar Parceiro';
             document.getElementById('btnSalvar').innerText = 'Salvar Parceiro';
             document.getElementById('btnCancelar').classList.add('hidden');
@@ -249,27 +291,33 @@
                     const g = list[id] || {};
                     const div = document.createElement('div');
                     div.className = `p-4 bg-zinc-900/40 border rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${g.active === false ? 'border-rose-950/30 bg-rose-950/5 opacity-60' : 'border-zinc-800/80'}`;
-                    
-                    const safeNome = (g.nome || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    const safeWhats = (g.whatsapp || '').replace(/'/g, "\\'");
-                    const safeEnd = (g.endereco || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
+
+                    const logo = g.imagem || g.image || '';
 
                     div.innerHTML = `
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <h4 class="text-xs font-bold ${g.active === false ? 'text-rose-400 line-through' : 'text-white'} uppercase tracking-wide">${g.nome || 'Sem Nome'}</h4>
-                                <span class="text-[9px] px-2 py-0.5 rounded-md font-bold uppercase font-mono ${g.active !== false ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}">
-                                    ${g.active !== false ? 'Ativo' : 'Inativo'}
-                                </span>
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="w-11 h-11 rounded-lg bg-white border border-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+                                ${logo
+                                    ? `<img src="${logo}" class="w-full h-full object-contain p-0.5" onerror="this.parentElement.innerHTML='<span class=\\'text-zinc-400 text-[8px]\\'>—</span>'">`
+                                    : `<span class="text-zinc-400 text-[8px]">SEM LOGO</span>`
+                                }
                             </div>
-                            <div class="space-y-1 mt-2 font-mono text-[10px] text-zinc-500">
-                                <p>📞 ${g.whatsapp || 'Não informado'}</p>
-                                <p>📍 ${g.endereco || 'Endereço não informado'}</p>
-                                <p class="text-[9px] text-zinc-700">PATH: galvanicas/${id}</p>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="text-xs font-bold ${g.active === false ? 'text-rose-400 line-through' : 'text-white'} uppercase tracking-wide">${g.nome || 'Sem Nome'}</h4>
+                                    <span class="text-[9px] px-2 py-0.5 rounded-md font-bold uppercase font-mono ${g.active !== false ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}">
+                                        ${g.active !== false ? 'Ativo' : 'Inativo'}
+                                    </span>
+                                </div>
+                                <div class="space-y-1 mt-2 font-mono text-[10px] text-zinc-500">
+                                    <p>📞 ${g.whatsapp || 'Não informado'}</p>
+                                    <p>📍 ${g.endereco || 'Endereço não informado'}</p>
+                                    <p class="text-[9px] text-zinc-700">PATH: galvanicas/${id}</p>
+                                </div>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0 justify-end">
-                            <button type="button" onclick="editarGalvUI('${id}', '${safeNome}', '${safeWhats}', '${safeEnd}', ${g.active !== false})" class="bg-zinc-950 text-zinc-300 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase hover:border-zinc-700">Editar</button>
+                            <button type="button" onclick="editarGalvUI('${id}')" class="bg-zinc-950 text-zinc-300 border border-zinc-800 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase hover:border-zinc-700">Editar</button>
                             <button type="button" onclick="deletarGalvUI('${id}')" class="bg-rose-950/20 text-rose-400 border border-rose-900/30 px-3 py-2 text-[10px] font-bold rounded-xl transition-all uppercase hover:bg-rose-950/40">🗑️</button>
                         </div>
                     `;
@@ -282,18 +330,34 @@
             }
         }
 
-        function editarGalvUI(id, nome, whats, endereco, active) {
-            document.getElementById('galvId').value = id;
-            document.getElementById('galvNome').value = nome;
-            document.getElementById('galvWhats').value = whats;
-            document.getElementById('galvEnd').value = endereco;
-            document.getElementById('galvActive').checked = active;
+        async function editarGalvUI(id) {
+            try {
+                const g = (typeof galvanicaService.getById === 'function')
+                    ? await galvanicaService.getById(id)
+                    : (await galvanicaService.listarTodas())[id];
 
-            document.getElementById('formTitulo').innerText = 'Modificar Parceiro';
-            document.getElementById('btnSalvar').innerText = 'Atualizar Parceiro';
-            document.getElementById('btnCancelar').classList.remove('hidden');
+                if (!g) { alert('Parceiro não encontrado.'); return; }
 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+                document.getElementById('galvId').value = id;
+                document.getElementById('galvNome').value = g.nome || '';
+                document.getElementById('galvWhats').value = g.whatsapp || '';
+                document.getElementById('galvEnd').value = g.endereco || '';
+                document.getElementById('galvImagem').value = g.imagem || g.image || '';
+                document.getElementById('galvSelo').value = g.selo || '';
+                document.getElementById('galvTelefone').value = g.telefone || '';
+                document.getElementById('galvDescricao').value = g.descricao || '';
+                document.getElementById('galvActive').checked = g.active !== false;
+                atualizarPreviewLogo(g.imagem || g.image || '');
+
+                document.getElementById('formTitulo').innerText = 'Modificar Parceiro';
+                document.getElementById('btnSalvar').innerText = 'Atualizar Parceiro';
+                document.getElementById('btnCancelar').classList.remove('hidden');
+
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                console.error('Erro ao carregar parceiro para edição:', error);
+                alert('Falha ao carregar dados do parceiro.');
+            }
         }
 
         async function salvarGalvanicaUI(e) {
@@ -306,6 +370,10 @@
                 nome: document.getElementById('galvNome').value.trim(),
                 whatsapp: document.getElementById('galvWhats').value.trim().replace(/\D/g, ''),
                 endereco: document.getElementById('galvEnd').value.trim(),
+                imagem: document.getElementById('galvImagem').value.trim(),
+                selo: document.getElementById('galvSelo').value.trim() || 'PARCEIRO',
+                telefone: document.getElementById('galvTelefone').value.trim(),
+                descricao: document.getElementById('galvDescricao').value.trim(),
                 active: document.getElementById('galvActive').checked,
                 updatedAt: Date.now()
             };
@@ -333,7 +401,15 @@
         async function deletarGalvUI(id) {
             if (!confirm('Deseja expurgar esta galvânica do mapa logístico integrado?')) return;
             try {
-                await galvanicaService.deletar(id);
+                if (typeof galvanicaService.excluir === 'function') {
+                    await galvanicaService.excluir(id);
+                } else if (typeof galvanicaService.delete === 'function') {
+                    await galvanicaService.delete(id);
+                } else if (typeof galvanicaService.deletar === 'function') {
+                    await galvanicaService.deletar(id);
+                } else {
+                    throw new Error('Nenhum método de exclusão disponível no serviço.');
+                }
                 await carregarGalvanicasUI();
             } catch (error) {
                 console.error('Erro ao deletar:', error);

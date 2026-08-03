@@ -6,6 +6,10 @@
   <title>Abella Joias - Gerador de Descrições no Bruto em Lote</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+  <script src="../js/firebase/firebase-config.js"></script>
+  <script src="../js/services/seoValidator.js"></script>
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Google Fonts: Inter -->
@@ -186,38 +190,6 @@
           <p class="text-[10px] text-slate-500 mt-1">Essa informação será incorporada de forma natural na descrição curta.</p>
         </div>
 
-        <!-- Campos obrigatórios do SEO IQ200 -->
-        <div class="pt-3 border-t border-slate-800 flex flex-col gap-2.5">
-          <label class="block text-xs font-medium text-slate-300 flex items-center justify-between">
-            <span>Dados para o SEO IQ200</span>
-            <span class="text-[10px] text-emerald-400 font-normal"><i class="fa-solid fa-chart-line mr-1"></i>Score</span>
-          </label>
-
-          <div>
-            <label class="block text-[11px] text-slate-400 mb-1">Preço padrão (R$) *</label>
-            <input type="number" id="inputDefaultPreco" step="0.01" min="0" placeholder="Ex: 24.90" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
-          </div>
-
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Categoria (ID) *</label>
-              <input type="text" id="inputDefaultCategoria" placeholder="Ex: brincos" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400 mb-1">Subcategoria (ID) *</label>
-              <input type="text" id="inputDefaultSubcategoria" placeholder="Ex: infantil" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-[11px] text-slate-400 mb-1">Prefixo do SKU</label>
-            <input type="text" id="inputSkuPrefix" value="ABJ" placeholder="Ex: ABJ" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none">
-          </div>
-
-          <p class="text-[10px] text-slate-500">* Use os mesmos IDs de categoria/subcategoria já cadastrados no seu catálogo — o IQ200 valida por correspondência exata.</p>
-        </div>
-
-
         <div class="mt-auto pt-3 border-t border-slate-800">
           <p class="text-[11px] text-slate-500 leading-relaxed">
             <i class="fa-solid fa-wand-magic-sparkles text-amber-400 mr-1"></i>
@@ -285,9 +257,6 @@
           <button id="btnExportCSV" disabled class="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 disabled:opacity-40 text-emerald-200 text-xs rounded-lg transition-all flex items-center gap-1.5">
             <i class="fa-solid fa-file-csv text-emerald-400"></i> Exportar CSV
           </button>
-          <button id="btnExportJSON" disabled class="px-3 py-1.5 bg-amber-950 hover:bg-amber-900 border border-amber-800 disabled:opacity-40 text-amber-200 text-xs rounded-lg transition-all flex items-center gap-1.5">
-            <i class="fa-solid fa-file-code text-amber-400"></i> Exportar JSON (Firebase)
-          </button>
           <button id="btnExportTXT" disabled class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-40 text-slate-200 text-xs rounded-lg transition-all flex items-center gap-1.5">
             <i class="fa-solid fa-file-lines text-amber-400"></i> Exportar TXT
           </button>
@@ -336,67 +305,10 @@
     const progressPercent = document.getElementById('progressPercent');
     const btnCopyAll = document.getElementById('btnCopyAll');
     const btnExportCSV = document.getElementById('btnExportCSV');
-    const btnExportJSON = document.getElementById('btnExportJSON');
     const btnExportTXT = document.getElementById('btnExportTXT');
     const selectCategory = document.getElementById('selectCategory');
     const customCategoryGroup = document.getElementById('customCategoryGroup');
     const inputCustomCategory = document.getElementById('inputCustomCategory');
-
-    // ==================================================================
-    // Motor de score IQ200 — espelha exatamente js/services/seoValidator.js
-    // (mesmos ids, pesos e limiares) para pré-visualizar o score antes
-    // mesmo de importar o produto no Firebase.
-    // ==================================================================
-    function calcularIQ200(item) {
-      const nome = String(item.nome || '').trim();
-      const descricao = String(item.description || '').trim();
-      const temImagem = !!item.base64; // foto já anexada nesta ferramenta
-      const preco = Number(item.preco || 0);
-      const sku = String(item.sku || '').trim();
-      const categoriaId = String(item.categoriaId || '').trim();
-      const subcategoriaId = String(item.subcategoriaId || '').trim();
-
-      const regras = [
-        { id: 'nome', peso: 10, ok: nome.length >= 3 },
-        { id: 'nome_tamanho', peso: 5, ok: nome.length > 0 && nome.length <= 70 },
-        { id: 'descricao', peso: 15, ok: descricao.length > 0 },
-        { id: 'descricao_tamanho', peso: 10, ok: descricao.length >= 50 && descricao.length <= 300 },
-        { id: 'imagem', peso: 15, ok: temImagem },
-        { id: 'preco', peso: 15, ok: preco > 0 },
-        { id: 'sku', peso: 10, ok: sku.length > 0 },
-        { id: 'categoria', peso: 10, ok: categoriaId.length > 0 },
-        { id: 'subcategoria', peso: 10, ok: subcategoriaId.length > 0 }
-      ];
-
-      const pesoTotal = regras.reduce((acc, r) => acc + r.peso, 0);
-      const pesoObtido = regras.reduce((acc, r) => acc + (r.ok ? r.peso : 0), 0);
-      const score = Math.round((pesoObtido / pesoTotal) * 100);
-      const nivel = score >= 80 ? 'bom' : score >= 50 ? 'atencao' : 'critico';
-
-      return { score, nivel };
-    }
-
-    function corNivelScore(nivel) {
-      return { bom: '#34d399', atencao: '#fbbf24', critico: '#fb7185' }[nivel] || '#71717a';
-    }
-    function labelNivelScore(nivel) {
-      return { bom: '🟢 Bom', atencao: '🟡 Atenção', critico: '🔴 Crítico' }[nivel] || nivel;
-    }
-
-    function recalcScore(id) {
-      const item = items.find(i => i.id === id);
-      if (!item) return;
-      const { score, nivel } = calcularIQ200(item);
-      item.score = score;
-      item.nivel = nivel;
-
-      const badge = document.getElementById('score_' + id);
-      if (badge) {
-        const cor = corNivelScore(nivel);
-        badge.style.color = cor;
-        badge.innerHTML = `<span style="color:${cor}">${labelNivelScore(nivel)} · ${score}</span>`;
-      }
-    }
 
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
@@ -508,13 +420,8 @@
             itemCategory: 'default',
             description: '',
             errorMsg: '',
-            nome: '',
-            sku: '',
-            preco: null,
-            categoriaId: '',
-            subcategoriaId: '',
-            score: 0,
-            nivel: 'critico'
+            produtoId: '',
+            produtoNome: ''
           });
         } catch (err) {
           console.error("Erro ao carregar imagem:", err);
@@ -567,7 +474,6 @@
         btnClearAll.disabled = true;
         btnCopyAll.disabled = true;
         btnExportCSV.disabled = true;
-        btnExportJSON.disabled = true;
         btnExportTXT.disabled = true;
         return;
       }
@@ -579,7 +485,6 @@
       const hasDone = items.some(i => i.status === 'done');
       btnCopyAll.disabled = !hasDone;
       btnExportCSV.disabled = !hasDone;
-      btnExportJSON.disabled = !hasDone;
       btnExportTXT.disabled = !hasDone;
 
       items.forEach((item, index) => {
@@ -602,10 +507,6 @@
           badgeStatus = `<span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-medium border border-red-500/30 flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Erro</span>`;
         }
 
-        const scoreBadge = item.status === 'done'
-          ? `<span id="score_${item.id}" class="px-2 py-0.5 rounded-full bg-slate-950 border border-slate-800 text-[10px] font-bold" style="color:${corNivelScore(item.nivel)}">${labelNivelScore(item.nivel)} · ${item.score}</span>`
-          : '';
-
         existingCard.innerHTML = `
           <!-- Imagem Miniatura -->
           <div class="relative w-24 h-24 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center group">
@@ -624,8 +525,7 @@
                 <span class="text-xs font-bold text-slate-300">#${index + 1}</span>
                 <span class="text-xs text-slate-400 truncate max-w-[150px]">${item.file.name}</span>
                 ${badgeStatus}
-                ${scoreBadge}
-
+                
                 <!-- Seletor do Tipo por Item -->
                 <select onchange="updateItemCategory('${item.id}', this.value)" class="bg-slate-950 border border-slate-800 text-slate-300 text-[11px] rounded-lg px-2 py-0.5 focus:border-amber-500 focus:outline-none">
                   <option value="default" ${item.itemCategory === 'default' ? 'selected' : ''}>Tipo: Padrão Geral</option>
@@ -654,41 +554,12 @@
               ` : ''}
             </div>
 
+            <!-- Caixa do Texto Gerado -->
             ${item.status === 'done' ? `
-              <!-- Campos do IQ200 -->
-              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                <div class="col-span-2 sm:col-span-2">
-                  <label class="block text-[10px] text-slate-500 mb-0.5">Nome (≤ 70 caracteres)</label>
-                  <input type="text" value="${item.nome}" maxlength="70" oninput="updateCampo('${item.id}','nome',this.value)" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none">
-                </div>
-                <div>
-                  <label class="block text-[10px] text-slate-500 mb-0.5">SKU</label>
-                  <input type="text" value="${item.sku}" oninput="updateCampo('${item.id}','sku',this.value)" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none">
-                </div>
-                <div>
-                  <label class="block text-[10px] text-slate-500 mb-0.5">Preço (R$)</label>
-                  <input type="number" step="0.01" value="${item.preco}" oninput="updateCampo('${item.id}','preco',this.value)" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none">
-                </div>
-                <div>
-                  <label class="block text-[10px] text-slate-500 mb-0.5">Categoria</label>
-                  <input type="text" value="${item.categoriaId}" oninput="updateCampo('${item.id}','categoriaId',this.value)" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none">
-                </div>
-              </div>
-              <div class="w-32">
-                <label class="block text-[10px] text-slate-500 mb-0.5">Subcategoria</label>
-                <input type="text" value="${item.subcategoriaId}" oninput="updateCampo('${item.id}','subcategoriaId',this.value)" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none">
-              </div>
+              <textarea oninput="updateDescription('${item.id}', this.value)" rows="4" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl p-3 text-xs text-slate-200 font-sans focus:ring-1 focus:ring-amber-500 focus:outline-none custom-scrollbar leading-relaxed">${item.description}</textarea>
 
-              <!-- Descrição (campo avaliado pelo IQ200 — 50 a 300 caracteres) -->
-              <label class="block text-[10px] text-slate-500 -mb-1">Descrição (${item.description.length} caracteres · ideal 50–300)</label>
-              <textarea oninput="updateCampo('${item.id}','description',this.value)" rows="3" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl p-3 text-xs text-slate-200 font-sans focus:ring-1 focus:ring-amber-500 focus:outline-none custom-scrollbar leading-relaxed">${item.description}</textarea>
-
-              ${(item.medida || item.acompanha) ? `
-                <div class="text-[11px] text-slate-500 bg-slate-950/50 border border-slate-800 rounded-lg p-2 leading-relaxed">
-                  ${item.medida ? `<div><span class="text-slate-400">Medida:</span> ${item.medida.replace(/\n/g, ' · ')}</div>` : ''}
-                  ${item.acompanha ? `<div><span class="text-slate-400">Acompanha:</span> ${item.acompanha}</div>` : ''}
-                </div>
-              ` : ''}
+              <!-- SEO IQ200 — conformidade + vínculo com produto real -->
+              <div id="seoBox_${item.id}" class="flex flex-col md:flex-row md:items-center gap-2 p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80"></div>
             ` : item.status === 'error' ? `
               <div class="p-3 rounded-xl bg-red-950/30 border border-red-900/50 text-red-300 text-xs">
                 ${item.errorMsg || 'Falha ao processar imagem.'}
@@ -700,8 +571,87 @@
             `}
           </div>
         `;
+
+        if (item.status === 'done') renderSeoBox(item);
       });
     }
+
+    // ==================================================================
+    // SEO IQ200 — conformidade da descrição + vínculo com produto real
+    // ==================================================================
+    let cacheProdutos = null;
+
+    async function carregarProdutosParaVinculo() {
+        if (cacheProdutos) return cacheProdutos;
+        try {
+            const path = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('products') : 'abella/products';
+            const snap = await db.ref(path).once('value');
+            const obj = snap.val() || {};
+            cacheProdutos = Object.entries(obj).map(([id, p]) => ({ id, nome: p.nome || p.name || '(sem nome)', sku: p.sku || p.codigo || '' }));
+            return cacheProdutos;
+        } catch (e) {
+            console.error('[Descrições IA] Erro ao carregar produtos:', e);
+            return [];
+        }
+    }
+
+    function statusSeo(texto) {
+        const len = (texto || '').trim().length;
+        if (len === 0) return { ok: false, cor: 'text-slate-500', label: 'Vazio' };
+        if (len < 50) return { ok: false, cor: 'text-rose-400', label: `Curta demais (${len}/50 mín.)` };
+        if (len > 300) return { ok: false, cor: 'text-rose-400', label: `Longa demais (${len}/300 máx.)` };
+        return { ok: true, cor: 'text-emerald-400', label: `✅ Dentro do padrão SEO IQ200 (${len} caracteres)` };
+    }
+
+    async function renderSeoBox(item) {
+        const box = document.getElementById(`seoBox_${item.id}`);
+        if (!box) return;
+
+        const st = statusSeo(item.description);
+        const produtos = await carregarProdutosParaVinculo();
+
+        box.innerHTML = `
+            <span class="text-[11px] font-semibold ${st.cor} shrink-0">${st.label}</span>
+            <div class="flex-1 flex items-center gap-2">
+                <select onchange="vincularProduto('${item.id}', this.value)" class="flex-1 bg-slate-900 border border-slate-800 text-slate-300 text-[11px] rounded-lg px-2 py-1.5 focus:border-amber-500 focus:outline-none">
+                    <option value="">🔗 Vincular a um produto do catálogo...</option>
+                    ${produtos.map(p => `<option value="${p.id}" ${item.produtoId === p.id ? 'selected' : ''}>${p.nome}${p.sku ? ' — ' + p.sku : ''}</option>`).join('')}
+                </select>
+                <button onclick="salvarNoProduto('${item.id}')" ${item.produtoId ? '' : 'disabled'}
+                    class="px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all shrink-0 ${item.produtoId ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}">
+                    💾 Salvar no Produto
+                </button>
+            </div>
+        `;
+    }
+
+    window.vincularProduto = function(itemId, produtoId) {
+        const item = items.find(i => i.id === itemId);
+        if (!item) return;
+        item.produtoId = produtoId;
+        const produto = (cacheProdutos || []).find(p => p.id === produtoId);
+        item.produtoNome = produto ? produto.nome : '';
+        renderSeoBox(item);
+    };
+
+    window.salvarNoProduto = async function(itemId) {
+        const item = items.find(i => i.id === itemId);
+        if (!item || !item.produtoId) return;
+
+        const st = statusSeo(item.description);
+        if (!st.ok && !confirm(`Essa descrição está fora do padrão de SEO (${st.label}). Salvar mesmo assim?`)) return;
+
+        try {
+            const path = typeof window.getAbellaPath === 'function'
+                ? window.getAbellaPath(`products/${item.produtoId}`)
+                : `abella/products/${item.produtoId}`;
+            await db.ref(path).update({ descricao: item.description });
+            showToast(`Descrição salva em "${item.produtoNome}" — o Dashboard SEO já reflete isso.`, 'success');
+        } catch (e) {
+            console.error('[Descrições IA] Erro ao salvar no produto:', e);
+            showToast('Falha ao salvar no produto. Veja o console.', 'error');
+        }
+    };
 
     window.updateItemCategory = function(id, val) {
       const item = items.find(i => i.id === id);
@@ -715,17 +665,12 @@
       renderList();
     };
 
-    window.updateCampo = function(id, campo, valor) {
-      const item = items.find(i => i.id === id);
-      if (!item) return;
-      item[campo] = (campo === 'preco') ? (parseFloat(valor) || 0) : valor;
-      recalcScore(id);
-    };
-
     window.updateDescription = function(id, text) {
       const item = items.find(i => i.id === id);
-      if (item) item.description = text;
-      recalcScore(id);
+      if (item) {
+        item.description = text;
+        renderSeoBox(item);
+      }
     };
 
     window.copySingleItem = function(id) {
@@ -756,7 +701,7 @@
       const doneItems = items.filter(i => i.status === 'done' && i.description);
       if (doneItems.length === 0) return;
 
-      const combinedText = doneItems.map(i => i.descricaoCompleta || i.description).join('\n\n-----------------------------------\n\n');
+      const combinedText = doneItems.map(i => i.description).join('\n\n-----------------------------------\n\n');
       copyToClipboard(combinedText);
       showToast(`Todas as ${doneItems.length} descrições foram copiadas!`, 'success');
     });
@@ -766,7 +711,7 @@
       if (doneItems.length === 0) return;
 
       const combinedText = doneItems.map((item) => {
-        return `[ ARQUIVO / FOTO: ${item.file.name} ]\n${item.descricaoCompleta || item.description}`;
+        return `[ ARQUIVO / FOTO: ${item.file.name} ]\n${item.description}`;
       }).join('\n\n===================================\n\n');
 
       const blob = new Blob([combinedText], { type: 'text/plain;charset=utf-8' });
@@ -782,24 +727,25 @@
       const doneItems = items.filter(i => i.status === 'done' && i.description);
       if (doneItems.length === 0) return;
 
-      let csvContent = "\uFEFFItem;Nome do Arquivo;Nome do Produto;SKU;Preço;Categoria;Subcategoria;Medida;Material;Descrição;Acompanha;Score IQ200\n";
+      let csvContent = "\uFEFFItem;Nome do Arquivo;Título;Medida;Material;Descrição Curta;Acompanha;Descrição Completa\n";
       doneItems.forEach((item, idx) => {
-        const cleanVal = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+        const lines = item.description.split('\n');
+        const rawTitulo = (lines[0] || '').replace(/\*\*/g, '').trim();
+        
+        const getField = (prefix) => {
+          const line = lines.find(l => l.startsWith(prefix));
+          return line ? line.replace(prefix, '').trim() : '';
+        };
 
-        csvContent += [
-          idx + 1,
-          cleanVal(item.file.name),
-          cleanVal(item.nome),
-          cleanVal(item.sku),
-          String(item.preco || 0).replace('.', ','),
-          cleanVal(item.categoriaId),
-          cleanVal(item.subcategoriaId),
-          cleanVal(item.medida),
-          cleanVal('Latão no Bruto (Sem Banho)'),
-          cleanVal(item.description),
-          cleanVal(item.acompanha),
-          item.score
-        ].join(';') + '\n';
+        const medida = getField('Medida:');
+        const material = getField('Material:');
+        const descCurta = getField('Descrição:');
+        const acompanha = getField('Acompanha:');
+
+        const cleanVal = (val) => `"${(val || '').replace(/"/g, '""')}"`;
+        const cleanDescCompleta = `"${item.description.replace(/"/g, '""')}"`;
+
+        csvContent += `${idx + 1};${cleanVal(item.file.name)};${cleanVal(rawTitulo)};${cleanVal(medida)};${cleanVal(material)};${cleanVal(descCurta)};${cleanVal(acompanha)};${cleanDescCompleta}\n`;
       });
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -811,56 +757,9 @@
       URL.revokeObjectURL(url);
     });
 
-    btnExportJSON.addEventListener('click', () => {
-      const doneItems = items.filter(i => i.status === 'done' && i.description);
-      if (doneItems.length === 0) return;
-
-      const usados = new Set();
-      const produtos = {};
-
-      doneItems.forEach(item => {
-        let chave = slugify(item.nome) || slugify(item.sku) || item.id;
-        let chaveFinal = chave;
-        let n = 2;
-        while (usados.has(chaveFinal)) { chaveFinal = `${chave}-${n++}`; }
-        usados.add(chaveFinal);
-
-        produtos[chaveFinal] = {
-          nome: item.nome,
-          descricao: item.description,
-          preco: Number(item.preco) || 0,
-          sku: item.sku,
-          categoriaId: item.categoriaId,
-          subcategoriaId: item.subcategoriaId,
-          medida: item.medida || '',
-          material: 'Latão no Bruto (Sem Banho)',
-          acompanha: item.acompanha || '',
-          imagem: '',
-          ativo: true,
-          _observacao: `Imagem local: ${item.file.name} — faça upload no Firebase Storage e cole a URL no campo "imagem".`
-        };
-      });
-
-      const blob = new Blob([JSON.stringify(produtos, null, 2)], { type: 'application/json;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `produtos_abella_joias_${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast(`JSON com ${doneItems.length} produtos pronto para importar no Firebase!`, 'success');
-    });
-
     btnStartBatch.addEventListener('click', async () => {
       const pendingItems = items.filter(i => i.status === 'pending');
       if (pendingItems.length === 0) return;
-
-      const defaultPreco = parseFloat(document.getElementById('inputDefaultPreco').value) || 0;
-      const defaultCategoria = document.getElementById('inputDefaultCategoria').value.trim();
-      const defaultSubcategoria = document.getElementById('inputDefaultSubcategoria').value.trim();
-      if (!defaultPreco || !defaultCategoria || !defaultSubcategoria) {
-        showToast('Preencha Preço, Categoria e Subcategoria padrão para o score IQ200 sair completo.', 'error');
-      }
 
       isProcessing = true;
       btnStartBatch.disabled = true;
@@ -900,43 +799,6 @@
       renderList();
     });
 
-    let skuCounter = 0;
-
-    function slugify(str) {
-      return String(str || '')
-        .toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-    }
-
-    // Garante que a descrição fique dentro da janela ideal do IQ200 (50–300 chars)
-    // sem cortar palavras e sem ficar com aparência de texto genérico repetido.
-    function ajustarTamanhoDescricao(texto) {
-      let t = texto.trim();
-
-      if (t.length > 300) {
-        t = t.slice(0, 300);
-        const ultimoEspaco = t.lastIndexOf(' ');
-        if (ultimoEspaco > 250) t = t.slice(0, ultimoEspaco);
-        t = t.replace(/[,;:.]?\s*$/, '') + '.';
-      }
-
-      if (t.length < 50) {
-        const complementos = [
-          ' Peça produzida com acabamento cuidadoso, ideal para revenda no varejo.',
-          ' Excelente custo-benefício para quem trabalha com semijoias no atacado.',
-          ' Um item versátil, fácil de combinar com diferentes estilos e ocasiões.'
-        ];
-        for (const c of complementos) {
-          if (t.length >= 50) break;
-          if ((t + c).length <= 300) t += c;
-        }
-      }
-
-      return t;
-    }
-
     async function processSingleItem(item) {
       try {
         const categoryName = getSelectedCategoryName(item.itemCategory);
@@ -950,12 +812,6 @@
         const inputBaseSize = document.getElementById('inputBaseSize').value.trim();
         const chkBlankMeasurements = document.getElementById('chkBlankMeasurements').checked;
 
-        // Campos globais do SEO IQ200
-        const defaultPreco = parseFloat(document.getElementById('inputDefaultPreco').value) || 0;
-        const defaultCategoria = document.getElementById('inputDefaultCategoria').value.trim();
-        const defaultSubcategoria = document.getElementById('inputDefaultSubcategoria').value.trim();
-        const skuPrefix = (document.getElementById('inputSkuPrefix').value.trim() || 'ABJ').toUpperCase();
-
         // Simulação inteligente e instantânea baseada nas regras de parâmetros e itens sem limites
         await new Promise(r => setTimeout(r, 600));
 
@@ -965,11 +821,13 @@
         if (customAcc) accParts.push(customAcc);
 
         let isTrio = categoryName === 'Trio de Brincos' || item.itemCategory === 'Trio de Brincos';
-
-        // ---- Nome do produto (campo "nome" do IQ200 — sem markdown, ≤ 70 caracteres) ----
-        let nome = isTrio ? 'Trio de Brincos Estrela, Coração e Lua' : `${categoryName} Zircônia`;
-        if (nome.length > 70) nome = nome.slice(0, 70).trim();
-        item.nome = item.nome && item.nome.trim() ? item.nome : nome;
+        
+        let titulo = `**${categoryName} Exclusivo**`;
+        if (isTrio) {
+          titulo = `**Trio de Brincos Estrela, Coração e Lua**`;
+        } else {
+          titulo = `**${categoryName} Zircônia**`;
+        }
 
         let medida = "0,8 cm x 0,8 cm";
         if (chkBlankMeasurements) {
@@ -980,41 +838,17 @@
           medida = "Item 1: 0,5 cm x 0,5 cm\nItem 2: 0,6 cm x 0,6 cm\nItem 3: 0,7 cm x 0,7 cm";
         }
 
-        // ---- Descrição (campo "descricao" do IQ200 — 50 a 300 caracteres) ----
-        let descBase = extraDetails
-          ? `${item.nome}, peça no bruto de alto padrão com ${extraDetails}, perfeita para banho e revenda no atacado da Abella Joias.`
-          : `${item.nome}, peça no bruto de alto padrão, perfeita para banho e revenda no atacado da Abella Joias.`;
-        let descricaoFinal = ajustarTamanhoDescricao(descBase);
-
-        // ---- SKU (auto, editável) ----
-        if (!item.sku) {
-          skuCounter++;
-          const catSlug = slugify(categoryName).slice(0, 12).toUpperCase();
-          item.sku = `${skuPrefix}-${catSlug}-${String(skuCounter).padStart(4, '0')}`;
-        }
-
-        // ---- Preço / Categoria / Subcategoria (usa valor do item se já tiver sido editado manualmente) ----
-        if (!item.preco) item.preco = defaultPreco;
-        if (!item.categoriaId) item.categoriaId = defaultCategoria;
-        if (!item.subcategoriaId) item.subcategoriaId = defaultSubcategoria;
-
-        // ---- Bloco de texto legado (mantido para quem já usa a exportação em TXT) ----
-        let descText = `**${item.nome}**\nMedida: ${medida}\nMaterial: Latão no Bruto (Sem Banho)\nDescrição: ${descricaoFinal}`;
-
+        let descCurta = extraDetails ? `Peça no bruto de alto padrão com ${extraDetails}, ideal para banho e revenda.` : `Peça no bruto de alto padrão, perfeita para banho e revenda.`;
+        
+        let descText = `${titulo}\nMedida: ${medida}\nMaterial: Latão no Bruto (Sem Banho)\nDescrição: ${descCurta}`;
+        
         let acompanhaStr = accParts.join(" e ");
         if (accParts.length > 0) {
           descText += `\nAcompanha: ${acompanhaStr}`;
         }
 
-        item.description = descricaoFinal;
-        item.descricaoCompleta = descText;
-        item.medida = medida;
-        item.acompanha = acompanhaStr;
+        item.description = descText;
         item.status = 'done';
-
-        const { score, nivel } = calcularIQ200(item);
-        item.score = score;
-        item.nivel = nivel;
 
       } catch (err) {
         console.error("Erro no processamento:", err);

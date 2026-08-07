@@ -13,12 +13,15 @@
 
     <link rel="stylesheet" href="components/index.css">
     <style>
-        .cat-hero{
-            position: relative; aspect-ratio: 16/9; overflow:hidden;
-            border-radius: var(--radius-lg); margin: var(--space-4) auto 0;
-            max-width: 860px;
+        .cat-hero-copy{
+            position: relative; text-align:center; overflow:hidden;
+            padding: var(--space-7) var(--space-5) var(--space-5); max-width:640px; margin:0 auto;
         }
-        .cat-hero img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        .cat-hero-copy::before{
+            content:''; position:absolute; top:50%; left:50%; width:420px; height:420px;
+            background: radial-gradient(circle, rgba(var(--color-primary-rgb),.12) 0%, rgba(var(--color-primary-rgb),0) 70%);
+            transform: translate(-50%,-50%); z-index:-1; pointer-events:none;
+        }
     </style>
 </head>
 <body>
@@ -43,11 +46,7 @@
 
         <div id="breadcrumb-slot"></div>
 
-        <section class="cat-hero" data-aurora-reveal>
-            <img id="categoriaBannerImg" src="" alt="" loading="lazy" onerror="this.style.display='none'">
-        </section>
-
-        <section style="text-align:center; padding: var(--space-6) var(--space-5); max-width:640px; margin:0 auto;">
+        <section class="cat-hero-copy" data-aurora-reveal>
             <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary-hover); margin-bottom:var(--space-2);">Coleção</p>
             <h1 id="categoriaNome" style="font-size:clamp(28px,5vw,48px);"></h1>
             <p id="categoriaDescricao" style="font-size:13px; color:var(--color-secondary); margin-top:var(--space-3);"></p>
@@ -114,17 +113,6 @@
             }
 
             try {
-                // Banner específico de subcategoria (mesma regra do settings real)
-                const snapSettings = await db.ref('abella/settings').once('value').catch(() => null);
-                if (snapSettings && snapSettings.exists()) {
-                    const cfg = snapSettings.val();
-                    const urlBanner = cfg.bannerSubcategoria || cfg.banner_subcategoria || cfg.heroBannerUrl;
-                    if (urlBanner) {
-                        const img = document.getElementById('categoriaBannerImg');
-                        img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(urlBanner) : urlBanner;
-                    }
-                }
-
                 const snapCategories = await db.ref('abella/categories').once('value');
                 let categoriaAtual = null;
 
@@ -144,7 +132,8 @@
                     return;
                 }
 
-                const nomeCategoria = categoriaAtual.nome || categoriaAtual.name || categoriaSlug;
+                const nomeCategoria = categoriaAtual.nome || categoriaAtual.name
+                    || categoriaSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                 document.title = `${nomeCategoria} • Subcategorias • Abella Joias`;
                 document.getElementById('categoriaNome').innerText = nomeCategoria;
                 const descricaoCategoria = categoriaAtual.descricao || categoriaAtual.description || `Explore a coleção completa de ${nomeCategoria}.`;
@@ -203,12 +192,6 @@
                     { label: 'Home', href: 'index.html' },
                     { label: nomeCategoria }
                 ]);
-
-                if (!document.getElementById('categoriaBannerImg').src) {
-                    const imgCat = categoriaAtual.imagem || categoriaAtual.image || '';
-                    if (imgCat) document.getElementById('categoriaBannerImg').src =
-                        typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(imgCat) : imgCat;
-                }
 
                 const subcategoriasObj = categoriaAtual.subcategories || categoriaAtual.subcategorias || {};
                 const listaSubcategorias = Object.entries(subcategoriasObj).filter(([_, sub]) => sub && sub.paused !== true);

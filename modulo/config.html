@@ -491,8 +491,22 @@ if (typeof window.getAbellaPath !== 'function') {
 // ================================================================
 // UTILITÁRIOS
 // ================================================================
+function resolverGsUrl(url) {
+    const valor = String(url || '').trim();
+    if (!valor) return '';
+    if (!valor.startsWith('gs://')) return valor;
+
+    const semGs = valor.replace('gs://', '');
+    const primeiraBarra = semGs.indexOf('/');
+    if (primeiraBarra === -1) return '';
+
+    const bucket = semGs.slice(0, primeiraBarra);
+    const caminho = semGs.slice(primeiraBarra + 1);
+    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
+}
+
 function atualizarPreview(inputId, imgId, placeholderId) {
-    const url = document.getElementById(inputId)?.value?.trim() || '';
+    const url = resolverGsUrl(document.getElementById(inputId)?.value?.trim() || '');
     const img = document.getElementById(imgId);
     const ph  = placeholderId ? document.getElementById(placeholderId) : null;
 

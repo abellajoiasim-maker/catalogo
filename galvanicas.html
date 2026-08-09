@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Galvânicas Parceiras • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Conheça as galvânicas parceiras da Abella Joias em Limeira-SP. Compre no bruto e entregamos direto na galvânica da sua preferência, com frete grátis acima de R$100.">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <script src="./js/analytics.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
+    <link rel="stylesheet" href="components/index.css">
+    <script src="engine/render.js"></script>
+
+    <style>
+        /* ===== Ornamento / assinatura visual ===== */
+        .galv-gem{
+            width:22px; height:22px; margin: 0 auto var(--space-4);
+            opacity:.85;
+        }
+        .galv-gem path{ stroke: var(--color-primary-hover); stroke-width:1.1; fill:none; }
+        .galv-gem .facet{ fill: rgba(var(--color-primary-rgb),.12); }
+
+        .galv-hero{
+            text-align:center; padding: var(--space-8) var(--space-5) var(--space-7);
+            max-width: 680px; margin: 0 auto; position:relative;
+        }
+
+        .galv-stats{ display:flex; align-items:center; justify-content:center; gap: var(--space-6); margin-top: var(--space-6); flex-wrap:wrap; }
+        .galv-stats .stat{ text-align:center; }
+        .galv-stats .stat b{ display:block; font-family:var(--font-heading); font-size:26px; color:var(--color-primary-hover); letter-spacing:.01em; }
+        .galv-stats .stat span{ font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--color-secondary); }
+        .galv-stats .sep{
+            width:1px; height:32px; position:relative;
+            background: linear-gradient(to bottom, transparent, var(--color-border) 20%, var(--color-border) 80%, transparent);
+        }
+        .galv-stats .sep::before{
+            content:''; position:absolute; left:50%; top:50%; width:4px; height:4px;
+            background: var(--color-primary-hover); border-radius:1px; opacity:.5;
+            transform: translate(-50%,-50%) rotate(45deg);
+        }
+
+        /* ===== Selo de parceiro — pill metálico com brilho ===== */
+        .galv-seal{
+            display:inline-flex; align-items:center; gap:5px;
+            padding: 5px 13px 5px 10px;
+            border-radius: 999px;
+            font-size:9.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+            color: var(--color-text);
+            background: linear-gradient(135deg, rgba(var(--color-primary-rgb),.16), rgba(var(--color-primary-rgb),.28) 45%, rgba(var(--color-primary-rgb),.16));
+            border: 1px solid rgba(var(--color-primary-rgb),.45);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 1px 2px rgba(0,0,0,.06);
+            position:relative; overflow:hidden; isolation:isolate;
+        }
+        .galv-seal .dot{
+            width:5px; height:5px; border-radius:50%;
+            background: var(--color-primary-hover);
+            box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb),.18);
+            flex-shrink:0;
+        }
+        .galv-seal::after{
+            content:''; position:absolute; inset:0; z-index:1;
+            background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.65) 48%, rgba(255,255,255,.05) 52%, transparent 65%);
+            transform: translateX(-140%);
+            animation: seal-shine 4.5s ease-in-out infinite;
+        }
+        @keyframes seal-shine{
+            0%, 55%{ transform: translateX(-140%); }
+            80%, 100%{ transform: translateX(140%); }
+        }
+
+        .galv-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap: var(--space-6); }
+        @media (max-width: 900px){ .galv-grid{ grid-template-columns:repeat(2,1fr); } }
+        @media (max-width: 620px){ .galv-grid{ grid-template-columns:1fr; } }
+
+        .galv-card{
+            display:flex; flex-direction:column; gap: var(--space-4); padding: var(--space-5);
+            cursor:default; position:relative; overflow:hidden;
+            transition: transform .35s cubic-bezier(.2,.7,.3,1), box-shadow .35s ease, border-color .35s ease;
+        }
+        .galv-card::before{
+            content:''; position:absolute; top:0; left:0; right:0; height:2px;
+            background: linear-gradient(90deg, transparent, var(--color-primary-hover), transparent);
+            opacity:0; transition: opacity .4s ease;
+        }
+        .galv-card:hover{
+            transform: translateY(-4px);
+            box-shadow: 0 18px 34px -20px rgba(var(--color-primary-rgb),.35), 0 4px 14px rgba(0,0,0,.05);
+            border-color: rgba(var(--color-primary-rgb),.4);
+        }
+        .galv-card:hover::before{ opacity:1; }
+
+        .galv-card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap: var(--space-3); }
+
+        .galv-card-logo{
+            aspect-ratio: 2.8 / 1; border-radius: var(--radius-md);
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            display:flex; align-items:center; justify-content:center;
+            overflow:hidden; position:relative;
+        }
+        .galv-card-logo::after{
+            content:''; position:absolute; inset:0; pointer-events:none;
+            box-shadow: inset 0 0 0 1px rgba(var(--color-primary-rgb),.08);
+            border-radius: inherit;
+        }
+        .galv-card-logo img{ width:100%; height:100%; object-fit:cover; object-position:center; }
+        .galv-card-logo .fallback{ font-family:var(--font-heading); font-size:24px; color:var(--color-primary); opacity:.45; letter-spacing:.05em; }
+
+        .galv-card h3{ font-family:var(--font-heading); font-size:18px; color:var(--color-text); letter-spacing:.01em; }
+
+        .galv-row{ display:flex; gap: var(--space-2); font-size:12.5px; color:var(--color-secondary); line-height:1.5; }
+        .galv-row strong{ color:var(--color-text); min-width:64px; flex-shrink:0; font-weight:500; }
+
+        .galv-slogan{
+            font-size:12px; color:var(--color-secondary); font-style:italic;
+            border-top:1px solid var(--color-border); padding-top: var(--space-3); margin-top:auto;
+        }
+
+        /* ===== Botão WhatsApp com ícone oficial ===== */
+        .galv-whats-btn{
+            display:flex; align-items:center; justify-content:center; gap:9px;
+        }
+        .galv-whats-btn svg{ width:15px; height:15px; flex-shrink:0; }
+        .galv-whats-btn .ic-outline{ fill: var(--color-secondary); transition: fill .25s ease; }
+        .galv-whats-btn:hover .ic-outline{ fill: #25D366; }
+
+        .galv-empty{
+            grid-column: 1/-1; text-align:center; padding: var(--space-9) var(--space-6); color:var(--color-secondary);
+            border:1px dashed var(--color-border); border-radius: var(--radius-lg); font-size:13px;
+            background: rgba(var(--color-primary-rgb),.02);
+        }
+        .galv-empty span{ display:block; font-size:22px; margin-bottom: var(--space-3); opacity:.5; }
+
+        /* ===== Banner GOLD ===== */
+        .gold-banner{
+            position:relative; overflow:hidden;
+            background: rgba(var(--color-primary-rgb),.06);
+            border:1px solid rgba(var(--color-primary-rgb),.3);
+            border-radius: var(--radius-lg); padding: var(--space-8) var(--space-7);
+            text-align:center; margin-top: var(--space-9);
+        }
+        .gold-banner::before{
+            content:''; position:absolute; inset:-40% -10% auto -10%; height:220px;
+            background: radial-gradient(closest-side, rgba(var(--color-primary-rgb),.22), transparent 70%);
+            pointer-events:none;
+        }
+        .gold-banner h3{ font-family:var(--font-heading); font-size: clamp(20px,2.6vw,28px); position:relative; }
+        .gold-banner p{ font-size:13.5px; color:var(--color-secondary); margin: var(--space-3) auto var(--space-5); max-width:460px; position:relative; }
+        .gold-banner .aurora-btn{ position:relative; }
+
+        @media (prefers-reduced-motion: reduce){
+            .galv-seal::after{ animation:none; }
+            .galv-card{ transition:none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="promo-banner" class="hidden" style="background: var(--color-text); text-align:center; padding: var(--space-3) var(--space-4);">
+        <p id="promoTexto" style="color: var(--color-primary); font-size:11px; letter-spacing:.2em; text-transform:uppercase; font-weight:700;"></p>
+    </div>
+
+    <div class="aurora-header">
+        <div class="bar aurora-container">
+            <nav class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="./galvanicas.html">Galvânicas</a>
+            </nav>
+            <div class="brand">
+                <div class="brand-logo"><span style="font-family:var(--font-heading);font-weight:600;">A</span></div>
+                <div><p class="brand-name">Abella</p></div>
+            </div>
+            <div class="actions">
+                <a href="carrinho.html" class="cart-btn"><span id="cart-count">0</span></a>
+            </div>
+        </div>
+    </div>
+
+    <main class="aurora-container">
+        <div id="breadcrumb-slot"></div>
+
+        <section class="galv-hero" data-aurora-reveal>
+            <svg class="galv-gem" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path class="facet" d="M4 8 L12 3 L20 8 L12 21 Z"/>
+                <path d="M4 8 L20 8 M4 8 L12 21 M20 8 L12 21 M8.5 8 L12 3 L15.5 8 M8.5 8 L12 21 M15.5 8 L12 21"/>
+            </svg>
+            <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color: var(--color-primary-hover); margin-bottom: var(--space-3);">Logística Integrada · Limeira-SP</p>
+            <h1 style="font-size: clamp(28px, 4.5vw, 46px); line-height:1.08;">Galvânicas Parceiras</h1>
+            <div style="width:64px; height:1px; background:var(--color-primary); margin: var(--space-5) auto 0;"></div>
+            <p style="font-size:14px; color:var(--color-secondary); margin-top: var(--space-4);">
+                Compre no bruto e entregamos direto na galvânica da sua preferência em Limeira.
+                <strong style="color:var(--color-primary-hover); display:block; margin-top:4px;">Frete grátis para compras acima de R$100.</strong>
+            </p>
+
+            <div class="galv-stats">
+                <div class="stat"><b id="statTotal">—</b><span>Parceiros</span></div>
+                <div class="sep"></div>
+                <div class="stat"><b style="color:var(--color-success, #2F7D5A);">Diária</b><span>Coleta</span></div>
+                <div class="sep"></div>
+                <div class="stat"><b>Limeira</b><span>Cidade</span></div>
+            </div>
+        </section>
+
+        <section class="aurora-section" style="padding-top:0;">
+            <div id="loadingGalv" style="text-align:center; padding: var(--space-8) 0; color:var(--color-secondary); font-size:13px;">
+                Carregando parceiros...
+            </div>
+            <div id="grid-galvanicas" class="galv-grid" style="display:none;"></div>
+
+            <div class="gold-banner">
+                <h3>Seja nosso Parceiro GOLD</h3>
+                <p>Tem uma galvânica em Limeira e quer atender clientes Abella Joias? Fale com a gente e entre pra lista de parceiros credenciados.</p>
+                <a id="btnParceiroGold" class="aurora-btn aurora-btn--primary" href="#" target="_blank" rel="noopener">Quero ser Parceiro GOLD</a>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/services/galvanicaService.js"></script>
+
+    <script>
+        function _path(node) {
+            return typeof window.getAbellaPath === 'function' ? window.getAbellaPath(node) : `abella/${node}`;
+        }
+
+        // Breadcrumb, no mesmo padrão do resto do site
+        if (window.AuroraRender) {
+            document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb([
+                { label: 'Home', href: 'index.html' },
+                { label: 'Galvânicas Parceiras' }
+            ]);
+        }
+
+        async function carregarSettings() {
+            try {
+                const snap = await db.ref(_path('settings')).once('value');
+                if (!snap.exists()) return;
+                const cfg = snap.val() || {};
+
+                // Banner promocional (mesmo aviso usado nas outras páginas)
+                if (cfg.bannerAtivo && cfg.bannerTexto) {
+                    document.getElementById('promoTexto').innerText = cfg.bannerTexto;
+                    document.getElementById('promo-banner').classList.remove('hidden');
+                }
+
+                // WhatsApp do botão "Parceiro GOLD"
+                if (cfg.whatsapp) {
+                    const num = String(cfg.whatsapp).replace(/\D/g, '');
+                    document.getElementById('btnParceiroGold').href =
+                        `https://wa.me/${num}?text=${encodeURIComponent('Olá, tenho interesse em ser Parceiro GOLD Abella Joias.')}`;
+                }
+            } catch (e) {
+                console.warn('[galvanicas.html] Erro ao carregar settings:', e);
+            }
+        }
+
+        async function carregarGalvanicas() {
+            const loading = document.getElementById('loadingGalv');
+            const grid = document.getElementById('grid-galvanicas');
+
+            try {
+                const lista = window.galvanicaService
+                    ? Object.values(await window.galvanicaService.getAll())
+                    : [];
+
+                const ativos = lista.filter(g => g.active !== false);
+
+                loading.style.display = 'none';
+                grid.style.display = 'grid';
+
+                document.getElementById('statTotal').innerText = ativos.length;
+
+                if (ativos.length === 0) {
+                    grid.innerHTML = `<div class="galv-empty"><span>◆</span>Nenhuma galvânica parceira cadastrada no momento. Volte em breve!</div>`;
+                    return;
+                }
+
+                grid.innerHTML = ativos.map(g => {
+                    const nome     = g.nome || 'Galvânica Parceira';
+                    const endereco = g.endereco || '';
+                    const telefone = g.telefone || '';
+                    const whatsNum = (g.whatsapp || '').replace(/\D/g, '');
+                    const logo     = g.imagem || g.image || '';
+                    const slogan   = g.descricao || '';
+                    const selo     = g.selo || 'PARCEIRO';
+
+                    return `
+                        <div class="aurora-card galv-card" data-aurora-reveal>
+                            <div class="galv-card-top">
+                                <div class="galv-card-logo" style="flex:1;">
+                                    ${logo
+                                        ? `<img src="${logo}" alt="${nome} — parceira Abella Joias" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'fallback\\'>${nome.charAt(0)}</span>'">`
+                                        : `<span class="fallback">${nome.charAt(0)}</span>`
+                                    }
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:flex-end; margin-top:-6px;">
+                                <span class="galv-seal"><span class="dot"></span>${selo}</span>
+                            </div>
+                            <h3>${nome}</h3>
+                            ${endereco ? `<div class="galv-row"><strong>Endereço</strong><span>${endereco}</span></div>` : ''}
+                            ${telefone ? `<div class="galv-row"><strong>Telefone</strong><span>${telefone}</span></div>` : ''}
+                            ${slogan ? `<p class="galv-slogan">${slogan}</p>` : ''}
+                            ${whatsNum ? `
+                                <a class="aurora-btn aurora-btn--outline aurora-btn--block galv-whats-btn" target="_blank" rel="noopener"
+                                   href="https://wa.me/${whatsNum}?text=${encodeURIComponent(`Olá ${nome}. Sou cliente da Abella Joias e gostaria de iniciar uma parceria para os serviços de banho de semijoias. Qual o melhor contato?`)}">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="ic-outline" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413"/></svg>
+                                    Falar no WhatsApp
+                                </a>` : ''
+                            }
+                        </div>
+                    `;
+                }).join('');
+
+                if (window.AuroraAnimations) AuroraAnimations.initReveal();
+
+            } catch (e) {
+                console.error('[galvanicas.html] Erro ao carregar galvânicas:', e);
+                loading.innerText = '⚠️ Não foi possível carregar os parceiros agora.';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await carregarSettings();
+            await carregarGalvanicas();
+        });
+    </script>
+</body>
+</html>

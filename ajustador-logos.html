@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ajustador de Logos • Galvânicas Abella Joias</title>
+<style>
+  :root{
+    --gold:#caa85c;
+    --gold-hover:#e0c17a;
+    --bg:#0c0c0c;
+    --panel:#141414;
+    --border:#242424;
+    --text:#eee;
+    --muted:#8a8a8a;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    padding: 32px 20px 60px;
+  }
+  .wrap{ max-width: 1000px; margin:0 auto; }
+  header{ text-align:center; margin-bottom: 28px; }
+  header p.eyebrow{ font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--gold); margin:0 0 8px; }
+  header h1{ font-family: Georgia, serif; font-size: clamp(22px,3vw,32px); margin:0; font-weight:600; }
+  header .sub{ color:var(--muted); font-size:13px; margin-top:10px; max-width:560px; margin-left:auto; margin-right:auto; line-height:1.6; }
+
+  .config{
+    display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:26px;
+  }
+  .config label{ font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); display:block; margin-bottom:6px; }
+  .config .field{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:10px 14px; }
+  .seg{ display:flex; gap:6px; }
+  .seg button{
+    background:transparent; border:1px solid var(--border); color:var(--muted);
+    padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer; transition:.2s;
+  }
+  .seg button.active{ background:rgba(202,168,92,.15); border-color:var(--gold); color:var(--gold); }
+
+  .dropzone{
+    border:1.5px dashed var(--border); border-radius:20px; padding:44px 20px;
+    text-align:center; cursor:pointer; transition:.25s; background:var(--panel);
+    margin-bottom: 30px;
+  }
+  .dropzone.drag{ border-color:var(--gold); background:rgba(202,168,92,.06); }
+  .dropzone .ic{ font-size:28px; margin-bottom:10px; opacity:.6; }
+  .dropzone p{ margin:4px 0; color:var(--muted); font-size:13px; }
+  .dropzone strong{ color:var(--text); }
+  input[type=file]{ display:none; }
+
+  .grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(230px,1fr)); gap:18px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .card .preview-box{
+    height:96px; border-radius:10px; background:#fff; border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; padding:10px;
+  }
+  .card .preview-box img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .card .name-row{ display:flex; align-items:center; gap:8px; }
+  .card input[type=text]{
+    flex:1; background:#0c0c0c; border:1px solid var(--border); border-radius:8px;
+    color:var(--text); font-size:12px; padding:8px 10px; font-family:monospace;
+  }
+  .card .meta{ font-size:10.5px; color:var(--muted); display:flex; justify-content:space-between; }
+  .card .actions{ display:flex; gap:8px; }
+  .btn{
+    flex:1; text-align:center; padding:9px; border-radius:9px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.06em; cursor:pointer; border:1px solid var(--border);
+    background:transparent; color:var(--muted); transition:.2s;
+  }
+  .btn.primary{ background:linear-gradient(135deg,var(--gold),#a9863f); color:#111; border-color:transparent; }
+  .btn.primary:hover{ filter:brightness(1.08); }
+  .btn.ghost:hover{ border-color:var(--gold); color:var(--gold); }
+
+  .toolbar{ display:flex; justify-content:center; margin: 26px 0 6px; }
+  .toolbar .btn{ flex:none; padding:12px 26px; font-size:12px; }
+
+  .empty{ text-align:center; color:var(--muted); font-size:13px; padding:30px; }
+  canvas{ display:none; }
+
+  footer{ text-align:center; color:var(--muted); font-size:11px; margin-top:34px; line-height:1.7; }
+  footer code{ color:var(--gold); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <p class="eyebrow">Abella Joias · Ferramenta interna</p>
+      <h1>Ajustador de Logos das Galvânicas</h1>
+      <p class="sub">
+        Solte as imagens das logos aqui. Cada uma é recentralizada e ajustada automaticamente à mesma
+        proporção da vitrine do grid (<code>.galv-card-logo</code>), pronta para subir no Firebase Storage.
+      </p>
+    </header>
+
+    <div class="config">
+      <div class="field">
+        <label>Fundo do quadro</label>
+        <div class="seg" id="bgSeg">
+          <button data-bg="transparent" class="active">Transparente</button>
+          <button data-bg="white">Branco</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Proporção do quadro</label>
+        <div class="seg" id="ratioSeg">
+          <button data-ratio="3">3∶1 (padrão)</button>
+          <button data-ratio="2.4">2.4∶1</button>
+          <button data-ratio="4">4∶1 (larga)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="dropzone" id="dz">
+      <div class="ic">◆</div>
+      <p><strong>Arraste as logos aqui</strong> ou clique para selecionar</p>
+      <p>Aceita várias de uma vez · PNG, JPG, WEBP</p>
+      <input type="file" id="fileInput" accept="image/*" multiple>
+    </div>
+
+    <div id="grid" class="grid"></div>
+    <div id="emptyMsg" class="empty">Nenhuma imagem carregada ainda.</div>
+
+    <div class="toolbar" id="toolbarAll" style="display:none;">
+      <button class="btn primary" id="btnDownloadAll">⬇ Baixar todas (.zip)</button>
+    </div>
+
+    <canvas id="workCanvas"></canvas>
+  </div>
+
+  <footer>
+    Formato de saída: PNG · nomeie o arquivo igual ao ID do Firebase (ex: <code>4d-galvanica.png</code>)<br>
+    para facilitar ao colar a URL do Storage no campo "Logo da Galvânica" do painel admin.
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    const state = { bg: 'transparent', ratio: 3, items: [] };
+    let itemId = 0;
+
+    const dz = document.getElementById('dz');
+    const fileInput = document.getElementById('fileInput');
+    const grid = document.getElementById('grid');
+    const emptyMsg = document.getElementById('emptyMsg');
+    const toolbarAll = document.getElementById('toolbarAll');
+    const canvas = document.getElementById('workCanvas');
+    const ctx = canvas.getContext('2d');
+
+    document.getElementById('bgSeg').addEventListener('click', e => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      [...btn.parentElement.children].forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.bg = btn.dataset.bg;
+      reprocessAll();
+    });
+    document.getElementById('ratioSeg').addEventListener('click', e => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      [...btn.parentElement.children].forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.ratio = parseFloat(btn.dataset.ratio);
+      reprocessAll();
+    });
+
+    dz.addEventListener('click', () => fileInput.click());
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+    dz.addEventListener('drop', e => {
+      e.preventDefault(); dz.classList.remove('drag');
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+    function slugify(name){
+      return name.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/\.[a-z0-9]+$/,'')
+        .replace(/[^a-z0-9]+/g,'-')
+        .replace(/(^-|-$)/g,'') || 'logo';
+    }
+
+    function handleFiles(fileList){
+      [...fileList].forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const img = new Image();
+          img.onload = () => {
+            const item = { id: itemId++, img, filename: slugify(file.name), dataUrl: null };
+            state.items.push(item);
+            renderAll();
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function processImage(img){
+      const W = 720;
+      const H = Math.round(W / state.ratio);
+      canvas.width = W; canvas.height = H;
+      ctx.clearRect(0,0,W,H);
+
+      if (state.bg === 'white'){
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0,0,W,H);
+      }
+
+      const pad = 0.14; // 14% de respiro em volta
+      const boxW = W * (1 - pad*2);
+      const boxH = H * (1 - pad*2);
+      const scale = Math.min(boxW / img.width, boxH / img.height);
+      const drawW = img.width * scale;
+      const drawH = img.height * scale;
+      const x = (W - drawW) / 2;
+      const y = (H - drawH) / 2;
+      ctx.drawImage(img, x, y, drawW, drawH);
+
+      return canvas.toDataURL('image/png');
+    }
+
+    function reprocessAll(){
+      state.items.forEach(item => { item.dataUrl = processImage(item.img); });
+      renderAll();
+    }
+
+    function renderAll(){
+      grid.innerHTML = '';
+      emptyMsg.style.display = state.items.length ? 'none' : 'block';
+      toolbarAll.style.display = state.items.length ? 'flex' : 'none';
+
+      state.items.forEach(item => {
+        if (!item.dataUrl) item.dataUrl = processImage(item.img);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="preview-box"><img src="${item.dataUrl}" alt=""></div>
+          <div class="name-row">
+            <input type="text" value="${item.filename}.png" data-id="${item.id}">
+          </div>
+          <div class="meta"><span>${img_dims(item.img)}</span><span>PNG</span></div>
+          <div class="actions">
+            <button class="btn ghost" data-remove="${item.id}">Remover</button>
+            <button class="btn primary" data-download="${item.id}">Baixar</button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      grid.querySelectorAll('input[type=text]').forEach(inp => {
+        inp.addEventListener('change', e => {
+          const id = parseInt(e.target.dataset.id);
+          const item = state.items.find(i => i.id === id);
+          item.filename = e.target.value.replace(/\.png$/i,'').trim() || 'logo';
+        });
+      });
+      grid.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = parseInt(btn.dataset.remove);
+          state.items = state.items.filter(i => i.id !== id);
+          renderAll();
+        });
+      });
+      grid.querySelectorAll('[data-download]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = parseInt(btn.dataset.download);
+          const item = state.items.find(i => i.id === id);
+          downloadDataUrl(item.dataUrl, `${item.filename}.png`);
+        });
+      });
+    }
+
+    function img_dims(img){ return `${img.width}×${img.height}`; }
+
+    function downloadDataUrl(dataUrl, filename){
+      const a = document.createElement('a');
+      a.href = dataUrl; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    document.getElementById('btnDownloadAll').addEventListener('click', async () => {
+      const zip = new JSZip();
+      state.items.forEach(item => {
+        const base64 = item.dataUrl.split(',')[1];
+        zip.file(`${item.filename}.png`, base64, { base64: true });
+      });
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      downloadDataUrl(url, 'logos-galvanicas-abella.zip');
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    });
+  </script>
+</body>
+</html>

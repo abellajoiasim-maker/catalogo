@@ -36,6 +36,19 @@
         }
     }
 
+    // Chave separada para o cupom aplicado (independente dos itens, sobrevive a alterações de quantidade)
+    const CUPOM_KEY = 'pma_v8_cupom_aplicado';
+
+    function obterCupomSalvo() {
+        try {
+            const dados = localStorage.getItem(CUPOM_KEY);
+            return dados ? JSON.parse(dados) : null;
+        } catch (error) {
+            console.error('[carrinhoService] Erro ao ler cupom do localStorage:', error);
+            return null;
+        }
+    }
+
     // Instanciação do serviço com os métodos públicos
     const carrinhoService = {
         
@@ -47,13 +60,14 @@
             
             // Injeta em tempo real os descontos vigentes do ecossistema para cada item
             return itens.map(item => {
-                if (window.descontoService && typeof window.descontoService.calcularDesconto === 'function') {
-                    const infoDesconto = window.descontoService.calcularDesconto(item);
+                if (window.descontoService && typeof window.descontoService.calcularPrecoComDesconto === 'function') {
+                    const precoFinal = window.descontoService.calcularPrecoComDesconto(item);
+                    const badge = window.descontoService.obterEtiquetaOferta(item);
                     return {
                         ...item,
-                        precoVendaUnitario: infoDesconto.precoFinal,
-                        possuiDesconto: infoDesconto.descontoAplicado > 0,
-                        badgePromocional: infoDesconto.badge
+                        precoVendaUnitario: precoFinal,
+                        possuiDesconto: precoFinal < (parseFloat(item.preco) || 0),
+                        badgePromocional: badge
                     };
                 }
                 // Fallback de segurança caso o descontoService falhe ou não tenha carregado
@@ -188,12 +202,64 @@
 
         /**
          * Calcula o valor LÍQUIDO total real de cobrança aplicando as regras do descontoService
+         * e, se houver, o cupom de código aplicado pelo cliente.
          */
         obterTotal: function () {
             const itensComDesconto = this.listar();
-            return itensComDesconto.reduce((total, item) => {
+            const subtotalComDescontoCategoria = itensComDesconto.reduce((total, item) => {
                 return total + (item.precoVendaUnitario * (parseInt(item.quantidade) || 0));
             }, 0);
+
+            const descontoCupom = this.obterDescontoCupom();
+            return Math.max(0, subtotalComDescontoCategoria - descontoCupom);
+        },
+
+        /**
+         * Aplica um cupom já validado (objeto retornado por cupomService.validar) ao carrinho atual.
+         */
+        aplicarCupom: function (cupom) {
+            try {
+                localStorage.setItem(CUPOM_KEY, JSON.stringify(cupom));
+                return true;
+            } catch (error) {
+                console.error('[carrinhoService] Erro ao aplicar cupom:', error);
+                return false;
+            }
+        },
+
+        /**
+         * Remove o cupom atualmente aplicado ao carrinho.
+         */
+        removerCupom: function () {
+            try {
+                localStorage.removeItem(CUPOM_KEY);
+                return true;
+            } catch (error) {
+                console.error('[carrinhoService] Erro ao remover cupom:', error);
+                return false;
+            }
+        },
+
+        /**
+         * Retorna o cupom atualmente aplicado (ou null se nenhum estiver ativo).
+         */
+        obterCupomAplicado: function () {
+            return obterCupomSalvo();
+        },
+
+        /**
+         * Calcula o valor em R$ do desconto do cupom aplicado, já sobre o subtotal com desconto de categoria.
+         */
+        obterDescontoCupom: function () {
+            const cupom = obterCupomSalvo();
+            if (!cupom || !window.cupomService) return 0;
+
+            const itensComDesconto = this.listar();
+            const subtotal = itensComDesconto.reduce((total, item) => {
+                return total + (item.precoVendaUnitario * (parseInt(item.quantidade) || 0));
+            }, 0);
+
+            return window.cupomService.calcularDesconto(cupom, subtotal);
         }
     };
 

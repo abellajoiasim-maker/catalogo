@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+    <style id="auth-guard-hide">html{visibility:hidden !important;}</style>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Comercial - Abella Joias</title>
@@ -8,9 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase App e Database (Versões Compat v9) -->
+    <!-- Firebase App, Database e Auth (Versões Compat v9) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
     <style>
         .glass {
@@ -325,6 +327,7 @@
 
     <!-- Scripts e Conexão de Dependências (arquitetura oficial) -->
     <script src="../js/firebase/firebase-config.js"></script>
+    <script src="js/auth-guard.js"></script>
     <script src="../js/utils/money.js"></script>
 
     <!-- Script de Lógica do Sistema -->
@@ -546,6 +549,50 @@
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        async function aplicarCampanha() {
+            const categoria = document.getElementById('campanha-categoria').value;
+            const subcategoria = document.getElementById('campanha-subcategoria').value;
+            const desconto = parseInt(document.getElementById('campanha-desconto').value);
+            const cor = document.getElementById('campanha-cor').value;
+            const corTexto = document.getElementById('campanha-cor-texto').value;
+            const validade = document.getElementById('campanha-validade').value || null;
+
+            if (!categoria) {
+                alert('Selecione a categoria alvo da campanha.');
+                return;
+            }
+            if (!desconto || desconto < 1 || desconto > 99) {
+                alert('O desconto precisa ser um número entre 1 e 99.');
+                return;
+            }
+
+            // A chave precisa ser exatamente o ID da categoria em minúsculo — é assim
+            // que o descontoService.js (usado no catálogo/carrinho) encontra a regra.
+            const chave = categoria.toLowerCase();
+
+            try {
+                await window.db.ref(`${abellaPath('settings')}/descontos/regrasCategoria/${chave}`).set({
+                    categoria: categoria,
+                    subcategoria: subcategoria || null,
+                    porcentagem: desconto,
+                    nomeCampanha: nomeCategoria(categoria),
+                    badgeIcone: document.getElementById('campanha-icone')?.value || '🔥',
+                    cor: cor,
+                    corTexto: corTexto,
+                    ativo: true,
+                    validoAte: validade,
+                    createdAt: new Date().toISOString()
+                });
+
+                alert(`Campanha aplicada em "${nomeCategoria(categoria)}" com sucesso!`);
+                limparCampos();
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error('Erro ao aplicar campanha:', error);
+                alert('Erro ao salvar a campanha. Veja o console para detalhes.');
+            }
         }
 
         async function toggleOfertaCategoria(chave, novoValor) {

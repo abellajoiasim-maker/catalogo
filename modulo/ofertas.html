@@ -292,6 +292,10 @@
                             </select>
                         </div>
                         <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Valor mínimo de compra (opcional)</label>
+                            <input type="number" id="cupom-valor-minimo" class="input" placeholder="Ex: 150.00 — deixe em branco para não exigir mínimo" min="0" step="0.01">
+                        </div>
+                        <div>
                             <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Válido até (opcional)</label>
                             <input type="date" id="cupom-validade" class="input">
                         </div>
@@ -608,12 +612,13 @@
                     : expirado ? '<span class="text-[10px] font-bold text-red-500 uppercase">Expirado</span>'
                     : '<span class="text-[10px] font-bold text-emerald-600 uppercase">Ativo</span>';
                 var valorTexto = c.type === 'fixo' ? formatarMoeda(c.value) : `${c.value}%`;
+                var minimoTexto = c.valorMinimo > 0 ? ` • mín. ${formatarMoeda(c.valorMinimo)}` : '';
 
                 return `
                 <div class="flex items-center justify-between gap-3 border border-slate-100 rounded-xl p-3">
                     <div class="min-w-0">
                         <p class="text-sm font-bold font-mono text-slate-800 truncate">${codigo}</p>
-                        <p class="text-[11px] text-slate-500 font-mono">${valorTexto} ${c.expiraEm ? '• até ' + formatarDataBR(c.expiraEm) : ''} ${statusTexto}</p>
+                        <p class="text-[11px] text-slate-500 font-mono">${valorTexto}${minimoTexto} ${c.expiraEm ? '• até ' + formatarDataBR(c.expiraEm) : ''} ${statusTexto}</p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <label class="switch">
@@ -654,6 +659,7 @@ async function criarCupom() {
     const codigo = document.getElementById('cupom-codigo').value.trim().toUpperCase();
     const valor = parseFloat(document.getElementById('cupom-valor').value);
     const tipo = document.getElementById('cupom-tipo').value;
+    const valorMinimo = parseFloat(document.getElementById('cupom-valor-minimo').value) || 0;
     const validade = document.getElementById('cupom-validade').value || null;
 
     if (!codigo || !valor) {
@@ -666,6 +672,7 @@ async function criarCupom() {
             code: codigo,
             value: valor,
             type: tipo,
+            valorMinimo: valorMinimo,
             active: true,
             expiraEm: validade,
             validoAte: validade, // Salva ambos para garantir retrocompatibilidade no checkout
@@ -675,6 +682,7 @@ async function criarCupom() {
         alert(`Cupom [ ${codigo} ] ativado com sucesso!`);
         document.getElementById('cupom-codigo').value = '';
         document.getElementById('cupom-valor').value = '';
+        document.getElementById('cupom-valor-minimo').value = '';
         document.getElementById('cupom-validade').value = '';
 
         await carregarPainelOfertas();
@@ -703,40 +711,6 @@ async function criarCupom() {
             }
         }
 
-       // ---------- CRIAR CUPOM (PADRONIZADO) ----------
-async function criarCupom() {
-    const codigo = document.getElementById('cupom-codigo').value.trim().toUpperCase();
-    const valor = parseFloat(document.getElementById('cupom-valor').value);
-    const tipo = document.getElementById('cupom-tipo').value;
-    const validade = document.getElementById('cupom-validade').value || null;
-
-    if (!codigo || !valor) {
-        alert('Preencha corretamente o código e o valor do cupom.');
-        return;
-    }
-
-    try {
-        await window.db.ref(`${abellaPath('coupons')}/${codigo}`).set({
-            code: codigo,
-            value: valor,
-            type: tipo,
-            active: true,
-            expiraEm: validade,
-            validoAte: validade, // Salva ambos para garantir retrocompatibilidade no checkout
-            createdAt: new Date().toISOString()
-        });
-
-        alert(`Cupom [ ${codigo} ] ativado com sucesso!`);
-        document.getElementById('cupom-codigo').value = '';
-        document.getElementById('cupom-valor').value = '';
-        document.getElementById('cupom-validade').value = '';
-
-        await carregarPainelOfertas();
-    } catch (error) {
-        console.error("Erro ao criar cupom:", error);
-        alert('Erro ao salvar o cupom.');
-    }
-}
 
         function limparCampos() {
             document.getElementById('form-campanha').reset();

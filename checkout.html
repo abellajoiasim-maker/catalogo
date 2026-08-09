@@ -168,6 +168,7 @@
                         <div class="summary-row"><span>Peso Total</span><span id="res-peso">0,00 grs.</span></div>
                         <div class="summary-row"><span>Subtotal</span><span id="res-subtotal">R$ 0,00</span></div>
                         <div class="summary-row hidden" id="box-desconto" style="color:var(--color-success);"><span>Desconto PIX</span><span id="res-desconto">- R$ 0,00</span></div>
+                        <div class="summary-row hidden" id="box-cupom" style="color:var(--color-success);"><span>Cupom <strong id="res-cupom-codigo"></strong></span><span id="res-desconto-cupom">- R$ 0,00</span></div>
                         <div class="summary-row"><span>Frete</span><span id="res-frete">R$ 0,00</span></div>
                         <div class="summary-total"><span>Total</span><span id="res-total" style="color:var(--color-primary-hover);">R$ 0,00</span></div>
                     </div>
@@ -250,6 +251,9 @@
     <script src="./js/utils/money.js"></script>
     <script src="./js/utils/peso.js"></script>
     <script src="./js/utils/storage.js"></script>
+    <script src="./js/services/configService.js"></script>
+    <script src="./js/services/descontoService.js"></script>
+    <script src="./js/services/cupomService.js"></script>
     <script src="./js/services/carrinhoService.js"></script>
     <script src="./js/utils/image-helper.js"></script>
     <script src="./js/utils/imagens.js"></script>
@@ -293,10 +297,11 @@
         }
 
         function itensNormalizados() {
-            const raw = (window.carrinhoService ? carrinhoService.obterItens() : []) || [];
+            const raw = (window.carrinhoService ? carrinhoService.listar() : []) || [];
             const itens = raw.map(item => {
                 const qtd = parseInt(item.quantidade || 0);
-                const preco = parseFloat(item.preco || item.price || 0);
+                // precoVendaUnitario já vem com o desconto de categoria/global aplicado (descontoService)
+                const preco = parseFloat(item.precoVendaUnitario ?? item.preco ?? item.price ?? 0);
                 const peso = parseFloat(item.peso || 0);
                 return {
                     id: item.id || '',
@@ -345,12 +350,26 @@
 
             const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
             const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+
+            // Cupom aplicado no carrinho — segue valendo no checkout, sobre o subtotal já com desconto de categoria
+            const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
+            const descontoCupom = window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0;
+
             const frete = subtotal >= freteGratis ? 0 : freteFixo;
-            const total = subtotal - desconto + frete;
+            const total = Math.max(0, subtotal - desconto - descontoCupom + frete);
 
             document.getElementById('box-desconto').classList.toggle('hidden', desconto === 0);
             document.getElementById('labelDescontoPix').innerText = `${descontoPix}% de desconto`;
             document.getElementById('labelParcelasCartao').innerText = `Em até ${cfg.maxInstallments || cfg.parcelas || 6}x`;
+
+            const boxCupom = document.getElementById('box-cupom');
+            if (cupomAplicado && descontoCupom > 0.001) {
+                boxCupom.classList.remove('hidden');
+                document.getElementById('res-cupom-codigo').innerText = cupomAplicado.code;
+                document.getElementById('res-desconto-cupom').innerText = `- ${fmtMoeda(descontoCupom)}`;
+            } else {
+                boxCupom.classList.add('hidden');
+            }
 
             document.getElementById('res-qtd').innerText = `${qtdTotal} pçs`;
             document.getElementById('res-peso').innerText = fmtPeso(pesoTotal);
@@ -525,8 +544,12 @@
                 const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
                 const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
                 const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+
+                const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
+                const descontoCupom = window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0;
+
                 const frete = subtotal >= freteGratis ? 0 : freteFixo;
-                const total = subtotal - desconto + frete;
+                const total = Math.max(0, subtotal - desconto - descontoCupom + frete);
 
                 const pedidoId = 'PED-' + Date.now();
 
@@ -556,6 +579,9 @@
                     totalPecas: qtdTotal,
                     qtd: qtdTotal,
 
+                    cupomAplicado: cupomAplicado ? cupomAplicado.code : null,
+                    descontoCupom: descontoCupom || 0,
+
                     observacoes: obs,
 
                     itens: itens.map(i => ({
@@ -576,6 +602,7 @@
 
                 if (window.carrinhoService && typeof carrinhoService.limpar === 'function') {
                     carrinhoService.limpar();
+                    carrinhoService.removerCupom();
                 }
 
                 const Q = '\n';

@@ -71,8 +71,20 @@
         </div>
 
         <div id="resumo" class="aurora-section" style="padding-top: var(--space-6); max-width: 380px; margin-left: auto;">
+            <div id="cupomBox" style="margin-bottom: var(--space-5);">
+                <div id="cupomForm" style="display:flex; gap: var(--space-2);">
+                    <input type="text" id="inputCupom" placeholder="Código do cupom" class="aurora-input" style="text-transform:uppercase; flex:1;">
+                    <button class="aurora-btn aurora-btn--outline aurora-btn--sm" id="btnAplicarCupom">Aplicar</button>
+                </div>
+                <p id="cupomMsg" style="font-size:11px; margin-top: var(--space-2);"></p>
+                <div id="cupomAplicadoBox" class="hidden" style="display:flex; align-items:center; justify-content:space-between; background:rgba(var(--color-primary-rgb),.08); border:1px solid var(--color-border); border-radius:var(--radius-md); padding: var(--space-3) var(--space-4);">
+                    <span style="font-size:12px; font-weight:600;">🏷️ Cupom <strong id="cupomCodigoAplicado"></strong> aplicado</span>
+                    <button id="btnRemoverCupom" style="font-size:11px; color:var(--color-danger); background:none; border:none; cursor:pointer;">Remover</button>
+                </div>
+            </div>
             <div class="summary-row"><span>Subtotal</span><span id="subtotal">R$ 0,00</span></div>
             <div class="summary-row" id="linhaDesconto" style="display:none;"><span>Desconto</span><span id="descontoValor" style="color:var(--color-success);"></span></div>
+            <div class="summary-row" id="linhaDescontoCupom" style="display:none;"><span>Cupom</span><span id="descontoCupomValor" style="color:var(--color-success);"></span></div>
             <div class="summary-total"><span>Total</span><span id="total">R$ 0,00</span></div>
             <a href="checkout.html" class="aurora-btn aurora-btn--primary aurora-btn--block" style="margin-top: var(--space-5);">Finalizar Pedido</a>
         </div>
@@ -91,6 +103,9 @@
     <script src="./js/utils/money.js"></script>
     <script src="./js/utils/peso.js"></script>
     <script src="./js/utils/storage.js"></script>
+    <script src="./js/services/configService.js"></script>
+    <script src="./js/services/descontoService.js"></script>
+    <script src="./js/services/cupomService.js"></script>
     <script src="./js/services/carrinhoService.js"></script>
     <script src="./js/utils/image-helper.js"></script>
     <script src="./js/utils/imagens.js"></script>
@@ -160,17 +175,42 @@
 
             const subtotal = carrinhoService.obterTotalBruto();
             const total = carrinhoService.obterTotal();
-            const desconto = subtotal - total;
+            const descontoCategoria = itens.reduce((acc, item) => {
+                const bruto = (parseFloat(item.preco) || 0) * item.quantidade;
+                const comDesconto = item.precoVendaUnitario * item.quantidade;
+                return acc + (bruto - comDesconto);
+            }, 0);
+            const descontoCupom = carrinhoService.obterDescontoCupom();
 
             document.getElementById('subtotal').innerText = formatarMoeda(subtotal);
             document.getElementById('total').innerText = formatarMoeda(total);
 
             const linhaDesconto = document.getElementById('linhaDesconto');
-            if (desconto > 0.001) {
+            if (descontoCategoria > 0.001) {
                 linhaDesconto.style.display = 'flex';
-                document.getElementById('descontoValor').innerText = `− ${formatarMoeda(desconto)}`;
+                document.getElementById('descontoValor').innerText = `− ${formatarMoeda(descontoCategoria)}`;
             } else {
                 linhaDesconto.style.display = 'none';
+            }
+
+            const linhaDescontoCupom = document.getElementById('linhaDescontoCupom');
+            const cupomAplicado = carrinhoService.obterCupomAplicado();
+            if (cupomAplicado && descontoCupom > 0.001) {
+                linhaDescontoCupom.style.display = 'flex';
+                document.getElementById('descontoCupomValor').innerText = `− ${formatarMoeda(descontoCupom)}`;
+            } else {
+                linhaDescontoCupom.style.display = 'none';
+            }
+
+            if (cupomAplicado) {
+                document.getElementById('cupomForm').classList.add('hidden');
+                document.getElementById('cupomAplicadoBox').classList.remove('hidden');
+                document.getElementById('cupomAplicadoBox').style.display = 'flex';
+                document.getElementById('cupomCodigoAplicado').innerText = cupomAplicado.code;
+            } else {
+                document.getElementById('cupomForm').classList.remove('hidden');
+                document.getElementById('cupomAplicadoBox').classList.add('hidden');
+                document.getElementById('cupomAplicadoBox').style.display = 'none';
             }
         }
 
@@ -188,13 +228,58 @@
             renderizarCarrinho();
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        async function aplicarCupomUI() {
+            const input = document.getElementById('inputCupom');
+            const msg = document.getElementById('cupomMsg');
+            const btn = document.getElementById('btnAplicarCupom');
+            const codigo = input.value.trim();
+
+            if (!codigo) { msg.style.color = 'var(--color-danger)'; msg.innerText = 'Digite um código.'; return; }
+            if (!window.cupomService) { msg.style.color = 'var(--color-danger)'; msg.innerText = 'Serviço de cupom indisponível.'; return; }
+
+            btn.disabled = true;
+            btn.innerText = 'Validando...';
+            msg.innerText = '';
+
+            const subtotalAtual = carrinhoService.obterTotalBruto();
+            const resultado = await cupomService.validar(codigo, subtotalAtual);
+
+            btn.disabled = false;
+            btn.innerText = 'Aplicar';
+
+            if (!resultado.valido) {
+                msg.style.color = 'var(--color-danger)';
+                msg.innerText = resultado.motivo;
+                return;
+            }
+
+            carrinhoService.aplicarCupom(resultado.cupom);
+            input.value = '';
+            msg.innerText = '';
+            renderizarCarrinho();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb([
                 { label: 'Home', href: 'index.html' },
                 { label: 'Sacola' }
             ]);
 
+            // Precisa estar carregado ANTES do primeiro render, senão descontoService não acha nada
+            if (window.ConfigService) {
+                try { await ConfigService.getSettings(); } catch (e) { console.warn('Falha ao pré-carregar settings:', e); }
+            }
+
             renderizarCarrinho();
+
+            document.getElementById('btnAplicarCupom').addEventListener('click', aplicarCupomUI);
+            document.getElementById('inputCupom').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); aplicarCupomUI(); }
+            });
+            document.getElementById('btnRemoverCupom').addEventListener('click', () => {
+                carrinhoService.removerCupom();
+                renderizarCarrinho();
+            });
 
             document.getElementById('btnLimpar').addEventListener('click', () => {
                 if (confirm('Tem certeza que deseja esvaziar a sacola?')) {

@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <style id="auth-guard-hide">html{visibility:hidden !important;}</style>
+    <meta charset="UTF-8">
+    <title>Super Importador Premium • Abella Joias</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+    <!-- BIBLIOTECA SHEETJS PARA LER .XLSX DIRETO NO NAVEGADOR -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            background: #050505;
+            color: #f5f5f5;
+            font-family: Inter, sans-serif;
+        }
+        .glass {
+            background: rgba(20, 20, 20, .92);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, .06);
+        }
+        .gold {
+            color: #caa85c;
+        }
+        .btn-gold {
+            background: #caa85c;
+            color: #000;
+            font-weight: 900;
+            transition: .25s;
+        }
+        .btn-gold:hover {
+            filter: brightness(1.05);
+            transform: translateY(-2px);
+        }
+        .log-success { color: #4ade80; }
+        .log-error { color: #f87171; }
+        .log-warning { color: #facc15; }
+        .log-info { color: #93c5fd; }
+
+        .scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- HEADER -->
+        <div class="glass rounded-[2rem] p-8">
+            <div class="flex flex-col xl:flex-row gap-8 justify-between">
+                <div class="space-y-3">
+                    <h1 class="text-4xl font-black uppercase tracking-[0.25em] gold">
+                        Super Importador Premium
+                    </h1>
+                    <p class="text-zinc-400 text-sm leading-relaxed max-w-3xl">
+                        Sistema inteligente de importação e exportação CSV/.XLSX totalmente integrado ao catálogo premium Abella Joias.
+                    </p>
+                    <button onclick="AuthGuard.logout()" class="h-9 px-4 rounded-xl border border-zinc-800 text-xs uppercase font-black tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors w-fit">
+                        Sair
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div class="glass rounded-3xl p-4">
+                        <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Produtos</p>
+                        <h2 id="statsProdutos" class="text-3xl font-black gold mt-2">0</h2>
+                    </div>
+                    <div class="glass rounded-3xl p-4">
+                        <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Categorias</p>
+                        <h2 id="statsCategorias" class="text-3xl font-black gold mt-2">0</h2>
+                    </div>
+                    <div class="glass rounded-3xl p-4">
+                        <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Subcategorias</p>
+                        <h2 id="statsSubcategorias" class="text-3xl font-black gold mt-2">0</h2>
+                    </div>
+                    <div class="glass rounded-3xl p-4">
+                        <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Banco</p>
+                        <h2 id="firebaseStatus" class="text-lg font-black text-emerald-400 mt-3">ONLINE</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRID -->
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+            <!-- IMPORTADOR -->
+            <div class="xl:col-span-2 space-y-6">
+                <div class="glass rounded-[2rem] p-8 space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-black">📦 Importador Excel / CSV Inteligente</h2>
+                        <p class="text-zinc-500 text-sm mt-2">
+                            Compatível com planilhas .xlsx do Excel/Google Sheets. Ignora células vazias e organiza o catálogo automaticamente.
+                        </p>
+                    </div>
+
+                    <!-- UPLOAD -->
+                    <div class="border-2 border-dashed border-zinc-800 rounded-[2rem] p-10 text-center bg-black/40">
+                        <!-- Aceita tanto .csv quanto .xlsx agora -->
+                        <input type="file" id="importFile" accept=".csv, .xlsx" class="hidden" onchange="atualizarArquivo(this)">
+                        <label for="importFile" id="importLabel" class="cursor-pointer block space-y-4">
+                            <div class="text-6xl">📂</div>
+                            <div>
+                                <h3 class="text-xl font-black">Clique para selecionar seu CSV ou Planilha .XLSX</h3>
+                                <p class="text-zinc-500 text-sm mt-2">Compatível com Google Sheets, Excel e LibreOffice</p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- OPTIONS -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="glass rounded-2xl p-4 flex items-start gap-4 cursor-pointer">
+                            <input type="checkbox" id="incrementalMode" checked class="mt-1">
+                            <div>
+                                <h3 class="font-black">Modo Incremental</h3>
+                                <p class="text-zinc-500 text-xs mt-1">Mantém os produtos atuais e apenas adiciona/atualiza.</p>
+                            </div>
+                        </label>
+
+                        <label class="glass rounded-2xl p-4 flex items-start gap-4 cursor-pointer">
+                            <input type="checkbox" id="resetCategorias">
+                            <div>
+                                <h3 class="font-black">Resetar Categorias</h3>
+                                <p class="text-zinc-500 text-xs mt-1">Recria completamente categorias e subcategorias.</p>
+                            </div>
+                        </label>
+
+                        <label class="glass rounded-2xl p-4 flex items-start gap-4 cursor-pointer md:col-span-2 border-2 border-[#caa85c]/30">
+                            <input type="checkbox" id="somentePrecoMode" class="mt-1">
+                            <div>
+                                <h3 class="font-black gold">⚡ Modo Somente Preços</h3>
+                                <p class="text-zinc-500 text-xs mt-1">Pra atualizar preço de muitos produtos de uma vez, a planilha só precisa ter 2 colunas: <b>SKU</b> e <b>Preço</b>. Nenhum outro dado é exigido nem alterado — produtos não encontrados são ignorados com aviso.</p>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- BUTTONS -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button onclick="executarImportacao()" id="btnImportar" class="btn-gold rounded-2xl h-14 uppercase tracking-[0.2em] text-sm">
+                            🚀 Importar Planilha
+                        </button>
+                        <button onclick="exportarCSV()" class="bg-zinc-900 border border-zinc-800 rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-sm hover:border-[#caa85c] transition-all">
+                            📤 Exportar CSV
+                        </button>
+                        <button onclick="baixarModeloCSV()" class="bg-zinc-900 border border-zinc-800 rounded-2xl h-14 font-black uppercase tracking-[0.2em] text-sm hover:border-[#caa85c] transition-all">
+                            📥 Modelo Planilha
+                        </button>
+                    </div>
+                </div>
+
+                <!-- LOG -->
+                <div class="glass rounded-[2rem] p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-2xl font-black">📜 Console Operacional</h2>
+                            <p class="text-zinc-500 text-sm mt-1">Monitoramento em tempo real da importação.</p>
+                        </div>
+                        <button onclick="limparConsole()" class="text-xs uppercase tracking-[0.2em] border border-zinc-800 rounded-xl px-4 py-2 hover:border-red-500 transition-all">
+                            Limpar
+                        </button>
+                    </div>
+
+                    <div id="logConsole" class="bg-black rounded-3xl border border-zinc-900 p-6 h-[420px] overflow-y-auto scrollbar text-sm space-y-2">
+                        <p class="log-info">Sistema inicializado e pronto para .CSV ou .XLSX.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIDEBAR -->
+            <div class="space-y-6">
+                <div class="glass rounded-[2rem] p-8">
+                    <h2 class="text-xl font-black mb-6">📋 Estrutura da Planilha</h2>
+                   <div class="space-y-3 text-sm">
+    <div class="glass rounded-2xl p-4">Col A / 1. Nome</div>
+    <div class="glass rounded-2xl p-4">Col B / 2. SKU</div>
+    <div class="glass rounded-2xl p-4">Col C / 3. Categoria</div>
+    <div class="glass rounded-2xl p-4">Col D / 4. Subcategoria</div>
+    <div class="glass rounded-2xl p-4">Col E / 5. Preço</div>
+    <div class="glass rounded-2xl p-4">Col F / 6. Peso</div>
+    <div class="glass rounded-2xl p-4">Col G / 7. URL Imagem</div>
+    <div class="glass rounded-2xl p-4">Col H / 8. Descrição</div>
+    <div class="glass rounded-2xl p-4">Col I / 9. Variação</div>
+    <div class="glass rounded-2xl p-4">Col J / 10. Opções</div>
+    <div class="glass rounded-2xl p-4">Col K / 11. Pausado</div>
+</div>
+                <p class="text-zinc-500 text-xs mt-4 border-t border-zinc-800 pt-4">
+                    ⚡ No <b class="gold">Modo Somente Preços</b>, a planilha usa só 2 colunas: <b>SKU</b> e <b>Preço</b> — o resto pode ficar vazio ou nem existir.
+                </p>
+                <button onclick="baixarModeloPrecos()" class="w-full mt-3 bg-zinc-900 border border-zinc-800 rounded-2xl h-12 font-black uppercase tracking-[0.15em] text-xs hover:border-[#caa85c] transition-all">
+                    📥 Modelo Somente Preços
+                </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- AJUSTE RÁPIDO DE PREÇOS -->
+        <div class="glass rounded-[2rem] p-8 space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-black">⚡ Ajuste Rápido de Preços</h2>
+                    <p class="text-zinc-500 text-sm mt-2">Busque um produto (nome ou SKU) ou escolha uma categoria, edite o preço direto na tabela e salve — sem precisar de planilha.</p>
+                </div>
+                <div id="precoResumoAlteracoes" class="hidden glass rounded-2xl px-5 py-3 text-center">
+                    <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Alterações pendentes</p>
+                    <h3 id="precoContadorAlteracoes" class="text-2xl font-black gold">0</h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="precoBusca" placeholder="🔎 Buscar por nome ou SKU..."
+                       class="glass rounded-2xl h-12 px-5 text-sm outline-none focus:border-[#caa85c] md:col-span-2"
+                       oninput="filtrarProdutosPreco()">
+                <select id="precoFiltroCategoria" class="glass rounded-2xl h-12 px-5 text-sm outline-none focus:border-[#caa85c]" onchange="filtrarProdutosPreco()">
+                    <option value="">Todas as categorias</option>
+                </select>
+            </div>
+
+            <div class="bg-black rounded-3xl border border-zinc-900 overflow-hidden">
+                <div class="overflow-x-auto scrollbar" style="max-height: 480px;">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-zinc-950 z-10">
+                            <tr class="text-left text-zinc-500 text-[10px] uppercase tracking-[0.15em]">
+                                <th class="p-4">SKU</th>
+                                <th class="p-4">Nome</th>
+                                <th class="p-4">Categoria</th>
+                                <th class="p-4 text-right">Preço Atual</th>
+                                <th class="p-4 text-right w-40">Novo Preço</th>
+                            </tr>
+                        </thead>
+                        <tbody id="precoTabelaBody">
+                            <tr><td colspan="5" class="p-8 text-center text-zinc-600">Digite algo na busca ou escolha uma categoria pra listar os produtos.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button onclick="salvarAlteracoesPreco()" id="btnSalvarPrecos" class="btn-gold rounded-2xl h-14 w-full uppercase tracking-[0.2em] text-sm" disabled>
+                💾 Salvar Alterações de Preço
+            </button>
+        </div>
+    </div>
+
+<script src="../js/firebase/firebase-config.js"></script>
+<script src="js/auth-guard.js"></script>
+
+<script>
+    // "db" já vem pronto de js/firebase/firebase-config.js — não redeclarar aqui.
+
+    function slugify(text='') {
+        return text
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g,'')
+            .replace(/[^a-z0-9]+/g,'-')
+            .replace(/^-+|-+$/g,'');
+    }
+
+    function atualizarArquivo(input) {
+        const file = input.files[0];
+        document.getElementById('importLabel').innerHTML = file
+            ? `
+                <div class="text-6xl">✅</div>
+                <div>
+                    <h3 class="text-xl font-black">${file.name}</h3>
+                    <p class="text-zinc-500 text-sm mt-2">Arquivo reconhecido com sucesso.</p>
+                </div>
+            `
+            : `
+                <div class="text-6xl">📂</div>
+                <div>
+                    <h3 class="text-xl font-black">Clique para selecionar seu CSV ou Planilha .XLSX</h3>
+                    <p class="text-zinc-500 text-sm mt-2">Compatível com Google Sheets, Excel e LibreOffice</p>
+                </div>
+            `;
+    }
+
+    function log(msg, type='info') {
+        const consoleEl = document.getElementById('logConsole');
+        const classe = type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : type === 'warning' ? 'log-warning' : 'log-info';
+        consoleEl.innerHTML += `<p class="${classe}">${msg}</p>`;
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function limparConsole() {
+        document.getElementById('logConsole').innerHTML = '';
+    }
+
+    // Processador manual para fallback de arquivos text/csv padrão
+    function parseCSVLine(line) {
+        const arr = [];
+        let quote = false;
+        let cell = '';
+
+        for (let i = 0; i < line.length; i++) {
+            let char = line[i];
+            if (char === '"') {
+                quote = !quote;
+            } else if (char === ',' && !quote) {
+                arr.push(cell.trim());
+                cell = '';
+            } else {
+                cell += char;
+            }
+        }
+        arr.push(cell.trim());
+        return arr;
+    }
+
+    async function atualizarEstatisticas() {
+        try {
+            const prodSnap = await db.ref('abella/products').once('value');
+            const catSnap = await db.ref('abella/categories').once('value');
+
+            const produtos = prodSnap.val() || {};
+            const categorias = catSnap.val() || {};
+            let subcats = 0;
+
+            Object.values(categorias).forEach(cat => {
+                if (cat.subcategories) {
+                    subcats += Object.keys(cat.subcategories).length;
+                }
+            });
+
+            document.getElementById('statsProdutos').innerText = Object.keys(produtos).length;
+            document.getElementById('statsCategorias').innerText = Object.keys(categorias).length;
+            document.getElementById('statsSubcategorias').innerText = subcats;
+
+            // Alimenta também o painel de Ajuste Rápido de Preços
+            todosProdutosCache = Object.entries(produtos).map(([id, p]) => ({ id, ...p }));
+            popularFiltroCategoriaPreco(categorias);
+        } catch(e) {
+            console.error("Erro ao atualizar estatísticas:", e);
+        }
+    }
+
+    // ==========================================================
+    // AJUSTE RÁPIDO DE PREÇOS
+    // ==========================================================
+    let todosProdutosCache = [];
+    const alteracoesPrecoPendentes = new Map();
+
+    function popularFiltroCategoriaPreco(categorias) {
+        const select = document.getElementById('precoFiltroCategoria');
+        const valorAtual = select.value;
+        select.innerHTML = '<option value="">Todas as categorias</option>';
+        Object.entries(categorias || {}).forEach(([slug, cat]) => {
+            const opt = document.createElement('option');
+            opt.value = slug;
+            opt.innerText = cat.name || slug;
+            select.appendChild(opt);
+        });
+        select.value = valorAtual;
+    }
+
+    function normalizarTexto(txt) {
+        return String(txt || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function filtrarProdutosPreco() {
+        const termo = normalizarTexto(document.getElementById('precoBusca').value.trim());
+        const categoriaFiltro = document.getElementById('precoFiltroCategoria').value;
+        const corpo = document.getElementById('precoTabelaBody');
+
+        if (!termo && !categoriaFiltro) {
+            corpo.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-zinc-600">Digite algo na busca ou escolha uma categoria pra listar os produtos.</td></tr>';
+            return;
+        }
+
+        const filtrados = todosProdutosCache.filter(p => {
+            const bateCategoria = !categoriaFiltro || p.category === categoriaFiltro;
+            if (!bateCategoria) return false;
+            if (!termo) return true;
+            const alvo = normalizarTexto(`${p.name || ''} ${p.sku || ''}`);
+            return alvo.includes(termo);
+        }).slice(0, 300); // teto de segurança pra não travar o navegador com milhares de linhas
+
+        if (filtrados.length === 0) {
+            corpo.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-zinc-600">Nenhum produto encontrado.</td></tr>';
+            return;
+        }
+
+        corpo.innerHTML = filtrados.map(p => {
+            const precoAtual = Number(p.price || 0).toFixed(2);
+            const valorPendente = alteracoesPrecoPendentes.has(p.id) ? alteracoesPrecoPendentes.get(p.id) : precoAtual;
+            return `
+                <tr class="border-t border-zinc-900 hover:bg-zinc-950/60" data-produto-id="${p.id}">
+                    <td class="p-4 text-zinc-500 font-mono text-xs">${p.sku || p.id}</td>
+                    <td class="p-4">${p.name || '(sem nome)'}</td>
+                    <td class="p-4 text-zinc-500 text-xs">${p.category || '-'}</td>
+                    <td class="p-4 text-right text-zinc-500">R$ ${precoAtual}</td>
+                    <td class="p-4 text-right">
+                        <input type="number" step="0.01" min="0" value="${valorPendente}"
+                               class="input-preco-rapido glass rounded-xl h-10 w-32 px-3 text-right outline-none focus:border-[#caa85c]"
+                               data-preco-original="${precoAtual}"
+                               onchange="registrarAlteracaoPreco('${p.id}', this)">
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function registrarAlteracaoPreco(produtoId, input) {
+        const novoValor = parseFloat(input.value);
+        const original = parseFloat(input.getAttribute('data-preco-original'));
+
+        if (isNaN(novoValor) || novoValor < 0) {
+            input.value = original.toFixed(2);
+            return;
+        }
+
+        if (Math.abs(novoValor - original) < 0.001) {
+            alteracoesPrecoPendentes.delete(produtoId);
+            input.closest('tr').classList.remove('bg-[#caa85c]/5');
+        } else {
+            alteracoesPrecoPendentes.set(produtoId, novoValor.toFixed(2));
+            input.closest('tr').classList.add('bg-[#caa85c]/5');
+        }
+
+        atualizarContadorAlteracoesPreco();
+    }
+
+    function atualizarContadorAlteracoesPreco() {
+        const total = alteracoesPrecoPendentes.size;
+        const resumo = document.getElementById('precoResumoAlteracoes');
+        const contador = document.getElementById('precoContadorAlteracoes');
+        const btn = document.getElementById('btnSalvarPrecos');
+
+        contador.innerText = total;
+        resumo.classList.toggle('hidden', total === 0);
+        btn.disabled = total === 0;
+    }
+
+    async function salvarAlteracoesPreco() {
+        if (alteracoesPrecoPendentes.size === 0) return;
+        const btn = document.getElementById('btnSalvarPrecos');
+        btn.disabled = true;
+        btn.innerText = '⏳ Salvando...';
+
+        let sucesso = 0, falhas = 0;
+
+        for (const [produtoId, novoPreco] of alteracoesPrecoPendentes.entries()) {
+            try {
+                await db.ref(`abella/products/${produtoId}`).update({
+                    price: parseFloat(novoPreco),
+                    updatedAt: Date.now()
+                });
+                sucesso++;
+            } catch (e) {
+                console.error(`Erro ao salvar preço de ${produtoId}:`, e);
+                falhas++;
+            }
+        }
+
+        log(`💾 ${sucesso} preço(s) atualizado(s) via Ajuste Rápido.${falhas ? ' ' + falhas + ' falha(s).' : ''}`, falhas ? 'warning' : 'success');
+
+        alteracoesPrecoPendentes.clear();
+        atualizarContadorAlteracoesPreco();
+        btn.innerText = '💾 Salvar Alterações de Preço';
+        await atualizarEstatisticas();
+        filtrarProdutosPreco();
+    }
+
+    function baixarModeloPrecos() {
+        const modelo = `SKU,Preco\n"ACG-001","54.90"`;
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), modelo], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'modelo-somente-precos-abella.csv';
+        link.click();
+        log('📥 Modelo de planilha "Somente Preços" baixado.', 'success');
+    }
+
+    // INTERPRETADOR UNIFICADO (Lê CSV e Transforma planilhas .XLSX)
+    async function executarImportacao() {
+        const file = document.getElementById('importFile').files[0];
+        if (!file) {
+            alert('Por favor, selecione um arquivo válido (.csv ou .xlsx) primeiro.');
+            return;
+        }
+
+        const incremental = document.getElementById('incrementalMode').checked;
+        const resetCategorias = document.getElementById('resetCategorias').checked;
+        const somentePreco = document.getElementById('somentePrecoMode').checked;
+        const btn = document.getElementById('btnImportar');
+        btn.disabled = true;
+
+        try {
+            log(`🚀 Lendo o arquivo: ${file.name}...`, 'info');
+
+            if (somentePreco) {
+                log('⚡ Modo Somente Preços ativo — categorias e demais campos não serão tocados.', 'info');
+            } else {
+                if (!incremental) {
+                    log('🗑️ Removendo catálogo antigo (Modo limpo)...', 'warning');
+                    await db.ref('abella/products').remove();
+                }
+                if (resetCategorias) {
+                    log('🗑️ Resetando árvore de categorias antigas...', 'warning');
+                    await db.ref('abella/categories').remove();
+                }
+            }
+
+            let matrizDados = [];
+
+            // IDENTIFICA SE O ARQUIVO É EXCEL (.XLSX) OU TEXTO (.CSV)
+            if (file.name.endsWith('.xlsx')) {
+                log('📊 Formato .XLSX detectado. Convertendo matriz de dados via SheetJS...', 'info');
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                // Pega a primeira aba da planilha
+                const nomeAba = workbook.SheetNames[0];
+                const aba = workbook.Sheets[nomeAba];
+                // Transforma em uma matriz bidimensional (Array de Arrays)
+                matrizDados = XLSX.utils.sheet_to_json(aba, { header: 1, defval: "" });
+            } else {
+                log('📄 Formato .CSV detectado. Processando quebras de texto normais...', 'info');
+                const texto = await file.text();
+                const linhas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
+                matrizDados = linhas.map(linha => parseCSVLine(linha));
+            }
+
+            if (matrizDados.length <= 1) {
+                log('⚠️ A planilha lida está vazia ou contém apenas o cabeçalho.', 'warning');
+                btn.disabled = false;
+                return;
+            }
+
+            log(`📦 ${matrizDados.length - 1} registros detectados na fila de processamento.`, 'info');
+
+            // ==================================================
+            // MODO SOMENTE PREÇOS — planilha de 2 colunas: SKU, Preço
+            // ==================================================
+            if (somentePreco) {
+                let atualizados = 0, naoEncontrados = 0, invalidos = 0;
+
+                for (let i = 1; i < matrizDados.length; i++) {
+                    const colunas = matrizDados[i];
+                    if (!colunas || colunas.length === 0 || (colunas.length === 1 && colunas[0] === '')) continue;
+
+                    const skuBruto = colunas[0] ? String(colunas[0]).replace(/^"|"$/g, '').trim() : '';
+                    const precoCru = colunas[1] !== undefined && colunas[1] !== null
+                        ? String(colunas[1]).replace(/[^0-9.,]/g, '').replace(',', '.') : '';
+
+                    if (!skuBruto || precoCru === '') {
+                        log(`⚠️ Linha ${i + 1} ignorada: falta SKU ou Preço.`, 'warning');
+                        invalidos++;
+                        continue;
+                    }
+
+                    const novoPreco = parseFloat(precoCru);
+                    if (isNaN(novoPreco) || novoPreco < 0) {
+                        log(`⚠️ Linha ${i + 1} ignorada: preço inválido ("${colunas[1]}").`, 'warning');
+                        invalidos++;
+                        continue;
+                    }
+
+                    const skuLimpo = skuBruto.replace(/[\.\$#\[\]\/]/g, '-');
+                    const snap = await db.ref(`abella/products/${skuLimpo}`).once('value');
+
+                    if (!snap.exists()) {
+                        log(`⚠️ SKU "${skuBruto}" não encontrado no catálogo — linha ${i + 1} ignorada.`, 'warning');
+                        naoEncontrados++;
+                        continue;
+                    }
+
+                    await db.ref(`abella/products/${skuLimpo}`).update({ price: novoPreco, updatedAt: Date.now() });
+                    atualizados++;
+                }
+
+                log(`🎉 Concluído: ${atualizados} preço(s) atualizado(s), ${naoEncontrados} SKU(s) não encontrado(s), ${invalidos} linha(s) inválida(s).`, atualizados > 0 ? 'success' : 'warning');
+                atualizarEstatisticas();
+                btn.disabled = false;
+                return;
+            }
+
+            let processados = 0;
+
+            // Começa no índice 1 para pular a linha de títulos (Cabeçalho)
+            for (let i = 1; i < matrizDados.length; i++) {
+                const colunas = matrizDados[i];
+
+                if (!colunas || colunas.length === 0 || (colunas.length === 1 && colunas[0] === '')) {
+                    continue; 
+                }
+
+                // Captura os dados de forma segura independente do formato original
+                const nome = colunas[0] ? String(colunas[0]).replace(/^"|"$/g, '').trim() : '';
+                const sku = colunas[1] ? String(colunas[1]).replace(/^"|"$/g, '').trim() : '';
+                const categoriaNome = colunas[2] ? String(colunas[2]).replace(/^"|"$/g, '').trim() : '';
+                const subcategoriaNome = colunas[3] ? String(colunas[3]).replace(/^"|"$/g, '').trim() : '';
+                
+                const precoCru = colunas[4] !== undefined && colunas[4] !== null ? String(colunas[4]).replace(/[^0-9.,]/g, '').replace(',', '.') : '';
+                const pesoCru = colunas[5] !== undefined && colunas[5] !== null ? String(colunas[5]).replace(/[^0-9.,]/g, '').replace(',', '.') : '';
+
+                const imagem = colunas[6]
+    ? String(colunas[6]).replace(/^"|"$/g, '').trim()
+    : '';
+
+const descricao = colunas[7]
+    ? String(colunas[7]).trim()
+    : '';
+
+const variacao = colunas[8]
+    ? String(colunas[8]).replace(/^"|"$/g, '').trim()
+    : '';
+
+const opcoes = colunas[9]
+    ? String(colunas[9]).replace(/^"|"$/g, '').trim()
+    : '';
+
+const pausadoStr = colunas[10]
+    ? String(colunas[10]).toLowerCase().trim()
+    : '';
+
+                // Validação vital obrigatória
+                if (!nome || !sku || !categoriaNome) {
+                    log(`⚠️ Linha ${i + 1} ignorada: Faltam dados obrigatórios (Nome, SKU ou Categoria).`, 'warning');
+                    continue;
+                }
+
+                const categoriaSlug = slugify(categoriaNome);
+                const skuLimpo = sku.replace(/[\.\$#\[\]\/]/g, '-');
+
+                // Sincroniza árvore de categoria comercial
+                await db.ref(`abella/categories/${categoriaSlug}`).update({
+                    name: categoriaNome,
+                    slug: categoriaSlug,
+                    paused: false
+                });
+
+                // Se houver subcategoria preenchida, cria seu nó correspondente
+                if (subcategoriaNome) {
+                    const subcategoriaSlug = slugify(subcategoriaNome);
+                    await db.ref(`abella/categories/${categoriaSlug}/subcategories/${subcategoriaSlug}`).update({
+                        name: subcategoriaNome,
+                        slug: subcategoriaSlug,
+                        paused: false
+                    });
+                }
+
+                // Cria o modelo limpo
+               const produto = {
+    id: skuLimpo,
+    sku: sku,
+    name: nome,
+    category: categoriaSlug,
+    updatedAt: Date.now()
+};
+
+if (subcategoriaNome)
+    produto.subcategory = slugify(subcategoriaNome);
+
+if (precoCru !== '')
+    produto.price = parseFloat(precoCru) || 0;
+
+if (pesoCru !== '')
+    produto.weight = parseFloat(pesoCru) || 0;
+
+if (imagem)
+    produto.image = imagem;
+
+if (descricao)
+    produto.description = descricao;
+
+if (variacao)
+    produto.variacaoTipo = variacao;
+
+if (opcoes)
+    produto.opcoesPersonalizadas = opcoes;
+
+if (pausadoStr !== '') {
+    produto.paused = pausadoStr.includes('true');
+} else {
+    produto.paused = false;
+}
+
+                // Atualização incremental nativa por chave hash única
+                await db.ref(`abella/products/${skuLimpo}`).update(produto);
+                processados++;
+            }
+
+            log(`🎉 Sucesso! ${processados} produtos foram injetados/atualizados no banco de dados.`, 'success');
+            atualizarEstatisticas();
+
+        } catch(e) {
+            console.error(e);
+            log(`❌ Falha crítica no interpretador: ${e.message}`, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function exportarCSV() {
+        try {
+            const snap = await db.ref('abella/products').once('value');
+            const produtos = snap.val() || {};
+
+         let csv = `Nome,SKU,Categoria,Subcategoria,Preco,Peso,Imagem,Descricao,Variacao,Opcoes,Pausado\n`;
+
+            Object.values(produtos).forEach(p => {
+                csv += `"${(p.name || '').replace(/"/g, '""')}",`;
+                csv += `"${(p.sku || '').replace(/"/g, '""')}",`;
+                csv += `"${(p.category || '').replace(/"/g, '""')}",`;
+                csv += `"${(p.subcategory || '').replace(/"/g, '""')}",`;
+                csv += `"${p.price || 0}",`;
+                csv += `"${p.weight || 0}",`;
+csv += `"${(p.image || '').replace(/"/g, '""')}",`;
+csv += `"${(p.description || '').replace(/"/g, '""')}",`;
+csv += `"${(p.variacaoTipo || 'Padrão').replace(/"/g, '""')}",`;
+                csv += `"${(p.opcoesPersonalizadas || '').replace(/"/g, '""')}",`;
+                csv += `"${p.paused || false}"\n`;
+            });
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `catalogo-abella-${Date.now()}.csv`;
+            link.click();
+
+            log('📤 Tabela CSV exportada com sucesso (Padrão UTF-8).', 'success');
+        } catch (e) {
+            log(`❌ Erro ao exportar: ${e.message}`, 'error');
+        }
+    }
+
+   function baixarModeloCSV() {
+
+    const modelo =
+`Nome,SKU,Categoria,Subcategoria,Preco,Peso,Imagem,Descricao,Variacao,Opcoes,Pausado
+"Gargantilha Elo Português Luxo","ACG-001","Correntes & Colares","Premium","49.90","12.5","gs://catalogo-abella-joias.firebasestorage.app/images/produtos/ACG-001.jpg","Gargantilha premium com banho hipoalergênico e acabamento de luxo.","Padrão","","false"`;
+
+    const blob = new Blob(
+        [new Uint8Array([0xEF, 0xBB, 0xBF]), modelo],
+        { type: 'text/csv;charset=utf-8;' }
+    );
+
+    const link = document.createElement('a');
+
+    link.href = URL.createObjectURL(blob);
+    link.download = 'modelo-importacao-abella.csv';
+
+    link.click();
+
+    log(
+        '📥 Modelo CSV atualizado com campo Descrição.',
+        'success'
+    );
+}
+    atualizarEstatisticas();
+</script>
+
+</body>
+</html>

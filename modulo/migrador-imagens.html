@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<style id="auth-guard-hide">html{visibility:hidden !important;}</style>
+<meta charset="UTF-8">
+<title>Migrador de Imagens • Abella Joias</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+<style>
+    body { background: #050505; color: #f5f5f5; font-family: Inter, sans-serif; }
+    .glass { background: rgba(20,20,20,.92); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.06); }
+    .gold { color: #caa85c; }
+    .btn-gold { background: #caa85c; color: #000; font-weight: 900; transition: .25s; }
+    .btn-gold:hover { filter: brightness(1.05); transform: translateY(-2px); }
+    .btn-gold:disabled { opacity: .35; filter: none; transform: none; cursor: not-allowed; }
+    .log-success { color: #4ade80; } .log-error { color: #f87171; }
+    .log-warning { color: #facc15; } .log-info { color: #93c5fd; }
+    .scrollbar::-webkit-scrollbar { width: 6px; }
+    .scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 20px; }
+    .badge-ok { background: rgba(74,222,128,.12); color: #4ade80; border: 1px solid rgba(74,222,128,.3); }
+    .badge-falta { background: rgba(248,113,113,.12); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+    .dropzone { border: 2px dashed #333; transition: .2s; }
+    .dropzone.dragover { border-color: #caa85c; background: rgba(202,168,92,.06); }
+    .prod-card { cursor: pointer; transition: .2s; }
+    .prod-card:hover { transform: translateY(-3px); border-color: rgba(202,168,92,.4); }
+    .modal-backdrop { background: rgba(0,0,0,.75); backdrop-filter: blur(4px); }
+    .tab-ativa { background: #caa85c; color: #000; }
+</style>
+</head>
+
+<body class="min-h-screen p-4 md:p-8">
+<div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- HEADER / STATS -->
+    <div class="glass rounded-[2rem] p-8">
+        <div class="flex flex-col xl:flex-row gap-8 justify-between">
+            <div class="space-y-3 flex-1">
+                <div class="flex items-start justify-between gap-4">
+                    <h1 class="text-4xl font-black uppercase tracking-[0.25em] gold">Migrador de Imagens</h1>
+                    <button onclick="AuthGuard.logout()" class="shrink-0 h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors whitespace-nowrap">
+                        Sair
+                    </button>
+                </div>
+                <p class="text-zinc-400 text-sm leading-relaxed max-w-3xl">
+                    Veja quais produtos já têm foto e quais estão faltando, e envie imagens novas de qualquer lugar (pasta do computador ou Google Drive) direto para o Firebase — já vinculadas ao produto certo.
+                </p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div class="glass rounded-3xl p-4">
+                    <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Produtos</p>
+                    <h2 id="statTotal" class="text-3xl font-black gold mt-2">0</h2>
+                </div>
+                <div class="glass rounded-3xl p-4">
+                    <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Com Imagem</p>
+                    <h2 id="statComImagem" class="text-3xl font-black text-emerald-400 mt-2">0</h2>
+                </div>
+                <div class="glass rounded-3xl p-4">
+                    <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Sem Imagem</p>
+                    <h2 id="statSemImagem" class="text-3xl font-black text-red-400 mt-2">0</h2>
+                </div>
+                <div class="glass rounded-3xl p-4">
+                    <p class="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">Completo</p>
+                    <h2 id="statPercentual" class="text-3xl font-black gold mt-2">0%</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ÁREA DE IMPORTAÇÃO -->
+    <div class="glass rounded-[2rem] p-8 space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-2xl font-black">📤 Enviar Imagens</h2>
+                <p class="text-zinc-500 text-sm mt-2">
+                    O nome do arquivo precisa ser o <b class="gold">código/SKU ou ID</b> do produto (ex: <code class="text-zinc-300">ABC123.jpg</code>). Várias fotos do mesmo produto podem usar sufixo: <code class="text-zinc-300">ABC123-1.jpg</code>, <code class="text-zinc-300">ABC123-2.jpg</code>.
+                </p>
+            </div>
+            <button onclick="abrirGoogleDrivePicker()" class="bg-zinc-900 border border-zinc-800 rounded-2xl h-14 px-6 font-black uppercase tracking-[0.15em] text-xs hover:border-[#caa85c] transition-all whitespace-nowrap">
+                🗂️ Importar do Google Drive
+            </button>
+        </div>
+
+        <div id="dropzone" class="dropzone rounded-[2rem] p-10 text-center bg-black/40">
+            <input type="file" id="inputArquivos" multiple accept="image/*" class="hidden" onchange="lidarComArquivosSelecionados(this.files)">
+            <label for="inputArquivos" class="cursor-pointer block space-y-4">
+                <div class="text-6xl">🖼️</div>
+                <div>
+                    <h3 class="text-xl font-black">Arraste as imagens aqui ou clique para selecionar</h3>
+                    <p class="text-zinc-500 text-sm mt-2">Aceita seleção múltipla. Pode escolher qualquer pasta do computador (inclusive uma pasta sincronizada do Google Drive Desktop).</p>
+                </div>
+            </label>
+        </div>
+
+        <!-- PRÉVIA DE CORRESPONDÊNCIAS -->
+        <div id="painelPreview" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-black text-lg">🔎 Conferência antes de enviar</h3>
+                <div class="flex gap-3">
+                    <button onclick="cancelarPreview()" class="text-xs uppercase tracking-[0.2em] border border-zinc-800 rounded-xl px-4 py-2 hover:border-red-500 transition-all">Cancelar</button>
+                    <button onclick="aplicarPreview()" id="btnAplicarPreview" class="btn-gold rounded-xl px-6 py-2 text-xs uppercase tracking-[0.2em]">✅ Enviar Selecionados</button>
+                </div>
+            </div>
+            <div class="bg-black rounded-3xl border border-zinc-900 overflow-hidden">
+                <div class="overflow-x-auto scrollbar" style="max-height: 420px;">
+                    <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-zinc-950 z-10">
+                            <tr class="text-left text-zinc-500 text-[10px] uppercase tracking-[0.15em]">
+                                <th class="p-3 w-10"></th>
+                                <th class="p-3">Prévia</th>
+                                <th class="p-3">Arquivo</th>
+                                <th class="p-3">Produto Encontrado</th>
+                                <th class="p-3">Situação Atual</th>
+                                <th class="p-3">Atribuir Manualmente</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaPreviewBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTRO / BUSCA -->
+    <div class="glass rounded-[2rem] p-6 space-y-4">
+        <div class="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+            <div class="flex gap-2" id="tabsFiltro">
+                <button data-filtro="todos" class="filtro-btn tab-ativa rounded-xl px-5 py-3 text-xs uppercase font-black tracking-[0.15em]">Todos</button>
+                <button data-filtro="sem" class="filtro-btn bg-zinc-900 rounded-xl px-5 py-3 text-xs uppercase font-black tracking-[0.15em]">Sem Imagem</button>
+                <button data-filtro="com" class="filtro-btn bg-zinc-900 rounded-xl px-5 py-3 text-xs uppercase font-black tracking-[0.15em]">Com Imagem</button>
+            </div>
+            <div class="flex gap-3">
+                <input type="text" id="inputBusca" placeholder="🔎 Buscar por nome, SKU ou ID..." oninput="renderizarGrid()"
+                       class="glass rounded-2xl h-12 px-5 text-sm outline-none focus:border-[#caa85c] w-full md:w-80">
+                <button onclick="exportarFaltantesCSV()" class="bg-zinc-900 border border-zinc-800 rounded-2xl h-12 px-5 font-black uppercase tracking-[0.15em] text-xs hover:border-[#caa85c] transition-all whitespace-nowrap">
+                    📥 Exportar Faltantes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GRID DE PRODUTOS -->
+    <div class="glass rounded-[2rem] p-8">
+        <div id="gridProdutos" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
+            <p class="text-zinc-600 col-span-full text-center py-10">Carregando produtos...</p>
+        </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="glass rounded-[2rem] p-8">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-2xl font-black">📜 Console Operacional</h2>
+                <p class="text-zinc-500 text-sm mt-1">Acompanhe os envios em tempo real.</p>
+            </div>
+            <button onclick="limparConsole()" class="text-xs uppercase tracking-[0.2em] border border-zinc-800 rounded-xl px-4 py-2 hover:border-red-500 transition-all">Limpar</button>
+        </div>
+        <div id="logConsole" class="bg-black rounded-3xl border border-zinc-900 p-6 h-[300px] overflow-y-auto scrollbar text-sm space-y-2">
+            <p class="log-info">Sistema pronto. Selecione imagens ou importe do Google Drive.</p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PRODUTO INDIVIDUAL -->
+<div id="modalProduto" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div class="glass rounded-[2rem] p-8 max-w-md w-full space-y-6">
+        <div class="flex items-center justify-between">
+            <h3 class="text-xl font-black" id="modalTitulo">Produto</h3>
+            <button onclick="fecharModal()" class="text-zinc-500 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <img id="modalImagemAtual" class="w-full aspect-square object-cover rounded-2xl bg-zinc-900" src="">
+        <div class="space-y-3">
+            <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Enviar arquivo do computador</label>
+            <input type="file" id="modalInputArquivo" accept="image/*" class="text-sm w-full">
+        </div>
+        <div class="space-y-3">
+            <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Ou colar link direto da imagem</label>
+            <input type="text" id="modalInputUrl" placeholder="https://..." class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c]">
+        </div>
+        <button onclick="salvarImagemModal()" class="btn-gold rounded-2xl h-12 w-full uppercase tracking-[0.2em] text-sm">💾 Salvar Imagem</button>
+    </div>
+</div>
+
+<script src="../js/firebase/firebase-config.js"></script>
+<script src="js/auth-guard.js"></script>
+
+<script>
+// =========================================================================
+// CONFIGURAÇÃO GOOGLE DRIVE (opcional)
+// Para habilitar o botão "Importar do Google Drive" preencha os 2 campos
+// abaixo com credenciais do seu Google Cloud Console:
+//   1) console.cloud.google.com -> crie/abra um projeto
+//   2) Ative a "Google Picker API" e a "Google Drive API"
+//   3) Credenciais -> criar API Key            -> cole em GOOGLE_API_KEY
+//   4) Credenciais -> criar OAuth Client ID     -> tipo "App da Web"
+//      adicione a URL onde esta página roda em "Origens JavaScript autorizadas"
+//      -> cole em GOOGLE_CLIENT_ID
+// Sem isso preenchido, o botão avisa e o resto do migrador funciona normal
+// usando arquivos do computador.
+// =========================================================================
+const GOOGLE_DRIVE_CONFIG = {
+    apiKey: '',   // <-- cole sua API Key aqui
+    clientId: ''  // <-- cole seu OAuth Client ID aqui
+};
+
+// =========================================================================
+// ESTADO GERAL
+// =========================================================================
+const PRODUCTS_PATH = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('products') : 'abella/products';
+const STORAGE_FOLDER = 'images/produtos';
+
+let produtosCache = {};      // id -> produto normalizado
+let listaProdutos = [];      // array dos mesmos produtos, pra iterar fácil
+let filtroAtivo = 'todos';
+let pendentesPreview = [];   // [{arquivo, chave, produto, incluir, urlPreview}]
+let googleTokenClient = null;
+let googlePickerCarregado = false;
+let produtoModalAtual = null;
+
+// =========================================================================
+// LOG
+// =========================================================================
+function log(msg, tipo = 'info') {
+    const el = document.getElementById('logConsole');
+    const classe = tipo === 'success' ? 'log-success' : tipo === 'error' ? 'log-error' : tipo === 'warning' ? 'log-warning' : 'log-info';
+    el.innerHTML += `<p class="${classe}">${msg}</p>`;
+    el.scrollTop = el.scrollHeight;
+}
+function limparConsole() { document.getElementById('logConsole').innerHTML = ''; }
+
+// =========================================================================
+// CARREGAMENTO DOS PRODUTOS
+// =========================================================================
+async function carregarProdutos() {
+    try {
+        const snap = await db.ref(PRODUCTS_PATH).once('value');
+        const dados = snap.val() || {};
+        produtosCache = {};
+        Object.keys(dados).forEach(id => {
+            const p = dados[id] || {};
+            produtosCache[id] = {
+                id,
+                nome: p.nome || p.name || '(sem nome)',
+                codigo: p.codigo || '',
+                sku: p.sku || '',
+                imagem: p.imagem || p.image || '',
+            };
+        });
+        listaProdutos = Object.values(produtosCache);
+        atualizarStats();
+        renderizarGrid();
+        log(`Carregados ${listaProdutos.length} produtos.`, 'success');
+    } catch (err) {
+        log(`Erro ao carregar produtos: ${err.message}`, 'error');
+    }
+}
+
+function atualizarStats() {
+    const total = listaProdutos.length;
+    const comImagem = listaProdutos.filter(p => p.imagem).length;
+    const semImagem = total - comImagem;
+    document.getElementById('statTotal').innerText = total;
+    document.getElementById('statComImagem').innerText = comImagem;
+    document.getElementById('statSemImagem').innerText = semImagem;
+    document.getElementById('statPercentual').innerText = total ? Math.round((comImagem / total) * 100) + '%' : '0%';
+}
+
+// =========================================================================
+// FILTROS / GRID
+// =========================================================================
+document.getElementById('tabsFiltro').addEventListener('click', (e) => {
+    const btn = e.target.closest('.filtro-btn');
+    if (!btn) return;
+    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('tab-ativa', 'bg-zinc-900'));
+    document.querySelectorAll('.filtro-btn').forEach(b => b.classList.add('bg-zinc-900'));
+    btn.classList.add('tab-ativa');
+    btn.classList.remove('bg-zinc-900');
+    filtroAtivo = btn.dataset.filtro;
+    renderizarGrid();
+});
+
+function normalizarTexto(v) {
+    return String(v || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function renderizarGrid() {
+    const termo = normalizarTexto(document.getElementById('inputBusca').value);
+    const grid = document.getElementById('gridProdutos');
+
+    let lista = listaProdutos;
+    if (filtroAtivo === 'sem') lista = lista.filter(p => !p.imagem);
+    if (filtroAtivo === 'com') lista = lista.filter(p => p.imagem);
+    if (termo) {
+        lista = lista.filter(p => normalizarTexto(`${p.nome} ${p.codigo} ${p.sku} ${p.id}`).includes(termo));
+    }
+
+    if (lista.length === 0) {
+        grid.innerHTML = `<p class="text-zinc-600 col-span-full text-center py-10">Nenhum produto encontrado.</p>`;
+        return;
+    }
+
+    grid.innerHTML = lista.map(p => {
+        const temImagem = Boolean(p.imagem);
+        const thumb = temImagem
+            ? `<img src="${p.imagem}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/300x300/111111/caa85c?text=ERRO'">`
+            : `<div class="w-full h-full flex items-center justify-center text-4xl bg-zinc-950">📷</div>`;
+        return `
+            <div class="prod-card glass rounded-2xl overflow-hidden border border-zinc-900" onclick="abrirModal('${p.id}')">
+                <div class="aspect-square bg-zinc-900">${thumb}</div>
+                <div class="p-3 space-y-1">
+                    <p class="text-xs font-black truncate">${p.nome}</p>
+                    <p class="text-[10px] text-zinc-500 font-mono truncate">${p.codigo || p.sku || p.id}</p>
+                    <span class="inline-block text-[9px] uppercase font-black px-2 py-1 rounded-full ${temImagem ? 'badge-ok' : 'badge-falta'}">
+                        ${temImagem ? '✓ Com Imagem' : '✕ Sem Imagem'}
+                    </span>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// =========================================================================
+// EXTRAÇÃO DE CHAVE DO NOME DO ARQUIVO E MATCHING
+// =========================================================================
+function extrairChaveArquivo(nomeArquivo) {
+    const semPasta = String(nomeArquivo).split('/').pop().split('\\').pop();
+    const pontoIdx = semPasta.lastIndexOf('.');
+    const ext = pontoIdx !== -1 ? semPasta.slice(pontoIdx).toLowerCase() : '';
+    let base = pontoIdx !== -1 ? semPasta.slice(0, pontoIdx) : semPasta;
+    // remove sufixos de múltiplas fotos: -1, _2, (3)
+    base = base.replace(/[\s_-]?\(?\d+\)?$/, '');
+    return { chave: normalizarTexto(base), ext };
+}
+
+function encontrarProdutoPorChave(chave) {
+    if (!chave) return null;
+    return listaProdutos.find(p =>
+        normalizarTexto(p.id) === chave ||
+        normalizarTexto(p.codigo) === chave ||
+        normalizarTexto(p.sku) === chave
+    ) || null;
+}
+
+// =========================================================================
+// DROPZONE (ARQUIVOS LOCAIS)
+// =========================================================================
+const dropzone = document.getElementById('dropzone');
+['dragenter', 'dragover'].forEach(evt => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); }));
+dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const arquivos = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+    if (arquivos.length) lidarComArquivosSelecionados(arquivos);
+});
+
+function lidarComArquivosSelecionados(fileList) {
+    const arquivos = Array.from(fileList);
+    if (!arquivos.length) return;
+    montarPreview(arquivos.map(f => ({ nome: f.name, blob: f })));
+}
+
+// =========================================================================
+// PRÉVIA / CONFERÊNCIA ANTES DE ENVIAR (usada por upload local e Drive)
+// =========================================================================
+function montarPreview(itens) {
+    pendentesPreview = itens.map(item => {
+        const { chave, ext } = extrairChaveArquivo(item.nome);
+        const produto = encontrarProdutoPorChave(chave);
+        return {
+            nome: item.nome,
+            blob: item.blob,
+            ext,
+            produto,
+            incluir: true,
+            urlPreview: URL.createObjectURL(item.blob)
+        };
+    });
+
+    document.getElementById('painelPreview').classList.remove('hidden');
+    renderizarPreview();
+
+    const semMatch = pendentesPreview.filter(p => !p.produto).length;
+    log(`${pendentesPreview.length} arquivo(s) analisado(s). ${semMatch > 0 ? semMatch + ' sem correspondência automática (atribua manualmente na tabela).' : 'Todos encontrados automaticamente.'}`, semMatch > 0 ? 'warning' : 'success');
+}
+
+function opcoesProdutosSelect(selecionadoId) {
+    return listaProdutos.map(p =>
+        `<option value="${p.id}" ${p.id === selecionadoId ? 'selected' : ''}>${p.nome} (${p.codigo || p.sku || p.id})</option>`
+    ).join('');
+}
+
+function renderizarPreview() {
+    const corpo = document.getElementById('tabelaPreviewBody');
+    corpo.innerHTML = pendentesPreview.map((item, i) => {
+        const statusAtual = item.produto
+            ? (item.produto.imagem ? `<span class="badge-ok px-2 py-1 rounded-full text-[10px] font-black uppercase">tem foto (será substituída)</span>` : `<span class="badge-falta px-2 py-1 rounded-full text-[10px] font-black uppercase">sem foto</span>`)
+            : `<span class="text-zinc-600 text-xs">—</span>`;
+        return `
+            <tr class="border-t border-zinc-900">
+                <td class="p-3"><input type="checkbox" ${item.incluir ? 'checked' : ''} onchange="alternarInclusao(${i}, this.checked)"></td>
+                <td class="p-3"><img src="${item.urlPreview}" class="w-12 h-12 object-cover rounded-xl bg-zinc-900"></td>
+                <td class="p-3 text-xs text-zinc-400 font-mono">${item.nome}</td>
+                <td class="p-3 text-xs ${item.produto ? 'text-emerald-400' : 'text-red-400'} font-black">${item.produto ? item.produto.nome : 'NÃO ENCONTRADO'}</td>
+                <td class="p-3">${statusAtual}</td>
+                <td class="p-3">
+                    <select onchange="atribuirManual(${i}, this.value)" class="bg-zinc-950 border border-zinc-800 rounded-lg text-xs p-2 max-w-[180px]">
+                        <option value="">-- escolher produto --</option>
+                        ${opcoesProdutosSelect(item.produto ? item.produto.id : null)}
+                    </select>
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+function alternarInclusao(i, valor) { pendentesPreview[i].incluir = valor; }
+function atribuirManual(i, produtoId) {
+    pendentesPreview[i].produto = produtoId ? produtosCache[produtoId] : null;
+    renderizarPreview();
+}
+
+function cancelarPreview() {
+    pendentesPreview = [];
+    document.getElementById('painelPreview').classList.add('hidden');
+    document.getElementById('inputArquivos').value = '';
+}
+
+async function aplicarPreview() {
+    const selecionados = pendentesPreview.filter(p => p.incluir && p.produto);
+    if (!selecionados.length) {
+        log('Nada selecionado com produto correspondente para enviar.', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('btnAplicarPreview');
+    btn.disabled = true;
+    btn.innerText = '⏳ Enviando...';
+
+    let sucesso = 0, falhas = 0;
+    for (const item of selecionados) {
+        try {
+            await enviarImagemParaProduto(item.produto.id, item.blob, item.ext);
+            log(`[OK] ${item.nome} → ${item.produto.nome}`, 'success');
+            sucesso++;
+        } catch (err) {
+            log(`[ERRO] ${item.nome}: ${err.message}`, 'error');
+            falhas++;
+        }
+    }
+
+    log(`Concluído: ${sucesso} enviada(s), ${falhas} com erro.`, falhas ? 'warning' : 'success');
+    btn.disabled = false;
+    btn.innerText = '✅ Enviar Selecionados';
+    cancelarPreview();
+    await carregarProdutos();
+}
+
+// =========================================================================
+// UPLOAD PARA O FIREBASE STORAGE + GRAVAÇÃO NO PRODUTO (RTDB)
+// =========================================================================
+async function enviarImagemParaProduto(produtoId, blob, ext) {
+    if (!window.storage) throw new Error('Firebase Storage não inicializado.');
+
+    const extensaoFinal = ext || '.jpg';
+    const caminho = `${STORAGE_FOLDER}/${produtoId}${extensaoFinal}`;
+    const ref = window.storage.ref().child(caminho);
+
+    await ref.put(blob);
+    const url = await ref.getDownloadURL();
+
+    await db.ref(PRODUCTS_PATH).child(produtoId).update({
+        imagem: url,
+        image: url,
+        updatedAt: Date.now()
+    });
+
+    return url;
+}
+
+// =========================================================================
+// MODAL DE PRODUTO INDIVIDUAL
+// =========================================================================
+function abrirModal(produtoId) {
+    produtoModalAtual = produtosCache[produtoId];
+    if (!produtoModalAtual) return;
+    document.getElementById('modalTitulo').innerText = produtoModalAtual.nome;
+    document.getElementById('modalImagemAtual').src = produtoModalAtual.imagem || 'https://via.placeholder.com/400x400/111111/caa85c?text=SEM+IMAGEM';
+    document.getElementById('modalInputArquivo').value = '';
+    document.getElementById('modalInputUrl').value = '';
+    document.getElementById('modalProduto').classList.remove('hidden');
+}
+function fecharModal() {
+    document.getElementById('modalProduto').classList.add('hidden');
+    produtoModalAtual = null;
+}
+
+async function salvarImagemModal() {
+    if (!produtoModalAtual) return;
+    const arquivo = document.getElementById('modalInputArquivo').files[0];
+    const urlColada = document.getElementById('modalInputUrl').value.trim();
+
+    try {
+        if (arquivo) {
+            const { ext } = extrairChaveArquivo(arquivo.name);
+            await enviarImagemParaProduto(produtoModalAtual.id, arquivo, ext);
+            log(`[OK] Imagem enviada para "${produtoModalAtual.nome}".`, 'success');
+        } else if (urlColada) {
+            await db.ref(PRODUCTS_PATH).child(produtoModalAtual.id).update({
+                imagem: urlColada, image: urlColada, updatedAt: Date.now()
+            });
+            log(`[OK] URL salva para "${produtoModalAtual.nome}".`, 'success');
+        } else {
+            log('Selecione um arquivo ou cole uma URL.', 'warning');
+            return;
+        }
+        fecharModal();
+        await carregarProdutos();
+    } catch (err) {
+        log(`Erro ao salvar imagem: ${err.message}`, 'error');
+    }
+}
+
+// =========================================================================
+// EXPORTAR CSV DOS PRODUTOS SEM IMAGEM (pra saber o que fotografar)
+// =========================================================================
+function exportarFaltantesCSV() {
+    const faltantes = listaProdutos.filter(p => !p.imagem);
+    if (!faltantes.length) { log('Nenhum produto sem imagem no momento. 🎉', 'success'); return; }
+
+    let csv = 'ID,Codigo,SKU,Nome\n';
+    faltantes.forEach(p => {
+        csv += `"${p.id}","${p.codigo}","${p.sku}","${p.nome.replace(/"/g, '""')}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'produtos-sem-imagem.csv';
+    link.click();
+    log(`Exportado CSV com ${faltantes.length} produto(s) sem imagem.`, 'success');
+}
+
+// =========================================================================
+// GOOGLE DRIVE (opcional — requer CONFIG preenchida acima)
+// =========================================================================
+function carregarScript(src) {
+    return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+    });
+}
+
+async function garantirGooglePickerCarregado() {
+    if (googlePickerCarregado) return;
+    await carregarScript('https://apis.google.com/js/api.js');
+    await new Promise((resolve) => gapi.load('picker', resolve));
+    await carregarScript('https://accounts.google.com/gsi/client');
+    googlePickerCarregado = true;
+}
+
+async function abrirGoogleDrivePicker() {
+    if (!GOOGLE_DRIVE_CONFIG.apiKey || !GOOGLE_DRIVE_CONFIG.clientId) {
+        alert(
+            'Integração com Google Drive ainda não configurada.\n\n' +
+            'Abra o arquivo migrador-imagens.html e preencha GOOGLE_DRIVE_CONFIG ' +
+            '(apiKey e clientId) com credenciais do Google Cloud Console.\n\n' +
+            'Enquanto isso, você pode usar a área de upload normal escolhendo os ' +
+            'arquivos de qualquer pasta do computador (inclusive uma pasta do Google Drive sincronizada).'
+        );
+        return;
+    }
+
+    try {
+        await garantirGooglePickerCarregado();
+
+        if (!googleTokenClient) {
+            googleTokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_DRIVE_CONFIG.clientId,
+                scope: 'https://www.googleapis.com/auth/drive.readonly',
+                callback: (resposta) => {
+                    if (resposta.error) {
+                        log(`Falha na autorização do Google Drive: ${resposta.error}`, 'error');
+                        return;
+                    }
+                    abrirPickerComToken(resposta.access_token);
+                }
+            });
+        }
+
+        googleTokenClient.requestAccessToken();
+    } catch (err) {
+        log(`Erro ao carregar Google Drive: ${err.message}`, 'error');
+    }
+}
+
+function abrirPickerComToken(accessToken) {
+    const view = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(false);
+
+    const picker = new google.picker.PickerBuilder()
+        .addView(view)
+        .setOAuthToken(accessToken)
+        .setDeveloperKey(GOOGLE_DRIVE_CONFIG.apiKey)
+        .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+        .setCallback((data) => callbackPickerDrive(data, accessToken))
+        .build();
+    picker.setVisible(true);
+}
+
+async function callbackPickerDrive(data, accessToken) {
+    if (data.action !== google.picker.Action.PICKED) return;
+
+    log(`Baixando ${data.docs.length} imagem(ns) do Google Drive...`, 'info');
+    const itens = [];
+
+    for (const doc of data.docs) {
+        try {
+            const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${doc.id}?alt=media`, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const blob = await resp.blob();
+            itens.push({ nome: doc.name, blob });
+        } catch (err) {
+            log(`Falha ao baixar "${doc.name}" do Drive: ${err.message}`, 'error');
+        }
+    }
+
+    if (itens.length) montarPreview(itens);
+}
+
+// =========================================================================
+// INÍCIO
+// =========================================================================
+window.addEventListener('load', () => {
+    // pequena espera para garantir que firebase-config.js já rodou
+    setTimeout(carregarProdutos, 300);
+});
+</script>
+</body>
+</html>

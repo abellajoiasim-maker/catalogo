@@ -331,6 +331,24 @@
         </section>
 
         <!-- ══════════════════════════════════════════════
+             SEÇÃO 2.3 — PROMOÇÕES DA HOME (abella/promocoes)
+        ══════════════════════════════════════════════ -->
+        <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
+            <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
+                <span class="w-1.5 h-6 bg-[#caa85c] rounded-full"></span>
+                <h2 class="serif text-lg uppercase tracking-wider">🏷️ Promoções da Home (abellajoias.com.br)</h2>
+            </div>
+            <p class="text-[11px] text-zinc-500 -mt-2">Cards do grid "Promoções vigentes" da página principal (abellajoias.com.br). Preencha imagem, título e preços. Cole links completos (https://... ou gs://...). Cards vazios são ignorados automaticamente.</p>
+
+            <div id="promoLista" class="space-y-5"></div>
+
+            <button type="button" id="btnAddPromo" onclick="adicionarCampoPromo()"
+                    class="w-full rounded-xl border border-dashed border-zinc-700 py-3 text-xs uppercase tracking-widest text-zinc-400 hover:border-[#caa85c] hover:text-[#caa85c] transition-colors">
+                + Adicionar promoção
+            </button>
+        </section>
+
+        <!-- ══════════════════════════════════════════════
              SEÇÃO 2.5 — TEMA VISUAL DA LOJA
         ══════════════════════════════════════════════ -->
         <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
@@ -558,6 +576,71 @@ function _setVal(id, val) {
     if (el) el.value = val ?? '';
 }
 
+// ================================================================
+// PROMOÇÕES DA HOME — abella/promocoes (editável pelo painel)
+// ================================================================
+function _promoTemplate(idx, dados = {}) {
+    return `
+    <div class="promo-bloco rounded-2xl border border-zinc-800 bg-zinc-900/30 p-5 space-y-4" data-promo-idx="${idx}">
+        <div class="flex items-center justify-between">
+            <p class="text-xs uppercase tracking-widest text-zinc-400 font-bold">Promoção #${idx + 1}</p>
+            <button type="button" onclick="removerCampoPromo(${idx})" class="text-[11px] text-red-400 hover:text-red-300">Remover</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Imagem (16:9 ou quadrada)</label>
+                <input type="text" class="promo-campo w-full h-11 rounded-xl px-4 text-sm font-mono" data-campo="imagem" value="${dados.imagem || ''}" placeholder="https://... ou gs://...">
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Título</label>
+                <input type="text" class="promo-campo w-full h-11 rounded-xl px-4 text-sm" data-campo="titulo" value="${dados.titulo || ''}" placeholder="Ex: Cruzes & Pingentes — 20% OFF">
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Descrição (opcional)</label>
+                <input type="text" class="promo-campo w-full h-11 rounded-xl px-4 text-sm" data-campo="descricao" value="${dados.descricao || ''}" placeholder="Ex: Em peças selecionadas">
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Selo (opcional)</label>
+                <input type="text" class="promo-campo w-full h-11 rounded-xl px-4 text-sm" data-campo="selo" value="${dados.selo || ''}" placeholder="Ex: Oferta · Combo · Frete Grátis">
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Preço de (riscado, opcional)</label>
+                <input type="text" class="promo-campo w-full h-11 rounded-xl px-4 text-sm" data-campo="precoDe" value="${dados.precoDe || ''}" placeholder="Ex: R$ 45,00">
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Preço por (destaque)</label>
+                <input type="text" class="promo-campo w-full h-11 rounded-xl px-4 text-sm" data-campo="precoPor" value="${dados.precoPor || ''}" placeholder="Ex: R$ 36,00">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-2">Link da promoção (opcional — padrão: catálogo)</label>
+                <input type="text" class="promo-campo w-full h-11 rounded-xl px-4 text-sm font-mono" data-campo="link" value="${dados.link || ''}" placeholder="https://catalogo.abellajoias.com.br/subcategorias.html?categoria=cruzes">
+            </div>
+        </div>
+    </div>`;
+}
+
+let _promoIdx = 0;
+function adicionarCampoPromo(dados = {}) {
+    const lista = document.getElementById('promoLista');
+    const div = document.createElement('div');
+    div.innerHTML = _promoTemplate(_promoIdx++, dados);
+    lista.appendChild(div.firstElementChild);
+}
+function removerCampoPromo(idx) {
+    document.querySelector(`.promo-bloco[data-promo-idx="${idx}"]`)?.remove();
+}
+function coletarPromocoes() {
+    const blocos = [...document.querySelectorAll('.promo-bloco')];
+    return blocos.map(b => {
+        const promo = {};
+        b.querySelectorAll('.promo-campo').forEach(input => {
+            const valor = input.value.trim();
+            if (valor) promo[input.dataset.campo] = valor;
+        });
+        return Object.keys(promo).length > 0 ? promo : null;
+    }).filter(Boolean);
+}
+
 function _getVal(id) {
     return document.getElementById(id)?.value?.trim() ?? '';
 }
@@ -622,6 +705,19 @@ async function carregarConfiguracoes() {
 
         const ultimaAtualizacaoEl = document.getElementById('cfg-ultimaAtualizacao');
         if (ultimaAtualizacaoEl) ultimaAtualizacaoEl.innerText = d.ultimaAtualizacao ?? 'Nenhum registro encontrado';
+
+        // Promoções da home — abella/promocoes
+        const promoLista = document.getElementById('promoLista');
+        if (promoLista) {
+            let promocoes = [];
+            const snapPromo = await _db().ref(window.getAbellaPath('promocoes')).once('value').catch(() => null);
+            if (snapPromo && snapPromo.exists()) {
+                const pd = snapPromo.val();
+                promocoes = Array.isArray(pd) ? pd : Object.values(pd);
+            }
+            promocoes.filter(p => p && typeof p === 'object').forEach(p => adicionarCampoPromo(p));
+            if (promocoes.length === 0) adicionarCampoPromo();
+        }
 
     } catch (err) {
         console.error('[config.html] Falha ao carregar configurações:', err);
@@ -694,6 +790,8 @@ async function salvarConfiguracoesAdmin(e) {
 
     try {
         await _db().ref(window.getAbellaPath('settings')).set(payload);
+        // Promoções da home — gravadas separadamente em abella/promocoes
+        await _db().ref(window.getAbellaPath('promocoes')).set(coletarPromocoes());
         const el = document.getElementById('cfg-ultimaAtualizacao');
         if (el) el.innerText = payload.ultimaAtualizacao;
         spawnToast('Configurações salvas com sucesso!');

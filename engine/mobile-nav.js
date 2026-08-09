@@ -5,7 +5,7 @@ Sprint 2 — Luxury UI Engine
 Módulo: Mobile Navigation
 
 Arquivo:
-luxury-v11/engine/mobile-nav.js
+engine/mobile-nav.js
 
 Problema que resolve:
 No Header (Sprint 1), ".nav-links" simplesmente desaparece no

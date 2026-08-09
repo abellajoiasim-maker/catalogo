@@ -84,7 +84,7 @@ js/firebase/firebase-config.js
 
 ⚠️ INCONSISTÊNCIA DETECTADA (auditar):
 
-`admin/admin-logic.js` declara seu **próprio** `firebaseConfig` local e reinicializa o Firebase de forma independente, em vez de reutilizar `window.firebaseApp` / `window.db` gerados por `firebase-config.js`. Isso viola a regra "Nunca criar firebaseConfig local" descrita mais abaixo. Deve ser tratado como item prioritário de refatoração/auditoria.
+`admin/admin-logic.js` era uma lógica administrativa paralela não carregada pelo painel e foi removido da árvore publicada. A configuração canônica continua em `js/firebase/firebase-config.js` e será auditada separadamente na etapa de blindagem do Firebase.
 
 ---
 
@@ -403,7 +403,7 @@ Nunca criar `firebaseConfig` local.
 
 Utilizar sempre a configuração global (`js/firebase/firebase-config.js`).
 
-> ⚠️ Ver seção "ARQUITETURA OFICIAL" acima: `admin/admin-logic.js` hoje viola esta regra e precisa ser auditado/corrigido.
+> O painel publicado utiliza os módulos carregados por suas próprias páginas; a configuração canônica será auditada na etapa específica do Firebase.
 
 ---
 
@@ -441,7 +441,7 @@ catalogo/
 ├── importador.html              → "Super Importador Premium" (importação em massa de produtos)
 ├── admin/
 │   ├── admin.html                → Painel administrativo (login/acesso)
-│   └── admin-logic.js            → Lógica do painel admin (⚠️ Firebase local duplicado)
+│   └── admin.html                → Entrada do painel administrativo
 ├── modulo/                       → Painel interno de gestão (uso operacional/lojista)
 │   ├── config.html               → Configurações da loja (settings)
 │   ├── editor.html               → "Super Editor V7" — gestão avançada de produtos/categorias
@@ -506,7 +506,7 @@ Considerar ambiente sem autenticação obrigatória.
 
 Qualquer funcionalidade crítica deve validar dados no frontend.
 
-`admin/admin.html` + `admin-logic.js` implementam alguma forma de controle de acesso ao painel — auditar se é apenas cosmético (client-side) já que as regras do RTDB estão abertas para qualquer cliente.
+`admin/admin.html` é a entrada do painel e os módulos em `modulo/` implementam suas telas. A autenticação e as regras do RTDB serão auditadas na etapa de blindagem.
 
 ---
 
@@ -564,7 +564,7 @@ Toda auditoria deve validar:
 
 Assuma que:
 
-Firebase já está auditado — **exceto** `admin/admin-logic.js`, que precisa de revisão (config duplicada).
+A configuração do Firebase será revisada em etapa própria, sem misturar essa auditoria com a consolidação estrutural do catálogo.
 
 Services já estão auditados quanto à estrutura de dados documentada aqui.
 

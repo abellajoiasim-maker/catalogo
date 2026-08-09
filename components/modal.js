@@ -5,7 +5,7 @@ Sprint 1 — Component Library
 Componente: Modal (controlador JS)
 
 Arquivo:
-luxury-v11/components/modal.js
+components/modal.js
 
 Um único modal na página (#auroraModal). Todo conteúdo
 (produto, confirmação, aviso) passa por AuroraModal.open(),

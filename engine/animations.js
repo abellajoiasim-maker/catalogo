@@ -5,7 +5,7 @@ Sprint 2 — Luxury UI Engine
 Módulo: Animations
 
 Arquivo:
-luxury-v11/engine/animations.js
+engine/animations.js
 
 Regra do documento mestre (item 10):
 "Duração: 150ms, 250ms, 350ms, 500ms. Nunca 2 segundos."

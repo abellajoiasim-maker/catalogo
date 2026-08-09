@@ -568,16 +568,27 @@
                 return;
             }
 
-            // A chave precisa ser exatamente o ID da categoria em minúsculo — é assim
-            // que o descontoService.js (usado no catálogo/carrinho) encontra a regra.
-            const chave = categoria.toLowerCase();
+            // A chave precisa coincidir com o identificador usado nos produtos.
+            // Para subcategoria, usamos uma chave composta; sem subcategoria,
+            // a campanha vale para toda a categoria.
+            const normalizarChaveOferta = (valor) => String(valor || '')
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, '-');
+            const categoriaNormalizada = normalizarChaveOferta(categoria);
+            const subcategoriaNormalizada = normalizarChaveOferta(subcategoria);
+            const chave = subcategoriaNormalizada
+                ? `${categoriaNormalizada}__${subcategoriaNormalizada}`
+                : categoriaNormalizada;
 
             try {
                 await window.db.ref(`${abellaPath('settings')}/descontos/regrasCategoria/${chave}`).set({
                     categoria: categoria,
                     subcategoria: subcategoria || null,
                     porcentagem: desconto,
-                    nomeCampanha: nomeCategoria(categoria),
+                    nomeCampanha: document.getElementById('campanha-nome').value.trim() || 'Oferta Especial',
                     badgeIcone: document.getElementById('campanha-icone')?.value || '🔥',
                     cor: cor,
                     corTexto: corTexto,

@@ -65,6 +65,12 @@
             );
         },
 
+        // Leitura síncrona do último snapshot carregado. Usada por serviços
+        // de renderização que precisam calcular preços sem nova consulta.
+        getCachedSettings() {
+            return _cache ? structuredClone(_cache) : null;
+        },
+
         // INVALIDAÇÃO FORÇADA DE INFRAESTRUTURA DE DADOS
         invalidateCache() {
             _cache = null;

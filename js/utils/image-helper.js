@@ -120,7 +120,7 @@ const ImageHelper = (() => {
 
     function obterImagemSubcategoriaGrid(slug) {
         const cleanSlug = normalizarSlug(slug);
-        if (!cleanSlug) return obtenerImagemFallback();
+        if (!cleanSlug) return obterImagemFallback();
         return converterGsUrl(`${STORAGE_ROOT}/subcategoria-grid/${cleanSlug}.jpg`);
     }
 

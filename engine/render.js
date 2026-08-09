@@ -5,7 +5,7 @@ Sprint 2 — Luxury UI Engine
 Módulo: Render Engine
 
 Arquivo:
-luxury-v11/engine/render.js
+engine/render.js
 
 Responsabilidade:
 Transformar dados vindos do Firebase (categorias, subcategorias,
@@ -98,8 +98,15 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
         productCard(data, onClickHandlerName) {
             const nome = data.nome || data.name || 'Joia';
             const img = resolveImage(data.imagem || data.image) || fallbackImg();
-            const preco = data.preco ?? data.price ?? 0;
-            const precoAntigo = data.precoAntigo ?? data.oldPrice ?? null;
+            const precoOriginal = data.preco ?? data.price ?? 0;
+            const precoAntigoInformado = data.precoAntigo ?? data.oldPrice ?? data.precoOriginal ?? null;
+            const precoCalculado = (window.descontoService && typeof window.descontoService.calcularPrecoComDesconto === 'function')
+                ? window.descontoService.calcularPrecoComDesconto(data)
+                : Number(precoOriginal) || 0;
+            const preco = Number(precoCalculado) || 0;
+            const precoAntigo = Number(precoAntigoInformado) > preco
+                ? Number(precoAntigoInformado)
+                : (Number(precoOriginal) > preco ? Number(precoOriginal) : null);
             const peso = data.peso ?? data.weight ?? null;
             const eyebrow = data.colecao || data.eyebrow || '';
             const sku = data.sku || data.codigo || '';
@@ -112,9 +119,14 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
                 ? `<span class="price-old">${(typeof window.formatarMoeda === 'function') ? window.formatarMoeda(precoAntigo) : precoAntigo}</span>`
                 : '';
 
-            const badgeHTML = data.badge
-                ? `<div class="badges"><span class="aurora-badge aurora-badge--${data.badge}">${data.badgeLabel || data.badge}</span></div>`
-                : '';
+            const etiquetaOferta = (window.descontoService && typeof window.descontoService.obterEtiquetaOferta === 'function')
+                ? window.descontoService.obterEtiquetaOferta(data)
+                : null;
+            const badgeHTML = etiquetaOferta
+                ? `<div class="badges"><span class="aurora-badge aurora-badge--offer">${etiquetaOferta}</span></div>`
+                : (data.badge
+                    ? `<div class="badges"><span class="aurora-badge aurora-badge--${data.badge}">${data.badgeLabel || data.badge}</span></div>`
+                    : '');
 
             const clickAttr = onClickHandlerName ? `onclick="${onClickHandlerName}('${data.id || ''}')"` : '';
 

@@ -57,42 +57,27 @@
 
             try {
                 // Recupera de forma síncrona o cache limpo e descongelado do ConfigService
-                const config = typeof window.ConfigService.getCachedSettings === 'function'
-                    ? window.ConfigService.getCachedSettings()
-                    : null;
+                const config = window.ConfigService._cache;
                 if (!config || !config.descontos) {
                     return 0;
                 }
 
-                const normalizarChave = (valor) => String(valor || '')
-                    .trim()
-                    .toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .replace(/\s+/g, '-');
-
-                const categoriaProd = normalizarChave(
-                    produto.categoriaId || produto.categoryId || produto.category || produto.categoria
-                );
-                const subcategoriaProd = normalizarChave(
-                    produto.subcategoriaId || produto.subcategoryId || produto.subcategory || produto.subcategoria
-                );
+                const categoriaProd = String(produto.category || produto.categoria || '').trim().toLowerCase();
+                const subcategoriaProd = String(produto.subcategory || produto.subcategoria || '').trim().toLowerCase();
                 const regrasCategoria = config.descontos.regrasCategoria || {};
 
-                // Primeiro procura a regra mais específica por subcategoria/categoria.
-                const candidatos = [
-                    subcategoriaProd && `${categoriaProd}__${subcategoriaProd}`,
-                    subcategoriaProd,
-                    categoriaProd
-                ].filter(Boolean);
-                for (const chave of candidatos) {
-                    const regra = regrasCategoria[chave];
-                    if (regra && regra.ativo) {
-                        return Math.min(100, Math.max(0, safeNumber(regra.porcentagem)));
-                    }
+                // 1º Lugar: regra específica de categoria+subcategoria (chave composta "categoria__subcategoria")
+                const chaveComposta = subcategoriaProd ? `${categoriaProd}__${subcategoriaProd}` : null;
+                if (chaveComposta && regrasCategoria[chaveComposta] && regrasCategoria[chaveComposta].ativo) {
+                    return Math.min(100, Math.max(0, safeNumber(regrasCategoria[chaveComposta].porcentagem)));
                 }
 
-                // Só aplica o desconto global quando ele estiver ativo.
+                // 2º Lugar: regra específica só de categoria (funciona independente do desconto global estar ligado)
+                if (categoriaProd && regrasCategoria[categoriaProd] && regrasCategoria[categoriaProd].ativo) {
+                    return Math.min(100, Math.max(0, safeNumber(regrasCategoria[categoriaProd].porcentagem)));
+                }
+
+                // 3º Lugar: fallback para o desconto global, só se ele estiver realmente ativado
                 if (config.descontos.ativo) {
                     return Math.min(100, Math.max(0, safeNumber(config.descontos.porcentagem)));
                 }
@@ -105,6 +90,30 @@
         },
 
         /**
+         * Retorna a melhor faixa de desconto automático por valor de compra que um
+         * subtotal atinge (a de maior valor mínimo entre as que o subtotal cobre).
+         * Não soma faixas — é sempre uma só, a mais vantajosa que a compra alcançar.
+         */
+        obterMelhorFaixaValor: function (subtotal) {
+            if (!window.ConfigService) return null;
+            try {
+                const config = window.ConfigService._cache;
+                const faixas = (config && config.descontos && config.descontos.faixasValor) || [];
+                if (!Array.isArray(faixas) || faixas.length === 0) return null;
+
+                const elegiveis = faixas.filter(f => safeNumber(f.valorMinimo) > 0 && subtotal >= safeNumber(f.valorMinimo));
+                if (elegiveis.length === 0) return null;
+
+                return elegiveis.reduce((melhor, atual) =>
+                    safeNumber(atual.valorMinimo) > safeNumber(melhor.valorMinimo) ? atual : melhor
+                );
+            } catch (error) {
+                console.error('[PMA V8] [descontoService] Erro ao obter faixa de valor:', error);
+                return null;
+            }
+        },
+
+        /**
          * Calcula o preço final de um produto aplicando o desconto de categoria/campanha global se houver.
          */
         calcularPrecoComDesconto: function (produto) {
@@ -113,13 +122,7 @@
             }
 
             const precoOriginal = safeNumber(produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor);
-            const precoPromocional = safeNumber(produto.promocao ?? produto.promo ?? produto.precoPromocional, 0);
             const percentualPromo = this.obterPercentualPromocao(produto);
-
-            // Preço promocional explícito do produto tem prioridade quando é menor.
-            if (precoPromocional > 0 && precoPromocional < precoOriginal) {
-                return precoPromocional;
-            }
 
             if (percentualPromo > 0) {
                 return round(precoOriginal * (1 - percentualPromo / 100));
@@ -199,18 +202,11 @@
             }
 
             const precoOriginal = safeNumber(produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor);
-            const precoPromocional = safeNumber(produto.promocao ?? produto.promo ?? produto.precoPromocional, 0);
             const percentualPromo = this.obterPercentualPromocao(produto);
 
             // Se houver desconto ativo via painel administrativo por categoria/global
             if (percentualPromo >= 1) {
                 return `-${percentualPromo}% OFF`;
-            }
-
-            // Também identifica a etiqueta quando o produto possui preço promocional fixo.
-            if (precoPromocional > 0 && precoPromocional < precoOriginal) {
-                const percentualFixo = this.calcularPercentualDesconto(precoPromocional, precoOriginal);
-                return percentualFixo >= 1 ? `-${percentualFixo}% OFF` : null;
             }
 
             // Fallback: Verifica se o produto veio com "oldPrice" fixo direto do banco de dados
@@ -236,13 +232,7 @@
                 return true;
             }
 
-            const precoBase = safeNumber(produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor);
-            const precoPromocional = safeNumber(produto.promocao ?? produto.promo ?? produto.precoPromocional, 0);
-            if (precoPromocional > 0 && precoPromocional < precoBase) {
-                return true;
-            }
-
-            const precoAtual = precoBase;
+            const precoAtual = safeNumber(produto.price ?? produto.precoFinal ?? produto.preco ?? produto.valor);
             const precoAnterior = safeNumber(produto.oldPrice ?? produto.precoAntigo ?? produto.precoOriginal);
 
             return (precoAnterior > 0 && precoAtual < precoAnterior);

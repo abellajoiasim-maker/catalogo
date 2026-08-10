@@ -202,7 +202,7 @@
 
         /**
          * Calcula o valor LÍQUIDO total real de cobrança aplicando as regras do descontoService
-         * e, se houver, o cupom de código aplicado pelo cliente.
+         * e, se houver, o cupom de código aplicado pelo cliente + a faixa de desconto por valor.
          */
         obterTotal: function () {
             const itensComDesconto = this.listar();
@@ -211,7 +211,38 @@
             }, 0);
 
             const descontoCupom = this.obterDescontoCupom();
-            return Math.max(0, subtotalComDescontoCategoria - descontoCupom);
+            const descontoFaixa = this.obterDescontoFaixaValor();
+            return Math.max(0, subtotalComDescontoCategoria - descontoCupom - descontoFaixa);
+        },
+
+        /**
+         * Calcula o valor em R$ do desconto automático por faixa de valor de compra (sem código).
+         */
+        obterDescontoFaixaValor: function () {
+            if (!window.descontoService) return 0;
+
+            const itensComDesconto = this.listar();
+            const subtotal = itensComDesconto.reduce((total, item) => {
+                return total + (item.precoVendaUnitario * (parseInt(item.quantidade) || 0));
+            }, 0);
+
+            const faixa = window.descontoService.obterMelhorFaixaValor(subtotal);
+            if (!faixa) return 0;
+
+            const percentual = Math.min(100, Math.max(0, parseFloat(faixa.percentual) || 0));
+            return Math.round((subtotal * (percentual / 100) + Number.EPSILON) * 100) / 100;
+        },
+
+        /**
+         * Retorna a faixa de valor atualmente aplicada (ou null), útil para exibir a etiqueta na UI.
+         */
+        obterFaixaValorAplicada: function () {
+            if (!window.descontoService) return null;
+            const itensComDesconto = this.listar();
+            const subtotal = itensComDesconto.reduce((total, item) => {
+                return total + (item.precoVendaUnitario * (parseInt(item.quantidade) || 0));
+            }, 0);
+            return window.descontoService.obterMelhorFaixaValor(subtotal);
         },
 
         /**

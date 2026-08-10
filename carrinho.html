@@ -9,6 +9,10 @@
 
     <script>window.AURORA_FALLBACK_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';</script>
 
+    <!-- Firebase SDK: necessário no carrinho para carregar as regras de descontos -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+
     <link rel="stylesheet" href="components/index.css">
     <style>
         .cart-item{
@@ -32,6 +36,16 @@
         .summary-row{ display:flex; justify-content:space-between; font-size:14px; padding-block: var(--space-2); color: var(--color-secondary); }
         .summary-total{ display:flex; justify-content:space-between; font-family: var(--font-heading); font-size:22px; padding-top: var(--space-4); margin-top: var(--space-3); border-top: 1px solid var(--color-border); }
         .empty-cart{ text-align:center; padding: var(--space-10) var(--space-5); }
+        .cart-promo-alert{
+            display:none; margin:0 0 var(--space-4); padding:var(--space-4);
+            border-radius:var(--radius-md);
+            background:linear-gradient(135deg, rgba(var(--color-primary-rgb),.13), rgba(var(--color-primary-rgb),.04));
+            border:1px solid var(--color-primary); box-shadow:0 4px 16px rgba(0,0,0,.05);
+            font-size:13px; line-height:1.5;
+        }
+        .cart-promo-alert strong{ color:var(--color-primary); }
+        .cart-promo-alert .promo-progress{ display:block; height:6px; margin-top:8px; border-radius:999px; background:rgba(var(--color-primary-rgb),.12); overflow:hidden; }
+        .cart-promo-alert .promo-progress > span{ display:block; height:100%; width:0; border-radius:inherit; background:var(--color-primary); transition:width .25s ease; }
     </style>
 </head>
 <body>
@@ -82,7 +96,10 @@
                     <button id="btnRemoverCupom" style="font-size:11px; color:var(--color-danger); background:none; border:none; cursor:pointer;">Remover</button>
                 </div>
             </div>
-            <div id="alertaProgressoFaixa" style="display:none; margin:0 0 var(--space-4); padding:var(--space-3) var(--space-4); border-radius:var(--radius-md); background:rgba(var(--color-primary-rgb),.08); border:1px solid var(--color-border); font-size:12px; line-height:1.45; color:var(--color-text);"></div>
+            <div id="alertaProgressoFaixa" class="cart-promo-alert">
+                <div id="alertaProgressoFaixaTexto"></div>
+                <span class="promo-progress"><span id="alertaProgressoFaixaBarra"></span></span>
+            </div>
             <div class="summary-row"><span>Subtotal</span><span id="subtotal">R$ 0,00</span></div>
             <div class="summary-row" id="linhaDesconto" style="display:none;"><span>Desconto</span><span id="descontoValor" style="color:var(--color-success);"></span></div>
             <div class="summary-row" id="linhaDescontoFaixa" style="display:none;"><span id="labelFaixa">Desconto por valor</span><span id="descontoFaixaValor" style="color:var(--color-success);"></span></div>
@@ -208,12 +225,28 @@
             const faixaAplicada = carrinhoService.obterFaixaValorAplicada();
             const progressoFaixa = carrinhoService.obterProgressoFaixaValor();
             const alertaFaixa = document.getElementById('alertaProgressoFaixa');
+            const alertaFaixaTexto = document.getElementById('alertaProgressoFaixaTexto');
+            const alertaFaixaBarra = document.getElementById('alertaProgressoFaixaBarra');
+
             if (alertaFaixa && progressoFaixa?.temFaixas && progressoFaixa.mensagem) {
                 alertaFaixa.style.display = 'block';
-                alertaFaixa.innerHTML = progressoFaixa.mensagem;
+                if (alertaFaixaTexto) alertaFaixaTexto.innerHTML = progressoFaixa.mensagem;
+
+                // Mostra visualmente o avanço em direção à próxima faixa.
+                const faixaAnterior = progressoFaixa.faixaAtual?.valorMinimo || 0;
+                const proxima = progressoFaixa.proximaFaixa?.valorMinimo || 0;
+                const subtotalParaMeta = carrinhoService.listar().reduce((total, item) => {
+                    return total + ((Number(item.precoVendaUnitario) || 0) * (parseInt(item.quantidade) || 0));
+                }, 0);
+                let progressoPercentual = 100;
+                if (proxima > faixaAnterior) {
+                    progressoPercentual = Math.max(0, Math.min(100, ((subtotalParaMeta - faixaAnterior) / (proxima - faixaAnterior)) * 100));
+                }
+                if (alertaFaixaBarra) alertaFaixaBarra.style.width = `${progressoPercentual}%`;
             } else if (alertaFaixa) {
                 alertaFaixa.style.display = 'none';
-                alertaFaixa.innerHTML = '';
+                if (alertaFaixaTexto) alertaFaixaTexto.innerHTML = '';
+                if (alertaFaixaBarra) alertaFaixaBarra.style.width = '0%';
             }
 
             const linhaDescontoFaixa = document.getElementById('linhaDescontoFaixa');
@@ -288,9 +321,15 @@
                 { label: 'Sacola' }
             ]);
 
-            // Precisa estar carregado ANTES do primeiro render, senão descontoService não acha nada
+            // IMPORTANTE: o carrinho precisa carregar as configurações antes do primeiro render.
+            // Sem o Firebase SDK nesta página, ConfigService retornava o fallback e
+            // as faixas de desconto por valor ficavam invisíveis no carrinho.
             if (window.ConfigService) {
-                try { await ConfigService.getSettings(); } catch (e) { console.warn('Falha ao pré-carregar settings:', e); }
+                try {
+                    await ConfigService.getSettings(true);
+                } catch (e) {
+                    console.warn('[Carrinho] Falha ao pré-carregar settings:', e);
+                }
             }
 
             renderizarCarrinho();

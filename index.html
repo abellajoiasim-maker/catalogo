@@ -71,6 +71,112 @@
             .trust-item + .trust-item{ border-left:0; border-top:1px solid var(--color-border); }
             .hero-copy .glyph{ font-size:64px; }
         }
+
+        /* PROMOÇÕES — cards editáveis pelo painel (config.html: seção Promoções) */
+        #promocoes .promo-grid{
+            display:flex;
+            flex-wrap:wrap;
+            justify-content:center;
+            gap:24px;
+        }
+        #promocoes .promo-card{
+            display:flex;
+            flex-direction:column;
+            width:100%;
+            max-width:340px;
+            flex:1 1 300px;
+            border:1px solid var(--color-border);
+            border-radius: var(--radius-lg, 18px);
+            overflow:hidden;
+            background:var(--color-surface,#fff);
+            text-decoration:none;
+            color:inherit;
+            transition:transform .25s ease, box-shadow .25s ease;
+        }
+        #promocoes .promo-card:hover{
+            transform:translateY(-4px);
+            box-shadow:0 14px 32px rgba(0,0,0,.10);
+        }
+        #promocoes .promo-img{
+            position:relative;
+            width:100%;
+            aspect-ratio:16/9;
+            overflow:hidden;
+            background: rgba(var(--color-primary-rgb),.06);
+        }
+        #promocoes .promo-img img{
+            position:absolute;
+            inset:0;
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            object-position:center;
+            display:block;
+        }
+        #promocoes .promo-img .selo{
+            position:absolute;
+            top:12px;
+            left:12px;
+            z-index:2;
+            background:var(--color-primary);
+            color:#fff;
+            font-size:10px;
+            font-weight:700;
+            letter-spacing:.06em;
+            text-transform:uppercase;
+            padding:5px 12px;
+            border-radius:999px;
+            line-height:1;
+        }
+        #promocoes .promo-body{
+            padding: var(--space-5, 18px) var(--space-5, 20px) var(--space-6, 22px);
+            display:flex;
+            flex-direction:column;
+            flex:1;
+        }
+        #promocoes .promo-body h3{
+            font-family: var(--font-heading);
+            font-size:16px;
+            line-height:1.35;
+            margin:0 0 6px;
+            display:-webkit-box;
+            -webkit-line-clamp:2;
+            -webkit-box-orient:vertical;
+            overflow:hidden;
+        }
+        #promocoes .promo-body .desc{
+            font-size:13px;
+            color:var(--color-secondary);
+            margin:0 0 12px;
+            display:-webkit-box;
+            -webkit-line-clamp:2;
+            -webkit-box-orient:vertical;
+            overflow:hidden;
+        }
+        #promocoes .promo-precos{
+            display:flex;
+            align-items:baseline;
+            gap:8px;
+            flex-wrap:wrap;
+            margin-top:auto;
+        }
+        #promocoes .promo-precos .de{
+            font-size:13px;
+            color:#9a9a9a;
+            text-decoration:line-through;
+        }
+        #promocoes .promo-precos .por{
+            font-size:17px;
+            font-weight:700;
+            color:var(--color-primary-hover);
+        }
+        #promocoes .promo-empty{
+            width:100%;
+            text-align:center;
+            padding:32px 0;
+            color:var(--color-secondary);
+            font-size:13px;
+        }
     </style>
 </head>
 <body>
@@ -79,6 +185,7 @@
         <div class="util-bar">Abella Joias • Catálogo Premium</div>
         <div class="bar aurora-container">
             <nav class="nav-links">
+                <a href="#promocoes">Promoções</a>
                 <a href="#categorias">Coleções</a>
                 <a href="./galvanicas.html">Galvânicas</a>
             </nav>
@@ -142,6 +249,17 @@
             <div class="trust-item">
                 <p style="font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--color-secondary); font-weight:600;">Atendimento</p>
                 <p style="font-family:var(--font-heading); font-size:20px; color:var(--color-primary-hover); margin-top: var(--space-1);">WhatsApp</p>
+            </div>
+        </section>
+
+        <section class="aurora-section" id="promocoes">
+            <div style="text-align:center; margin-bottom: var(--space-7);">
+                <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary-hover); font-weight:700;">Condições especiais</p>
+                <h2 style="font-size: clamp(26px,4vw,44px); margin-top: var(--space-2);">Promoções vigentes</h2>
+                <p style="font-size:13px; color:var(--color-secondary); margin-top: var(--space-2);">Ofertas atuais do catálogo — atualizadas direto pelo painel administrativo.</p>
+            </div>
+            <div class="promo-grid" id="promoGrid">
+                <div class="promo-empty">⏳ Carregando promoções...</div>
             </div>
         </section>
 
@@ -447,6 +565,58 @@
                 loading.classList.remove('hidden');
                 loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Erro técnico ao carregar categorias.</p>`;
             }
+        }
+
+        // Promoções da Home (abella/promocoes) — bloco independente: uma falha aqui não deve impedir o resto da home
+        try {
+            const promoGrid = document.getElementById('promoGrid');
+            if (promoGrid && typeof db !== 'undefined') {
+                const snapPromos = await db.ref('abella/promocoes').once('value').catch(() => null);
+                let promocoes = [];
+                if (snapPromos && snapPromos.exists()) {
+                    const dados = snapPromos.val();
+                    promocoes = Array.isArray(dados)
+                        ? dados.map((val, i) => ({ id: val?.id || String(i), ...val })).filter(Boolean)
+                        : Object.entries(dados).map(([id, val]) => ({ id, ...val }));
+                }
+                promocoes = promocoes.filter(p => p && p.paused !== true && p.ativa !== false).slice(0, 6);
+
+                if (promocoes.length === 0) {
+                    promoGrid.innerHTML = '<div class="promo-empty">Nenhuma promoção ativa no momento — confira o catálogo para condições especiais.</div>';
+                } else {
+                    promoGrid.innerHTML = promocoes.map(p => {
+                        const titulo = p.titulo || 'Promoção';
+                        const desc = p.descricao || p.desc || '';
+                        const precoDe = p.precoDe || p.preco_de || '';
+                        const precoPor = p.precoPor || p.preco_por || p.preco || '';
+                        const imgBruta = p.imagem || p.image || '';
+                        const link = p.link || 'https://catalogo.abellajoias.com.br';
+                        const img = imgBruta ? (typeof resolverImagemFirebase === 'function' ? resolverImagemFirebase(imgBruta) : imgBruta) : '';
+                        return `
+                            <a class="promo-card" href="${link}" target="_blank" rel="noopener" data-aurora-reveal>
+                                <div class="promo-img">
+                                    ${img ? `<img src="${img}" alt="${titulo}" loading="lazy" onerror="this.style.display='none'">` : ''}
+                                    <span class="selo">${p.selo || 'Oferta'}</span>
+                                </div>
+                                <div class="promo-body">
+                                    <h3>${titulo}</h3>
+                                    ${desc ? `<p class="desc">${desc}</p>` : ''}
+                                    <div class="promo-precos">
+                                        ${precoDe ? `<span class="de">${precoDe}</span>` : ''}
+                                        ${precoPor ? `<span class="por">${precoPor}</span>` : ''}
+                                    </div>
+                                    <span class="aurora-btn aurora-btn--outline" style="margin-top:var(--space-3);">Ver promoção →</span>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                    if (window.AuroraAnimations) AuroraAnimations.initReveal();
+                }
+            }
+        } catch (promoError) {
+            console.error('[Home] Falha ao carregar promoções:', promoError);
+            const promoGrid = document.getElementById('promoGrid');
+            if (promoGrid) promoGrid.innerHTML = '<div class="promo-empty">⚠️ Erro ao carregar promoções.</div>';
         }
 
         // SEO IQ200 — FAQ Schema (renderiza visível + injeta FAQPage JSON-LD)

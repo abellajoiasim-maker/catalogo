@@ -243,6 +243,27 @@
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Válido até (opcional)</label>
                             <input type="date" id="global-validade" class="input w-44">
                         </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ícone da Badge</label>
+                            <select id="global-icone" class="input w-28">
+                                <option value="🔥">🔥 Fogo</option>
+                                <option value="⚡">⚡ Raio</option>
+                                <option value="💎">💎 Diamante</option>
+                                <option value="✨">✨ Brilho</option>
+                                <option value="🎁">🎁 Presente</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cor de Fundo</label>
+                            <input type="color" id="global-cor" class="input h-[46px] w-16 p-1 cursor-pointer" value="#10b981">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cor do Texto</label>
+                            <select id="global-cor-texto" class="input w-32">
+                                <option value="#ffffff">Branco</option>
+                                <option value="#1e293b">Escuro (Slate)</option>
+                            </select>
+                        </div>
                         <button onclick="salvarDescontoGlobal()" class="px-5 py-2.5 btn-gold text-sm flex items-center gap-2">
                             <i class="fa-solid fa-check"></i> Salvar Desconto Global
                         </button>
@@ -307,7 +328,7 @@
                     </div>
                     <p class="text-[11px] text-slate-400 mt-3 flex items-start gap-1.5">
                         <i class="fa-solid fa-circle-info mt-0.5"></i>
-                        <span>Este cupom fica salvo em <code>abella/coupons</code>. Confirme com quem mantém o <code>checkout.js</code> se essa coleção já é lida no carrinho/checkout antes de divulgar o código ao cliente.</span>
+                        <span>Este cupom fica salvo em <code>abella/coupons</code> e já é validado de verdade no carrinho/checkout do cliente.</span>
                     </p>
                 </div>
 
@@ -319,6 +340,29 @@
                     <div id="lista-cupons" class="space-y-2">
                         <p class="text-sm text-slate-400 italic">Carregando...</p>
                     </div>
+                </div>
+
+                <!-- Faixas de Desconto Automático por Valor de Compra -->
+                <div class="card p-6 glass">
+                    <h2 class="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-sky-600"></i> Desconto Automático por Valor de Compra
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-4">Sem precisar de código — aplica sozinho no carrinho conforme o valor da compra. Ex: acima de R$300 → 5% OFF, acima de R$500 → 10% OFF.</p>
+
+                    <div id="lista-faixas-form" class="space-y-2 mb-3"></div>
+
+                    <button type="button" onclick="adicionarLinhaFaixa()" class="text-xs font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-4 py-2 rounded-lg transition-colors mb-4">
+                        <i class="fa-solid fa-plus"></i> Adicionar Faixa
+                    </button>
+
+                    <button onclick="salvarFaixasValor()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> Salvar Faixas de Desconto
+                    </button>
+
+                    <p class="text-[11px] text-slate-400 mt-3 flex items-start gap-1.5">
+                        <i class="fa-solid fa-circle-info mt-0.5"></i>
+                        <span>Aplica sempre a faixa de maior valor que a compra atingir (não soma faixas). Funciona junto com um cupom de código, se o cliente também usar um.</span>
+                    </p>
                 </div>
             </div>
 
@@ -490,6 +534,10 @@
                 renderCupons(cupons);
                 atualizarContadores(settings, cupons);
 
+                faixasValorAtuais = (settings.descontos && settings.descontos.faixasValor) || [];
+                if (faixasValorAtuais.length === 0) faixasValorAtuais = [{ valorMinimo: '', percentual: '' }];
+                renderLinhasFaixas();
+
             } catch (error) {
                 console.error("Erro ao carregar painel de ofertas:", error);
             }
@@ -632,18 +680,27 @@
             document.getElementById('global-ativo').checked = !!d.ativo;
             document.getElementById('global-porcentagem').value = d.porcentagem || 10;
             document.getElementById('global-validade').value = d.validoAte || '';
+            document.getElementById('global-icone').value = d.badgeIcone || '🔥';
+            document.getElementById('global-cor').value = d.cor || '#10b981';
+            document.getElementById('global-cor-texto').value = d.corTexto || '#ffffff';
         }
 
         async function salvarDescontoGlobal() {
             var ativo = document.getElementById('global-ativo').checked;
             var porcentagem = parseInt(document.getElementById('global-porcentagem').value) || 0;
             var validade = document.getElementById('global-validade').value || null;
+            var badgeIcone = document.getElementById('global-icone').value;
+            var cor = document.getElementById('global-cor').value;
+            var corTexto = document.getElementById('global-cor-texto').value;
 
             try {
                 const updates = {};
                 updates[`${abellaPath('settings')}/descontos/ativo`] = ativo;
                 updates[`${abellaPath('settings')}/descontos/porcentagem`] = porcentagem;
                 updates[`${abellaPath('settings')}/descontos/validoAte`] = validade;
+                updates[`${abellaPath('settings')}/descontos/badgeIcone`] = badgeIcone;
+                updates[`${abellaPath('settings')}/descontos/cor`] = cor;
+                updates[`${abellaPath('settings')}/descontos/corTexto`] = corTexto;
 
                 await window.db.ref().update(updates);
                 alert('✅ Desconto global salvo com sucesso!');
@@ -689,6 +746,60 @@
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // ---------- FAIXAS DE DESCONTO POR VALOR DE COMPRA ----------
+        let faixasValorAtuais = [];
+
+        function renderLinhasFaixas() {
+            const container = document.getElementById('lista-faixas-form');
+            container.innerHTML = faixasValorAtuais.map((f, idx) => `
+                <div class="flex items-center gap-2">
+                    <div class="flex-1">
+                        <label class="block text-[9px] font-bold text-slate-400 uppercase">Compras acima de (R$)</label>
+                        <input type="number" min="0" step="0.01" class="input" value="${f.valorMinimo}"
+                            oninput="atualizarLinhaFaixa(${idx}, 'valorMinimo', this.value)">
+                    </div>
+                    <div class="w-28">
+                        <label class="block text-[9px] font-bold text-slate-400 uppercase">Desconto (%)</label>
+                        <input type="number" min="1" max="99" class="input" value="${f.percentual}"
+                            oninput="atualizarLinhaFaixa(${idx}, 'percentual', this.value)">
+                    </div>
+                    <button type="button" onclick="removerLinhaFaixa(${idx})" class="text-red-400 hover:text-red-600 hover:bg-red-50 w-9 h-9 rounded-lg transition-colors mt-4 shrink-0">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `).join('') || '<p class="text-xs text-slate-400 italic">Nenhuma faixa cadastrada ainda.</p>';
+        }
+
+        function adicionarLinhaFaixa() {
+            faixasValorAtuais.push({ valorMinimo: '', percentual: '' });
+            renderLinhasFaixas();
+        }
+
+        function atualizarLinhaFaixa(idx, campo, valor) {
+            faixasValorAtuais[idx][campo] = valor;
+        }
+
+        function removerLinhaFaixa(idx) {
+            faixasValorAtuais.splice(idx, 1);
+            renderLinhasFaixas();
+        }
+
+        async function salvarFaixasValor() {
+            const faixasValidas = faixasValorAtuais
+                .map(f => ({ valorMinimo: parseFloat(f.valorMinimo), percentual: parseInt(f.percentual) }))
+                .filter(f => f.valorMinimo > 0 && f.percentual > 0 && f.percentual <= 99)
+                .sort((a, b) => a.valorMinimo - b.valorMinimo);
+
+            try {
+                await window.db.ref(`${abellaPath('settings')}/descontos/faixasValor`).set(faixasValidas);
+                alert('✅ Faixas de desconto salvas com sucesso!');
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error('Erro ao salvar faixas de desconto:', error);
+                alert('Erro ao salvar as faixas de desconto.');
+            }
         }
 
         async function toggleCupom(codigo, novoValor) {

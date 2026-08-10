@@ -166,7 +166,9 @@
                     <div style="margin-top: var(--space-5); padding-top: var(--space-4); border-top:1px solid var(--color-border);">
                         <div class="summary-row"><span>Quantidade</span><span id="res-qtd">0 pçs</span></div>
                         <div class="summary-row"><span>Peso Total</span><span id="res-peso">0,00 grs.</span></div>
+                        <div id="alertaProgressoFaixaCheckout" style="display:none; margin:0 0 var(--space-4); padding:var(--space-3) var(--space-4); border-radius:var(--radius-md); background:rgba(var(--color-primary-rgb),.08); border:1px solid var(--color-border); font-size:12px; line-height:1.45; color:var(--color-text);"></div>
                         <div class="summary-row"><span>Subtotal</span><span id="res-subtotal">R$ 0,00</span></div>
+                        <div class="summary-row hidden" id="box-desconto-ofertas" style="color:var(--color-success);"><span>Desconto de ofertas</span><span id="res-desconto-ofertas">- R$ 0,00</span></div>
                         <div class="summary-row hidden" id="box-desconto" style="color:var(--color-success);"><span>Desconto PIX</span><span id="res-desconto">- R$ 0,00</span></div>
                         <div class="summary-row hidden" id="box-cupom" style="color:var(--color-success);"><span>Cupom <strong id="res-cupom-codigo"></strong></span><span id="res-desconto-cupom">- R$ 0,00</span></div>
                         <div class="summary-row hidden" id="box-faixa" style="color:var(--color-success);"><span id="res-faixa-label">Desconto por valor</span><span id="res-desconto-faixa">- R$ 0,00</span></div>
@@ -241,7 +243,10 @@
             </div>
             <div style="text-align:right;">
                 <p>Subtotal: <strong id="print-fin-subtotal"></strong></p>
-                <p id="print-fin-linha-desc">Desconto: <strong id="print-fin-desconto" style="color:#0a7a4d;"></strong></p>
+                <p id="print-fin-linha-ofertas" style="display:none;color:#0a7a4d;">Descontos de ofertas: <strong id="print-fin-ofertas"></strong></p>
+                <p id="print-fin-linha-faixa" style="display:none;color:#0a7a4d;">Desconto por valor: <strong id="print-fin-faixa"></strong></p>
+                <p id="print-fin-linha-cupom" style="display:none;color:#0a7a4d;">Cupom: <strong id="print-fin-cupom"></strong></p>
+                <p id="print-fin-linha-desc" style="display:none;color:#0a7a4d;">Desconto PIX: <strong id="print-fin-desconto"></strong></p>
                 <p>Frete: <strong id="print-fin-frete"></strong></p>
                 <p style="font-size:14px; margin-top:4px;">TOTAL: <strong id="print-fin-total"></strong></p>
             </div>
@@ -301,15 +306,18 @@
             const raw = (window.carrinhoService ? carrinhoService.listar() : []) || [];
             const itens = raw.map(item => {
                 const qtd = parseInt(item.quantidade || 0);
+                const precoOriginal = parseFloat(item.preco ?? item.price ?? 0) || 0;
                 // precoVendaUnitario já vem com o desconto de categoria/global aplicado (descontoService)
-                const preco = parseFloat(item.precoVendaUnitario ?? item.preco ?? item.price ?? 0);
+                const preco = parseFloat(item.precoVendaUnitario ?? precoOriginal);
                 const peso = parseFloat(item.peso || 0);
                 return {
                     id: item.id || '',
+                    sku: item.sku || item.codigo || item.id || '',
                     nome: item.name || item.nome || 'Produto',
                     imagem: item.image || item.imagem || '',
-                    preco, peso, quantidade: qtd,
+                    precoOriginal, preco, peso, quantidade: qtd,
                     subtotal: preco * qtd,
+                    descontoOferta: Math.max(0, (precoOriginal - preco) * qtd),
                     pesoTotal: peso * qtd,
                     variacao: item.variacao || ''
                 };
@@ -340,14 +348,19 @@
                             ${item.variacao ? `<p style="font-size:10px; color:var(--color-primary-hover);">🔹 ${item.variacao}</p>` : ''}
                             <p style="font-size:10px; color:var(--color-secondary);">${item.quantidade} pçs • ${fmtPeso(item.pesoTotal)}</p>
                         </div>
-                        <span style="font-size:12px; font-weight:700; color:var(--color-primary-hover);">${fmtMoeda(item.subtotal)}</span>
+                        <span style="font-size:12px; font-weight:700; color:var(--color-primary-hover); text-align:right;">
+                            ${item.precoOriginal > item.preco + 0.001 ? `<s style="display:block;font-size:10px;color:var(--color-secondary);font-weight:400;">${fmtMoeda(item.precoOriginal * item.quantidade)}</s>` : ''}
+                            ${fmtMoeda(item.subtotal)}
+                        </span>
                     </div>
                 `).join('');
             }
 
             const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
             const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
+            const subtotalBruto = itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0);
             const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+            const descontoOfertas = Math.max(0, subtotalBruto - subtotal);
 
             const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
             const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
@@ -372,6 +385,22 @@
                 document.getElementById('res-desconto-cupom').innerText = `- ${fmtMoeda(descontoCupom)}`;
             } else {
                 boxCupom.classList.add('hidden');
+            }
+
+            const boxDescontoOfertas = document.getElementById('box-desconto-ofertas');
+            if (boxDescontoOfertas) {
+                boxDescontoOfertas.classList.toggle('hidden', descontoOfertas <= 0.001);
+                document.getElementById('res-desconto-ofertas').innerText = `- ${fmtMoeda(descontoOfertas)}`;
+            }
+
+            const progressoFaixa = window.carrinhoService?.obterProgressoFaixaValor?.();
+            const alertaFaixa = document.getElementById('alertaProgressoFaixaCheckout');
+            if (alertaFaixa && progressoFaixa?.temFaixas && progressoFaixa.mensagem) {
+                alertaFaixa.style.display = 'block';
+                alertaFaixa.innerHTML = progressoFaixa.mensagem;
+            } else if (alertaFaixa) {
+                alertaFaixa.style.display = 'none';
+                alertaFaixa.innerHTML = '';
             }
 
             const boxFaixa = document.getElementById('box-faixa');
@@ -412,14 +441,20 @@
             const freteFixo = parseFloat(cfg.freteFixo || cfg.frete || 0);
             const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
 
+            const subtotalBruto = itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0);
             const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+            const descontoOfertas = Math.max(0, subtotalBruto - subtotal);
             const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
             const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
             const desconto = form.formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+            const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
+            const descontoCupom = window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0;
+            const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
+            const descontoFaixa = window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0;
             const frete = subtotal >= freteGratis ? 0 : freteFixo;
-            const total = subtotal - desconto + frete;
+            const total = Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete);
 
-            return { itens, form, calc: { subtotal, pesoTotal, qtdTotal, desconto, frete, total } };
+            return { itens, form, calc: { subtotalBruto, subtotal, descontoOfertas, pesoTotal, qtdTotal, desconto, descontoCupom, descontoFaixa, faixaAplicada, cupomAplicado, frete, total } };
         }
 
         function prepararImpressao() {
@@ -459,13 +494,19 @@
             document.getElementById('print-fin-frete').innerText = dados.calc.frete === 0 ? 'Grátis' : fmtMoeda(dados.calc.frete);
             document.getElementById('print-fin-total').innerText = fmtMoeda(dados.calc.total);
 
-            const linhaDesc = document.getElementById('print-fin-linha-desc');
-            if (dados.calc.desconto > 0) {
-                linhaDesc.style.display = '';
-                document.getElementById('print-fin-desconto').innerText = `- ${fmtMoeda(dados.calc.desconto)}`;
-            } else {
-                linhaDesc.style.display = 'none';
-            }
+            const linhasImpressao = [
+                ['print-fin-linha-ofertas', 'print-fin-ofertas', dados.calc.descontoOfertas],
+                ['print-fin-linha-faixa', 'print-fin-faixa', dados.calc.descontoFaixa],
+                ['print-fin-linha-cupom', 'print-fin-cupom', dados.calc.descontoCupom],
+                ['print-fin-linha-desc', 'print-fin-desconto', dados.calc.desconto]
+            ];
+            linhasImpressao.forEach(([linhaId, valorId, valor]) => {
+                const linha = document.getElementById(linhaId);
+                if (!linha) return;
+                const ativo = Number(valor || 0) > 0.001;
+                linha.style.display = ativo ? '' : 'none';
+                if (ativo) document.getElementById(valorId).innerText = `- ${fmtMoeda(valor)}`;
+            });
 
             window.print();
         }
@@ -507,6 +548,9 @@
                     <div style="display:flex;justify-content:space-between;"><span>Peso total</span><strong>${fmtPeso(dados.calc.pesoTotal)}</strong></div>
                     <div style="display:flex;justify-content:space-between;"><span>Forma de pagamento</span><strong>${dados.form.formaPag}</strong></div>
                     <div style="display:flex;justify-content:space-between;"><span>Subtotal</span><strong>${fmtMoeda(dados.calc.subtotal)}</strong></div>
+                    ${dados.calc.descontoOfertas > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Descontos de ofertas</span><strong>- ${fmtMoeda(dados.calc.descontoOfertas)}</strong></div>` : ''}
+                    ${dados.calc.descontoFaixa > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Desconto por valor${dados.calc.faixaAplicada?.valorMinimo ? ` (${fmtMoeda(dados.calc.faixaAplicada.valorMinimo)})` : ''}</span><strong>- ${fmtMoeda(dados.calc.descontoFaixa)}</strong></div>` : ''}
+                    ${dados.calc.descontoCupom > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Cupom${dados.calc.cupomAplicado?.code ? ` (${dados.calc.cupomAplicado.code})` : ''}</span><strong>- ${fmtMoeda(dados.calc.descontoCupom)}</strong></div>` : ''}
                     ${dados.calc.desconto > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Desconto PIX</span><strong>- ${fmtMoeda(dados.calc.desconto)}</strong></div>` : ''}
                     <div style="display:flex;justify-content:space-between;"><span>Frete</span><strong>${dados.calc.frete === 0 ? 'Grátis' : fmtMoeda(dados.calc.frete)}</strong></div>
                     <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:var(--space-2);"><span>Total</span><strong style="color:var(--color-primary-hover);">${fmtMoeda(dados.calc.total)}</strong></div>
@@ -552,7 +596,9 @@
                 const whatsDestino = cfg.whatsapp || '5519999999999';
                 const nomeLoja = cfg.name || 'Abella Joias';
 
+                const subtotalBruto = itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0);
                 const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
+                const descontoOfertas = Math.max(0, subtotalBruto - subtotal);
                 const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
                 const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
                 const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
@@ -587,7 +633,14 @@
                     pagamento: formaPag,
                     formaPagamento: formaPag,
 
-                    subtotal, desconto, frete, total,
+                    subtotalBruto,
+                    subtotal,
+                    descontoOfertas,
+                    desconto,
+                    descontoPix: desconto || 0,
+                    percentualDescontoPix: formaPag === 'PIX' ? descontoPix : 0,
+                    frete,
+                    total,
                     valorTotal: total,
                     pesoTotal,
                     totalPecas: qtdTotal,
@@ -597,12 +650,20 @@
                     descontoCupom: descontoCupom || 0,
                     faixaValorAplicada: faixaAplicada ? faixaAplicada.valorMinimo : null,
                     descontoFaixaValor: descontoFaixa || 0,
+                    percentualDescontoFaixa: faixaAplicada ? (parseFloat(faixaAplicada.percentual) || 0) : 0,
+                    descontoFaixa: faixaAplicada ? {
+                        valorMinimo: parseFloat(faixaAplicada.valorMinimo) || 0,
+                        percentual: parseFloat(faixaAplicada.percentual) || 0,
+                        desconto: descontoFaixa || 0
+                    } : null,
 
                     observacoes: obs,
 
                     itens: itens.map(i => ({
-                        id: i.id, nome: i.nome, name: i.nome, variacao: i.variacao,
+                        id: i.id, sku: i.sku, codigo: i.sku, nome: i.nome, name: i.nome, variacao: i.variacao,
+                        precoOriginal: i.precoOriginal,
                         preco: i.preco, price: i.preco, precoFinal: i.preco,
+                        descontoOferta: i.descontoOferta,
                         quantidade: i.quantidade, subtotal: i.subtotal,
                         peso: i.peso, pesoTotal: i.pesoTotal,
                         imagem: i.imagem, image: i.imagem
@@ -634,6 +695,9 @@
                 });
                 msg += `${Q}*─── VALORES ───*${Q}`;
                 msg += `Subtotal: ${fmtMoeda(subtotal)}${Q}`;
+                if (descontoOfertas > 0) msg += `Desconto de ofertas: -${fmtMoeda(descontoOfertas)}${Q}`;
+                if (descontoFaixa > 0) msg += `Desconto por valor: -${fmtMoeda(descontoFaixa)}${Q}`;
+                if (descontoCupom > 0) msg += `Cupom: -${fmtMoeda(descontoCupom)}${Q}`;
                 if (desconto > 0) msg += `Desconto PIX (${descontoPix}%): -${fmtMoeda(desconto)}${Q}`;
                 msg += `Frete: ${frete === 0 ? 'Grátis' : fmtMoeda(frete)}${Q}`;
                 msg += `*Total: ${fmtMoeda(total)}*${Q}${Q}`;
@@ -661,6 +725,15 @@
             ]);
 
             const cfg = await carregarConfigAurora();
+
+            // Pré-carrega o cache normalizado usado pelo descontoService,
+            // incluindo as faixas progressivas de valor de compra.
+            if (window.ConfigService) {
+                try { await ConfigService.getSettings(true); } catch (e) {
+                    console.warn('Falha ao pré-carregar regras de desconto:', e);
+                }
+            }
+
             if (cfg.name) {
                 document.getElementById('nomeLojaHeader').innerText = cfg.name;
                 document.getElementById('print-nome-loja').innerText = cfg.name.toUpperCase();

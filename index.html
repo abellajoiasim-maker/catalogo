@@ -146,11 +146,12 @@
         </section>
 
         <section class="aurora-section" id="categorias">
-            <div style="max-width:480px; margin: 0 auto; position:relative;">
-                <input type="search" id="busca" placeholder="Buscar categorias ou produtos (ex: coração)..." autocomplete="off" class="aurora-input" style="border-radius: var(--radius-xl); padding-left: var(--space-8); height:52px;" onkeydown="if(event.key==='Enter'){ window.location.href = 'produtos.html?busca=' + encodeURIComponent(this.value.trim()); }">
-                <span style="position:absolute; left:var(--space-4); top:50%; transform:translateY(-50%); color:var(--color-secondary);">🔎</span>
+            <div style="max-width:620px; margin: 0 auto; position:relative;">
+                <input type="search" id="busca" placeholder="Buscar por nome, SKU, código ou descrição..." autocomplete="off" class="aurora-input" style="border-radius: var(--radius-xl); padding-left: var(--space-8); height:52px;" aria-label="Buscar produtos">
+                <span style="position:absolute; left:var(--space-4); top:50%; transform:translateY(-50%); color:var(--color-secondary); pointer-events:none;">🔎</span>
+                <div id="sugestoes-busca" style="display:none; position:absolute; z-index:100; left:0; right:0; top:58px; background:white; border:1px solid var(--color-border); border-radius:var(--radius-lg); box-shadow:0 12px 35px rgba(0,0,0,.12); overflow:hidden; text-align:left;"></div>
             </div>
-            <p style="text-align:center; font-size:11px; color:var(--color-secondary); margin: var(--space-2) 0 var(--space-7);">Aperte Enter para buscar produtos em todo o catálogo</p>
+            <p id="ajuda-busca" style="text-align:center; font-size:11px; color:var(--color-secondary); margin: var(--space-2) 0 var(--space-7);">Busque por qualquer parte do SKU, nome, código, categoria ou descrição.</p>
 
             <div id="loading" style="text-align:center; padding: var(--space-6) 0;">
                 <p style="color:var(--color-primary-hover); font-weight:600;">⏳ Carregando categorias...</p>
@@ -315,25 +316,124 @@
             }).join('');
 
             const inputBusca = document.getElementById('busca');
+            const sugestoesBusca = document.getElementById('sugestoes-busca');
+            const ajudaBusca = document.getElementById('ajuda-busca');
             if (inputBusca) {
+                const normalizarBusca = (txt) => String(txt || '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[-_/\\]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                const escaparBuscaHTML = (txt) => {
+                    const d = document.createElement('div');
+                    d.textContent = String(txt ?? '');
+                    return d.innerHTML;
+                };
+
+                let produtosBusca = [];
+                try {
+                    if (typeof db !== 'undefined') {
+                        const snapProdutosBusca = await db.ref('abella/products').once('value');
+                        if (snapProdutosBusca.exists()) {
+                            const dadosProdutosBusca = snapProdutosBusca.val();
+                            produtosBusca = Array.isArray(dadosProdutosBusca)
+                                ? dadosProdutosBusca.map((p, i) => ({ id: p?.id || String(i), ...p }))
+                                : Object.entries(dadosProdutosBusca).map(([id, p]) => ({ id, ...p }));
+                            produtosBusca = produtosBusca.filter(p => p && p.ativo !== false && p.paused !== true && !p._ehVitrine);
+                            produtosBusca = produtosBusca.map(p => ({
+                                ...p,
+                                _busca: normalizarBusca([
+                                    p.nome, p.name, p.sku, p.codigo, p.id, p.descricao,
+                                    p.categoriaId, p.category, p.categoria, p.subcategoriaId, p.subcategory,
+                                    ...(Array.isArray(p.tags) ? p.tags : []),
+                                    ...(Array.isArray(p.dizeres) ? p.dizeres : []),
+                                    ...(Array.isArray(p.iniciais) ? p.iniciais : [])
+                                ].filter(Boolean).join(' '))
+                            }));
+                        }
+                    }
+                } catch (erroBusca) {
+                    console.warn('[Home] Não foi possível pré-carregar o índice de produtos:', erroBusca);
+                }
+
+                const tokensBusca = (valor) => normalizarBusca(valor).split(' ').filter(Boolean);
+                const produtoCasaCompativel = (produto, valor) => {
+                    const alvo = produto?._busca || '';
+                    const tokens = tokensBusca(valor);
+                    return tokens.length === 0 || tokens.every(token => alvo.includes(token));
+                };
+
+                const navegarParaBusca = () => {
+                    const termo = inputBusca.value.trim();
+                    if (termo) window.location.href = `produtos.html?busca=${encodeURIComponent(termo)}`;
+                };
+
+                const renderizarSugestoes = (valor) => {
+                    const termo = normalizarBusca(valor);
+                    if (!sugestoesBusca) return;
+                    if (!termo) {
+                        sugestoesBusca.style.display = 'none';
+                        sugestoesBusca.innerHTML = '';
+                        return;
+                    }
+
+                    const encontrados = produtosBusca.filter(p => produtoCasaCompativel(p, termo)).slice(0, 8);
+                    if (!encontrados.length) {
+                        sugestoesBusca.innerHTML = `<div style="padding:14px 16px;font-size:12px;color:var(--color-secondary);">Nenhum produto encontrado. Pressione Enter para ver a busca completa.</div>`;
+                        sugestoesBusca.style.display = 'block';
+                        return;
+                    }
+
+                    sugestoesBusca.innerHTML = encontrados.map(p => {
+                        const nome = escaparBuscaHTML(p.nome || p.name || 'Produto');
+                        const sku = escaparBuscaHTML(p.sku || p.codigo || p.id || '');
+                        return `<button type="button" data-busca-produto="${escaparBuscaHTML(p.id)}" style="display:flex;width:100%;align-items:center;gap:12px;padding:11px 14px;border:0;border-bottom:1px solid var(--color-border);background:white;text-align:left;cursor:pointer;">
+                            <span style="font-size:16px;">💎</span><span style="display:flex;flex-direction:column;min-width:0;"><strong style="font-size:12px;color:var(--color-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${nome}</strong><small style="font-size:10px;color:var(--color-secondary);">SKU: ${sku}</small></span>
+                        </button>`;
+                    }).join('') + `<button type="button" id="ver-todos-resultados" style="width:100%;padding:12px;border:0;background:var(--color-background-alt,#fafafa);font-size:11px;font-weight:700;cursor:pointer;">Ver todos os resultados para “${escaparBuscaHTML(valor)}” →</button>`;
+                    sugestoesBusca.style.display = 'block';
+
+                    sugestoesBusca.querySelectorAll('[data-busca-produto]').forEach(btn => {
+                        btn.addEventListener('click', () => navegarParaBusca());
+                    });
+                    sugestoesBusca.querySelector('#ver-todos-resultados')?.addEventListener('click', navegarParaBusca);
+                };
+
                 inputBusca.addEventListener('input', (e) => {
-                    const termo = e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-                    let achou = false;
+                    const valor = e.target.value;
+                    const termo = normalizarBusca(valor);
+                    let achouCategoria = false;
                     grid.querySelectorAll('.aurora-card--category').forEach(card => {
                         const nomeEl = card.querySelector('.title');
-                        const texto = (nomeEl?.innerText || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                        const visivel = texto.includes(termo);
+                        const texto = normalizarBusca(nomeEl?.innerText || '');
+                        const visivel = !termo || tokensBusca(valor).every(t => texto.includes(t));
                         card.closest('.col-4').style.display = visivel ? '' : 'none';
-                        if (visivel) achou = true;
+                        if (visivel) achouCategoria = true;
                     });
-                    noResult.classList.toggle('hidden', achou);
+                    const achouProduto = produtosBusca.some(p => produtoCasaCompativel(p, valor));
+                    noResult.classList.toggle('hidden', !termo || achouCategoria || achouProduto);
+                    if (ajudaBusca) ajudaBusca.innerText = termo
+                        ? `${produtosBusca.filter(p => produtoCasaCompativel(p, valor)).length} produto(s) encontrado(s) • Enter abre todos os resultados`
+                        : 'Busque por qualquer parte do SKU, nome, código, categoria ou descrição.';
+                    renderizarSugestoes(valor);
                 });
 
-                // Enter na busca da Home: manda pra busca de produtos em todo o
-                // catálogo (link compartilhável, igual ao produtos.html).
                 inputBusca.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && inputBusca.value.trim()) {
-                        window.location.href = `produtos.html?busca=${encodeURIComponent(inputBusca.value.trim())}`;
+                        e.preventDefault();
+                        navegarParaBusca();
+                    }
+                    if (e.key === 'Escape' && sugestoesBusca) {
+                        sugestoesBusca.style.display = 'none';
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!sugestoesBusca?.contains(e.target) && e.target !== inputBusca) {
+                        if (sugestoesBusca) sugestoesBusca.style.display = 'none';
                     }
                 });
             }

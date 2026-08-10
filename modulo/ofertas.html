@@ -349,15 +349,24 @@
                     </h2>
                     <p class="text-xs text-slate-500 mb-4">Sem precisar de código — aplica sozinho no carrinho conforme o valor da compra. Ex: acima de R$300 → 5% OFF, acima de R$500 → 10% OFF.</p>
 
-                    <div id="lista-faixas-form" class="space-y-2 mb-3"></div>
+                    <div class="flex items-end gap-2 mb-5">
+                        <div class="flex-1">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase">Compras acima de (R$)</label>
+                            <input type="number" min="0" step="0.01" id="nova-faixa-valor" class="input" placeholder="Ex: 300.00">
+                        </div>
+                        <div class="w-24">
+                            <label class="block text-[9px] font-bold text-slate-400 uppercase">Desconto (%)</label>
+                            <input type="number" min="1" max="99" id="nova-faixa-percentual" class="input" placeholder="5">
+                        </div>
+                        <button type="button" onclick="criarFaixaValor()" class="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg text-sm transition-colors shadow-sm shrink-0">
+                            <i class="fa-solid fa-plus"></i> Adicionar
+                        </button>
+                    </div>
 
-                    <button type="button" onclick="adicionarLinhaFaixa()" class="text-xs font-bold text-sky-600 bg-sky-50 hover:bg-sky-100 px-4 py-2 rounded-lg transition-colors mb-4">
-                        <i class="fa-solid fa-plus"></i> Adicionar Faixa
-                    </button>
-
-                    <button onclick="salvarFaixasValor()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-check"></i> Salvar Faixas de Desconto
-                    </button>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mb-2">Faixas Cadastradas</h3>
+                    <div id="lista-faixas" class="space-y-2">
+                        <p class="text-sm text-slate-400 italic">Carregando...</p>
+                    </div>
 
                     <p class="text-[11px] text-slate-400 mt-3 flex items-start gap-1.5">
                         <i class="fa-solid fa-circle-info mt-0.5"></i>
@@ -534,9 +543,7 @@
                 renderCupons(cupons);
                 atualizarContadores(settings, cupons);
 
-                faixasValorAtuais = (settings.descontos && settings.descontos.faixasValor) || [];
-                if (faixasValorAtuais.length === 0) faixasValorAtuais = [{ valorMinimo: '', percentual: '' }];
-                renderLinhasFaixas();
+                renderFaixasValor((settings.descontos && settings.descontos.faixasValor) || {});
 
             } catch (error) {
                 console.error("Erro ao carregar painel de ofertas:", error);
@@ -749,56 +756,92 @@
         }
 
         // ---------- FAIXAS DE DESCONTO POR VALOR DE COMPRA ----------
-        let faixasValorAtuais = [];
+        function renderFaixasValor(faixasObj) {
+            const container = document.getElementById('lista-faixas');
+            const chaves = Object.keys(faixasObj || {});
 
-        function renderLinhasFaixas() {
-            const container = document.getElementById('lista-faixas-form');
-            container.innerHTML = faixasValorAtuais.map((f, idx) => `
-                <div class="flex items-center gap-2">
-                    <div class="flex-1">
-                        <label class="block text-[9px] font-bold text-slate-400 uppercase">Compras acima de (R$)</label>
-                        <input type="number" min="0" step="0.01" class="input" value="${f.valorMinimo}"
-                            oninput="atualizarLinhaFaixa(${idx}, 'valorMinimo', this.value)">
+            if (chaves.length === 0) {
+                container.innerHTML = '<p class="text-sm text-slate-400 italic">Nenhuma faixa cadastrada ainda.</p>';
+                return;
+            }
+
+            // Mostra sempre da maior faixa pra menor, é assim que o desconto é aplicado (a mais alta que a compra atingir)
+            const ordenadas = chaves.sort((a, b) => (faixasObj[b].valorMinimo || 0) - (faixasObj[a].valorMinimo || 0));
+
+            container.innerHTML = ordenadas.map(chave => {
+                const f = faixasObj[chave];
+                const statusTexto = f.ativo !== false
+                    ? '<span class="text-[10px] font-bold text-emerald-600 uppercase">Ativa</span>'
+                    : '<span class="text-[10px] font-bold text-slate-400 uppercase">Pausada</span>';
+
+                return `
+                <div class="flex items-center justify-between gap-3 border border-slate-100 rounded-xl p-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold text-slate-800">Acima de ${formatarMoeda(f.valorMinimo)}</p>
+                        <p class="text-[11px] text-slate-500 font-mono">${f.percentual}% OFF ${statusTexto}</p>
                     </div>
-                    <div class="w-28">
-                        <label class="block text-[9px] font-bold text-slate-400 uppercase">Desconto (%)</label>
-                        <input type="number" min="1" max="99" class="input" value="${f.percentual}"
-                            oninput="atualizarLinhaFaixa(${idx}, 'percentual', this.value)">
+                    <div class="flex items-center gap-2 shrink-0">
+                        <label class="switch">
+                            <input type="checkbox" ${f.ativo !== false ? 'checked' : ''} onchange="toggleFaixaValor('${chave}', this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        <button onclick="removerFaixaValor('${chave}')" class="text-red-400 hover:text-red-600 hover:bg-red-50 w-8 h-8 rounded-lg transition-colors">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
                     </div>
-                    <button type="button" onclick="removerLinhaFaixa(${idx})" class="text-red-400 hover:text-red-600 hover:bg-red-50 w-9 h-9 rounded-lg transition-colors mt-4 shrink-0">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </div>
-            `).join('') || '<p class="text-xs text-slate-400 italic">Nenhuma faixa cadastrada ainda.</p>';
+                </div>`;
+            }).join('');
         }
 
-        function adicionarLinhaFaixa() {
-            faixasValorAtuais.push({ valorMinimo: '', percentual: '' });
-            renderLinhasFaixas();
-        }
+        async function criarFaixaValor() {
+            const valorMinimo = parseFloat(document.getElementById('nova-faixa-valor').value);
+            const percentual = parseInt(document.getElementById('nova-faixa-percentual').value);
 
-        function atualizarLinhaFaixa(idx, campo, valor) {
-            faixasValorAtuais[idx][campo] = valor;
-        }
+            if (!valorMinimo || valorMinimo <= 0) {
+                alert('Preencha um valor mínimo de compra válido.');
+                return;
+            }
+            if (!percentual || percentual < 1 || percentual > 99) {
+                alert('O desconto precisa ser um número entre 1 e 99.');
+                return;
+            }
 
-        function removerLinhaFaixa(idx) {
-            faixasValorAtuais.splice(idx, 1);
-            renderLinhasFaixas();
-        }
-
-        async function salvarFaixasValor() {
-            const faixasValidas = faixasValorAtuais
-                .map(f => ({ valorMinimo: parseFloat(f.valorMinimo), percentual: parseInt(f.percentual) }))
-                .filter(f => f.valorMinimo > 0 && f.percentual > 0 && f.percentual <= 99)
-                .sort((a, b) => a.valorMinimo - b.valorMinimo);
+            const chave = 'faixa_' + Date.now();
 
             try {
-                await window.db.ref(`${abellaPath('settings')}/descontos/faixasValor`).set(faixasValidas);
-                alert('✅ Faixas de desconto salvas com sucesso!');
+                await window.db.ref(`${abellaPath('settings')}/descontos/faixasValor/${chave}`).set({
+                    valorMinimo, percentual, ativo: true,
+                    createdAt: new Date().toISOString()
+                });
+
+                document.getElementById('nova-faixa-valor').value = '';
+                document.getElementById('nova-faixa-percentual').value = '';
+
                 await carregarPainelOfertas();
             } catch (error) {
-                console.error('Erro ao salvar faixas de desconto:', error);
-                alert('Erro ao salvar as faixas de desconto.');
+                console.error('Erro ao criar faixa de desconto:', error);
+                alert('Erro ao salvar a faixa de desconto.');
+            }
+        }
+
+        async function toggleFaixaValor(chave, novoValor) {
+            try {
+                await window.db.ref(`${abellaPath('settings')}/descontos/faixasValor/${chave}/ativo`).set(novoValor);
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error('Erro ao pausar/reativar faixa:', error);
+                alert('Erro ao atualizar a faixa.');
+            }
+        }
+
+        async function removerFaixaValor(chave) {
+            if (!confirm('Remover esta faixa de desconto?')) return;
+            try {
+                await window.db.ref(`${abellaPath('settings')}/descontos/faixasValor/${chave}`).remove();
+                await carregarPainelOfertas();
+            } catch (error) {
+                console.error('Erro ao remover faixa:', error);
+                alert('Erro ao remover a faixa.');
             }
         }
 

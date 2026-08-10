@@ -169,6 +169,7 @@
                         <div class="summary-row"><span>Subtotal</span><span id="res-subtotal">R$ 0,00</span></div>
                         <div class="summary-row hidden" id="box-desconto" style="color:var(--color-success);"><span>Desconto PIX</span><span id="res-desconto">- R$ 0,00</span></div>
                         <div class="summary-row hidden" id="box-cupom" style="color:var(--color-success);"><span>Cupom <strong id="res-cupom-codigo"></strong></span><span id="res-desconto-cupom">- R$ 0,00</span></div>
+                        <div class="summary-row hidden" id="box-faixa" style="color:var(--color-success);"><span id="res-faixa-label">Desconto por valor</span><span id="res-desconto-faixa">- R$ 0,00</span></div>
                         <div class="summary-row"><span>Frete</span><span id="res-frete">R$ 0,00</span></div>
                         <div class="summary-total"><span>Total</span><span id="res-total" style="color:var(--color-primary-hover);">R$ 0,00</span></div>
                     </div>
@@ -256,7 +257,8 @@
     <script src="./js/services/cupomService.js"></script>
     <script src="./js/services/carrinhoService.js"></script>
     <script src="./js/utils/image-helper.js"></script>
-    
+    <script src="./js/utils/imagens.js"></script>
+
     <script src="components/modal.js"></script>
     <script src="engine/render.js"></script>
 
@@ -353,9 +355,11 @@
             // Cupom aplicado no carrinho — segue valendo no checkout, sobre o subtotal já com desconto de categoria
             const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
             const descontoCupom = window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0;
+            const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
+            const descontoFaixa = window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0;
 
             const frete = subtotal >= freteGratis ? 0 : freteFixo;
-            const total = Math.max(0, subtotal - desconto - descontoCupom + frete);
+            const total = Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete);
 
             document.getElementById('box-desconto').classList.toggle('hidden', desconto === 0);
             document.getElementById('labelDescontoPix').innerText = `${descontoPix}% de desconto`;
@@ -368,6 +372,15 @@
                 document.getElementById('res-desconto-cupom').innerText = `- ${fmtMoeda(descontoCupom)}`;
             } else {
                 boxCupom.classList.add('hidden');
+            }
+
+            const boxFaixa = document.getElementById('box-faixa');
+            if (faixaAplicada && descontoFaixa > 0.001) {
+                boxFaixa.classList.remove('hidden');
+                document.getElementById('res-faixa-label').innerText = `Compra acima de ${fmtMoeda(faixaAplicada.valorMinimo)}`;
+                document.getElementById('res-desconto-faixa').innerText = `- ${fmtMoeda(descontoFaixa)}`;
+            } else {
+                boxFaixa.classList.add('hidden');
             }
 
             document.getElementById('res-qtd').innerText = `${qtdTotal} pçs`;
@@ -546,9 +559,11 @@
 
                 const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
                 const descontoCupom = window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0;
+                const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
+                const descontoFaixa = window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0;
 
                 const frete = subtotal >= freteGratis ? 0 : freteFixo;
-                const total = Math.max(0, subtotal - desconto - descontoCupom + frete);
+                const total = Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete);
 
                 const pedidoId = 'PED-' + Date.now();
 
@@ -580,6 +595,8 @@
 
                     cupomAplicado: cupomAplicado ? cupomAplicado.code : null,
                     descontoCupom: descontoCupom || 0,
+                    faixaValorAplicada: faixaAplicada ? faixaAplicada.valorMinimo : null,
+                    descontoFaixaValor: descontoFaixa || 0,
 
                     observacoes: obs,
 

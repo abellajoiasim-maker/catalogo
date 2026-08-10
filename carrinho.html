@@ -84,6 +84,7 @@
             </div>
             <div class="summary-row"><span>Subtotal</span><span id="subtotal">R$ 0,00</span></div>
             <div class="summary-row" id="linhaDesconto" style="display:none;"><span>Desconto</span><span id="descontoValor" style="color:var(--color-success);"></span></div>
+            <div class="summary-row" id="linhaDescontoFaixa" style="display:none;"><span id="labelFaixa">Desconto por valor</span><span id="descontoFaixaValor" style="color:var(--color-success);"></span></div>
             <div class="summary-row" id="linhaDescontoCupom" style="display:none;"><span>Cupom</span><span id="descontoCupomValor" style="color:var(--color-success);"></span></div>
             <div class="summary-total"><span>Total</span><span id="total">R$ 0,00</span></div>
             <a href="checkout.html" class="aurora-btn aurora-btn--primary aurora-btn--block" style="margin-top: var(--space-5);">Finalizar Pedido</a>
@@ -108,7 +109,8 @@
     <script src="./js/services/cupomService.js"></script>
     <script src="./js/services/carrinhoService.js"></script>
     <script src="./js/utils/image-helper.js"></script>
-    
+    <script src="./js/utils/imagens.js"></script>
+
     <script src="engine/render.js"></script>
     <script src="engine/animations.js"></script>
     <script src="engine/mobile-nav.js"></script>
@@ -199,6 +201,17 @@
                 document.getElementById('descontoCupomValor').innerText = `− ${formatarMoeda(descontoCupom)}`;
             } else {
                 linhaDescontoCupom.style.display = 'none';
+            }
+
+            const descontoFaixa = carrinhoService.obterDescontoFaixaValor();
+            const faixaAplicada = carrinhoService.obterFaixaValorAplicada();
+            const linhaDescontoFaixa = document.getElementById('linhaDescontoFaixa');
+            if (faixaAplicada && descontoFaixa > 0.001) {
+                linhaDescontoFaixa.style.display = 'flex';
+                document.getElementById('labelFaixa').innerText = `Desconto (compra acima de ${formatarMoeda(faixaAplicada.valorMinimo)})`;
+                document.getElementById('descontoFaixaValor').innerText = `− ${formatarMoeda(descontoFaixa)}`;
+            } else {
+                linhaDescontoFaixa.style.display = 'none';
             }
 
             if (cupomAplicado) {

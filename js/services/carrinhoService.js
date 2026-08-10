@@ -112,6 +112,8 @@
                 // Guarda apenas os dados brutos essenciais estruturais no storage
                 itens.push({
                     id: pId,
+                    sku: produto.sku || produto.codigo || pId,
+                    codigo: produto.codigo || produto.sku || pId,
                     name: produto.nome || produto.name,
                     preco: parseFloat(produto.preco) || 0,
                     category: produto.categoriaId || produto.category || produto.categoria || '',
@@ -243,6 +245,23 @@
                 return total + (item.precoVendaUnitario * (parseInt(item.quantidade) || 0));
             }, 0);
             return window.descontoService.obterMelhorFaixaValor(subtotal);
+        },
+
+        /**
+         * Retorna o progresso até a próxima meta de desconto por valor.
+         * O cálculo usa o subtotal após ofertas de produto/categoria, antes da faixa.
+         */
+        obterProgressoFaixaValor: function () {
+            if (!window.descontoService || typeof window.descontoService.obterProgressoFaixaValor !== 'function') {
+                return null;
+            }
+
+            const itensComDesconto = this.listar();
+            const subtotal = itensComDesconto.reduce((total, item) => {
+                return total + (item.precoVendaUnitario * (parseInt(item.quantidade) || 0));
+            }, 0);
+
+            return window.descontoService.obterProgressoFaixaValor(subtotal);
         },
 
         /**

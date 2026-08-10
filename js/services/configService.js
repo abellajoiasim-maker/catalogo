@@ -131,7 +131,16 @@
                 descontos: {
                     ativo: Boolean(descontosCruos.ativo ?? DEFAULT_SETTINGS.descontos.ativo),
                     porcentagem: Number(descontosCruos.porcentagem ?? descontosCruos.valor ?? 0),
-                    regrasCategoria: descontosCruos.regrasCategoria || {}
+                    regrasCategoria: descontosCruos.regrasCategoria || {},
+                    // Faixas progressivas de desconto por valor de compra.
+                    // Mantidas no cache normalizado para que carrinho e checkout
+                    // consigam calcular a próxima meta sem nova leitura do Firebase.
+                    faixasValor: Array.isArray(descontosCruos.faixasValor)
+                        ? descontosCruos.faixasValor.map(f => ({
+                            valorMinimo: Number(f?.valorMinimo) || 0,
+                            percentual: Number(f?.percentual) || 0
+                        })).filter(f => f.valorMinimo > 0 && f.percentual > 0)
+                        : []
                 },
 
                 cores: {

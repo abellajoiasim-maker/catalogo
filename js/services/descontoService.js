@@ -41,36 +41,6 @@
     }
 
     // ==========================================================
-    // Acesso seguro ao cache de configurações
-    // ==========================================================
-    function obterConfigCache() {
-        try {
-            if (!window.ConfigService) return null;
-            if (typeof window.ConfigService.getCachedSettings === 'function') {
-                return window.ConfigService.getCachedSettings();
-            }
-            // Compatibilidade com versões antigas do ConfigService.
-            return window.ConfigService._cache || null;
-        } catch (error) {
-            console.warn('[PMA V8] [descontoService] Não foi possível ler o cache de configurações:', error);
-            return null;
-        }
-    }
-
-    function obterFaixasOrdenadas() {
-        const config = obterConfigCache();
-        const faixas = config?.descontos?.faixasValor;
-        if (!Array.isArray(faixas)) return [];
-        return faixas
-            .map(f => ({
-                valorMinimo: safeNumber(f?.valorMinimo),
-                percentual: safeNumber(f?.percentual)
-            }))
-            .filter(f => f.valorMinimo > 0 && f.percentual > 0)
-            .sort((a, b) => a.valorMinimo - b.valorMinimo);
-    }
-
-    // ==========================================================
     // Definição do Serviço da API Pública
     // ==========================================================
 
@@ -87,7 +57,7 @@
 
             try {
                 // Recupera de forma síncrona o cache limpo e descongelado do ConfigService
-                const config = obterConfigCache();
+                const config = window.ConfigService._cache;
                 if (!config || !config.descontos) {
                     return 0;
                 }
@@ -125,75 +95,25 @@
          * Não soma faixas — é sempre uma só, a mais vantajosa que a compra alcançar.
          */
         obterMelhorFaixaValor: function (subtotal) {
-            const valorCompra = Math.max(0, safeNumber(subtotal));
-            const faixas = obterFaixasOrdenadas();
-            const elegiveis = faixas.filter(f => valorCompra >= f.valorMinimo);
+            if (!window.ConfigService) return null;
+            try {
+                const config = window.ConfigService._cache;
+                const faixasObj = (config && config.descontos && config.descontos.faixasValor) || {};
+                const faixas = Object.values(faixasObj);
+                if (faixas.length === 0) return null;
 
-            if (elegiveis.length === 0) return null;
+                const elegiveis = faixas.filter(f =>
+                    f.ativo !== false && safeNumber(f.valorMinimo) > 0 && subtotal >= safeNumber(f.valorMinimo)
+                );
+                if (elegiveis.length === 0) return null;
 
-            return elegiveis[elegiveis.length - 1];
-        },
-
-        /**
-         * Retorna a próxima faixa que o cliente ainda não atingiu.
-         * Se já estiver na última faixa, retorna null.
-         */
-        obterProximaFaixaValor: function (subtotal) {
-            const valorCompra = Math.max(0, safeNumber(subtotal));
-            const faixas = obterFaixasOrdenadas();
-            return faixas.find(f => valorCompra < f.valorMinimo) || null;
-        },
-
-        /**
-         * Retorna o progresso completo das metas de desconto por valor.
-         * A mensagem é pronta para ser exibida no carrinho e checkout.
-         */
-        obterProgressoFaixaValor: function (subtotal) {
-            const valorCompra = Math.max(0, safeNumber(subtotal));
-            const faixas = obterFaixasOrdenadas();
-            if (faixas.length === 0) {
-                return {
-                    temFaixas: false,
-                    atingiuAlguma: false,
-                    faixaAtual: null,
-                    proximaFaixa: null,
-                    falta: 0,
-                    percentualProxima: 0,
-                    mensagem: ''
-                };
+                return elegiveis.reduce((melhor, atual) =>
+                    safeNumber(atual.valorMinimo) > safeNumber(melhor.valorMinimo) ? atual : melhor
+                );
+            } catch (error) {
+                console.error('[PMA V8] [descontoService] Erro ao obter faixa de valor:', error);
+                return null;
             }
-
-            const faixaAtual = this.obterMelhorFaixaValor(valorCompra);
-            const proximaFaixa = this.obterProximaFaixaValor(valorCompra);
-
-            if (!proximaFaixa) {
-                return {
-                    temFaixas: true,
-                    atingiuAlguma: Boolean(faixaAtual),
-                    faixaAtual,
-                    proximaFaixa: null,
-                    falta: 0,
-                    percentualProxima: 0,
-                    mensagem: faixaAtual
-                        ? `🎉 Você já atingiu a maior faixa: ${faixaAtual.percentual}% OFF em compras a partir de ${this.formatarMoeda(faixaAtual.valorMinimo)}.`
-                        : ''
-                };
-            }
-
-            const falta = round(Math.max(0, proximaFaixa.valorMinimo - valorCompra));
-            const prefixo = faixaAtual
-                ? `🎉 Você já ganhou ${faixaAtual.percentual}% OFF! `
-                : '';
-
-            return {
-                temFaixas: true,
-                atingiuAlguma: Boolean(faixaAtual),
-                faixaAtual,
-                proximaFaixa,
-                falta,
-                percentualProxima: proximaFaixa.percentual,
-                mensagem: `${prefixo}Faltam ${this.formatarMoeda(falta)} para ganhar ${proximaFaixa.percentual}% OFF em compras a partir de ${this.formatarMoeda(proximaFaixa.valorMinimo)}.`
-            };
         },
 
         /**
@@ -319,13 +239,6 @@
             const precoAnterior = safeNumber(produto.oldPrice ?? produto.precoAntigo ?? produto.precoOriginal);
 
             return (precoAnterior > 0 && precoAtual < precoAnterior);
-        },
-
-        /**
-         * Formata valores para comunicação de metas e descontos.
-         */
-        formatarMoeda: function (valor) {
-            return `R$ ${safeNumber(valor).toFixed(2).replace('.', ',')}`;
         },
 
         /**

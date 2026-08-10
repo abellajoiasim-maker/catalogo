@@ -595,7 +595,13 @@
                                 </figure>
                             </div>`;
                         }).join('');
-                        vitrineContainer.classList.remove('hidden');
+                        // Busca ativa (via URL ?busca= ao carregar a página) esconde a vitrine —
+                        // ela não é um produto pesquisável, então não deve aparecer misturada aos resultados.
+                        if (buscaInicial) {
+                            vitrineContainer.classList.add('hidden');
+                        } else {
+                            vitrineContainer.classList.remove('hidden');
+                        }
                     } else {
                         vitrineContainer.innerHTML = '';
                         vitrineContainer.classList.add('hidden');
@@ -679,6 +685,12 @@
                             if (visivel) achou = true;
                         });
                         noResult.classList.toggle('hidden', achou || produtosCatalogo.length === 0);
+
+                        // Com busca ativa, some com a vitrine — ela não é um produto pesquisável
+                        // e não deve aparecer misturada aos resultados. Volta quando o campo é limpo.
+                        if (vitrineContainer && vitrines.length > 0) {
+                            vitrineContainer.classList.toggle('hidden', !!termo);
+                        }
                     }
 
                     if (buscaInicial) {

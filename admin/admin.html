@@ -20,8 +20,8 @@
             aside > div:first-child { padding: 1rem; }
             nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; padding: .75rem !important; overflow: visible !important; }
             nav button { min-width: 0; width: 100%; min-height: 3rem; padding: .7rem .65rem !important; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; }
-            main { width: 100%; min-height: calc(100vh - 19rem); }
-            #conteudo-modulo { width: 100%; height: calc(100vh - 19rem); min-height: 42rem; }
+            main { width: 100%; height: auto; min-height: 0; flex: none; }
+            #conteudo-modulo { display: block; width: 100%; height: 1200px; min-height: 1200px; overflow: visible; }
         }
     </style>
 </head>
@@ -98,8 +98,47 @@
     </main>
 
     <script>
+        const iframeModulo = document.getElementById('conteudo-modulo');
+
+        function ajustarAlturaModulo() {
+            if (!iframeModulo || window.innerWidth > 767) return;
+            try {
+                const doc = iframeModulo.contentDocument;
+                if (!doc) return;
+                const body = doc.body;
+                const html = doc.documentElement;
+                const altura = Math.max(
+                    body?.scrollHeight || 0,
+                    body?.offsetHeight || 0,
+                    html?.scrollHeight || 0,
+                    html?.offsetHeight || 0,
+                    900
+                );
+                iframeModulo.style.height = `${altura + 24}px`;
+                iframeModulo.style.minHeight = `${altura + 24}px`;
+            } catch (erro) {
+                // O iframe é same-origin em produção; se o navegador bloquear a leitura,
+                // mantém a altura móvel de segurança definida no CSS.
+            }
+        }
+
+        iframeModulo?.addEventListener('load', () => {
+            ajustarAlturaModulo();
+            try {
+                const doc = iframeModulo.contentDocument;
+                const alvo = doc?.documentElement || doc?.body;
+                if (alvo && window.ResizeObserver) {
+                    new ResizeObserver(ajustarAlturaModulo).observe(alvo);
+                }
+            } catch (erro) {}
+            setTimeout(ajustarAlturaModulo, 500);
+            setTimeout(ajustarAlturaModulo, 1500);
+            setTimeout(ajustarAlturaModulo, 3000);
+        });
+        window.addEventListener('resize', ajustarAlturaModulo);
+
         function navegarPara(modulo, elementoBotao) {
-            document.getElementById('conteudo-modulo').src = `../modulo/${modulo}`;
+            iframeModulo.src = `../modulo/${modulo}`;
             
             // Atualiza estado visual do menu ativo
             document.querySelectorAll('nav button').forEach(btn => {

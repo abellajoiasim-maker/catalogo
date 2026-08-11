@@ -102,6 +102,17 @@
             const pId = produto.id || produto.codigo || produto.sku;
             const labelVariacao = variacao ? variacao.trim() : '';
             const itens = obterItens();
+            const estoqueControlado = produto.estoqueControlado === true || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true;
+            const estoqueQuantidade = Math.max(0, parseInt(produto.estoqueQuantidade ?? produto.estoque ?? 0, 10) || 0);
+            if (estoqueControlado) {
+                const totalAtual = itens
+                    .filter(item => item.id === pId)
+                    .reduce((total, item) => total + (parseInt(item.quantidade, 10) || 0), 0);
+                if (totalAtual + quantidade > estoqueQuantidade) {
+                    console.warn('[carrinhoService] Limite de estoque atingido para', pId);
+                    return false;
+                }
+            }
 
             // Busca por ID E pela variação exata para não somar itens de grades diferentes na mesma linha
             const index = itens.findIndex(item => item.id === pId && (item.variacao || '') === labelVariacao);
@@ -121,7 +132,9 @@
                     image: produto.imagem || produto.image || '',
                     peso: parseFloat(produto.peso || 0),
                     quantidade: quantidade,
-                    variacao: labelVariacao // Persistência estável da grade escolhida
+                    variacao: labelVariacao, // Persistência estável da grade escolhida
+                    estoqueControlado,
+                    estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null
                 });
             }
 
@@ -163,6 +176,10 @@
             const item = itens.find(item => item.id === produtoId && (item.variacao || '') === labelVariacao);
 
             if (item) {
+                if (item.estoqueControlado === true && novaQuantidade > (parseInt(item.estoqueQuantidade, 10) || 0)) {
+                    console.warn('[carrinhoService] Quantidade acima do estoque disponível.');
+                    return false;
+                }
                 item.quantidade = novaQuantidade;
                 salvarItens(itens);
                 console.info(`[carrinhoService] Quantidade do produto ID ${produtoId} (${labelVariacao}) atualizada para ${novaQuantidade}.`);

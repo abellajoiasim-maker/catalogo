@@ -157,9 +157,12 @@ export const ProdutoModule = {
             const pausado = p.paused === true;
             const temDizeres  = Array.isArray(p.dizeres)  && p.dizeres.length  > 0;
             const temIniciais = Array.isArray(p.iniciais) && p.iniciais.length > 0;
+            const estoqueControlado = p.estoqueControlado === true || p.estoqueLimitadoAtivo === true || p.controleEstoque === true;
+            const estoqueQuantidade = Math.max(0, parseInt(p.estoqueQuantidade ?? p.estoque ?? 0, 10) || 0);
             const badges = [
                 temDizeres  ? `<span class="px-1.5 py-0.5 bg-zinc-800 text-zinc-400 rounded text-[9px] font-bold">✍️ ${p.dizeres.length} dizeres</span>`  : '',
                 temIniciais ? `<span class="px-1.5 py-0.5 bg-zinc-800 text-zinc-400 rounded text-[9px] font-bold">🔤 ${p.iniciais.length} iniciais</span>` : '',
+                estoqueControlado ? `<span class="px-1.5 py-0.5 bg-amber-950/40 text-amber-300 rounded text-[9px] font-bold">📦 ${estoqueQuantidade} em estoque</span>` : '',
             ].filter(Boolean).join('');
 
             return `
@@ -253,6 +256,26 @@ export const ProdutoModule = {
                     </div>
                 </div>
 
+                <!-- Estoque limitado -->
+                <div class="p-3 bg-amber-950/20 border border-amber-900/40 rounded-xl space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <label class="text-xs text-amber-200 font-bold block">Contador de estoque limitado</label>
+                            <p class="text-[10px] text-amber-100/60 mt-1">Use para peças de saldão ou fora de linha.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="new-estoque-controlado" class="sr-only peer">
+                            <div class="w-10 h-5 bg-zinc-800 rounded-full peer peer-checked:bg-[#caa85c]"></div>
+                            <div class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full peer-checked:translate-x-5 transition-transform"></div>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="text-xs text-zinc-400 font-bold block mb-1">Quantidade disponível</label>
+                        <input type="number" id="new-estoque-quantidade" min="0" step="1" value="0" disabled
+                               class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white disabled:opacity-40 focus:outline-none focus:border-[#caa85c]">
+                    </div>
+                </div>
+
                 <!-- Variações -->
                 ${_htmlVariacoes('new')}
 
@@ -276,6 +299,12 @@ export const ProdutoModule = {
         `;
 
         Drawer.open({ title: '➕ NOVO PRODUTO', content: html, width: '700px' });
+        const newEstoqueToggle = document.getElementById('new-estoque-controlado');
+        const newEstoqueInput = document.getElementById('new-estoque-quantidade');
+        newEstoqueToggle?.addEventListener('change', () => {
+            newEstoqueInput.disabled = !newEstoqueToggle.checked;
+            if (newEstoqueToggle.checked) newEstoqueInput.focus();
+        });
         document.getElementById('btn-inserir-produto').onclick = () => this.salvarNovoProduto();
     },
 
@@ -290,6 +319,8 @@ export const ProdutoModule = {
         const iniciais = _extrairTags('newIniciaisContainer');
         const peso     = parseFloat(document.getElementById('new-peso')?.value) || 0;
         const promo    = parseFloat(document.getElementById('new-promo')?.value) || 0;
+        const estoqueControlado = document.getElementById('new-estoque-controlado')?.checked === true;
+        const estoqueQuantidade = Math.max(0, parseInt(document.getElementById('new-estoque-quantidade')?.value, 10) || 0);
 
         const dados = {
             sku:          document.getElementById('new-sku')?.value?.trim()          || '',
@@ -311,6 +342,9 @@ export const ProdutoModule = {
             iniciais:     iniciais.length > 0 ? iniciais : null,
             initials:     iniciais.length > 0 ? iniciais : null,
             paused:       false,
+            estoqueControlado,
+            estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
+            estoque: estoqueControlado ? estoqueQuantidade : null,
             createdAt:    Date.now(),
             updatedAt:    Date.now(),
         };
@@ -394,6 +428,26 @@ export const ProdutoModule = {
                     </div>
                 </div>
 
+                <!-- Estoque limitado -->
+                <div class="p-3 bg-amber-950/20 border border-amber-900/40 rounded-xl space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <label class="text-xs text-amber-200 font-bold block">Contador de estoque limitado</label>
+                            <p class="text-[10px] text-amber-100/60 mt-1">Ative apenas para peças de saldão.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="edit-estoque-controlado" class="sr-only peer" ${p.estoqueControlado === true || p.estoqueLimitadoAtivo === true || p.controleEstoque === true ? 'checked' : ''}>
+                            <div class="w-10 h-5 bg-zinc-800 rounded-full peer peer-checked:bg-[#caa85c]"></div>
+                            <div class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full peer-checked:translate-x-5 transition-transform"></div>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="text-xs text-zinc-400 font-bold block mb-1">Quantidade disponível</label>
+                        <input type="number" id="edit-estoque-quantidade" min="0" step="1" value="${Math.max(0, parseInt(p.estoqueQuantidade ?? p.estoque ?? 0, 10) || 0)}"
+                               class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#caa85c]">
+                    </div>
+                </div>
+
                 <!-- Variações -->
                 ${_htmlVariacoes('edit')}
 
@@ -428,6 +482,11 @@ export const ProdutoModule = {
         `;
 
         Drawer.open({ title: '✏️ EDITAR PRODUTO', content: html, width: '700px' });
+        const editEstoqueToggle = document.getElementById('edit-estoque-controlado');
+        const editEstoqueInput = document.getElementById('edit-estoque-quantidade');
+        const syncEditEstoque = () => { editEstoqueInput.disabled = !editEstoqueToggle.checked; };
+        editEstoqueToggle?.addEventListener('change', syncEditEstoque);
+        syncEditEstoque();
 
         // Popula as tags após o DOM estar pronto
         requestAnimationFrame(() => {
@@ -448,6 +507,8 @@ export const ProdutoModule = {
         const iniciais = _extrairTags('editIniciaisContainer');
         const peso     = parseFloat(document.getElementById('edit-peso')?.value)  || 0;
         const promo    = parseFloat(document.getElementById('edit-promo')?.value) || 0;
+        const estoqueControlado = document.getElementById('edit-estoque-controlado')?.checked === true;
+        const estoqueQuantidade = Math.max(0, parseInt(document.getElementById('edit-estoque-quantidade')?.value, 10) || 0);
 
         const dados = {
             sku:          document.getElementById('edit-sku')?.value?.trim()          || '',
@@ -469,6 +530,9 @@ export const ProdutoModule = {
             iniciais:     iniciais.length > 0 ? iniciais : null,
             initials:     iniciais.length > 0 ? iniciais : null,
             paused:       document.getElementById('edit-paused')?.checked || false,
+            estoqueControlado,
+            estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
+            estoque: estoqueControlado ? estoqueQuantidade : null,
             updatedAt:    Date.now(),
         };
 

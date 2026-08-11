@@ -110,6 +110,11 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
             const peso = data.peso ?? data.weight ?? null;
             const eyebrow = data.colecao || data.eyebrow || '';
             const sku = data.sku || data.codigo || '';
+            const estoqueControlado = data.estoqueControlado === true || data.estoqueLimitadoAtivo === true || data.controleEstoque === true;
+            const estoqueQuantidade = Math.max(0, parseInt(data.estoqueQuantidade ?? data.estoque ?? 0, 10) || 0);
+            const estoqueHTML = estoqueControlado
+                ? `<p class="stock-counter ${estoqueQuantidade === 0 ? 'stock-counter--soldout' : ''}" aria-label="${estoqueQuantidade === 0 ? 'Produto esgotado' : `${estoqueQuantidade} unidades disponíveis`}">${estoqueQuantidade === 0 ? 'Esgotado' : `Últimas ${estoqueQuantidade} unidades`}</p>`
+                : '';
 
             const precoFmt = (typeof window.formatarMoeda === 'function')
                 ? window.formatarMoeda(preco)
@@ -145,6 +150,7 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
                         ${sku ? `<p style="font-size:11px; color:var(--color-secondary); letter-spacing:.04em; margin-bottom:2px;">SKU: ${sku}</p>` : ''}
                         <p class="title">${nome}</p>
                         <div class="price-row"><span class="price">${precoFmt}</span>${precoAntigoHTML}</div>
+                        ${estoqueHTML}
                         ${peso ? `<p class="weight">${peso}g</p>` : ''}
                     </div>
                 </div>

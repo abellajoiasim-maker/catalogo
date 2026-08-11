@@ -681,6 +681,16 @@ const DataService = {
         <option value="">Selecione a categoria primeiro</option>
       </select>
 
+      <div class="my-4 p-4 bg-amber-950/20 border border-amber-700/50 rounded-xl">
+        <div class="flex items-center gap-2 mb-3"><span class="text-lg">📦</span><div><p class="text-sm font-bold text-amber-200">Estoque limitado / Saldão</p><p class="text-[10px] text-zinc-400">Use para peças com quantidade limitada.</p></div></div>
+        <label class="flex items-center gap-3 p-3 bg-zinc-900/70 border border-zinc-800 rounded-lg mb-2 cursor-pointer"><input type="checkbox" id="newEstoqueControlado" class="w-4 h-4 accent-amber-500" onchange="document.getElementById('newEstoqueCampos').classList.toggle('hidden', !this.checked)"><span class="text-xs text-zinc-200 font-semibold">Ativar estoque limitado</span></label>
+        <div id="newEstoqueCampos" class="hidden space-y-2">
+          <label class="text-xs text-zinc-400 block mb-1">Quantidade disponível</label><input id="newEstoqueQuantidade" type="number" min="0" step="1" class="input-dark" value="0">
+          <label class="flex items-center gap-3 p-2 bg-zinc-900/70 rounded-lg cursor-pointer"><input type="checkbox" id="newMostrarEstoqueGrid" class="w-4 h-4 accent-amber-500" checked><span class="text-xs text-zinc-300">Exibir contador de estoque no grid de produtos</span></label>
+          <label class="flex items-center gap-3 p-2 bg-zinc-900/70 rounded-lg cursor-pointer"><input type="checkbox" id="newVenderSemEstoque" class="w-4 h-4 accent-amber-500"><span class="text-xs text-zinc-300">Permitir venda mesmo sem estoque</span></label>
+        </div>
+      </div>
+
       <label class="text-xs text-zinc-400 block mb-1">Link de Imagem (URL ou gs://)</label>
       <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
         <div class="absolute text-xs text-zinc-600">Preview da Foto</div>
@@ -721,6 +731,10 @@ const DataService = {
       const listaIniciais = extrairValoresTags('newIniciaisContainer');
       const vitrine = document.getElementById('newVitrine')?.checked || false;
       const legendaVitrine = document.getElementById('newLegendaVitrine')?.value.trim() || '';
+      const estoqueControlado = document.getElementById('newEstoqueControlado')?.checked === true;
+      const estoqueQuantidade = Math.max(0, parseInt(document.getElementById('newEstoqueQuantidade')?.value, 10) || 0);
+      const mostrarEstoqueGrid = document.getElementById('newMostrarEstoqueGrid')?.checked !== false;
+      const venderSemEstoque = document.getElementById('newVenderSemEstoque')?.checked === true;
 
       await STATE.db.ref(window.getAbellaPath('products')).push({
         name: nome, title: nome, sku, category: cat,
@@ -733,6 +747,11 @@ const DataService = {
         dizeres:  listaDizeres,  sayings:  listaDizeres,
         iniciais: listaIniciais, initials: listaIniciais,
         vitrine, legendaVitrine,
+        estoqueControlado, estoqueLimitadoAtivo: estoqueControlado, controleEstoque: estoqueControlado,
+        estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
+        estoque: estoqueControlado ? estoqueQuantidade : null,
+        mostrarEstoqueGrid: estoqueControlado ? mostrarEstoqueGrid : false,
+        venderSemEstoque: estoqueControlado ? venderSemEstoque : false,
         paused: false, createdAt: Date.now(), updatedAt: Date.now()
       });
       fecharDrawer();
@@ -911,6 +930,16 @@ const DataService = {
       <label class="text-xs text-zinc-400 block mb-1">Subcategoria Vinculada</label>
       <select id="editSubcategoria" class="input-dark"></select>
 
+      <div class="my-4 p-4 bg-amber-950/20 border border-amber-700/50 rounded-xl">
+        <div class="flex items-center gap-2 mb-3"><span class="text-lg">📦</span><div><p class="text-sm font-bold text-amber-200">Estoque limitado / Saldão</p><p class="text-[10px] text-zinc-400">Atualize o saldo e o comportamento de venda.</p></div></div>
+        <label class="flex items-center gap-3 p-3 bg-zinc-900/70 border border-zinc-800 rounded-lg mb-2 cursor-pointer"><input type="checkbox" id="editEstoqueControlado" class="w-4 h-4 accent-amber-500" ${p.estoqueControlado === true || p.estoqueLimitadoAtivo === true || p.controleEstoque === true ? 'checked' : ''} onchange="document.getElementById('editEstoqueCampos').classList.toggle('hidden', !this.checked)"><span class="text-xs text-zinc-200 font-semibold">Ativar estoque limitado</span></label>
+        <div id="editEstoqueCampos" class="${p.estoqueControlado === true || p.estoqueLimitadoAtivo === true || p.controleEstoque === true ? '' : 'hidden'} space-y-2">
+          <label class="text-xs text-zinc-400 block mb-1">Quantidade disponível</label><input id="editEstoqueQuantidade" type="number" min="0" step="1" class="input-dark" value="${Number(p.estoqueQuantidade ?? p.estoque ?? 0)}">
+          <label class="flex items-center gap-3 p-2 bg-zinc-900/70 rounded-lg cursor-pointer"><input type="checkbox" id="editMostrarEstoqueGrid" class="w-4 h-4 accent-amber-500" ${p.mostrarEstoqueGrid !== false ? 'checked' : ''}><span class="text-xs text-zinc-300">Exibir contador de estoque no grid de produtos</span></label>
+          <label class="flex items-center gap-3 p-2 bg-zinc-900/70 rounded-lg cursor-pointer"><input type="checkbox" id="editVenderSemEstoque" class="w-4 h-4 accent-amber-500" ${p.venderSemEstoque === true ? 'checked' : ''}><span class="text-xs text-zinc-300">Permitir venda mesmo sem estoque</span></label>
+        </div>
+      </div>
+
       <label class="text-xs text-zinc-400 block mb-1">Link de Imagem</label>
       <div class="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative mb-2 flex items-center justify-center">
         <div class="absolute text-xs text-zinc-600">Preview Indisponível</div>
@@ -957,6 +986,10 @@ const DataService = {
       const paused = document.getElementById('editPaused')?.checked || false;
       const vitrine = document.getElementById('editVitrine')?.checked || false;
       const legendaVitrine = document.getElementById('editLegendaVitrine')?.value.trim() || '';
+      const estoqueControlado = document.getElementById('editEstoqueControlado')?.checked === true;
+      const estoqueQuantidade = Math.max(0, parseInt(document.getElementById('editEstoqueQuantidade')?.value, 10) || 0);
+      const mostrarEstoqueGrid = document.getElementById('editMostrarEstoqueGrid')?.checked !== false;
+      const venderSemEstoque = document.getElementById('editVenderSemEstoque')?.checked === true;
 
       await STATE.db.ref(window.getAbellaPath(`products/${id}`)).update({
         name: nomeVal,
@@ -972,6 +1005,11 @@ const DataService = {
         dizeres:  listaDizeres,  sayings:  listaDizeres,
         iniciais: listaIniciais, initials: listaIniciais,
         vitrine, legendaVitrine,
+        estoqueControlado, estoqueLimitadoAtivo: estoqueControlado, controleEstoque: estoqueControlado,
+        estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
+        estoque: estoqueControlado ? estoqueQuantidade : null,
+        mostrarEstoqueGrid: estoqueControlado ? mostrarEstoqueGrid : false,
+        venderSemEstoque: estoqueControlado ? venderSemEstoque : false,
         paused, updatedAt: Date.now()
       });
       fecharDrawer();

@@ -260,10 +260,10 @@ export const ProdutoModule = {
                 <div class="p-3 bg-amber-950/20 border border-amber-900/40 rounded-xl space-y-3">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <label class="text-xs text-amber-200 font-bold block">Contador de estoque limitado</label>
+                            <label class="text-xs text-amber-200 font-bold block">Ativar estoque limitado</label>
                             <p class="text-[10px] text-amber-100/60 mt-1">Use para peças de saldão ou fora de linha.</p>
                         </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
+                        <label class="relative inline-flex items-center cursor-pointer" title="Ativar controle de estoque">
                             <input type="checkbox" id="new-estoque-controlado" class="sr-only peer">
                             <div class="w-10 h-5 bg-zinc-800 rounded-full peer peer-checked:bg-[#caa85c]"></div>
                             <div class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full peer-checked:translate-x-5 transition-transform"></div>
@@ -274,6 +274,14 @@ export const ProdutoModule = {
                         <input type="number" id="new-estoque-quantidade" min="0" step="1" value="0" disabled
                                class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white disabled:opacity-40 focus:outline-none focus:border-[#caa85c]">
                     </div>
+                    <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                        <input type="checkbox" id="new-mostrar-estoque-grid" checked class="accent-[#caa85c]">
+                        <span>Exibir contador de estoque no grid de produtos</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                        <input type="checkbox" id="new-vender-sem-estoque" class="accent-[#caa85c]">
+                        <span>Permitir venda mesmo sem estoque</span>
+                    </label>
                 </div>
 
                 <!-- Variações -->
@@ -345,6 +353,8 @@ export const ProdutoModule = {
             estoqueControlado,
             estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
             estoque: estoqueControlado ? estoqueQuantidade : null,
+            mostrarEstoqueGrid: document.getElementById('new-mostrar-estoque-grid')?.checked !== false,
+            venderSemEstoque: document.getElementById('new-vender-sem-estoque')?.checked === true,
             createdAt:    Date.now(),
             updatedAt:    Date.now(),
         };
@@ -432,10 +442,10 @@ export const ProdutoModule = {
                 <div class="p-3 bg-amber-950/20 border border-amber-900/40 rounded-xl space-y-3">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <label class="text-xs text-amber-200 font-bold block">Contador de estoque limitado</label>
+                            <label class="text-xs text-amber-200 font-bold block">Ativar estoque limitado</label>
                             <p class="text-[10px] text-amber-100/60 mt-1">Ative apenas para peças de saldão.</p>
                         </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
+                        <label class="relative inline-flex items-center cursor-pointer" title="Ativar controle de estoque">
                             <input type="checkbox" id="edit-estoque-controlado" class="sr-only peer" ${p.estoqueControlado === true || p.estoqueLimitadoAtivo === true || p.controleEstoque === true ? 'checked' : ''}>
                             <div class="w-10 h-5 bg-zinc-800 rounded-full peer peer-checked:bg-[#caa85c]"></div>
                             <div class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full peer-checked:translate-x-5 transition-transform"></div>
@@ -446,6 +456,14 @@ export const ProdutoModule = {
                         <input type="number" id="edit-estoque-quantidade" min="0" step="1" value="${Math.max(0, parseInt(p.estoqueQuantidade ?? p.estoque ?? 0, 10) || 0)}"
                                class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#caa85c]">
                     </div>
+                    <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                        <input type="checkbox" id="edit-mostrar-estoque-grid" ${p.mostrarEstoqueGrid !== false ? 'checked' : ''} class="accent-[#caa85c]">
+                        <span>Exibir contador de estoque no grid de produtos</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                        <input type="checkbox" id="edit-vender-sem-estoque" ${p.venderSemEstoque === true ? 'checked' : ''} class="accent-[#caa85c]">
+                        <span>Permitir venda mesmo sem estoque</span>
+                    </label>
                 </div>
 
                 <!-- Variações -->
@@ -533,6 +551,8 @@ export const ProdutoModule = {
             estoqueControlado,
             estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
             estoque: estoqueControlado ? estoqueQuantidade : null,
+            mostrarEstoqueGrid: document.getElementById('edit-mostrar-estoque-grid')?.checked !== false,
+            venderSemEstoque: document.getElementById('edit-vender-sem-estoque')?.checked === true,
             updatedAt:    Date.now(),
         };
 

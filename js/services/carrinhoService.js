@@ -104,7 +104,7 @@
             const itens = obterItens();
             const estoqueControlado = produto.estoqueControlado === true || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true;
             const estoqueQuantidade = Math.max(0, parseInt(produto.estoqueQuantidade ?? produto.estoque ?? 0, 10) || 0);
-            if (estoqueControlado) {
+            if (estoqueControlado && produto.venderSemEstoque !== true) {
                 const totalAtual = itens
                     .filter(item => item.id === pId)
                     .reduce((total, item) => total + (parseInt(item.quantidade, 10) || 0), 0);
@@ -134,7 +134,8 @@
                     quantidade: quantidade,
                     variacao: labelVariacao, // Persistência estável da grade escolhida
                     estoqueControlado,
-                    estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null
+                    estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
+                    venderSemEstoque: produto.venderSemEstoque === true
                 });
             }
 
@@ -176,7 +177,7 @@
             const item = itens.find(item => item.id === produtoId && (item.variacao || '') === labelVariacao);
 
             if (item) {
-                if (item.estoqueControlado === true && novaQuantidade > (parseInt(item.estoqueQuantidade, 10) || 0)) {
+                if (item.estoqueControlado === true && item.venderSemEstoque !== true && novaQuantidade > (parseInt(item.estoqueQuantidade, 10) || 0)) {
                     console.warn('[carrinhoService] Quantidade acima do estoque disponível.');
                     return false;
                 }

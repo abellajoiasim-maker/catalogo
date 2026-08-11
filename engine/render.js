@@ -112,7 +112,7 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
             const sku = data.sku || data.codigo || '';
             const estoqueControlado = data.estoqueControlado === true || data.estoqueLimitadoAtivo === true || data.controleEstoque === true;
             const estoqueQuantidade = Math.max(0, parseInt(data.estoqueQuantidade ?? data.estoque ?? 0, 10) || 0);
-            const estoqueHTML = estoqueControlado
+            const estoqueHTML = estoqueControlado && data.mostrarEstoqueGrid !== false
                 ? `<p class="stock-counter ${estoqueQuantidade === 0 ? 'stock-counter--soldout' : ''}" aria-label="${estoqueQuantidade === 0 ? 'Produto esgotado' : `${estoqueQuantidade} unidades disponíveis`}">${estoqueQuantidade === 0 ? 'Esgotado' : `Últimas ${estoqueQuantidade} unidades`}</p>`
                 : '';
 

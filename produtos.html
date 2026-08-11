@@ -189,6 +189,7 @@
     const ehVitrine = produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine';
     const estoqueControlado = produto.estoqueControlado === true || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true;
     const estoqueQuantidade = Math.max(0, parseInt(produto.estoqueQuantidade ?? produto.estoque ?? 0, 10) || 0);
+    const venderSemEstoque = produto.venderSemEstoque === true;
     if (ehVitrine) {
         const bodyHTML = `
             <div class="media" style="border-radius:var(--radius-md); overflow:hidden; aspect-ratio:16/9; border: 1px solid var(--color-border); margin-bottom: var(--space-5);">
@@ -250,7 +251,7 @@
                 <label class="aurora-label">Quantidade</label>
                 <div style="display:flex; align-items:center; gap: var(--space-3);">
                     <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
-                    <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="${estoqueControlado && estoqueQuantidade === 0 ? 0 : 1}" min="${estoqueControlado && estoqueQuantidade === 0 ? 0 : 1}" ${estoqueControlado ? `max="${estoqueQuantidade}"` : ''}
+                    <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="${estoqueControlado && estoqueQuantidade === 0 && !venderSemEstoque ? 0 : 1}" min="${estoqueControlado && estoqueQuantidade === 0 && !venderSemEstoque ? 0 : 1}" ${estoqueControlado && !venderSemEstoque ? `max="${estoqueQuantidade}"` : ''}
                            data-variacao-nome="" data-variacao-preco="${precoBase}" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
                     ${estoqueControlado ? `<p style="font-size:11px;color:var(--color-secondary);margin-top:var(--space-2);">${estoqueQuantidade > 0 ? `${estoqueQuantidade} unidade(s) disponível(is)` : 'Produto esgotado'}</p>` : ''}
                     <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
@@ -390,7 +391,8 @@
 
     const estoqueControlado = produto.estoqueControlado === true || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true;
     const estoqueQuantidade = Math.max(0, parseInt(produto.estoqueQuantidade ?? produto.estoque ?? 0, 10) || 0);
-    if (estoqueControlado && totalSolicitado > estoqueQuantidade) {
+    const venderSemEstoque = produto.venderSemEstoque === true;
+    if (estoqueControlado && !venderSemEstoque && totalSolicitado > estoqueQuantidade) {
         alert(`Este produto possui apenas ${estoqueQuantidade} unidade(s) disponível(is).`);
         return;
     }

@@ -6,6 +6,15 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <script src="./js/analytics.js"></script>
     <title>Subcategorias • Abella Joias</title>
+    <meta name="description" content="Explore subcategorias de joias no atacado da Abella Joias, direto de fábrica em Limeira-SP.">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Abella Joias">
+    <meta property="og:title" content="Subcategorias • Abella Joias">
+    <meta property="og:description" content="Encontre a coleção ideal de joias no atacado.">
+    <meta property="og:image" content="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://catalogo.abellajoias.com.br/subcategorias.html">
 
     <script>window.AURORA_FALLBACK_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';</script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -22,6 +31,12 @@
             background: radial-gradient(circle, rgba(var(--color-primary-rgb),.12) 0%, rgba(var(--color-primary-rgb),0) 70%);
             transform: translate(-50%,-50%); z-index:-1; pointer-events:none;
         }
+        .subcat-intent{
+            max-width:760px; margin:0 auto var(--space-7); padding:var(--space-5) var(--space-6);
+            border-top:1px solid var(--color-border); border-bottom:1px solid var(--color-border);
+            text-align:center; color:var(--color-secondary); font-size:13px; line-height:1.75;
+        }
+        .subcat-intent strong{ color:var(--color-text); font-weight:600; }
     </style>
 </head>
 <body>
@@ -51,6 +66,10 @@
             <h1 id="categoriaNome" style="font-size:clamp(28px,5vw,48px);"></h1>
             <p id="categoriaDescricao" style="font-size:13px; color:var(--color-secondary); margin-top:var(--space-3);"></p>
         </section>
+
+        <div class="subcat-intent" id="subcategoriaIntento" aria-live="polite">
+            Escolha uma subcategoria para visualizar a <strong>vitrine ambientada</strong>, conferir os modelos disponíveis e avançar diretamente para o pedido.
+        </div>
 
         <section class="aurora-section">
             <div id="loading" style="text-align:center; padding: var(--space-6) 0;">
@@ -137,6 +156,8 @@
                 document.getElementById('categoriaNome').innerText = nomeCategoria;
                 const descricaoCategoria = categoriaAtual.descricao || categoriaAtual.description || `Explore a coleção completa de ${nomeCategoria}.`;
                 document.getElementById('categoriaDescricao').innerText = descricaoCategoria;
+                const intento = document.getElementById('subcategoriaIntento');
+                if (intento) intento.innerHTML = `Escolha uma subcategoria de <strong>${nomeCategoria}</strong> para visualizar a vitrine ambientada, conferir os modelos disponíveis e avançar diretamente para o pedido.`;
 
                 // SEO IQ200 — meta description, canonical, OG e BreadcrumbList dinâmicos por categoria
                 (function seoDinamicoCategoria() {
@@ -151,9 +172,9 @@
                         el.setAttribute('href', href);
                     };
 
-                    const descSeo = `${descricaoCategoria} Modelos de ${nomeCategoria} no atacado, direto de fábrica em Limeira-SP. Abella Joias.`;
+                    const descSeo = `${descricaoCategoria} Modelos de ${nomeCategoria} no atacado, direto de fábrica em Limeira-SP. Abella Joias.`.slice(0, 158);
                     const canonicalUrl = `${window.location.origin}${window.location.pathname}?categoria=${encodeURIComponent(categoriaSlug)}`;
-                    const imagemSeo = (categoriaAtual.imagem || categoriaAtual.image) || window.AURORA_FALLBACK_IMAGE;
+                    const imagemSeo = (categoriaAtual.imagem || categoriaAtual.image || categoriaAtual.cover || categoriaAtual.banner) || window.AURORA_FALLBACK_IMAGE;
 
                     setMeta('name', 'description', descSeo);
                     setMeta('name', 'robots', 'index, follow');
@@ -204,7 +225,7 @@
                 }
 
                 grid.innerHTML = listaSubcategorias.map(([subSlug, subData]) => {
-                    const html = AuroraRender.subcategoryCard(subSlug, subData, categoriaSlug, categoriaAtual.imagem || categoriaAtual.image);
+                    const html = AuroraRender.subcategoryCard(subSlug, subData, categoriaSlug, categoriaAtual.imagem || categoriaAtual.image || categoriaAtual.cover || categoriaAtual.banner);
                     return `<div class="col-3" data-aurora-reveal>${html}</div>`;
                 }).join('');
 

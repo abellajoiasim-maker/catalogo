@@ -6,6 +6,15 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <script src="./js/analytics.js"></script>
     <title>Produtos • Abella Joias</title>
+    <meta name="description" content="Confira produtos de joias no atacado da Abella Joias, direto de fábrica em Limeira-SP.">
+    <meta name="robots" content="index,follow">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Abella Joias">
+    <meta property="og:title" content="Produtos • Abella Joias">
+    <meta property="og:description" content="Modelos de joias no atacado com atendimento direto e pedido online.">
+    <meta property="og:image" content="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://catalogo.abellajoias.com.br/produtos.html">
 
     <script>window.AURORA_FALLBACK_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';</script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
@@ -86,10 +95,11 @@
         </section>
 
         <section class="aurora-section" style="padding-top: var(--space-5);">
-            <div style="display:flex; flex-direction:column; gap:var(--space-2); margin-bottom: var(--space-7);">
-                <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary-hover); font-weight:700;" id="categoriaEyebrow">Coleção</p>
-                <h1 id="categoriaNome" style="font-size:clamp(26px,4.5vw,44px);"></h1>
-                <div style="max-width:420px; margin-top: var(--space-4); position:relative;">
+                <div style="display:flex; flex-direction:column; gap:var(--space-2); margin-bottom: var(--space-7);">
+                    <p style="font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--color-primary-hover); font-weight:700;" id="categoriaEyebrow">Coleção</p>
+                    <h1 id="categoriaNome" style="font-size:clamp(26px,4.5vw,44px);"></h1>
+                    <p id="categoriaResumo" style="max-width:680px;color:var(--color-secondary);font-size:14px;line-height:1.7;margin-top:var(--space-2);"></p>
+                    <div style="max-width:420px; margin-top: var(--space-4); position:relative;">
                     <input type="text" id="busca" placeholder="Buscar produto pelo nome ou SKU..." autocomplete="off"
                            class="aurora-input" style="padding-left: var(--space-8);">
                     <span style="position:absolute; left:var(--space-4); top:50%; transform:translateY(-50%); color:var(--color-secondary);">🔎</span>
@@ -491,6 +501,12 @@
                     : (subcategoriaSlug ? tituloCase(subcategoriaSlug) : (categoriaSlug ? tituloCase(categoriaSlug) : 'Todos os produtos'));
 
                 document.getElementById('categoriaNome').innerText = nomeExibicao;
+                const resumo = document.getElementById('categoriaResumo');
+                if (resumo) {
+                    resumo.innerText = subcategoriaSlug
+                        ? `Veja a vitrine ambientada e os modelos de ${nomeExibicao} disponíveis para compra no atacado. Selecione uma peça para conferir detalhes, variações e adicionar ao pedido.`
+                        : `Explore os modelos de ${nomeExibicao} no catálogo da Abella Joias e avance diretamente para o seu pedido.`;
+                }
 
                 const crumbs = [{ label: 'Home', href: 'index.html' }];
                 if (categoriaSlug) crumbs.push({ label: categoriaSlug.replace(/-/g, ' '), href: `subcategorias.html?categoria=${encodeURIComponent(categoriaSlug)}` });
@@ -518,11 +534,11 @@
                     const tituloSeo = subcategoriaSlug
                         ? `${tituloCase(subcategoriaSlug)} Atacado | Abella Joias`
                         : (categoriaSlug ? `${tituloCase(categoriaSlug)} Atacado | Abella Joias` : 'Catálogo Completo Atacado | Abella Joias');
-                    const descSeo = subcategoriaSlug
+                    const descSeo = (subcategoriaSlug
                         ? `Compre ${tituloCase(subcategoriaSlug)} no atacado direto de fábrica em Limeira-SP. ${qtd} modelos disponíveis, preço de fábrica e entrega para todo o Brasil. Abella Joias.`
                         : (categoriaSlug
                             ? `Confira todos os modelos de ${tituloCase(categoriaSlug)} no atacado da Abella Joias. Preço de fábrica, qualidade garantida e envio para todo o Brasil.`
-                            : `Catálogo completo Abella Joias: semijoias e joias no bruto no atacado, direto de fábrica em Limeira-SP.`);
+                            : `Catálogo completo Abella Joias: semijoias e joias no bruto no atacado, direto de fábrica em Limeira-SP.`)).slice(0, 158);
 
                     const baseUrl = window.location.origin + window.location.pathname;
                     const canonicalUrl = categoriaSlug
@@ -531,7 +547,7 @@
 
                     // Usa a imagem vitrine desta subcategoria como imagem social, se existir
                     const vitrineDaPagina = filtrados.find(p => p._ehVitrine);
-                    const imagemSeo = (vitrineDaPagina && vitrineDaPagina.imagem) || window.AURORA_FALLBACK_IMAGE;
+                    const imagemSeo = (vitrineDaPagina && (vitrineDaPagina.imagem || vitrineDaPagina.image)) || window.AURORA_FALLBACK_IMAGE;
 
                     document.title = tituloSeo;
                     setMeta('name', 'description', descSeo);

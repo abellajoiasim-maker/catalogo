@@ -49,6 +49,20 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
         return window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg';
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function safeUrl(value) {
+        const url = String(value || '').trim();
+        return /^(https?:|data:image\/|\/|\.\/|\.\.\/)/i.test(url) ? url : fallbackImg();
+    }
+
     const AuroraRender = {
 
         /**
@@ -58,13 +72,15 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
         categoryCard(data) {
             const nome = data.nome || data.name || 'Joia';
             const slug = data.slug || data.categorySlug || slugify(nome);
-            const img = resolveImage(data.imagem || data.image) || fallbackImg();
+            const img = safeUrl(resolveImage(data.imagem || data.image) || fallbackImg());
+            const nomeEsc = escapeHtml(nome);
+            const fallbackEsc = escapeHtml(fallbackImg());
 
             return `
-                <a class="aurora-card aurora-card--category" href="subcategorias.html?categoria=${encodeURIComponent(slug)}">
+                <a class="aurora-card aurora-card--category" href="subcategorias.html?categoria=${encodeURIComponent(slug)}" aria-label="Ver subcategorias de ${nomeEsc}">
                     <div class="media">
-                        <img src="${img}" alt="${nome}" loading="lazy" onerror="this.src='${fallbackImg()}'">
-                        <div class="overlay"><h3 class="title">${nome}</h3></div>
+                        <img src="${img}" alt="${nomeEsc}" loading="lazy" onerror="this.src='${fallbackEsc}'">
+                        <div class="overlay"><h3 class="title">${nomeEsc}</h3></div>
                     </div>
                 </a>
             `;
@@ -77,16 +93,25 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
          */
         subcategoryCard(subSlug, data, categoriaSlug, imagemCategoriaFallback) {
             const nome = data.nome || data.name || subSlug;
-            const imgBruta = data.image || data.imagem || data.cover || data.banner || imagemCategoriaFallback || '';
-            const img = resolveImage(imgBruta) || fallbackImg();
+            const descricao = data.descricao || data.description || `Explore ${nome} no atacado.`;
+            const imgBruta = data.image || data.imagem || data.cover || data.banner || data.imagemAmbientada || data.imagemSubcategoria || imagemCategoriaFallback || '';
+            const img = safeUrl(resolveImage(imgBruta) || fallbackImg());
+            const nomeEsc = escapeHtml(nome);
+            const descricaoEsc = escapeHtml(descricao);
+            const fallbackEsc = escapeHtml(fallbackImg());
 
             return `
-                <a class="aurora-card aurora-card--subcategory"
-                   href="produtos.html?categoria=${encodeURIComponent(categoriaSlug)}&subcategoria=${encodeURIComponent(subSlug)}">
+                <a class="aurora-card aurora-card--subcategory" data-subcategoria-slug="${escapeHtml(subSlug)}"
+                   href="produtos.html?categoria=${encodeURIComponent(categoriaSlug)}&subcategoria=${encodeURIComponent(subSlug)}"
+                   aria-label="Ver produtos de ${nomeEsc}">
                     <div class="media">
-                        <img src="${img}" alt="${nome}" loading="lazy" onerror="this.src='${fallbackImg()}'">
+                        <img src="${img}" alt="${nomeEsc} — Abella Joias" loading="lazy" onerror="this.src='${fallbackEsc}'">
                     </div>
-                    <div class="body"><p class="title">${nome}</p></div>
+                    <div class="body">
+                        <p class="title">${nomeEsc}</p>
+                        <p class="description" style="font-size:12px;color:var(--color-secondary);line-height:1.5;">${descricaoEsc}</p>
+                        <span class="aurora-btn aurora-btn--outline" style="margin-top:var(--space-3);width:fit-content;">Ver produtos</span>
+                    </div>
                 </a>
             `;
         },
@@ -97,7 +122,7 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
          */
         productCard(data, onClickHandlerName) {
             const nome = data.nome || data.name || 'Joia';
-            const img = resolveImage(data.imagem || data.image) || fallbackImg();
+            const img = safeUrl(resolveImage(data.imagem || data.image) || fallbackImg());
             const precoOriginal = data.preco ?? data.price ?? 0;
             const precoAntigoInformado = data.precoAntigo ?? data.oldPrice ?? data.precoOriginal ?? null;
             const precoCalculado = (window.descontoService && typeof window.descontoService.calcularPrecoComDesconto === 'function')

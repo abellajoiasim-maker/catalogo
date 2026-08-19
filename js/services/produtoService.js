@@ -73,6 +73,9 @@
             } else if (produto.variacoes && typeof produto.variacoes === 'object') {
                 listaVariacoesLimpa = Object.values(produto.variacoes);
             }
+            const medidas = Array.isArray(produto.medidas)
+                ? produto.medidas
+                : (produto.medidas && typeof produto.medidas === 'object' ? Object.values(produto.medidas) : []);
 
 return {
                 id: this._safeString(id),
@@ -100,6 +103,9 @@ return {
                 venderSemEstoque: produto.venderSemEstoque === true,
                 destaque: Boolean(produto.destaque ?? false),
                 variacoes: listaVariacoesLimpa,
+                medidas,
+                variacoesPrecoModo: produto.variacoesPrecoModo || produto.politicaPrecoVariacao || 'unico',
+                variacoesPesoModo: produto.variacoesPesoModo || produto.politicaPesoVariacao || 'unico',
                 dizeres:  Array.isArray(produto.dizeres)  ? produto.dizeres  : (Array.isArray(produto.sayings)  ? produto.sayings  : []),
                 iniciais: Array.isArray(produto.iniciais) ? produto.iniciais : (Array.isArray(produto.initials) ? produto.initials : []),
                 sayings:  Array.isArray(produto.sayings)  ? produto.sayings  : (Array.isArray(produto.dizeres)  ? produto.dizeres  : []),
@@ -192,6 +198,13 @@ return {
                     venderSemEstoque: norm.venderSemEstoque,
                     destaque: norm.destaque,
                     variacoes: norm.variacoes,
+                    medidas: norm.medidas,
+                    variacoesPrecoModo: norm.variacoesPrecoModo,
+                    variacoesPesoModo: norm.variacoesPesoModo,
+                    dizeres: norm.dizeres,
+                    sayings: norm.sayings,
+                    iniciais: norm.iniciais,
+                    initials: norm.initials,
                     peso: norm.peso,
                     vitrine: norm.vitrine,
                     legendaVitrine: norm.legendaVitrine,

@@ -358,6 +358,20 @@ const DataService = {
     container.appendChild(wrapper);
   }
 
+  // Detecta se a lista de medidas tem preço/peso individuais preenchidos
+  // (diferentes de vazio/zero) e, nesse caso, força o modo 'individual' —
+  // independente do que estiver selecionado no dropdown de política.
+  // Isso evita que um produto fique "travado" em política 'unico' herdada
+  // de um salvamento anterior (ex: quando o produto foi criado sem medidas)
+  // mesmo depois de o admin preencher preços/pesos diferentes por linha.
+  function resolverModoVariacao(lista, modoSelecionado, campo) {
+    const temIndividual = Array.isArray(lista) && lista.some(item =>
+      item && typeof item === 'object' && Number(item[campo]) > 0
+    );
+    if (temIndividual) return 'individual';
+    return modoSelecionado || 'unico';
+  }
+
   function importarVariacoes(containerId) {
     const raw = prompt('Cole os valores separados por vírgula:\nEx: 45cm, 50cm, 60cm');
     if (!raw) return;
@@ -764,8 +778,8 @@ const DataService = {
       const listaDizeres  = extrairValoresTags('newDizeresContainer');
       const listaIniciais = extrairValoresTags('newIniciaisContainer');
       const medidas = listaDizeres;
-      const variacoesPrecoModo = document.getElementById('newVariacoesPrecoModo')?.value || 'individual';
-      const variacoesPesoModo = document.getElementById('newVariacoesPesoModo')?.value || 'individual';
+      const variacoesPrecoModo = resolverModoVariacao(medidas, document.getElementById('newVariacoesPrecoModo')?.value, 'preco');
+      const variacoesPesoModo = resolverModoVariacao(medidas, document.getElementById('newVariacoesPesoModo')?.value, 'peso');
       const vitrine = document.getElementById('newVitrine')?.checked || false;
       const legendaVitrine = document.getElementById('newLegendaVitrine')?.value.trim() || '';
       const estoqueControlado = document.getElementById('newEstoqueControlado')?.checked === true;
@@ -1028,8 +1042,8 @@ const DataService = {
       const listaDizeres  = extrairValoresTags('editDizeresContainer');
       const listaIniciais = extrairValoresTags('editIniciaisContainer');
       const medidas = listaDizeres;
-      const variacoesPrecoModo = document.getElementById('editVariacoesPrecoModo')?.value || 'individual';
-      const variacoesPesoModo = document.getElementById('editVariacoesPesoModo')?.value || 'individual';
+      const variacoesPrecoModo = resolverModoVariacao(medidas, document.getElementById('editVariacoesPrecoModo')?.value, 'preco');
+      const variacoesPesoModo = resolverModoVariacao(medidas, document.getElementById('editVariacoesPesoModo')?.value, 'peso');
       const paused = document.getElementById('editPaused')?.checked || false;
       const vitrine = document.getElementById('editVitrine')?.checked || false;
       const legendaVitrine = document.getElementById('editLegendaVitrine')?.value.trim() || '';

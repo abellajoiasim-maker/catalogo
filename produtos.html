@@ -183,6 +183,24 @@
             if (el && window.carrinhoService) el.innerText = carrinhoService.obterContagem();
         }
 
+        function normalizarValorVariacao(valor, fallback = '') {
+            if (valor === null || valor === undefined) return fallback;
+            if (typeof valor === 'string' || typeof valor === 'number') {
+                const texto = String(valor).trim();
+                return texto || fallback;
+            }
+            if (typeof valor === 'object') {
+                const candidatos = [
+                    valor.texto, valor.valor, valor.value, valor.letra,
+                    valor.nome, valor.name, valor.label, valor.titulo,
+                    valor.medida, valor.descricao, valor.id
+                ];
+                const encontrado = candidatos.find(item => item !== null && item !== undefined && String(item).trim());
+                return encontrado !== undefined ? String(encontrado).trim() : fallback;
+            }
+            return fallback;
+        }
+
         function abrirProduto(produtoId) {
     const produto = produtosDaPagina.find(p => p.id === produtoId);
     if (!produto) return;
@@ -212,8 +230,12 @@
         AuroraModal.open({ title: produto.nome || produto.title, bodyHTML, footerHTML: `<button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>` });
         return;
     }
-    const dizeres = Array.isArray(produto.dizeres) ? produto.dizeres.filter(Boolean) : [];
-    const iniciais = Array.isArray(produto.iniciais) ? produto.iniciais.filter(Boolean) : [];
+    const dizeres = Array.isArray(produto.dizeres)
+        ? produto.dizeres.map((valor, index) => normalizarValorVariacao(valor, `Modelo ${index + 1}`)).filter(Boolean)
+        : [];
+    const iniciais = Array.isArray(produto.iniciais)
+        ? produto.iniciais.map((valor, index) => normalizarValorVariacao(valor, String.fromCharCode(65 + index))).filter(Boolean)
+        : [];
     const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
 
     let combinacoes = [];
@@ -221,31 +243,27 @@
     if (medidas.length > 0) {
         combinacoes = medidas.map((m, idx) => {
             let nomeMedida = '';
-            if (typeof m === 'object' && m !== null) {
-                // Lê diretamente as propriedades usadas pelo painel de cadastro
-                nomeMedida = m.medida || m.nome || m.label || m.titulo || m.texto || '';
-            }
-            if (!nomeMedida || typeof m !== 'object') {
-                nomeMedida = String(m);
-            }
+            nomeMedida = normalizarValorVariacao(m, `Medida ${idx + 1}`);
             if (!nomeMedida || nomeMedida === 'undefined' || nomeMedida === '[object Object]') {
                 nomeMedida = `Medida ${idx + 1}`;
             }
 
-            const precoMedida = (typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '') ? Number(m.preco) : precoBase;
-            return { nome: nomeMedida, preco: precoMedida };
+            const precoIndividual = (typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '') ? Number(m.preco) : precoBase;
+            const pesoIndividual = (typeof m === 'object' && m !== null && m.peso !== undefined && m.peso !== null && m.peso !== '') ? Number(m.peso) : (Number(produto.peso) || 0);
+            const precoMedida = produto.variacoesPrecoModo === 'individual' ? precoIndividual : precoBase;
+            const pesoMedida = produto.variacoesPesoModo === 'individual' ? pesoIndividual : (Number(produto.peso) || 0);
+            return { nome: nomeMedida, preco: precoMedida, peso: pesoMedida };
         });
     } else if (dizeres.length > 0 && iniciais.length > 0) {
-        dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase })));
+        dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase, peso: Number(produto.peso) || 0 })));
     } else if (dizeres.length > 0) {
         combinacoes = dizeres.map((d, idx) => {
             let nomeD = typeof d === 'object' && d !== null ? (d.texto || d.medida || d.nome || d.label || d.titulo || '') : String(d);
             if (!nomeD || nomeD === 'undefined' || nomeD === '[object Object]') nomeD = `Modelo ${idx + 1}`;
-            const precoD = typeof d === 'object' && d !== null && d.preco !== undefined && d.preco !== null && d.preco !== '' ? Number(d.preco) : precoBase;
-            return { nome: nomeD, preco: precoD };
+            return { nome: nomeD, preco: precoBase, peso: Number(produto.peso) || 0 };
         });
     } else if (iniciais.length > 0) {
-        combinacoes = iniciais.map(i => ({ nome: `Letra ${i}`, preco: precoBase }));
+        combinacoes = iniciais.map(i => ({ nome: `Letra ${i}`, preco: precoBase, peso: Number(produto.peso) || 0 }));
     }
 
     let precoExibicaoModal = precoBase;
@@ -262,7 +280,7 @@
                 <div style="display:flex; align-items:center; gap: var(--space-3);">
                     <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', -1)">−</button>
                     <input type="number" class="input-grade-qtd aurora-input" id="qtd_simples" value="${estoqueControlado && estoqueQuantidade === 0 && !venderSemEstoque ? 0 : 1}" min="${estoqueControlado && estoqueQuantidade === 0 && !venderSemEstoque ? 0 : 1}" ${estoqueControlado && !venderSemEstoque ? `max="${estoqueQuantidade}"` : ''}
-                           data-variacao-nome="" data-variacao-preco="${precoBase}" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
+                           data-variacao-nome="" data-variacao-preco="${precoBase}" data-variacao-peso="${Number(produto.peso) || 0}" oninput="calcularTotalGrade()" style="max-width:80px; text-align:center;">
                     ${estoqueControlado ? `<p style="font-size:11px;color:var(--color-secondary);margin-top:var(--space-2);">${estoqueQuantidade > 0 ? `${estoqueQuantidade} unidade(s) disponível(is)` : 'Produto esgotado'}</p>` : ''}
                     <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_simples', 1)">+</button>
                 </div>
@@ -280,13 +298,14 @@
                             <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
                                 <div style="display:flex; flex-direction:column;">
                                     <span style="font-size:13px; font-weight:600;">${item.nome}</span>
-                                    <span style="font-size:11px; color:var(--color-primary-hover);">${precoItemFmt}</span>
+                                    <span style="font-size:11px; color:var(--color-primary-hover);">${precoItemFmt}${item.peso ? ` · ${item.peso}g` : ''}</span>
                                 </div>
                                 <div style="display:flex; align-items:center; gap: var(--space-2);">
                                     <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
                                     <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
                                            data-variacao-nome="${String(item.nome).replace(/"/g, '&quot;')}"
                                            data-variacao-preco="${item.preco}"
+                                           data-variacao-peso="${item.peso || 0}"
                                            oninput="calcularTotalGrade()"
                                            style="width:52px; text-align:center; height:36px; padding-inline:0;">
                                     <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
@@ -314,7 +333,7 @@
             </div>
             <div class="produto-modal-info">
                 <p class="aurora-price" id="modalPrecoDinamico" style="font-size:28px;">${precoFmt}</p>
-                ${produto.peso ? `<p style="font-size:13px; color:var(--color-secondary);">Peso: ${produto.peso}g</p>` : ''}
+                <p id="modalPesoDinamico" style="font-size:13px; color:var(--color-secondary);">${produto.peso ? `Peso: ${produto.peso}g` : ''}</p>
                 ${produto.sku ? `<p style="font-size:13px; color:var(--color-secondary);">SKU: ${produto.sku}</p>` : ''}
                 <div style="margin-top: var(--space-5);">${gradeHTML}</div>
                 ${avisoEstoqueHTML}
@@ -345,12 +364,14 @@
             let totalQtd = 0;
             let totalValor = 0;
             let primeiroPrecoEncontrado = null;
+            let primeiroPesoEncontrado = null;
 
             document.querySelectorAll('.input-grade-qtd').forEach(input => {
                 const qtd = parseInt(input.value) || 0;
                 const preco = parseFloat(input.getAttribute('data-variacao-preco')) || 0;
                 if (qtd > 0 && primeiroPrecoEncontrado === null) {
                     primeiroPrecoEncontrado = preco;
+                    primeiroPesoEncontrado = parseFloat(input.getAttribute('data-variacao-peso')) || 0;
                 }
                 totalQtd += qtd;
                 totalValor += (qtd * preco);
@@ -376,6 +397,16 @@
                     modalPrecoDinamico.innerText = window.MoneyUtils?.format ? window.MoneyUtils.format(precoParaMostrar) : `R$ ${precoParaMostrar.toFixed(2)}`;
                 }
             }
+
+            const modalPesoDinamico = document.getElementById('modalPesoDinamico');
+            if (modalPesoDinamico) {
+                let pesoParaMostrar = primeiroPesoEncontrado;
+                if (pesoParaMostrar === null) {
+                    const primeiroInput = document.querySelector('.input-grade-qtd');
+                    if (primeiroInput) pesoParaMostrar = parseFloat(primeiroInput.getAttribute('data-variacao-peso')) || 0;
+                }
+                modalPesoDinamico.innerText = pesoParaMostrar > 0 ? `Peso: ${pesoParaMostrar}g` : '';
+            }
         }
 
         function confirmarAdicionarCarrinho(produtoId) {
@@ -390,7 +421,8 @@
             totalSolicitado += qtd;
             const variacaoNome = input.getAttribute('data-variacao-nome') || '';
                     const variacaoPreco = parseFloat(input.getAttribute('data-variacao-preco')) || produto.preco;
-                    itensParaAdicionar.push({ variacao: variacaoNome, qtd, preco: variacaoPreco });
+                    const variacaoPeso = parseFloat(input.getAttribute('data-variacao-peso')) || Number(produto.peso) || 0;
+                    itensParaAdicionar.push({ variacao: variacaoNome, qtd, preco: variacaoPreco, peso: variacaoPeso });
                 }
             });
 
@@ -409,7 +441,7 @@
 
     let adicionouTudo = true;
     itensParaAdicionar.forEach(item => {
-                const produtoComPrecoAjustado = { ...produto, preco: item.preco };
+                const produtoComPrecoAjustado = { ...produto, preco: item.preco, peso: item.peso, pesoVariacao: item.peso };
                 const adicionou = carrinhoService.adicionar(produtoComPrecoAjustado, item.qtd, item.variacao);
                 if (adicionou === false) adicionouTudo = false;
             });
@@ -707,8 +739,8 @@
                         const partes = [
                             p.nome, p.sku, p.codigo, p.descricao,
                             p.categoriaId, p.subcategoriaId,
-                            ...(Array.isArray(p.dizeres) ? p.dizeres : []),
-                            ...(Array.isArray(p.iniciais) ? p.iniciais : [])
+                            ...(Array.isArray(p.dizeres) ? p.dizeres.map(v => normalizarValorVariacao(v)) : []),
+                            ...(Array.isArray(p.iniciais) ? p.iniciais.map(v => normalizarValorVariacao(v)) : [])
                         ];
                         indiceBusca.set(p.id, normalizar(partes.filter(Boolean).join(' ')));
                     });

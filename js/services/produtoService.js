@@ -77,6 +77,16 @@
                 ? produto.medidas
                 : (produto.medidas && typeof produto.medidas === 'object' ? Object.values(produto.medidas) : []);
 
+            // CORREÇÃO (sincronização Editor <-> Modal): quando o produto não tem o
+            // campo variacoesPrecoModo/variacoesPesoModo explicitamente salvo no banco
+            // (produtos legados ou criados antes desse campo existir), NÃO forçar 'unico'.
+            // Em vez disso, inferir o modo pela presença de preço/peso individual em
+            // cada linha de medida — exatamente a mesma lógica que o editor usa para
+            // pré-selecionar o dropdown. Isso evita que o editor mostre "individual"
+            // enquanto o modal de compra aplica "único" por trás.
+            const temPrecoIndividual = medidas.some(m => typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '' && Number(m.preco) > 0);
+            const temPesoIndividual = medidas.some(m => typeof m === 'object' && m !== null && m.peso !== undefined && m.peso !== null && m.peso !== '' && Number(m.peso) > 0);
+
 return {
                 id: this._safeString(id),
                 codigo: this._safeString(produto.codigo || produto.sku || id),
@@ -104,8 +114,8 @@ return {
                 destaque: Boolean(produto.destaque ?? false),
                 variacoes: listaVariacoesLimpa,
                 medidas,
-                variacoesPrecoModo: produto.variacoesPrecoModo || produto.politicaPrecoVariacao || 'unico',
-                variacoesPesoModo: produto.variacoesPesoModo || produto.politicaPesoVariacao || 'unico',
+                variacoesPrecoModo: produto.variacoesPrecoModo || produto.politicaPrecoVariacao || (temPrecoIndividual ? 'individual' : 'unico'),
+                variacoesPesoModo: produto.variacoesPesoModo || produto.politicaPesoVariacao || (temPesoIndividual ? 'individual' : 'unico'),
                 dizeres:  Array.isArray(produto.dizeres)  ? produto.dizeres  : (Array.isArray(produto.sayings)  ? produto.sayings  : []),
                 iniciais: Array.isArray(produto.iniciais) ? produto.iniciais : (Array.isArray(produto.initials) ? produto.initials : []),
                 sayings:  Array.isArray(produto.sayings)  ? produto.sayings  : (Array.isArray(produto.dizeres)  ? produto.dizeres  : []),

@@ -236,7 +236,19 @@
     const iniciais = Array.isArray(produto.iniciais)
         ? produto.iniciais.map((valor, index) => normalizarValorVariacao(valor, String.fromCharCode(65 + index))).filter(Boolean)
         : [];
-    const medidas = Array.isArray(produto.medidas) ? produto.medidas.filter(Boolean) : [];
+    const medidasSalvas = Array.isArray(produto.medidas)
+        ? produto.medidas
+        : (produto.medidas && typeof produto.medidas === 'object' ? Object.values(produto.medidas) : []);
+    // Compatibilidade: o editor antigo gravava as linhas de medida em dizeres/sayings.
+    const medidasLegadas = medidasSalvas.length === 0 && Array.isArray(produto.dizeres)
+        && produto.dizeres.some(valor => typeof valor === 'object' && valor !== null)
+        ? produto.dizeres
+        : [];
+    const medidas = (medidasSalvas.length ? medidasSalvas : medidasLegadas).filter(Boolean);
+    const temPrecoIndividualLegado = medidas.some(valor => typeof valor === 'object' && valor !== null && Number(valor.preco) > 0);
+    const temPesoIndividualLegado = medidas.some(valor => typeof valor === 'object' && valor !== null && Number(valor.peso) > 0);
+    const politicaPrecoVariacao = produto.variacoesPrecoModo || produto.politicaPrecoVariacao || (temPrecoIndividualLegado ? 'individual' : 'unico');
+    const politicaPesoVariacao = produto.variacoesPesoModo || produto.politicaPesoVariacao || (temPesoIndividualLegado ? 'individual' : 'unico');
 
     let combinacoes = [];
     
@@ -250,8 +262,8 @@
 
             const precoIndividual = (typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '') ? Number(m.preco) : precoBase;
             const pesoIndividual = (typeof m === 'object' && m !== null && m.peso !== undefined && m.peso !== null && m.peso !== '') ? Number(m.peso) : (Number(produto.peso) || 0);
-            const precoMedida = produto.variacoesPrecoModo === 'individual' ? precoIndividual : precoBase;
-            const pesoMedida = produto.variacoesPesoModo === 'individual' ? pesoIndividual : (Number(produto.peso) || 0);
+            const precoMedida = politicaPrecoVariacao === 'individual' ? precoIndividual : precoBase;
+            const pesoMedida = politicaPesoVariacao === 'individual' ? pesoIndividual : (Number(produto.peso) || 0);
             return { nome: nomeMedida, preco: precoMedida, peso: pesoMedida };
         });
     } else if (dizeres.length > 0 && iniciais.length > 0) {

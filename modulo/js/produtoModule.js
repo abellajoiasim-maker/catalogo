@@ -2,10 +2,29 @@ import { Drawer } from './drawer.js';
 
 // ─── Helpers de Tags (Dizeres / Iniciais) ────────────────────────────────────
 
+function _normalizarValorVariacao(valor, fallback = '') {
+    if (valor === null || valor === undefined) return fallback;
+    if (typeof valor === 'string' || typeof valor === 'number') {
+        const texto = String(valor).trim();
+        return texto || fallback;
+    }
+    if (typeof valor === 'object') {
+        const candidatos = [
+            valor.texto, valor.valor, valor.value, valor.letra,
+            valor.nome, valor.name, valor.label, valor.titulo,
+            valor.medida, valor.descricao, valor.id
+        ];
+        const encontrado = candidatos.find(item => item !== null && item !== undefined && String(item).trim());
+        return encontrado !== undefined ? String(encontrado).trim() : fallback;
+    }
+    return fallback;
+}
+
 function _criarTagRow(containerId, valor = '') {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const safe = valor.replace(/"/g, '&quot;');
+    const texto = _normalizarValorVariacao(valor);
+    const safe = texto.replace(/"/g, '&quot;');
     const row = document.createElement('div');
     row.className = 'flex gap-2 mb-1 items-center tag-item-row';
     row.innerHTML = `
@@ -37,14 +56,54 @@ function _popularTags(containerId, lista) {
     const container = document.getElementById(containerId);
     if (!container) return;
     container.innerHTML = '';
-    (Array.isArray(lista) ? lista : []).forEach(v => _criarTagRow(containerId, v));
+    (Array.isArray(lista) ? lista : []).forEach((v, index) => {
+        _criarTagRow(containerId, _normalizarValorVariacao(v, `Variação ${index + 1}`));
+    });
 }
 
 // ─── Bloco HTML reutilizável de variações ───────────────────────────────────
 
+function _numero(valor) {
+    const n = Number.parseFloat(valor);
+    return Number.isFinite(n) ? n : null;
+}
+
+function _criarMedidaRow(containerId, valor = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const objeto = typeof valor === 'object' && valor !== null ? valor : { nome: valor };
+    const nome = _normalizarValorVariacao(objeto, '');
+    const preco = objeto.preco ?? objeto.price ?? '';
+    const peso = objeto.peso ?? objeto.weight ?? '';
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-[1fr_100px_90px_auto] gap-2 items-center mb-2 medida-item-row';
+    row.innerHTML = `<input type="text" value="${String(nome).replace(/"/g, '&quot;')}" placeholder="Ex: 40 cm" class="min-w-0 bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-white medida-nome-input"><input type="number" value="${preco}" placeholder="Preço" step="0.01" min="0" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-white medida-preco-input"><input type="number" value="${peso}" placeholder="Peso (g)" step="0.01" min="0" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-sm text-white medida-peso-input"><button type="button" onclick="this.closest('.medida-item-row').remove()" class="shrink-0 bg-zinc-900 border border-zinc-800 text-red-400 px-3 py-2 rounded-xl text-xs font-bold">✕</button>`;
+    container.appendChild(row);
+}
+
+function _extrairMedidas(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.medida-item-row')).map(row => {
+        const item = { nome: row.querySelector('.medida-nome-input')?.value?.trim() || '', preco: _numero(row.querySelector('.medida-preco-input')?.value), peso: _numero(row.querySelector('.medida-peso-input')?.value) };
+        Object.keys(item).forEach(k => (item[k] === null || item[k] === '') && delete item[k]);
+        return item;
+    }).filter(item => item.nome);
+}
+
+function _popularMedidas(containerId, lista) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+    (Array.isArray(lista) ? lista : []).forEach(v => _criarMedidaRow(containerId, v));
+}
+
 function _htmlVariacoes(prefixo) {
-    const idDizeres  = `${prefixo}DizeresContainer`;
+    const idDizeres = `${prefixo}DizeresContainer`;
     const idIniciais = `${prefixo}IniciaisContainer`;
+    const idMedidas = `${prefixo}MedidasContainer`;
+    const idPrecoModo = `${prefixo}-variacoes-preco-modo`;
+    const idPesoModo = `${prefixo}-variacoes-peso-modo`;
     return `
         <!-- Variações: Dizeres -->
         <div class="mb-1 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
@@ -87,12 +146,20 @@ function _htmlVariacoes(prefixo) {
             <div id="${idIniciais}" class="flex flex-col gap-1 min-h-[8px]"></div>
             <p class="text-[10px] text-zinc-600 mt-1">Use "Importar" para colar o alfabeto (ex: A, B, C, D, E...)</p>
         </div>
+        <div class="border border-[#caa85c]/40 bg-[#caa85c]/5 p-3 rounded-xl">
+            <div class="flex justify-between items-center mb-2"><label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">📏 Medidas / Tamanhos</label><button type="button" onclick="_criarMedidaRow('${idMedidas}')" class="bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1 rounded-lg text-[10px] font-bold">➕ Add medida</button></div>
+            <div class="grid grid-cols-[1fr_100px_90px_auto] gap-2 text-[10px] text-zinc-500 mb-1"><span>Nome</span><span>Preço R$</span><span>Peso g</span><span></span></div>
+            <div id="${idMedidas}" class="flex flex-col gap-1"></div>
+            <div class="grid grid-cols-2 gap-2 mt-3"><label class="text-[10px] text-zinc-400">Política de preço<select id="${idPrecoModo}" class="w-full mt-1 bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white"><option value="unico">Preço único (base)</option><option value="individual">Preço individual</option></select></label><label class="text-[10px] text-zinc-400">Política de peso<select id="${idPesoModo}" class="w-full mt-1 bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-xs text-white"><option value="unico">Peso único (base)</option><option value="individual">Peso individual</option></select></label></div>
+            <p class="text-[10px] text-zinc-500 mt-2">Correntes: cadastre cada medida e selecione individual. Letras/dizeres: deixe sem medidas e use os valores base.</p>
+        </div>
     `;
 }
 
 // ─── Expõe helpers no escopo global (usados pelo onclick do HTML gerado) ────
-window._criarTagRow      = _criarTagRow;
+window._criarTagRow = _criarTagRow;
 window._importarVariacoes = _importarVariacoes;
+window._criarMedidaRow = _criarMedidaRow;
 
 // ─── Módulo Principal ────────────────────────────────────────────────────────
 
@@ -325,6 +392,9 @@ export const ProdutoModule = {
 
         const dizeres  = _extrairTags('newDizeresContainer');
         const iniciais = _extrairTags('newIniciaisContainer');
+        const medidas  = _extrairMedidas('newMedidasContainer');
+        const variacoesPrecoModo = document.getElementById('new-variacoes-preco-modo')?.value || 'unico';
+        const variacoesPesoModo = document.getElementById('new-variacoes-peso-modo')?.value || 'unico';
         const peso     = parseFloat(document.getElementById('new-peso')?.value) || 0;
         const promo    = parseFloat(document.getElementById('new-promo')?.value) || 0;
         const estoqueControlado = document.getElementById('new-estoque-controlado')?.checked === true;
@@ -349,6 +419,9 @@ export const ProdutoModule = {
             sayings:      dizeres.length  > 0 ? dizeres  : null,
             iniciais:     iniciais.length > 0 ? iniciais : null,
             initials:     iniciais.length > 0 ? iniciais : null,
+            medidas:      medidas.length > 0 ? medidas : null,
+            variacoesPrecoModo,
+            variacoesPesoModo,
             paused:       false,
             estoqueControlado,
             estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
@@ -510,6 +583,11 @@ export const ProdutoModule = {
         requestAnimationFrame(() => {
             _popularTags('editDizeresContainer',  p.dizeres  || p.sayings  || []);
             _popularTags('editIniciaisContainer', p.iniciais || p.initials || []);
+            _popularMedidas('editMedidasContainer', p.medidas || p.variacoes || p.variations || []);
+            const precoModo = document.getElementById('edit-variacoes-preco-modo');
+            const pesoModo = document.getElementById('edit-variacoes-peso-modo');
+            if (precoModo) precoModo.value = p.variacoesPrecoModo || p.politicaPrecoVariacao || 'unico';
+            if (pesoModo) pesoModo.value = p.variacoesPesoModo || p.politicaPesoVariacao || 'unico';
         });
 
         document.getElementById('btn-salvar-produto').onclick = () => this.salvarProduto(id);
@@ -523,6 +601,9 @@ export const ProdutoModule = {
 
         const dizeres  = _extrairTags('editDizeresContainer');
         const iniciais = _extrairTags('editIniciaisContainer');
+        const medidas  = _extrairMedidas('editMedidasContainer');
+        const variacoesPrecoModo = document.getElementById('edit-variacoes-preco-modo')?.value || 'unico';
+        const variacoesPesoModo = document.getElementById('edit-variacoes-peso-modo')?.value || 'unico';
         const peso     = parseFloat(document.getElementById('edit-peso')?.value)  || 0;
         const promo    = parseFloat(document.getElementById('edit-promo')?.value) || 0;
         const estoqueControlado = document.getElementById('edit-estoque-controlado')?.checked === true;
@@ -547,6 +628,9 @@ export const ProdutoModule = {
             sayings:      dizeres.length  > 0 ? dizeres  : null,
             iniciais:     iniciais.length > 0 ? iniciais : null,
             initials:     iniciais.length > 0 ? iniciais : null,
+            medidas:      medidas.length > 0 ? medidas : null,
+            variacoesPrecoModo,
+            variacoesPesoModo,
             paused:       document.getElementById('edit-paused')?.checked || false,
             estoqueControlado,
             estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,

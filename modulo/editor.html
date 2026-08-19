@@ -387,6 +387,8 @@ const DataService = {
   function htmlVariacoes(prefixo) {
     const idDiz = `${prefixo}DizeresContainer`;
     const idIni = `${prefixo}IniciaisContainer`;
+    const idPrecoModo = `${prefixo}VariacoesPrecoModo`;
+    const idPesoModo = `${prefixo}VariacoesPesoModo`;
     return `
       <div class="mb-3 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
@@ -411,6 +413,13 @@ const DataService = {
           </div>
         </div>
         <div id="${idIni}" class="flex flex-col gap-1 min-h-[4px]"></div>
+      </div>
+      <div class="mb-3 border border-[#caa85c]/40 bg-[#caa85c]/5 p-3 rounded-xl">
+        <p class="text-[10px] text-zinc-400 mb-2">As linhas acima serão usadas pelo catálogo como medidas/tamanhos quando o produto possuir variações.</p>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="text-[10px] text-zinc-400">Política de preço<select id="${idPrecoModo}" class="input-dark !mb-0 mt-1"><option value="individual">Preço individual</option><option value="unico">Preço único (base)</option></select></label>
+          <label class="text-[10px] text-zinc-400">Política de peso<select id="${idPesoModo}" class="input-dark !mb-0 mt-1"><option value="individual">Peso individual</option><option value="unico">Peso único (base)</option></select></label>
+        </div>
       </div>
     `;
   }
@@ -754,6 +763,9 @@ const DataService = {
       const subcat = document.getElementById('newSubcategoria').value;
       const listaDizeres  = extrairValoresTags('newDizeresContainer');
       const listaIniciais = extrairValoresTags('newIniciaisContainer');
+      const medidas = listaDizeres;
+      const variacoesPrecoModo = document.getElementById('newVariacoesPrecoModo')?.value || 'individual';
+      const variacoesPesoModo = document.getElementById('newVariacoesPesoModo')?.value || 'individual';
       const vitrine = document.getElementById('newVitrine')?.checked || false;
       const legendaVitrine = document.getElementById('newLegendaVitrine')?.value.trim() || '';
       const estoqueControlado = document.getElementById('newEstoqueControlado')?.checked === true;
@@ -771,6 +783,8 @@ const DataService = {
         descricao:   document.getElementById('newDescricao').value,
         dizeres:  listaDizeres,  sayings:  listaDizeres,
         iniciais: listaIniciais, initials: listaIniciais,
+        medidas,
+        variacoesPrecoModo, variacoesPesoModo,
         vitrine, legendaVitrine,
         estoqueControlado, estoqueLimitadoAtivo: estoqueControlado, controleEstoque: estoqueControlado,
         estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
@@ -985,8 +999,13 @@ const DataService = {
     `);
 
     carregarSubcategoriasProduto(p.category, DataService.getSubcategory(p));
-    DataService.getDizeres(p).forEach(val  => adicionarTagInput('editDizeresContainer',  val));
+    const medidasExistentes = Array.isArray(p.medidas) && p.medidas.length ? p.medidas : DataService.getDizeres(p);
+    medidasExistentes.forEach(val => adicionarTagInput('editDizeresContainer', val));
     DataService.getIniciais(p).forEach(val => adicionarTagInput('editIniciaisContainer', val));
+    const precoModo = document.getElementById('editVariacoesPrecoModo');
+    const pesoModo = document.getElementById('editVariacoesPesoModo');
+    if (precoModo) precoModo.value = p.variacoesPrecoModo || p.politicaPrecoVariacao || (medidasExistentes.length ? 'individual' : 'unico');
+    if (pesoModo) pesoModo.value = p.variacoesPesoModo || p.politicaPesoVariacao || (medidasExistentes.length ? 'individual' : 'unico');
   }
 
   function carregarSubcategoriasProduto(catSel, subSel = '') {
@@ -1008,6 +1027,9 @@ const DataService = {
       const subcat = document.getElementById('editSubcategoria').value;
       const listaDizeres  = extrairValoresTags('editDizeresContainer');
       const listaIniciais = extrairValoresTags('editIniciaisContainer');
+      const medidas = listaDizeres;
+      const variacoesPrecoModo = document.getElementById('editVariacoesPrecoModo')?.value || 'individual';
+      const variacoesPesoModo = document.getElementById('editVariacoesPesoModo')?.value || 'individual';
       const paused = document.getElementById('editPaused')?.checked || false;
       const vitrine = document.getElementById('editVitrine')?.checked || false;
       const legendaVitrine = document.getElementById('editLegendaVitrine')?.value.trim() || '';
@@ -1029,6 +1051,8 @@ const DataService = {
         descricao:   document.getElementById('editDescricao').value,
         dizeres:  listaDizeres,  sayings:  listaDizeres,
         iniciais: listaIniciais, initials: listaIniciais,
+        medidas,
+        variacoesPrecoModo, variacoesPesoModo,
         vitrine, legendaVitrine,
         estoqueControlado, estoqueLimitadoAtivo: estoqueControlado, controleEstoque: estoqueControlado,
         estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,

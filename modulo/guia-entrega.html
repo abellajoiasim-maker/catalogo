@@ -3,521 +3,488 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Guia de Entrega • Abella Joias</title>
+    <title>Impressão de Romaneio • Abella Joias</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    
+    <!-- SDKs do Firebase (Versão Compatível: App, Auth e Database) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:ital,wght@0,400;0,700;1,400&display=swap');
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f2f5;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .guia-print {
-            width: 148mm;
-            height: 105mm;
-            background: white;
-            margin: 0 auto;
-            padding: 5mm 8mm;
-            box-sizing: border-box;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-            position: relative;
-            color: #000;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .top-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1.3fr;
-            align-items: center;
-            margin-bottom: 1mm;
-        }
-
-        .logo-area img {
-            max-width: 30mm;
-            max-height: 25mm;
-            object-fit: contain;
-        }
-
-        .qr-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .qr-frame {
-            width: 20mm;
-            height: 20mm;
-            border: 1px solid #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #fff;
-        }
-
-        .qr-frame img { width: 100%; height: 100%; }
-
-        .qr-label {
-            background: #000;
-            color: #fff;
-            font-size: 6pt;
-            font-weight: bold;
-            padding: 1px 4px;
-            margin-top: 1px;
-            width: 20mm;
-            text-align: center;
-            letter-spacing: 1px;
-        }
-
-        .brand-info {
-            text-align: right;
-            line-height: 1.1;
-        }
-
-        .brand-name {
-            font-family: 'Cinzel', serif;
-            font-size: 19pt;
-            font-weight: 700;
-            margin: 0;
-            letter-spacing: 1px;
-        }
-
-        .brand-subtitle {
-            font-family: 'Cinzel', serif;
-            font-size: 6.5pt;
-            font-weight: 400;
-            letter-spacing: 1.5px;
-            margin-bottom: 2mm;
-            display: block;
-        }
-
-        .brand-site {
-            font-size: 8.5pt;
-            font-family: 'Montserrat', sans-serif;
-        }
-
-        .brand-whatsapp {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 4px;
-            font-weight: bold;
-            font-size: 10pt;
-            margin-top: 1mm;
-        }
-
-        .title-container {
-            border-top: 2.5px solid #000;
-            margin-top: 1mm;
-            text-align: right;
-        }
-        .doc-title {
-            font-size: 14pt;
-            font-weight: bold;
-            padding: 0.5mm 0;
-            letter-spacing: 2px;
-        }
-
-        .field-box {
-            border: 1.5px solid #000;
-            border-radius: 6px;
-            margin-bottom: 1.2mm;
-            display: flex;
-            align-items: center;
-            padding: 0.8mm 2.5mm;
-            min-height: 7.5mm;
-        }
-
-        .field-label {
-            font-weight: bold;
-            font-size: 9pt;
-            margin-right: 5px;
-            white-space: nowrap;
-        }
-
-        .field-value {
-            font-family: 'Montserrat', sans-serif;
-            font-style: italic;
-            font-size: 11pt;
-            flex-grow: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .section-label {
-            text-align: center;
-            font-weight: bold;
-            font-size: 12pt;
-            margin: 1.5mm 0;
-            letter-spacing: 1px;
-        }
-
-        .footer-row {
-            display: flex;
-            gap: 1.5mm;
-        }
-
-        .footer-cell {
-            border: 1.5px solid #000;
-            border-radius: 6px;
-            padding: 0.8mm 2.5mm;
-            display: flex;
-            align-items: center;
-            font-size: 9pt;
-            min-height: 7.5mm;
-        }
-
-        .editor-panel {
-            max-width: 800px;
-            margin: 0 auto 20px auto;
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            border: 1px solid #e2e8f0;
-        }
-
+        body { font-family: 'Inter', sans-serif; background: white; color: black; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
         @media print {
+            body { background: white; color: black; padding: 0; }
             .no-print { display: none !important; }
+            .break-inside-avoid { break-inside: avoid; }
         }
     </style>
 
 
 </head>
-<body>
+<body class="p-4 md:p-6 bg-white text-black">
 
-    <div class="editor-panel no-print">
-        <div class="flex justify-between items-center mb-6 border-b pb-4 gap-4">
+    <!-- Botão de Comando Flutuante -->
+    <div class="no-print mb-6 flex justify-end">
+        <button onclick="window.print()" class="bg-[#caa85c] text-black font-black px-6 py-2 rounded-xl text-xs uppercase tracking-wider shadow-lg hover:bg-[#b5944f] transition-all cursor-pointer">
+            🖨️ Confirmar Impressão / Salvar PDF
+        </button>
+    </div>
+
+    <!-- Barra de Carregamento -->
+    <div id="loader" class="text-center py-12 text-xs font-mono uppercase tracking-widest text-zinc-500 animate-pulse">
+        ⏳ Montando estrutura do romaneio...
+    </div>
+
+   <!-- Área do Romaneio Comercial -->
+<div id="romaneio-conteudo" style="display: none;" class="max-w-5xl mx-auto space-y-5">
+    <!-- Cabeçalho Principal -->
+    <div class="border-b-2 border-black pb-3 flex justify-between items-end">
+        <div>
+            <h1 class="text-2xl font-black tracking-widest font-cinzel">ABELLA JOIAS</h1>
+            <p class="text-[10px] uppercase font-mono tracking-wider text-zinc-600">Atacado de Joias no Bruto • Limeira/SP</p>
+            <p class="text-[10px] font-mono font-bold text-zinc-700 mt-0.5">WhatsApp: (19) 98820-7658</p>
+        </div>
+        <div class="text-right font-mono text-xs">
+            <p class="font-bold">ORDEM DE COMPRA: <span id="doc-id" class="text-zinc-700">#</span></p>
+            <p id="doc-data" class="text-zinc-500 text-[10px]"></p>
+        </div>
+    </div>
+
+        <!-- Dados do Cliente e Local de Entrega -->
+        <div class="grid grid-cols-2 gap-4 bg-zinc-50 p-3 rounded-xl border border-zinc-200 text-[11px] leading-relaxed">
+            <!-- Bloco Cliente -->
+            <div class="space-y-0.5 border-r border-zinc-200 pr-2">
+                <p class="font-mono text-[9px] uppercase text-zinc-400 font-black tracking-wider mb-1">📋 Dados do Cliente</p>
+                <p class="font-bold text-zinc-900 uppercase">Nome: <span id="cli-nome" class="font-medium">-</span></p>
+                <p class="font-bold text-zinc-900">WhatsApp: <span id="cli-whats" class="font-mono font-medium">-</span></p>
+                <p class="font-bold text-zinc-900 uppercase">Cidade: <span id="cli-cidade" class="font-medium">-</span></p>
+            </div>
+            <!-- Bloco Local de Entrega -->
+            <div class="space-y-0.5 pl-2">
+                <p class="font-mono text-[9px] uppercase text-zinc-400 font-black tracking-wider mb-1">📍 Local de Entrega</p>
+                <p class="font-bold text-zinc-900 uppercase">Nome: <span id="ent-nome" class="font-medium">-</span></p>
+                <p class="font-bold text-zinc-900 uppercase">Endereço: <span id="ent-rua" class="font-medium">-</span>, <span id="ent-num" class="font-medium">-</span></p>
+                <p class="font-bold text-zinc-900 uppercase">Bairro: <span id="ent-bairro" class="font-medium">-</span></p>
+                <p class="font-bold text-zinc-900 uppercase">Cidade - UF: <span id="ent-cidade-uf" class="font-medium">-</span></p>
+            </div>
+        </div>
+
+        <!-- Informações Complementares -->
+        <div class="bg-zinc-100/70 px-3 py-1.5 rounded-lg border border-zinc-200 flex justify-between text-[10px] font-mono uppercase tracking-wider text-zinc-600">
+            <div>Forma de Pagto: <span id="cli-pagamento" class="font-bold text-black">-</span></div>
+            <div id="layout-label"></div>
+        </div>
+
+        <!-- Destinatário de Renderização Dinâmica -->
+        <div id="render-target"></div>
+
+        <!-- Totais Consolidados de Rodapé -->
+        <div class="border-t-2 border-black pt-4 grid grid-cols-3 text-center font-mono text-xs font-bold bg-zinc-50 p-3 rounded-xl border border-zinc-200 break-inside-avoid">
             <div>
-                <h1 class="text-xl font-bold text-gray-800">Guia de Entrega</h1>
-                <p id="status-pedido" class="text-xs text-gray-500 font-bold">⏳ Carregando dados do pedido...</p>
+                <p class="text-[9px] text-zinc-500 uppercase">Total de Peças</p>
+                <p id="resumo-qtd" class="text-base text-black mt-0.5">0 pçs</p>
             </div>
-            <button id="btn-print" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg active:scale-95 flex items-center gap-2 whitespace-nowrap">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                IMPRIMIR AGORA
-            </button>
-        </div>
-
-        <p class="text-xs text-gray-500 mb-4">Os campos abaixo vêm preenchidos automaticamente do pedido, mas você pode editar qualquer um deles — ou deixar tudo em branco para criar uma guia avulsa, sem pedido vinculado.</p>
-
-        <div class="grid grid-cols-2 gap-6">
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Logotipo (opcional)</label>
-                    <input type="file" accept="image/*" onchange="loadFile(this, 'logo-view')" class="text-xs block w-full border rounded p-1">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">QR Code do site</label>
-                    <input type="file" accept="image/*" onchange="loadFile(this, 'qr-view')" class="text-xs block w-full border rounded p-1">
-                </div>
-                <div class="pt-2">
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Nome do Cliente</label>
-                    <input type="text" id="in-cliente" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Cidade de Origem</label>
-                    <input type="text" id="in-cidade-orig" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
-                </div>
+            <div>
+                <p class="text-[9px] text-zinc-500 uppercase">Massa Total Bruta</p>
+                <p id="resumo-peso" class="text-base text-black mt-0.5">0.00 grs</p>
             </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Nome do Destinatário</label>
-                    <input type="text" id="in-destinatario" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Endereço Completo</label>
-                    <input type="text" id="in-endereco" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Número</label>
-                        <input type="text" id="in-numero" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Bairro</label>
-                        <input type="text" id="in-bairro" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" oninput="sync()">
-                    </div>
-                </div>
+            <div id="bloco-financeiro-total">
+                <p class="text-[9px] text-zinc-500 uppercase">Valor Consolidado</p>
+                <p id="resumo-financeiro" class="text-base text-black mt-0.5">R$ 0,00</p>
             </div>
         </div>
     </div>
 
-    <!-- ÁREA DE IMPRESSÃO -->
-    <div id="print-area">
-        <div class="guia-print">
-            <div class="top-row">
-                <div class="logo-area">
-                    <img id="logo-view" src="https://cdn-icons-png.flaticon.com/512/4144/4144455.png">
-                </div>
-                <div class="qr-area">
-                    <div class="qr-frame">
-                        <img id="qr-view" src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg">
-                    </div>
-                    <div class="qr-label">NOSSO SITE</div>
-                </div>
-                <div class="brand-info">
-                    <div class="brand-name">Abella Joias</div>
-                    <span class="brand-subtitle">ATACADO DE JOIAS NO BRUTO</span>
-                    <div class="brand-site">www.abellajoias.com.br</div>
-                    <div class="brand-whatsapp">
-                        <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" width="14" style="display:inline; vertical-align:middle; margin-right:4px;">
-                        19 98820-7658
-                    </div>
-                </div>
-            </div>
-
-            <div class="title-container">
-                <div class="doc-title">GUIA DE ENTREGA</div>
-            </div>
-
-            <div class="field-box">
-                <span class="field-label">Nome do Cliente:</span>
-                <span id="out-cliente" class="field-value">-</span>
-            </div>
-
-            <div class="field-box">
-                <span class="field-label">Cidade:</span>
-                <span id="out-cidade-orig" class="field-value">-</span>
-            </div>
-
-            <div class="section-label">Local de Entrega</div>
-
-            <div class="field-box">
-                <span class="field-label">Nome:</span>
-                <span id="out-destinatario" class="field-value">-</span>
-            </div>
-
-            <div class="field-box">
-                <span class="field-label">Endereço:</span>
-                <span id="out-endereco" class="field-value">-</span>
-            </div>
-
-            <div class="footer-row">
-                <div class="footer-cell" style="width: 20mm;">
-                    <span class="field-label">Nº</span>
-                    <span id="out-numero" class="field-value">-</span>
-                </div>
-                <div class="footer-cell" style="flex-grow: 1;">
-                    <span class="field-label">Bairro:</span>
-                    <span id="out-bairro" class="field-value" style="font-size: 10pt;">-</span>
-                </div>
-                <div class="footer-cell" style="width: 45mm;">
-                    <span class="field-label">Cidade:</span>
-                    <span class="field-value" style="font-style: normal; font-size: 10pt;">Limeira - SP</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <!-- Scripts de Conexão de Dependências (Em Ordem Estrita) -->
     <script src="../js/firebase/firebase-config.js"></script>
-    <script src="../js/services/configService.js"></script>
+    <script src="js/auth-guard.js"></script>
+    <script src="../js/utils/money.js"></script>
+    <script src="../js/utils/image-helper.js"></script>
 
     <script>
-        function loadFile(input, targetId) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => document.getElementById(targetId).src = e.target.result;
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        // Sincroniza os inputs do formulário com a visualização do documento impresso
-        function sync() {
-            const mappings = {
-                'in-cliente': 'out-cliente',
-                'in-cidade-orig': 'out-cidade-orig',
-                'in-destinatario': 'out-destinatario',
-                'in-endereco': 'out-endereco',
-                'in-numero': 'out-numero',
-                'in-bairro': 'out-bairro'
-            };
-            for (const [inId, outId] of Object.entries(mappings)) {
-                const val = document.getElementById(inId).value;
-                document.getElementById(outId).innerText = val && val.trim() !== '' ? val : '-';
-            }
-        }
-
-        // Função de Impressão Direta
-        document.getElementById('btn-print').addEventListener('click', function() {
-            sync();
-
-            const printContent = document.getElementById('print-area').innerHTML;
-            const styles = document.head.innerHTML;
-
-            const printWindow = window.open('', '_blank', 'width=800,height=600');
-
-            printWindow.document.open();
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    ${styles}
-                    <style>
-                        body { background: white !important; padding: 0 !important; margin: 0 !important; }
-                        @page { size: A6 landscape; margin: 0; }
-                        .guia-print { box-shadow: none !important; margin: 0 !important; }
-                    </style>
-                </head>
-                <body>
-                    ${printContent}
-                    <script>
-                        window.onload = function() {
-                            window.print();
-                        };
-                    <\/script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-        });
-
-        // ================================================================
-        // INICIALIZAÇÃO E CARREGAMENTO DOS DADOS DO PEDIDO
-        // ================================================================
+        // Parâmetros da URL
         const urlParams = new URLSearchParams(window.location.search);
         const pedidoId = urlParams.get('id');
-        const statusEl = document.getElementById('status-pedido');
+        const layout = urlParams.get('layout') || 'lista'; 
+        const tipo = urlParams.get('tipo') || 'financeiro'; 
 
-        async function carregarLogoDaLoja() {
-            try {
-                if (window.ConfigService && typeof window.ConfigService.getSettings === 'function') {
-                    const cfg = await window.ConfigService.getSettings();
-                    const logoUrl = cfg.logo || cfg.logoUrl;
-                    if (logoUrl) {
-                        document.getElementById('logo-view').src = logoUrl;
+        // Atualiza rótulo visual do modo
+        const layoutLabel = document.getElementById('layout-label');
+        if (layoutLabel) {
+            layoutLabel.innerText = `Modo: ${layout} + ${tipo}`;
+        }
+
+        // Utilitários de Formatação
+        const formatarMoedaLocal = (v) => {
+            if (window.MoneyUtils && typeof window.MoneyUtils.format === 'function') {
+                return window.MoneyUtils.format(v);
+            }
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+        };
+
+        const formatarPesoLocal = (gramas) => {
+            const g = parseFloat(gramas || 0);
+            return g < 1000 ? `${g.toFixed(2)} grs` : `${(g / 1000).toFixed(3)} kg`;
+        };
+
+        // Resolve a URL real da imagem (a maioria dos produtos salva um caminho
+        // gs://... do Firebase Storage, que precisa ser convertido para uma URL
+        // de download antes de virar um <img src>). Sem isso, a imagem cai
+        // sempre no placeholder genérico.
+        const resolverImgLocal = (url) => {
+            if (!url) return 'https://placehold.co/200';
+            return (typeof resolverImagemFirebase === 'function') ? resolverImagemFirebase(url) : url;
+        };
+
+        // Rótulo de variação (ex.: letra, dizer, cor) exibido junto ao nome do item.
+        const variacaoLabel = (item) => {
+            const v = item.variacao || item.variacaoNome || '';
+            return v ? ` <span style="color:#a16207;font-weight:600;">[${v}]</span>` : '';
+        };
+
+        function exibirErro(mensagem) {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.innerText = mensagem;
+                loader.classList.remove('animate-pulse');
+                loader.classList.add('text-red-600', 'font-bold');
+            }
+        }
+
+        // Aguarda Inicialização do Auth antes de Carregar Dados
+        if (!pedidoId) {
+            exibirErro("❌ Erro Crítico: ID do pedido ausente na URL.");
+        } else {
+            if (window.firebase && firebase.auth) {
+                firebase.auth().onAuthStateChanged((user) => {
+                    if (user) {
+                        carregarDadosRomaneio();
+                    } else {
+                        exibirErro("🔒 Erro de Permissão: Usuário não autenticado. Faça login no sistema.");
                     }
-                }
-            } catch (e) {
-                console.warn('Não foi possível carregar a logo das configurações:', e);
+                });
+            } else {
+                carregarDadosRomaneio();
             }
         }
 
-        async function obterInstanciaDB() {
-            let retries = 0;
-            while (retries < 10) {
-                if (window.db) return window.db;
-                if (typeof firebase !== 'undefined' && firebase.database) return firebase.database();
-                await new Promise(resolve => setTimeout(resolve, 200));
-                retries++;
-            }
-            return null;
-        }
-
-       async function carregarPedido() {
-    if (!pedidoId) {
-        statusEl.innerText = '📝 Guia avulsa — nenhum pedido vinculado. Preencha os campos manualmente.';
-        sync();
-        return;
-    }
-
+       async function carregarDadosRomaneio() {
     try {
-        const db = await obterInstanciaDB();
-        if (!db) throw new Error('Instância do Firebase indisponível.');
+        const databaseInstancia = window.db || (window.firebase ? firebase.database() : null);
 
-        const path = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
-        const snap = await db.ref(path + '/' + pedidoId).once('value');
+        if (!databaseInstancia) {
+            throw new Error("Instância do banco de dados não disponível.");
+        }
 
+        const snap = await databaseInstancia.ref('abella/orders/' + pedidoId).once('value');
         if (!snap.exists()) {
-            statusEl.innerText = '❌ Pedido não encontrado no Firebase. Preencha manualmente, se quiser.';
-            statusEl.classList.add('text-red-600');
-            sync();
+            exibirErro("❌ Erro: Registro de pedido não localizado no Firebase.");
             return;
         }
 
         const p = snap.val();
-        console.log("📦 DADOS BRUTOS RECEBIDOS DO FIREBASE:", p);
+        
+        // Cabeçalho
+        document.getElementById('doc-id').innerText = p.numeroPedido || p.idPedido || pedidoId; 
+        document.getElementById('doc-data').innerText = p.createdAt ? new Date(p.createdAt).toLocaleString('pt-BR') : (p.data || new Date().toLocaleString('pt-BR'));
+        document.getElementById('cli-pagamento').innerText = p.formaPagamento || p.pagamento || 'PIX';
 
-        // 1. DADOS DO CLIENTE (Prioriza Cidade de Origem/Cliente do cadastro)
-        const nomeCliente = p.cliente || p.nome || p.nomeCliente || '';
-        const cidadeCliente = p.cidadeCliente || p.cidade || '';
+        // ==========================================
+        // 1. DADOS DO CLIENTE
+        // ==========================================
+        const nomeCliente = p.cliente || p.nomeCliente || p.nome || '-';
+        const whatsCliente = p.contato || p.whatsapp || p.whats || p.clienteWhatsapp || '-';
+        
+        // No seu Firebase, 'cidade' contém "Bacamal - MA"
+        const cidadeCliente = p.cidade || p.cidadeClienteTexto || '-';
 
-        // 2. OBTENÇÃO DOS OBJETOS DE ENTREGA/GALVÂNICA
-        const ent = (typeof p.entrega === 'object' && p.entrega !== null) ? p.entrega : {};
-        const endEntrega = (typeof p.enderecoEntrega === 'object' && p.enderecoEntrega !== null) ? p.enderecoEntrega : {};
-        const galv = (typeof p.galvanica === 'object' && p.galvanica !== null) ? p.galvanica : {};
-        const local = (typeof p.localEntrega === 'object' && p.localEntrega !== null) ? p.localEntrega : {};
+        document.getElementById('cli-nome').innerText = nomeCliente;
+        document.getElementById('cli-whats').innerText = whatsCliente;
+        document.getElementById('cli-cidade').innerText = cidadeCliente.toUpperCase();
 
-        // 3. DESTINATÁRIO / GALVÂNICA
-        // Pega do campo editado no modal primeiro
-        const destinatario = p.destinatario || 
-                             (typeof p.galvanica === 'string' ? p.galvanica : null) || 
-                             galv.nome || galv.destinatario || galv.razaoSocial ||
-                             ent.destinatario || ent.nome || ent.galvanica ||
-                             endEntrega.destinatario || endEntrega.nome ||
-                             local.destinatario || local.nome ||
-                             nomeCliente;
+        // ==========================================
+        // 2. LOCAL DE ENTREGA / GALVÂNICA
+        // ==========================================
+        // "enderecoEntrega" é o objeto real gravado pelo checkout do cliente
+        // ({local, rua, numero, bairro, cidade}). "galvanica"/"localEntrega"/"entrega"
+        // (objeto) são usados por outros fluxos (ex.: edição manual em pedidos.html,
+        // que grava {nome, endereco, numero, bairro, cidade}). Note que "entrega"
+        // também pode vir como STRING legada — nesse caso é ignorada aqui de propósito.
+        const entregaObjOuVazio = (typeof p.entrega === 'object' && p.entrega) ? p.entrega : {};
+        const galvObj = p.galvanica || p.localEntrega || entregaObjOuVazio || {};
+        const end = p.enderecoEntrega || {};
 
-        // 4. ENDEREÇO / RUA
-        const rua = p.rua || p.endereco ||
-                    ent.rua || ent.endereco || ent.logradouro ||
-                    endEntrega.rua || endEntrega.endereco || endEntrega.logradouro ||
-                    galv.rua || galv.endereco || galv.logradouro ||
-                    local.rua || local.endereco ||
-                    (typeof p.entrega === 'string' ? p.entrega : '') ||
-                    (typeof p.enderecoEntrega === 'string' ? p.enderecoEntrega : '');
+        const destNome = p.galvanicaNome || galvObj.nome || galvObj.destinatario || galvObj.galvanica || end.local || 'Langge Galvanica';
+        const destRua = p.galvanicaRua || galvObj.rua || galvObj.endereco || end.rua || p.endereco || '-';
+        const destNum = p.galvanicaNumero || galvObj.numero || end.numero || p.numero || 'S/N';
+        const destBairro = p.galvanicaBairro || galvObj.bairro || end.bairro || p.bairro || '-';
+        
+        // No seu Firebase, a entrega pega 'galvanicaCidade' ou o fallback de 'cidadeCliente' (Iracemápolis/Limeira)
+        const destCidade = p.galvanicaCidade || galvObj.cidade || end.cidade || p.cidadeCliente || 'Limeira';
+        const destUF = p.galvanicaEstado || galvObj.estado || galvObj.uf || end.estado || p.estado || 'SP';
 
-        // 5. NÚMERO
-        const numero = p.numero || ent.numero || endEntrega.numero || galv.numero || local.numero || '';
+        let textoEntrega = destCidade.toUpperCase();
+        if (destUF && !textoEntrega.includes(destUF.toUpperCase())) {
+            textoEntrega += ` - ${destUF.toUpperCase()}`;
+        }
 
-        // 6. BAIRRO
-        const bairro = p.bairro || ent.bairro || endEntrega.bairro || galv.bairro || local.bairro || '';
+        document.getElementById('ent-nome').innerText = destNome.toUpperCase();
+        document.getElementById('ent-rua').innerText = destRua.toUpperCase();
+        document.getElementById('ent-num').innerText = destNum;
+        document.getElementById('ent-bairro').innerText = destBairro.toUpperCase();
+        document.getElementById('ent-cidade-uf').innerText = textoEntrega;
 
-        // 4. ATRIBUIÇÃO AOS INPUTS
-        document.getElementById('in-cliente').value = nomeCliente;
-        document.getElementById('in-cidade-orig').value = cidadeCliente;
-        document.getElementById('in-destinatario').value = destinatario;
-        document.getElementById('in-endereco').value = rua;
-        document.getElementById('in-numero').value = numero;
-        document.getElementById('in-bairro').value = bairro;
+        // Totais do Rodapé
+        document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
+        document.getElementById('resumo-peso').innerText = formatarPesoLocal(p.pesoTotal || p.peso || 0);
+        document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
+        
+        if (tipo === 'conferencia') {
+            const blocoFin = document.getElementById('bloco-financeiro-total');
+            if (blocoFin) blocoFin.classList.add('invisible');
+        }
 
-        // Sincroniza os textos na guia
-        sync();
+        // Normalização do Array de Itens
+        let itens = p.itens || p.produtos || [];
+        if (typeof itens === 'object' && !Array.isArray(itens)) {
+            itens = Object.values(itens);
+        }
+        // O checkout do cliente salva o identificador do produto no campo "id",
+        // não em "sku". Normaliza aqui para que o SKU sempre apareça na impressão.
+        itens = itens.map(item => ({ ...item, sku: item.sku || item.id || item.codigo || '-' }));
+        // Ordena a listagem por SKU em ordem alfabética crescente.
+        itens.sort((a, b) => String(a.sku).localeCompare(String(b.sku), 'pt-BR', { numeric: true, sensitivity: 'base' }));
 
-        const numeroPedido = p.numeroPedido || p.idPedido || pedidoId;
-        statusEl.innerText = `✅ Pedido #${numeroPedido} — ${nomeCliente || 'sem nome'} (edite se precisar)`;
-        statusEl.classList.remove('text-red-600');
-        statusEl.classList.add('text-green-600');
+        // Seleção e Renderização
+        const modelo = `${layout}_${tipo}`;
+        const renderizadores = {
+            lista_conferencia: renderListaConferencia,
+            lista_financeiro: renderListaCompleto,
+            lista_foto: renderListaCompletoFoto,
+            grade_conferencia: renderGradeConferencia,
+            grade_financeiro: renderGradeCompleto,
+            grade_foto: renderGradeCompletoFoto
+        };
+
+        const renderizador = renderizadores[modelo];
+        if (!renderizador) {
+            throw new Error(`Modelo estrutural não mapeado: ${modelo}`);
+        }
+
+        document.getElementById('render-target').innerHTML = renderizador(p, itens);
+
+        // Exibição Final
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('romaneio-conteudo').style.display = 'block';
 
     } catch (err) {
-        console.error("Erro ao carregar pedido:", err);
-        statusEl.innerText = '❌ Erro ao carregar o pedido. Preencha manualmente, se quiser.';
-        statusEl.classList.add('text-red-600');
-        sync();
+        console.error("Erro ao carregar romaneio:", err);
+        exibirErro("❌ Ocorreu uma exceção crítica ao sincronizar o romaneio: " + err.message);
     }
 }
+        /* ==================== RENDERS DE COMPONENTES ==================== */
 
-        window.addEventListener('DOMContentLoaded', () => {
-            carregarLogoDaLoja();
-            
-            // Aguarda o Firebase carregar as bibliotecas
-            let checkAuthInterval = setInterval(() => {
-                if (typeof firebase !== 'undefined' && firebase.auth) {
-                    clearInterval(checkAuthInterval);
-                    
-                    // Verifica se a sessão do usuário administrativo está ativa
-                    firebase.auth().onAuthStateChanged((user) => {
-                        if (user) {
-                            // Usuário logado e verificado, agora tem permissão para ler o banco!
-                            carregarPedido();
-                        } else {
-                            // Sessão expirou ou não está logado
-                            statusEl.innerText = '⚠️ Acesso negado. Você precisa estar logado no painel de controle (Admin).';
-                            statusEl.classList.add('text-red-600');
-                            sync();
-                        }
-                    });
-                }
-            }, 100);
-        });
+        function renderResumoFinanceiro(p, itens) {
+            return `
+            <div class="mt-4 border-t-2 border-black pt-3 break-inside-avoid">
+                <h3 class="font-bold text-[11px] uppercase tracking-wider mb-2 text-zinc-800">RESUMO FINANCEIRO COBRANÇA</h3>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
+                    <div class="text-zinc-500">Total de Itens distintos:</div>
+                    <div class="text-right font-mono">${itens.length || 0}</div>
+                    <div class="text-zinc-500">Total de Peças:</div>
+                    <div class="text-right font-mono">${p.totalPecas || p.qtd || 0} pçs</div>
+                    <div class="text-zinc-500">Massa Bruta Estimada:</div>
+                    <div class="text-right font-mono">${formatarPesoLocal(p.pesoTotal || p.peso || 0)}</div>
+                    <div class="text-zinc-500">Descontos de Ofertas:</div>
+                    <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoOfertas || p.descontoCategoria || p.descontoCampanha || 0)}</div>
+                    <div class="text-zinc-500">Desconto por Valor de Compra${p.faixaValorAplicada ? ` (${formatarMoedaLocal(p.faixaValorAplicada)}+)` : ''}:</div>
+                    <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoFaixaValor || p.descontoFaixa?.desconto || 0)}</div>
+                    <div class="text-zinc-500">Cupom${p.cupomAplicado ? ` (${p.cupomAplicado})` : ''}:</div>
+                    <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoCupom || 0)}</div>
+                    <div class="text-zinc-500">Desconto por Peso Acumulado:</div>
+                    <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoPeso || 0)}</div>
+                    <div class="text-zinc-500">Desconto Modalidade PIX${p.percentualDescontoPix ? ` (${p.percentualDescontoPix}%)` : ''}:</div>
+                    <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoPix || p.desconto || 0)}</div>
+                    <div class="text-zinc-500">Custo Adicional de Frete:</div>
+                    <div class="text-right font-mono text-green-700">${formatarMoedaLocal(p.frete || 0)}</div>
+                    <div class="font-bold border-t border-black pt-1.5 text-xs text-black">VALOR FINAL LÍQUIDO</div>
+                    <div class="font-black text-right border-t border-black pt-1.5 text-xs text-black font-mono">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
+                </div>
+            </div>`;
+        }
+
+        function renderListaConferencia(p, itens) {
+            return `
+                <table class="w-full border-collapse text-[11px]">
+                    <thead>
+                        <tr class="border-b border-black text-left">
+                            <th class="py-1.5 font-bold text-zinc-700">SKU</th>
+                            <th class="py-1.5 font-bold text-zinc-700">Descrição do Item Bruto</th>
+                            <th class="py-1.5 text-center font-bold text-zinc-700 w-16">Qtd</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-200">
+                        ${itens.map(item => `
+                            <tr>
+                                <td class="py-1.5 font-mono text-zinc-600">${item.sku || '-'}</td>
+                                <td class="py-1.5 uppercase">${item.nome || item.name || '-'}${variacaoLabel(item)}</td>
+                                <td class="py-1.5 text-center font-bold text-zinc-900">${item.quantidade || 1}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>`;
+        }
+        
+        function renderListaCompleto(p, itens) {
+            return `
+                <table class="w-full text-[11px] border-collapse">
+                    <thead>
+                        <tr class="border-b border-black text-left">
+                            <th class="py-1.5">SKU</th>
+                            <th class="py-1.5">Produto</th>
+                            <th class="py-1.5 text-center">Qtd</th>
+                            <th class="py-1.5 text-center">Peso Un.</th>
+                            <th class="py-1.5 text-right">Preço Un.</th>
+                            <th class="py-1.5 text-right">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-200">
+                    ${itens.map(item => {
+                        const qtd = parseInt(item.quantidade || 1);
+                        const unit = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                        return `
+                            <tr>
+                                <td class="py-1.5 font-mono">${item.sku || '-'}</td>
+                                <td class="py-1.5 uppercase">${item.nome || item.name || '-'}${variacaoLabel(item)}</td>
+                                <td class="py-1.5 text-center font-bold">${qtd}</td>
+                                <td class="py-1.5 text-center font-mono">${formatarPesoLocal(item.peso || item.weight || 0)}</td>
+                                <td class="py-1.5 text-right font-mono">${formatarMoedaLocal(unit)}</td>
+                                <td class="py-1.5 text-right font-bold font-mono">${formatarMoedaLocal(unit * qtd)}</td>
+                            </tr>`;
+                    }).join('')}
+                    </tbody>
+                </table>
+                ${renderResumoFinanceiro(p, itens)}`;
+        }
+
+        function renderListaCompletoFoto(p, itens) {
+            return `
+            <div class="space-y-4">
+                <table class="w-full border-collapse text-[11px]">
+                    <thead>
+                        <tr class="border-b border-black text-left">
+                            <th class="py-1.5 w-14">Miniatura</th>
+                            <th class="py-1.5">SKU</th>
+                            <th class="py-1.5">Especificação</th>
+                            <th class="py-1.5 text-center">Qtd</th>
+                            <th class="py-1.5 text-center">Massa</th>
+                            <th class="py-1.5 text-right">Unit.</th>
+                            <th class="py-1.5 text-right">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-200">
+                        ${itens.map(item => {
+                            const qtd = parseInt(item.quantidade || 1);
+                            const peso = parseFloat(item.peso || item.weight || 0);
+                            const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                            return `
+                            <tr>
+                                <td class="py-1">
+                                    <img src="${resolverImgLocal(item.image || item.imagem)}" style="width:42px;height:42px;object-fit:cover;border:1px solid #e4e4e7;border-radius:6px;" onerror="this.src='https://placehold.co/100'">
+                                </td>
+                                <td class="font-mono text-zinc-600">${item.sku || '-'}</td>
+                                <td class="uppercase font-medium">${item.nome || item.name || '-'}${variacaoLabel(item)}</td>
+                                <td class="text-center font-bold text-black">${qtd}</td>
+                                <td class="text-center font-mono text-zinc-600">${formatarPesoLocal(peso)}</td>
+                                <td class="text-right font-mono">${formatarMoedaLocal(preco)}</td>
+                                <td class="text-right font-bold font-mono">${formatarMoedaLocal(preco * qtd)}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                ${renderResumoFinanceiro(p, itens)}
+            </div>`;
+        }
+
+        function renderGradeConferencia(p, itens) {
+            return `
+            <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+                ${itens.map(item => `
+                    <div class="border border-zinc-300 rounded-lg p-1.5 bg-white text-[10px] flex flex-col justify-between break-inside-avoid shadow-sm">
+                        <div class="flex justify-between items-start gap-1 mb-1">
+                            <span class="font-mono text-[9px] text-zinc-400 font-bold tracking-tight">SKU</span>
+                            <span class="bg-black text-white px-1 py-0.5 rounded text-[10px] font-black">${item.quantidade || 1}x</span>
+                        </div>
+                        <div class="font-mono text-zinc-800 font-medium truncate mb-1" title="${item.sku}">${item.sku || '-'}</div>
+                        <div class="font-bold uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 h-6">${item.nome || item.name || '-'}${variacaoLabel(item)}</div>
+                    </div>`).join('')}
+            </div>`;
+        }
+
+        function renderGradeCompleto(p, itens) {
+            return `
+            <div class="space-y-4">
+                <div class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+                    ${itens.map(item => {
+                        const qtd = parseInt(item.quantidade || 1);
+                        const peso = parseFloat(item.peso || item.weight || 0);
+                        const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                        return `
+                        <div class="border border-zinc-300 rounded-lg p-2 bg-white flex flex-col justify-between text-[10px] break-inside-avoid shadow-sm">
+                            <div>
+                                <div class="flex justify-between items-start gap-1 mb-1">
+                                    <span class="font-mono text-[8px] text-zinc-400 font-bold">SKU</span>
+                                    <span class="bg-zinc-900 text-white px-1 py-0.5 rounded text-[10px] font-black">${qtd}x</span>
+                                </div>
+                                <div class="font-mono text-zinc-700 truncate mb-1">${item.sku || '-'}</div>
+                                <div class="font-bold uppercase text-[10px] leading-tight text-black line-clamp-2 h-6 mb-2">${item.nome || item.name || '-'}${variacaoLabel(item)}</div>
+                            </div>
+                            <div class="border-t border-zinc-100 pt-1 text-[9px] font-mono space-y-0.5 bg-zinc-50/50 p-1 rounded">
+                                <div class="flex justify-between text-zinc-500"><span>Peso:</span><span class="text-zinc-900">${formatarPesoLocal(peso)}</span></div>
+                                <div class="flex justify-between text-zinc-500"><span>Unit:</span><span class="text-zinc-900">${formatarMoedaLocal(preco)}</span></div>
+                                <div class="flex justify-between font-bold text-zinc-600 border-t border-dashed mt-1 pt-0.5"><span>Total:</span><span class="text-black">${formatarMoedaLocal(preco * qtd)}</span></div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+                ${renderResumoFinanceiro(p, itens)}
+            </div>`;
+        }
+
+        function renderGradeCompletoFoto(p, itens) {
+            return `
+            <div class="space-y-4">
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+                    ${itens.map(item => {
+                        const qtd = parseInt(item.quantidade || 1);
+                        const peso = parseFloat(item.peso || item.weight || 0);
+                        const preco = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                        return `
+                        <div class="border border-zinc-300 rounded-lg overflow-hidden bg-white flex flex-col justify-between text-[10px] break-inside-avoid shadow-sm">
+                            <div class="h-24 bg-zinc-50 border-b border-zinc-100 overflow-hidden relative">
+                                <img src="${resolverImgLocal(item.image || item.imagem)}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/200'">
+                                <span class="absolute top-1 right-1 bg-black text-white px-1.5 py-0.5 rounded text-[10px] font-black shadow-md">${qtd}x</span>
+                            </div>
+                            <div class="p-1.5 flex flex-col flex-1 justify-between bg-white">
+                                <div class="mb-1.5">
+                                    <div class="font-mono text-[8px] text-zinc-400 font-bold uppercase">SKU ${item.sku || '-'}</div>
+                                    <div class="font-black uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 mt-0.5 h-6">${item.nome || item.name || '-'}${variacaoLabel(item)}</div>
+                                </div>
+                                <div class="border-t border-zinc-100 pt-1 text-[9px] font-mono space-y-0.5 bg-zinc-50 p-1 rounded">
+                                    <div class="flex justify-between"><span>Peso Un:</span><span>${formatarPesoLocal(peso)}</span></div>
+                                    <div class="flex justify-between text-zinc-500"><span>Valor:</span><span>${formatarMoedaLocal(preco)}</span></div>
+                                    <div class="flex justify-between font-bold border-t border-zinc-200/60 mt-0.5 pt-0.5"><span>Total:</span><span class="text-black">${formatarMoedaLocal(preco * qtd)}</span></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>
+                ${renderResumoFinanceiro(p, itens)}
+            </div>`;
+        }
     </script>
 </body>
 </html>

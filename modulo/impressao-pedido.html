@@ -163,7 +163,8 @@
             throw new Error("Instância do banco de dados não disponível.");
         }
 
-        const snap = await databaseInstancia.ref('abella/orders/' + pedidoId).once('value');
+        const ordersPath = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
+        const snap = await databaseInstancia.ref(ordersPath + '/' + pedidoId).once('value');
         if (!snap.exists()) {
             exibirErro("❌ Erro: Registro de pedido não localizado no Firebase.");
             return;

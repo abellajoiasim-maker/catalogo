@@ -449,6 +449,7 @@
     <script src="../js/firebase/firebase-config.js"></script>
     <script src="js/auth-guard.js"></script>
     <script src="../js/utils/money.js"></script>
+    <script src="../js/utils/image-helper.js"></script>
     <script src="../js/services/pedidoService.js"></script>
 
     <script>
@@ -730,12 +731,16 @@ document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
 
                 const precoUnidade = parseFloat(item.precoFinal || item.price || item.preco || 0);
                 const pesoItem = parseFloat(item.peso || item.weight || 0);
-                const imagemItem = item.image || item.imagem || 'https://placehold.co/80';
+                const imagemBruta = item.image || item.imagem || '';
+                const imagemItem = (typeof resolverImagemFirebase === 'function' && imagemBruta)
+                    ? resolverImagemFirebase(imagemBruta)
+                    : (imagemBruta || 'https://placehold.co/80');
+                const variacaoItem = item.variacao || item.variacaoNome || '';
 
                 div.innerHTML = `
                     <img src="${imagemItem}" onerror="this.src='https://placehold.co/80'" class="w-10 h-10 object-cover rounded-md border border-zinc-800 shrink-0">
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-bold text-zinc-100 truncate">${item.nome || item.name || item.titulo || 'Item sem especificação'}</p>
+                        <p class="text-xs font-bold text-zinc-100 truncate">${item.nome || item.name || item.titulo || 'Item sem especificação'}${variacaoItem ? ` <span class="text-[#caa85c] font-normal">[${variacaoItem}]</span>` : ''}</p>
                         <p class="text-[10px] text-zinc-500 font-mono">SKU: ${item.sku || '-'} • Unid: ${formatarMoeda(precoUnidade)} • ${pesoItem.toFixed(2)}g</p>
                     </div>
                     <div class="flex items-center gap-2 shrink-0">

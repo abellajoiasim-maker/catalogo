@@ -396,29 +396,15 @@
                 await db.ref(_obterCaminhoDB(`orders/${pedidoId}`)).set(dadosPedido);
             }
 
-            // Montar mensagem WhatsApp
+            // Mensagem WhatsApp resumida. O pedido completo, incluindo itens e variações,
+            // continua salvo no Firebase e disponível no painel/romaneio.
             const Q = '\n';
-            let msg = `*Novo Pedido — ${nomeLoja}*${Q}${Q}`;
-            msg += `*ID:* ${pedidoId}${Q}`;
-            msg += `*Cliente:* ${nome}${Q}`;
-            msg += `*WhatsApp:* ${whats}${Q}`;
-            msg += `*Cidade:* ${cidadeCli}${Q}${Q}`;
-            msg += `*─── ITENS ───*${Q}`;
-
-            itens.forEach(item => {
-                const varStr = item.variacao ? ` (${item.variacao})` : '';
-                msg += `▪ ${item.quantidade}x ${item.nome}${varStr} → ${_fmtMoeda(item.subtotal)}${Q}`;
-            });
-
-            msg += `${Q}*─── VALORES ───*${Q}`;
-            msg += `Subtotal: ${_fmtMoeda(subtotal)}${Q}`;
-            if (desconto > 0) msg += `Desconto PIX (${descontoPix}%): -${_fmtMoeda(desconto)}${Q}`;
-            msg += `Frete: ${frete === 0 ? 'Grátis' : _fmtMoeda(frete)}${Q}`;
-            msg += `*Total: ${_fmtMoeda(total)}*${Q}${Q}`;
-            msg += `*─── ENTREGA ───*${Q}`;
-            msg += `${localEnt}${Q}${ruaEnt}, ${numEnt} — ${bairroEnt}${Q}${cidadeEnt}${Q}${Q}`;
-            msg += `*Pagamento:* ${formaPag}${Q}`;
-            msg += `*Obs:* ${obs}`;
+            let msg = `*Novo pedido — ${nomeLoja}*${Q}${Q}`;
+            msg += `*Nome:* ${nome}${Q}`;
+            msg += `*Telefone:* ${whats}${Q}`;
+            msg += `*Cidade:* ${cidadeCli}${Q}`;
+            msg += `*Valor da compra:* ${_fmtMoeda(total)}${Q}`;
+            msg += `*Forma de pagamento:* ${formaPag}`;
 
             const urlWhats = `https://api.whatsapp.com/send?phone=${whatsDestino}&text=${encodeURIComponent(msg)}`;
 

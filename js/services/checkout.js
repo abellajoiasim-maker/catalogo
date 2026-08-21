@@ -45,6 +45,14 @@
         return g.toFixed(2).replace('.', ',') + ' grs.';
     }
 
+    // Arredonda para 2 casas decimais evitando ruído de ponto flutuante
+    // (ex.: 179.67 * 0.05 pode virar 8.983500000000001 em JS). Sem isso o
+    // valor "sujo" é gravado no Firebase e aparece assim em qualquer tela
+    // que releia o pedido (ex.: campo Desconto em pedidos.html).
+    function _round2(valor) {
+        return Math.round((Number(valor) || 0) * 100) / 100;
+    }
+
     function _resolverImagem(url) {
         if (!url) return FALLBACK_IMG;
         const s = String(url).trim();
@@ -190,13 +198,13 @@
         // ── Totais ──
         const qtdTotal    = itens.reduce((a, i) => a + i.quantidade, 0);
         const pesoTotal   = itens.reduce((a, i) => a + i.pesoTotal,  0);
-        const subtotal    = itens.reduce((a, i) => a + i.subtotal,   0);
+        const subtotal    = _round2(itens.reduce((a, i) => a + i.subtotal,   0));
 
         const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
-        const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+        const desconto = _round2(formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0);
 
-        const frete = subtotal >= freteGratis ? 0 : freteFixo;
-        const total = subtotal - desconto + frete;
+        const frete = _round2(subtotal >= freteGratis ? 0 : freteFixo);
+        const total = _round2(subtotal - desconto + frete);
 
         // Box desconto PIX
         const boxDesc = document.getElementById('box-desconto');
@@ -317,12 +325,12 @@
             const whatsDestino = cfg.whatsapp || CONFIG.WHATSAPP_FALLBACK;
             const nomeLoja     = cfg.name || 'Abella Joias';
 
-            const subtotal  = itens.reduce((a, i) => a + i.subtotal,  0);
+            const subtotal  = _round2(itens.reduce((a, i) => a + i.subtotal,  0));
             const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
             const qtdTotal  = itens.reduce((a, i) => a + i.quantidade, 0);
-            const desconto  = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
-            const frete     = subtotal >= freteGratis ? 0 : freteFixo;
-            const total     = subtotal - desconto + frete;
+            const desconto  = _round2(formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0);
+            const frete     = _round2(subtotal >= freteGratis ? 0 : freteFixo);
+            const total     = _round2(subtotal - desconto + frete);
 
             const pedidoId = 'PED-' + Date.now();
 

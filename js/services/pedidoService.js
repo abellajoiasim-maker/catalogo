@@ -76,12 +76,32 @@ invalidateCache() {
 // HELPERS
 // ==========================================================
 
-_safeString(valor = '') {
+    _safeString(valor = '') {
 
-    return String(valor || '')
-        .trim();
+        if (valor === null || valor === undefined) return '';
 
-},
+        if (typeof valor === 'object') {
+            return this._safeString(
+                valor.nome || valor.name || valor.label || valor.valor || valor.value || valor.medida || valor.tamanho || ''
+            );
+        }
+
+        return String(valor || '')
+            .trim();
+
+    },
+
+    _normalizarVariacao(valor = '') {
+
+        if (valor && typeof valor === 'object') {
+            return this._safeString(
+                valor.nome || valor.name || valor.label || valor.valor || valor.value || valor.medida || valor.tamanho || ''
+            );
+        }
+
+        return this._safeString(valor);
+
+    },
 
 _safeNumber(valor = 0) {
 
@@ -130,16 +150,25 @@ _normalizeStatus(status = '') {
 
 normalizarItem(item = {}) {
 
-    return {
+        const variacao = this._normalizarVariacao(
+            item.variacao || item.variation || item.medida || item.tamanho
+        );
+
+        return {
 
         id:
             this._safeString(
-                item.id
+                item.id || item.codigo || item.sku
             ),
 
         sku:
             this._safeString(
-                item.sku
+                item.sku || item.codigo || item.id
+            ),
+
+        codigo:
+            this._safeString(
+                item.codigo || item.sku || item.id
             ),
 
         nome:
@@ -154,6 +183,12 @@ normalizarItem(item = {}) {
                 item.imagem
             ),
 
+        imagem:
+            this._safeString(
+                item.imagem ||
+                item.image
+            ),
+
         categoria:
             this._safeString(
                 item.categoria ||
@@ -166,9 +201,33 @@ normalizarItem(item = {}) {
                 item.subcategory
             ),
 
+        precoOriginal:
+            this._safeNumber(
+                item.precoOriginal ??
+                item.priceOriginal ??
+                item.preco ??
+                item.price
+            ),
+
+        preco:
+            this._safeNumber(
+                item.preco ??
+                item.price ??
+                item.precoFinal
+            ),
+
+        price:
+            this._safeNumber(
+                item.price ??
+                item.preco ??
+                item.precoFinal
+            ),
+
         precoFinal:
             this._safeNumber(
                 item.precoFinal ??
+                item.precoVendaUnitario ??
+                item.preco ??
                 item.price
             ),
 
@@ -176,6 +235,24 @@ normalizarItem(item = {}) {
             this._safeNumber(
                 item.peso ??
                 item.weight
+            ),
+
+        weight:
+            this._safeNumber(
+                item.weight ??
+                item.peso
+            ),
+
+        pesoTotal:
+            this._safeNumber(
+                item.pesoTotal ??
+                ((item.peso ?? item.weight ?? 0) * (parseInt(item.quantidade) || 1))
+            ),
+
+        subtotal:
+            this._safeNumber(
+                item.subtotal ??
+                ((item.precoFinal ?? item.preco ?? item.price ?? 0) * (parseInt(item.quantidade) || 1))
             ),
 
         quantidade:
@@ -186,10 +263,16 @@ normalizarItem(item = {}) {
                 ) || 1
             ),
 
-        variacao:
-            this._safeString(
-                item.variacao
-            )
+        variacao,
+
+        name:
+            this._safeString(item.name || item.nome),
+
+        variation:
+            variacao,
+
+        descontoOferta:
+            this._safeNumber(item.descontoOferta)
 
     };
 
@@ -207,9 +290,19 @@ normalizarPedido(
     raw =
         this._safeObject(raw);
 
+    const entregaLegada =
+        this._safeObject(
+            raw.enderecoEntrega
+        );
+
+    const entregaRaw =
+        (raw.entrega && typeof raw.entrega === 'object')
+            ? raw.entrega
+            : entregaLegada;
+
     const entrega =
         this._safeObject(
-            raw.entrega
+            entregaRaw
         );
 
     const romaneio =
@@ -237,17 +330,37 @@ normalizarPedido(
 
         cliente:
             this._safeString(
-                raw.cliente
+                raw.cliente || raw.nome
+            ),
+
+        nome:
+            this._safeString(
+                raw.nome || raw.cliente
             ),
 
         whats:
             this._safeString(
-                raw.whats
+                raw.whats || raw.whatsapp || raw.contato
+            ),
+
+        whatsapp:
+            this._safeString(
+                raw.whatsapp || raw.whats || raw.contato
+            ),
+
+        contato:
+            this._safeString(
+                raw.contato || raw.whats || raw.whatsapp
             ),
 
         cidade:
             this._safeString(
-                raw.cidade
+                raw.cidade || raw.cidadeCliente || entrega.cidade
+            ),
+
+        cidadeCliente:
+            this._safeString(
+                raw.cidadeCliente || raw.cidade
             ),
 
         // ==================================================
@@ -256,7 +369,12 @@ normalizarPedido(
 
         formaPagamento:
             this._safeString(
-                raw.formaPagamento
+                raw.formaPagamento || raw.pagamento
+            ) || 'PIX',
+
+        pagamento:
+            this._safeString(
+                raw.pagamento || raw.formaPagamento
             ) || 'PIX',
 
         observacoes:
@@ -320,7 +438,7 @@ normalizarPedido(
 
             nome:
                 this._safeString(
-                    entrega.nome
+                    entrega.nome || entrega.local
                 ),
 
             endereco:
@@ -340,9 +458,17 @@ normalizarPedido(
 
             cidade:
                 this._safeString(
-                    entrega.cidade
+                    entrega.cidade || raw.cidadeEnt
                 )
 
+        },
+
+        enderecoEntrega: {
+            local: this._safeString(entrega.local || entrega.nome),
+            rua: this._safeString(entrega.rua || entrega.endereco),
+            numero: this._safeString(entrega.numero),
+            bairro: this._safeString(entrega.bairro),
+            cidade: this._safeString(entrega.cidade || raw.cidadeEnt)
         },
 
         // ==================================================
@@ -386,7 +512,7 @@ normalizarPedido(
 
             this
                 ._safeArray(
-                    raw.itens
+                    raw.itens || raw.produtos
                 )
                 .map(item =>
 
@@ -407,8 +533,36 @@ normalizarPedido(
 
         updatedAt:
             this._safeNumber(
-                raw.updatedAt
-            ) || Date.now()
+                raw.updatedAt || raw.createdAt
+            ) || Date.now(),
+
+        dataCriacao:
+            this._safeString(raw.dataCriacao || raw.data),
+
+        data:
+            this._safeString(raw.data || raw.dataCriacao),
+
+        subtotalBruto:
+            this._safeNumber(raw.subtotalBruto || raw.subtotal),
+
+        descontoOfertas:
+            this._safeNumber(raw.descontoOfertas),
+
+        descontoPix:
+            this._safeNumber(raw.descontoPix || raw.desconto),
+
+        qtd:
+            this._safeNumber(raw.qtd || raw.totalPecas),
+
+        valorTotal:
+            this._safeNumber(raw.valorTotal || raw.total),
+
+        cupomAplicado: raw.cupomAplicado || null,
+        descontoCupom: this._safeNumber(raw.descontoCupom),
+        faixaValorAplicada: raw.faixaValorAplicada ?? null,
+        descontoFaixaValor: this._safeNumber(raw.descontoFaixaValor),
+        percentualDescontoPix: this._safeNumber(raw.percentualDescontoPix),
+        percentualDescontoFaixa: this._safeNumber(raw.percentualDescontoFaixa)
 
     };
 
@@ -987,7 +1141,9 @@ PedidoService.criarPedido =PedidoService.create.bind(PedidoService);
 
 PedidoService.buscarPorId =PedidoService.getById.bind(PedidoService);
 
-PedidoService.listarTodos =PedidoService.getAll.bind(PedidoService);
+PedidoService.listarTodos = PedidoService.getAll.bind(PedidoService);
+PedidoService.atualizarStatus = PedidoService.updateStatus.bind(PedidoService);
+PedidoService.excluir = PedidoService.delete.bind(PedidoService);
 
 // ==========================================================// INIT// ==========================================================
 

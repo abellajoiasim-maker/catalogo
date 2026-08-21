@@ -627,7 +627,15 @@
                     cidade: cidadeCli,
                     cidadeCliente: cidadeCli,
 
-                    entrega: `${localEnt} — ${ruaEnt}, ${numEnt}, ${bairroEnt}, ${cidadeEnt}`,
+                    entrega: {
+                        nome: localEnt,
+                        local: localEnt,
+                        endereco: ruaEnt,
+                        rua: ruaEnt,
+                        numero: numEnt,
+                        bairro: bairroEnt,
+                        cidade: cidadeEnt
+                    },
                     enderecoEntrega: { local: localEnt, rua: ruaEnt, numero: numEnt, bairro: bairroEnt, cidade: cidadeEnt },
 
                     pagamento: formaPag,
@@ -660,7 +668,10 @@
                     observacoes: obs,
 
                     itens: itens.map(i => ({
-                        id: i.id, sku: i.sku, codigo: i.sku, nome: i.nome, name: i.nome, variacao: i.variacao,
+                        id: i.id, sku: i.sku, codigo: i.sku, nome: i.nome, name: i.nome,
+                        categoria: i.categoria || i.category || '',
+                        subcategoria: i.subcategoria || i.subcategory || '',
+                        variacao: (typeof i.variacao === 'object') ? (i.variacao.nome || i.variacao.name || i.variacao.medida || '') : (i.variacao || ''),
                         precoOriginal: i.precoOriginal,
                         preco: i.preco, price: i.preco, precoFinal: i.preco,
                         descontoOferta: i.descontoOferta,
@@ -669,13 +680,23 @@
                         imagem: i.imagem, image: i.imagem
                     })),
 
-                    status: 'Novo',
+                    status: 'Recebido',
+                    romaneio: {
+                        subtotal,
+                        desconto,
+                        totalPix: total,
+                        pesoTotal,
+                        totalPecas: qtdTotal
+                    },
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
                     dataCriacao: new Date().toISOString(),
                     data: new Date().toLocaleDateString('pt-BR')
                 };
 
                 if (!window.db) throw new Error('Instância global do Firebase (window.db) não inicializada.');
-                await db.ref(`abella/orders/${pedidoId}`).set(dadosPedido);
+                const ordersPath = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
+                await db.ref(`${ordersPath}/${pedidoId}`).set(dadosPedido);
 
                 if (window.carrinhoService && typeof carrinhoService.limpar === 'function') {
                     carrinhoService.limpar();

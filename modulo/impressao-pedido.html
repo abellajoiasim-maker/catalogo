@@ -102,6 +102,7 @@
     <script src="../js/firebase/firebase-config.js"></script>
     <script src="js/auth-guard.js"></script>
     <script src="../js/utils/money.js"></script>
+    <script src="../js/utils/image-helper.js"></script>
 
     <script>
         // Parâmetros da URL
@@ -127,6 +128,21 @@
         const formatarPesoLocal = (gramas) => {
             const g = parseFloat(gramas || 0);
             return g < 1000 ? `${g.toFixed(2)} grs` : `${(g / 1000).toFixed(3)} kg`;
+        };
+
+        // Resolve a URL real da imagem (a maioria dos produtos salva um caminho
+        // gs://... do Firebase Storage, que precisa ser convertido para uma URL
+        // de download antes de virar um <img src>). Sem isso, a imagem cai
+        // sempre no placeholder genérico.
+        const resolverImgLocal = (url) => {
+            if (!url) return 'https://placehold.co/200';
+            return (typeof resolverImagemFirebase === 'function') ? resolverImagemFirebase(url) : url;
+        };
+
+        // Rótulo de variação (ex.: letra, dizer, cor) exibido junto ao nome do item.
+        const variacaoLabel = (item) => {
+            const v = item.variacao || item.variacaoNome || '';
+            return v ? ` <span style="color:#a16207;font-weight:600;">[${v}]</span>` : '';
         };
 
         function exibirErro(mensagem) {
@@ -163,8 +179,7 @@
             throw new Error("Instância do banco de dados não disponível.");
         }
 
-        const ordersPath = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('orders') : 'abella/orders';
-        const snap = await databaseInstancia.ref(ordersPath + '/' + pedidoId).once('value');
+        const snap = await databaseInstancia.ref('abella/orders/' + pedidoId).once('value');
         if (!snap.exists()) {
             exibirErro("❌ Erro: Registro de pedido não localizado no Firebase.");
             return;
@@ -315,7 +330,7 @@
                         ${itens.map(item => `
                             <tr>
                                 <td class="py-1.5 font-mono text-zinc-600">${item.sku || '-'}</td>
-                                <td class="py-1.5 uppercase">${item.nome || item.name || '-'}</td>
+                                <td class="py-1.5 uppercase">${item.nome || item.name || '-'}${variacaoLabel(item)}</td>
                                 <td class="py-1.5 text-center font-bold text-zinc-900">${item.quantidade || 1}</td>
                             </tr>
                         `).join('')}
@@ -343,7 +358,7 @@
                         return `
                             <tr>
                                 <td class="py-1.5 font-mono">${item.sku || '-'}</td>
-                                <td class="py-1.5 uppercase">${item.nome || item.name || '-'}</td>
+                                <td class="py-1.5 uppercase">${item.nome || item.name || '-'}${variacaoLabel(item)}</td>
                                 <td class="py-1.5 text-center font-bold">${qtd}</td>
                                 <td class="py-1.5 text-center font-mono">${formatarPesoLocal(item.peso || item.weight || 0)}</td>
                                 <td class="py-1.5 text-right font-mono">${formatarMoedaLocal(unit)}</td>
@@ -378,10 +393,10 @@
                             return `
                             <tr>
                                 <td class="py-1">
-                                    <img src="${item.image || item.imagem || 'https://placehold.co/100'}" style="width:42px;height:42px;object-fit:cover;border:1px solid #e4e4e7;border-radius:6px;" onerror="this.src='https://placehold.co/100'">
+                                    <img src="${resolverImgLocal(item.image || item.imagem)}" style="width:42px;height:42px;object-fit:cover;border:1px solid #e4e4e7;border-radius:6px;" onerror="this.src='https://placehold.co/100'">
                                 </td>
                                 <td class="font-mono text-zinc-600">${item.sku || '-'}</td>
-                                <td class="uppercase font-medium">${item.nome || item.name || '-'}</td>
+                                <td class="uppercase font-medium">${item.nome || item.name || '-'}${variacaoLabel(item)}</td>
                                 <td class="text-center font-bold text-black">${qtd}</td>
                                 <td class="text-center font-mono text-zinc-600">${formatarPesoLocal(peso)}</td>
                                 <td class="text-right font-mono">${formatarMoedaLocal(preco)}</td>
@@ -404,7 +419,7 @@
                             <span class="bg-black text-white px-1 py-0.5 rounded text-[10px] font-black">${item.quantidade || 1}x</span>
                         </div>
                         <div class="font-mono text-zinc-800 font-medium truncate mb-1" title="${item.sku}">${item.sku || '-'}</div>
-                        <div class="font-bold uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 h-6">${item.nome || item.name || '-'}</div>
+                        <div class="font-bold uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 h-6">${item.nome || item.name || '-'}${variacaoLabel(item)}</div>
                     </div>`).join('')}
             </div>`;
         }
@@ -425,7 +440,7 @@
                                     <span class="bg-zinc-900 text-white px-1 py-0.5 rounded text-[10px] font-black">${qtd}x</span>
                                 </div>
                                 <div class="font-mono text-zinc-700 truncate mb-1">${item.sku || '-'}</div>
-                                <div class="font-bold uppercase text-[10px] leading-tight text-black line-clamp-2 h-6 mb-2">${item.nome || item.name || '-'}</div>
+                                <div class="font-bold uppercase text-[10px] leading-tight text-black line-clamp-2 h-6 mb-2">${item.nome || item.name || '-'}${variacaoLabel(item)}</div>
                             </div>
                             <div class="border-t border-zinc-100 pt-1 text-[9px] font-mono space-y-0.5 bg-zinc-50/50 p-1 rounded">
                                 <div class="flex justify-between text-zinc-500"><span>Peso:</span><span class="text-zinc-900">${formatarPesoLocal(peso)}</span></div>
@@ -450,13 +465,13 @@
                         return `
                         <div class="border border-zinc-300 rounded-lg overflow-hidden bg-white flex flex-col justify-between text-[10px] break-inside-avoid shadow-sm">
                             <div class="h-24 bg-zinc-50 border-b border-zinc-100 overflow-hidden relative">
-                                <img src="${item.image || item.imagem || 'https://placehold.co/200'}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/200'">
+                                <img src="${resolverImgLocal(item.image || item.imagem)}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/200'">
                                 <span class="absolute top-1 right-1 bg-black text-white px-1.5 py-0.5 rounded text-[10px] font-black shadow-md">${qtd}x</span>
                             </div>
                             <div class="p-1.5 flex flex-col flex-1 justify-between bg-white">
                                 <div class="mb-1.5">
                                     <div class="font-mono text-[8px] text-zinc-400 font-bold uppercase">SKU ${item.sku || '-'}</div>
-                                    <div class="font-black uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 mt-0.5 h-6">${item.nome || item.name || '-'}</div>
+                                    <div class="font-black uppercase text-[10px] leading-tight text-zinc-900 line-clamp-2 mt-0.5 h-6">${item.nome || item.name || '-'}${variacaoLabel(item)}</div>
                                 </div>
                                 <div class="border-t border-zinc-100 pt-1 text-[9px] font-mono space-y-0.5 bg-zinc-50 p-1 rounded">
                                     <div class="flex justify-between"><span>Peso Un:</span><span>${formatarPesoLocal(peso)}</span></div>

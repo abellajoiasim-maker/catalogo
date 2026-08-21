@@ -280,6 +280,13 @@
         function fmtMoeda(v) {
             return window.MoneyUtils?.format ? window.MoneyUtils.format(v) : `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
         }
+        // Arredonda para 2 casas decimais evitando ruído de ponto flutuante
+        // (ex.: 179.67 * 0.05 pode resultar em 8.983500000000001 em JS).
+        // Sem isso, o valor "sujo" é salvo no Firebase e aparece assim em
+        // qualquer tela que releia o pedido (ex.: campo Desconto em pedidos.html).
+        function round2(v) {
+            return Math.round((Number(v) || 0) * 100) / 100;
+        }
         function fmtPeso(g) {
             if (window.PesoUtils?.formatarPeso) return PesoUtils.formatarPeso(g);
             const n = parseFloat(g) || 0;
@@ -358,21 +365,21 @@
 
             const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
             const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
-            const subtotalBruto = itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0);
-            const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
-            const descontoOfertas = Math.max(0, subtotalBruto - subtotal);
+            const subtotalBruto = round2(itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0));
+            const subtotal = round2(itens.reduce((a, i) => a + i.subtotal, 0));
+            const descontoOfertas = round2(Math.max(0, subtotalBruto - subtotal));
 
             const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
-            const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+            const desconto = round2(formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0);
 
             // Cupom aplicado no carrinho — segue valendo no checkout, sobre o subtotal já com desconto de categoria
             const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
-            const descontoCupom = window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0;
+            const descontoCupom = round2(window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0);
             const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
-            const descontoFaixa = window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0;
+            const descontoFaixa = round2(window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0);
 
-            const frete = subtotal >= freteGratis ? 0 : freteFixo;
-            const total = Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete);
+            const frete = round2(subtotal >= freteGratis ? 0 : freteFixo);
+            const total = round2(Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete));
 
             document.getElementById('box-desconto').classList.toggle('hidden', desconto === 0);
             document.getElementById('labelDescontoPix').innerText = `${descontoPix}% de desconto`;
@@ -441,18 +448,18 @@
             const freteFixo = parseFloat(cfg.freteFixo || cfg.frete || 0);
             const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
 
-            const subtotalBruto = itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0);
-            const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
-            const descontoOfertas = Math.max(0, subtotalBruto - subtotal);
+            const subtotalBruto = round2(itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0));
+            const subtotal = round2(itens.reduce((a, i) => a + i.subtotal, 0));
+            const descontoOfertas = round2(Math.max(0, subtotalBruto - subtotal));
             const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
             const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
-            const desconto = form.formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+            const desconto = round2(form.formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0);
             const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
-            const descontoCupom = window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0;
+            const descontoCupom = round2(window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0);
             const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
-            const descontoFaixa = window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0;
-            const frete = subtotal >= freteGratis ? 0 : freteFixo;
-            const total = Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete);
+            const descontoFaixa = round2(window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0);
+            const frete = round2(subtotal >= freteGratis ? 0 : freteFixo);
+            const total = round2(Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete));
 
             return { itens, form, calc: { subtotalBruto, subtotal, descontoOfertas, pesoTotal, qtdTotal, desconto, descontoCupom, descontoFaixa, faixaAplicada, cupomAplicado, frete, total } };
         }
@@ -596,20 +603,20 @@
                 const whatsDestino = cfg.whatsapp || '5519999999999';
                 const nomeLoja = cfg.name || 'Abella Joias';
 
-                const subtotalBruto = itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0);
-                const subtotal = itens.reduce((a, i) => a + i.subtotal, 0);
-                const descontoOfertas = Math.max(0, subtotalBruto - subtotal);
+                const subtotalBruto = round2(itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0));
+                const subtotal = round2(itens.reduce((a, i) => a + i.subtotal, 0));
+                const descontoOfertas = round2(Math.max(0, subtotalBruto - subtotal));
                 const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
                 const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
-                const desconto = formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0;
+                const desconto = round2(formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0);
 
                 const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
-                const descontoCupom = window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0;
+                const descontoCupom = round2(window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0);
                 const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
-                const descontoFaixa = window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0;
+                const descontoFaixa = round2(window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0);
 
-                const frete = subtotal >= freteGratis ? 0 : freteFixo;
-                const total = Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete);
+                const frete = round2(subtotal >= freteGratis ? 0 : freteFixo);
+                const total = round2(Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete));
 
                 const pedidoId = 'PED-' + Date.now();
 

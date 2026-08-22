@@ -33,11 +33,21 @@ class SeoOrchestrator {
       .replace(/\s+/g, "-");
   }
 
+  buildCatalogUrl(product) {
+    const params = new URLSearchParams();
+    const categoria = product.categoriaId || product.categoria || product.category;
+    const subcategoria = product.subcategoriaId || product.subcategoria || product.subcategory;
+    if (categoria) params.set("categoria", this.generateSlug(categoria));
+    if (subcategoria) params.set("subcategoria", this.generateSlug(subcategoria));
+    const query = params.toString();
+    return `https://catalogo.abellajoias.com.br/produtos.html${query ? `?${query}` : ""}`;
+  }
+
   buildSeoPayload(product, slug) {
     return {
       title: `${product.nome} | Atacado Abella Joias`,
       description: product.descricao || `Compre ${product.nome} no atacado direto de fábrica em Limeira.`,
-      canonical: `https://catalogo.abellajoias.com.br/produto/${slug}`,
+      canonical: this.buildCatalogUrl(product),
       robots: "index, follow"
     };
   }
@@ -46,8 +56,8 @@ class SeoOrchestrator {
     return {
       ogTitle: `${product.nome} | Abella Joias`,
       ogDescription: product.descricao || "Atacado de Joias no Bruto.",
-      ogImage: product.imagemPrincipal || `https://catalogo.abellajoias.com.br/images/produto-vitrine/${slug}.jpg`,
-      ogUrl: `https://catalogo.abellajoias.com.br/produto/${slug}`,
+      ogImage: product.imagemPrincipal || "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media",
+      ogUrl: this.buildCatalogUrl(product),
       ogType: "product"
     };
   }
@@ -76,7 +86,7 @@ class SeoOrchestrator {
         "@type": "Offer",
         "priceCurrency": "BRL",
         "price": product.preco,
-        "availability": "https://schema.org/InStock"
+        "availability": (Number(product.estoque ?? 0) > 0 || product.venderSemEstoque) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
       }
     };
   }

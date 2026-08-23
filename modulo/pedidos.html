@@ -231,13 +231,23 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3 text-xs pt-1">
                     <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Desconto (R$)</label>
+                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Desconto PIX (R$)</label>
                         <input type="number" id="editPedidoDesconto" step="0.01" min="0" value="0" oninput="recalcularResumoFinanceiroModal()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
                     </div>
                     <div>
                         <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Frete (R$)</label>
                         <input type="number" id="editPedidoFrete" step="0.01" min="0" value="0" oninput="recalcularResumoFinanceiroModal()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
                     </div>
+                </div>
+
+                <!-- Descontos e promoções aplicados no momento da compra. Somente leitura:
+                     eles vêm de ofertas/cupom/faixa de valor já resolvidos no checkout, e
+                     editar aqui não altera a regra de negócio, só o registro do pedido. -->
+                <div id="editPromoInfoBox" class="hidden border-t border-zinc-800/60 pt-2 mt-1 space-y-1 text-[10px]">
+                    <p class="text-[9px] font-mono text-zinc-500 uppercase mb-1">Descontos e promoções ativos na compra</p>
+                    <div id="editPromoOfertas" class="hidden flex justify-between text-emerald-400"><span>Desconto de ofertas/campanha</span><strong id="editPromoOfertasValor">-</strong></div>
+                    <div id="editPromoFaixa" class="hidden flex justify-between text-emerald-400"><span id="editPromoFaixaLabel">Desconto por faixa de valor</span><strong id="editPromoFaixaValor">-</strong></div>
+                    <div id="editPromoCupom" class="hidden flex justify-between text-emerald-400"><span id="editPromoCupomLabel">Cupom</span><strong id="editPromoCupomValor">-</strong></div>
                 </div>
             </div>
 
@@ -700,6 +710,43 @@ document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
 
             document.getElementById('editPedidoDesconto').value = Math.round((parseFloat(p.desconto || 0)) * 100) / 100;
             document.getElementById('editPedidoFrete').value = parseFloat(p.frete || 0);
+
+            // Descontos e promoções ativos no momento da compra (ofertas/campanhas,
+            // faixa de valor, cupom). Ficavam salvos no pedido mas não apareciam em
+            // lugar nenhum do painel — só no romaneio impresso.
+            const descontoOfertasPedido = parseFloat(p.descontoOfertas || 0);
+            const descontoFaixaPedido = parseFloat(p.descontoFaixaValor || (p.descontoFaixa && p.descontoFaixa.desconto) || 0);
+            const faixaMinimoPedido = parseFloat((p.faixaValorAplicada) || (p.descontoFaixa && p.descontoFaixa.valorMinimo) || 0);
+            const descontoCupomPedido = parseFloat(p.descontoCupom || 0);
+            const cupomCodigoPedido = p.cupomAplicado || '';
+
+            const boxOfertas = document.getElementById('editPromoOfertas');
+            const boxFaixa = document.getElementById('editPromoFaixa');
+            const boxCupom = document.getElementById('editPromoCupom');
+
+            boxOfertas.classList.toggle('hidden', descontoOfertasPedido <= 0.001);
+            if (descontoOfertasPedido > 0.001) {
+                document.getElementById('editPromoOfertasValor').innerText = `- ${formatarMoeda(descontoOfertasPedido)}`;
+            }
+
+            boxFaixa.classList.toggle('hidden', descontoFaixaPedido <= 0.001);
+            if (descontoFaixaPedido > 0.001) {
+                document.getElementById('editPromoFaixaLabel').innerText = faixaMinimoPedido > 0
+                    ? `Desconto por faixa de valor (compra acima de ${formatarMoeda(faixaMinimoPedido)})`
+                    : 'Desconto por faixa de valor';
+                document.getElementById('editPromoFaixaValor').innerText = `- ${formatarMoeda(descontoFaixaPedido)}`;
+            }
+
+            boxCupom.classList.toggle('hidden', descontoCupomPedido <= 0.001);
+            if (descontoCupomPedido > 0.001) {
+                document.getElementById('editPromoCupomLabel').innerText = cupomCodigoPedido ? `Cupom (${cupomCodigoPedido})` : 'Cupom';
+                document.getElementById('editPromoCupomValor').innerText = `- ${formatarMoeda(descontoCupomPedido)}`;
+            }
+
+            document.getElementById('editPromoInfoBox').classList.toggle(
+                'hidden',
+                descontoOfertasPedido <= 0.001 && descontoFaixaPedido <= 0.001 && descontoCupomPedido <= 0.001
+            );
 
             ocultarFormAdicionarItem();
             renderizarItensModal(id);

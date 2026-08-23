@@ -145,6 +145,16 @@
             return v ? ` <span style="color:#a16207;font-weight:600;">[${v}]</span>` : '';
         };
 
+        // Preço bruto (antes da promoção) riscado ao lado do preço unitário,
+        // quando o item teve desconto de oferta/campanha aplicado no checkout.
+        const precoBrutoLabel = (item, precoFinalUnit) => {
+            const bruto = parseFloat(item.precoOriginal || 0);
+            if (bruto > 0 && bruto > precoFinalUnit + 0.001) {
+                return ` <span style="text-decoration:line-through;color:#a1a1aa;font-weight:400;">${formatarMoedaLocal(bruto)}</span>`;
+            }
+            return '';
+        };
+
         function exibirErro(mensagem) {
             const loader = document.getElementById('loader');
             if (loader) {
@@ -298,6 +308,8 @@
                     <div class="text-right font-mono">${p.totalPecas || p.qtd || 0} pçs</div>
                     <div class="text-zinc-500">Massa Bruta Estimada:</div>
                     <div class="text-right font-mono">${formatarPesoLocal(p.pesoTotal || p.peso || 0)}</div>
+                    <div class="font-bold text-zinc-800 border-t border-zinc-300 pt-1.5">Subtotal Bruto (sem descontos):</div>
+                    <div class="font-bold text-right font-mono border-t border-zinc-300 pt-1.5 text-zinc-800">${formatarMoedaLocal(p.subtotalBruto || p.subtotal || 0)}</div>
                     <div class="text-zinc-500">Descontos de Ofertas:</div>
                     <div class="text-right font-mono text-red-600">-${formatarMoedaLocal(p.descontoOfertas || p.descontoCategoria || p.descontoCampanha || 0)}</div>
                     <div class="text-zinc-500">Desconto por Valor de Compra${p.faixaValorAplicada ? ` (${formatarMoedaLocal(p.faixaValorAplicada)}+)` : ''}:</div>
@@ -361,7 +373,7 @@
                                 <td class="py-1.5 uppercase">${item.nome || item.name || '-'}${variacaoLabel(item)}</td>
                                 <td class="py-1.5 text-center font-bold">${qtd}</td>
                                 <td class="py-1.5 text-center font-mono">${formatarPesoLocal(item.peso || item.weight || 0)}</td>
-                                <td class="py-1.5 text-right font-mono">${formatarMoedaLocal(unit)}</td>
+                                <td class="py-1.5 text-right font-mono">${formatarMoedaLocal(unit)}${precoBrutoLabel(item, unit)}</td>
                                 <td class="py-1.5 text-right font-bold font-mono">${formatarMoedaLocal(unit * qtd)}</td>
                             </tr>`;
                     }).join('')}
@@ -399,7 +411,7 @@
                                 <td class="uppercase font-medium">${item.nome || item.name || '-'}${variacaoLabel(item)}</td>
                                 <td class="text-center font-bold text-black">${qtd}</td>
                                 <td class="text-center font-mono text-zinc-600">${formatarPesoLocal(peso)}</td>
-                                <td class="text-right font-mono">${formatarMoedaLocal(preco)}</td>
+                                <td class="text-right font-mono">${formatarMoedaLocal(preco)}${precoBrutoLabel(item, preco)}</td>
                                 <td class="text-right font-bold font-mono">${formatarMoedaLocal(preco * qtd)}</td>
                             </tr>`;
                         }).join('')}

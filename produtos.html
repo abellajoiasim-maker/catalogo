@@ -16,6 +16,31 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="canonical" href="https://catalogo.abellajoias.com.br/produtos.html">
 
+    <!-- SEO IQ200 — correção imediata do canonical, ainda no <head>, sem depender
+         do Firebase nem do script em /modulo/js/ (que fica bloqueado por robots.txt
+         para crawlers que não respeitem a exceção acima). Reflete a URL real assim
+         que o HTML chega, então o Googlebot já vê o canonical certo no primeiro crawl. -->
+    <script>
+    (function () {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var categoria = params.get('categoria');
+            var subcategoria = params.get('subcategoria');
+            var busca = params.get('busca') || params.get('q');
+            if (busca) return; // páginas de busca interna não competem por indexação
+
+            if (categoria) {
+                var url = window.location.origin + window.location.pathname + '?categoria=' + encodeURIComponent(categoria);
+                if (subcategoria) url += '&subcategoria=' + encodeURIComponent(subcategoria);
+                var link = document.querySelector('link[rel="canonical"]');
+                if (link) link.setAttribute('href', url);
+                var ogUrl = document.querySelector('meta[property="og:url"]');
+                if (ogUrl) ogUrl.setAttribute('content', url);
+            }
+        } catch (e) { /* silencioso: não deve travar a página por causa de SEO */ }
+    })();
+    </script>
+
     <script>window.AURORA_FALLBACK_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';</script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>

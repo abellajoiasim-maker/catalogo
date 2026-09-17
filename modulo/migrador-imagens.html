@@ -490,10 +490,19 @@ function extrairChaveArquivo(nomeArquivo) {
     const semPasta = String(nomeArquivo).split('/').pop().split('\\').pop();
     const pontoIdx = semPasta.lastIndexOf('.');
     const ext = pontoIdx !== -1 ? semPasta.slice(pontoIdx).toLowerCase() : '';
-    let base = pontoIdx !== -1 ? semPasta.slice(0, pontoIdx) : semPasta;
-    // remove sufixos de múltiplas fotos: -1, _2, (3)
-    base = base.replace(/[\s_-]?\(?\d+\)?$/, '');
-    return { chave: normalizarTexto(base), ext };
+    const base = pontoIdx !== -1 ? semPasta.slice(0, pontoIdx) : semPasta;
+
+    // Chave principal: o nome do arquivo inteiro, sem extensão (ex.: "BE-2884").
+    // NUNCA corta números aqui — o SKU normalmente termina em números.
+    const chave = normalizarTexto(base);
+
+    // Chave alternativa: só usada como plano B, pra casos de "foto extra" do
+    // tipo "BE-2884 (2).jpg" ou "BE-2884_2.jpg" — repare que o separador exigido
+    // é espaço/underscore/parênteses, NUNCA hífen, pra não confundir com o SKU.
+    const baseSemSufixo = base.replace(/\s*\(\d+\)$/, '').replace(/_\d+$/, '');
+    const chaveAlternativa = baseSemSufixo !== base ? normalizarTexto(baseSemSufixo) : null;
+
+    return { chave, chaveAlternativa, ext };
 }
 
 function encontrarProdutoPorChave(chave) {
@@ -528,8 +537,8 @@ function lidarComArquivosSelecionados(fileList) {
 // =========================================================================
 function montarPreview(itens) {
     pendentesPreview = itens.map(item => {
-        const { chave, ext } = extrairChaveArquivo(item.nome);
-        const produto = encontrarProdutoPorChave(chave);
+        const { chave, chaveAlternativa, ext } = extrairChaveArquivo(item.nome);
+        const produto = encontrarProdutoPorChave(chave) || (chaveAlternativa ? encontrarProdutoPorChave(chaveAlternativa) : null);
         return {
             nome: item.nome,
             blob: item.blob,

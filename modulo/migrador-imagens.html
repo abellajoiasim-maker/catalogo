@@ -46,12 +46,17 @@
             <div class="space-y-3 flex-1">
                 <div class="flex items-start justify-between gap-4">
                     <h1 class="text-4xl font-black uppercase tracking-[0.25em] gold">Migrador de Imagens</h1>
-                    <button onclick="AuthGuard.logout()" class="shrink-0 h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors whitespace-nowrap">
-                        Sair
-                    </button>
+                    <div class="flex gap-2 shrink-0">
+                        <button onclick="abrirModalConfigGithub()" id="btnConfigGithub" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-[#caa85c] hover:border-[#caa85c] transition-colors whitespace-nowrap">
+                            ⚙️ GitHub
+                        </button>
+                        <button onclick="AuthGuard.logout()" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors whitespace-nowrap">
+                            Sair
+                        </button>
+                    </div>
                 </div>
                 <p class="text-zinc-400 text-sm leading-relaxed max-w-3xl">
-                    Veja quais produtos já têm foto e quais estão faltando, e envie imagens novas de qualquer lugar (pasta do computador ou Google Drive) direto para o Firebase — já vinculadas ao produto certo.
+                    Veja quais produtos já têm foto e quais estão faltando, e envie imagens novas de qualquer lugar (pasta do computador ou Google Drive) — elas são convertidas para WebP e enviadas direto para o seu repositório GitHub (CDN via jsDelivr), já vinculadas ao produto certo.
                 </p>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -189,6 +194,43 @@
     </div>
 </div>
 
+<!-- MODAL CONFIGURAÇÃO GITHUB -->
+<div id="modalConfigGithub" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div class="glass rounded-[2rem] p-8 max-w-lg w-full space-y-5">
+        <div class="flex items-center justify-between">
+            <h3 class="text-xl font-black">⚙️ Configuração do GitHub</h3>
+            <button onclick="fecharModalConfigGithub()" class="text-zinc-500 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <p class="text-zinc-500 text-xs leading-relaxed">
+            Essas imagens são enviadas direto para o repositório GitHub que serve seu CDN via jsDelivr.
+            O token fica salvo <b class="gold">só neste navegador</b> (localStorage) — nunca é enviado a lugar nenhum além do GitHub. Não compartilhe este token com ninguém.
+        </p>
+        <div class="space-y-3">
+            <div>
+                <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Usuário / Organização</label>
+                <input id="cfgGhOwner" class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c] mt-1" placeholder="ex: abellajoiasim-maker">
+            </div>
+            <div>
+                <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Repositório</label>
+                <input id="cfgGhRepo" class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c] mt-1" placeholder="ex: abella-joias-cdn">
+            </div>
+            <div>
+                <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Branch</label>
+                <input id="cfgGhBranch" class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c] mt-1" placeholder="main" value="main">
+            </div>
+            <div>
+                <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Personal Access Token (fine-grained)</label>
+                <input id="cfgGhToken" type="password" class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c] mt-1" placeholder="github_pat_...">
+                <p class="text-zinc-600 text-[11px] mt-2 leading-relaxed">
+                    Crie em <b>github.com → Settings → Developer settings → Fine-grained tokens</b>.
+                    Selecione <b>apenas este repositório</b> e dê permissão <b>Contents: Read and write</b>. Nada além disso é necessário.
+                </p>
+            </div>
+        </div>
+        <button onclick="salvarConfigGithub()" class="btn-gold rounded-2xl h-12 w-full uppercase tracking-[0.2em] text-sm">💾 Salvar Configuração</button>
+    </div>
+</div>
+
 <script src="../js/firebase/firebase-config.js"></script>
 <script src="js/auth-guard.js"></script>
 
@@ -212,10 +254,88 @@ const GOOGLE_DRIVE_CONFIG = {
 };
 
 // =========================================================================
+// CONFIGURAÇÃO DO GITHUB / CDN (jsDelivr)
+// Preenchida pelo botão "⚙️ GitHub" no topo da página — fica salva no
+// localStorage deste navegador. Substitui o antigo upload para o
+// Firebase Storage (indisponível).
+// =========================================================================
+const GH_STORAGE_KEYS = {
+    owner: 'abella_gh_owner',
+    repo: 'abella_gh_repo',
+    branch: 'abella_gh_branch',
+    token: 'abella_gh_token'
+};
+
+function getGithubConfig() {
+    return {
+        owner: localStorage.getItem(GH_STORAGE_KEYS.owner) || '',
+        repo: localStorage.getItem(GH_STORAGE_KEYS.repo) || '',
+        branch: localStorage.getItem(GH_STORAGE_KEYS.branch) || 'main',
+        token: localStorage.getItem(GH_STORAGE_KEYS.token) || ''
+    };
+}
+
+function githubConfigured() {
+    const c = getGithubConfig();
+    return Boolean(c.owner && c.repo && c.token);
+}
+
+function cdnBaseAtual() {
+    const c = getGithubConfig();
+    return `https://cdn.jsdelivr.net/gh/${c.owner}/${c.repo}@${c.branch}`;
+}
+
+function abrirModalConfigGithub() {
+    const c = getGithubConfig();
+    document.getElementById('cfgGhOwner').value = c.owner;
+    document.getElementById('cfgGhRepo').value = c.repo;
+    document.getElementById('cfgGhBranch').value = c.branch || 'main';
+    document.getElementById('cfgGhToken').value = c.token;
+    document.getElementById('modalConfigGithub').classList.remove('hidden');
+}
+
+function fecharModalConfigGithub() {
+    document.getElementById('modalConfigGithub').classList.add('hidden');
+}
+
+function salvarConfigGithub() {
+    const owner = document.getElementById('cfgGhOwner').value.trim();
+    const repo = document.getElementById('cfgGhRepo').value.trim();
+    const branch = document.getElementById('cfgGhBranch').value.trim() || 'main';
+    const token = document.getElementById('cfgGhToken').value.trim();
+
+    if (!owner || !repo || !token) {
+        alert('Preencha usuário, repositório e token antes de salvar.');
+        return;
+    }
+
+    localStorage.setItem(GH_STORAGE_KEYS.owner, owner);
+    localStorage.setItem(GH_STORAGE_KEYS.repo, repo);
+    localStorage.setItem(GH_STORAGE_KEYS.branch, branch);
+    localStorage.setItem(GH_STORAGE_KEYS.token, token);
+
+    atualizarIndicadorGithub();
+    fecharModalConfigGithub();
+    log('Configuração do GitHub salva neste navegador.', 'success');
+}
+
+function atualizarIndicadorGithub() {
+    const btn = document.getElementById('btnConfigGithub');
+    if (!btn) return;
+    if (githubConfigured()) {
+        const c = getGithubConfig();
+        btn.innerHTML = `✅ ${c.owner}/${c.repo}`;
+        btn.classList.add('text-emerald-400');
+    } else {
+        btn.innerHTML = '⚙️ Configurar GitHub';
+        btn.classList.add('text-amber-400');
+    }
+}
+
+// =========================================================================
 // ESTADO GERAL
 // =========================================================================
 const PRODUCTS_PATH = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('products') : 'abella/products';
-const STORAGE_FOLDER = 'images/produtos';
 
 let produtosCache = {};      // id -> produto normalizado
 let listaProdutos = [];      // array dos mesmos produtos, pra iterar fácil
@@ -462,17 +582,119 @@ async function aplicarPreview() {
 }
 
 // =========================================================================
-// UPLOAD PARA O FIREBASE STORAGE + GRAVAÇÃO NO PRODUTO (RTDB)
+// CONVERSÃO PARA WEBP (direto no navegador, via canvas)
 // =========================================================================
+function converterBlobParaWebp(blob, qualidade = 0.82) {
+    return new Promise((resolve, reject) => {
+        const imgEl = new Image();
+        const urlTemp = URL.createObjectURL(blob);
+        imgEl.onload = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = imgEl.naturalWidth;
+                canvas.height = imgEl.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(imgEl, 0, 0);
+                canvas.toBlob((webpBlob) => {
+                    URL.revokeObjectURL(urlTemp);
+                    if (!webpBlob) { reject(new Error('Falha ao converter para WebP (navegador sem suporte).')); return; }
+                    resolve(webpBlob);
+                }, 'image/webp', qualidade);
+            } catch (err) {
+                URL.revokeObjectURL(urlTemp);
+                reject(err);
+            }
+        };
+        imgEl.onerror = () => { URL.revokeObjectURL(urlTemp); reject(new Error('Não foi possível ler a imagem selecionada.')); };
+        imgEl.src = urlTemp;
+    });
+}
+
+function blobParaBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+// =========================================================================
+// UPLOAD PARA O GITHUB (API Contents) + GRAVAÇÃO NO PRODUTO (RTDB)
+// Substitui o antigo upload para o Firebase Storage (indisponível).
+// =========================================================================
+async function githubBuscarShaExistente(cfg, caminho) {
+    const resp = await fetch(
+        `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${caminho}?ref=${cfg.branch}`,
+        { headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json' } }
+    );
+    if (resp.status === 404) return null;
+    if (!resp.ok) throw new Error(`Falha ao consultar arquivo existente (HTTP ${resp.status}).`);
+    const dados = await resp.json();
+    return dados.sha || null;
+}
+
+async function githubEnviarArquivo(cfg, caminho, base64Conteudo, mensagem) {
+    const shaExistente = await githubBuscarShaExistente(cfg, caminho);
+
+    const corpo = {
+        message: mensagem,
+        content: base64Conteudo,
+        branch: cfg.branch
+    };
+    if (shaExistente) corpo.sha = shaExistente;
+
+    const resp = await fetch(
+        `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${caminho}`,
+        {
+            method: 'PUT',
+            headers: {
+                Authorization: `Bearer ${cfg.token}`,
+                Accept: 'application/vnd.github+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(corpo)
+        }
+    );
+
+    if (!resp.ok) {
+        const detalhe = await resp.json().catch(() => ({}));
+        if (resp.status === 401) throw new Error('Token do GitHub inválido ou expirado. Reconfigure em "⚙️ GitHub".');
+        if (resp.status === 403) throw new Error('Sem permissão (verifique o escopo "Contents: Read and write" do token).');
+        throw new Error(detalhe.message || `Falha no upload (HTTP ${resp.status}).`);
+    }
+
+    return resp.json();
+}
+
+function purgarCacheJsdelivr(cfg, caminho) {
+    // Best-effort: dispara a purga do cache do jsDelivr pra esse arquivo
+    // específico. Não bloqueia o fluxo caso falhe (CORS/timeout).
+    const url = `https://purge.jsdelivr.net/gh/${cfg.owner}/${cfg.repo}@${cfg.branch}/${caminho}`;
+    fetch(url, { mode: 'no-cors' }).catch(() => {});
+}
+
 async function enviarImagemParaProduto(produtoId, blob, ext) {
-    if (!window.storage) throw new Error('Firebase Storage não inicializado.');
+    if (!githubConfigured()) {
+        throw new Error('Configure o GitHub primeiro (botão "⚙️ GitHub" no topo da página).');
+    }
 
-    const extensaoFinal = ext || '.jpg';
-    const caminho = `${STORAGE_FOLDER}/${produtoId}${extensaoFinal}`;
-    const ref = window.storage.ref().child(caminho);
+    const cfg = getGithubConfig();
+    const produto = produtosCache[produtoId];
+    if (!produto) throw new Error('Produto não encontrado.');
 
-    await ref.put(blob);
-    const url = await ref.getDownloadURL();
+    // Nome do arquivo = SKU/código do produto (padrão do CDN), nunca o ID interno.
+    const identificador = normalizarTexto(produto.codigo || produto.sku || produto.id).toUpperCase() || produto.id;
+    if (!identificador) throw new Error('Produto sem código/SKU definido — não é possível nomear o arquivo.');
+
+    const webpBlob = await converterBlobParaWebp(blob, 0.82);
+    const base64 = await blobParaBase64(webpBlob);
+
+    const caminho = `products/${identificador}.webp`;
+    await githubEnviarArquivo(cfg, caminho, base64, `feat: imagem do produto ${identificador} via migrador`);
+    purgarCacheJsdelivr(cfg, caminho);
+
+    const url = `${cdnBaseAtual()}/products/${identificador}.webp`;
 
     await db.ref(PRODUCTS_PATH).child(produtoId).update({
         imagem: url,
@@ -643,6 +865,10 @@ async function callbackPickerDrive(data, accessToken) {
 // INÍCIO
 // =========================================================================
 window.addEventListener('load', () => {
+    atualizarIndicadorGithub();
+    if (!githubConfigured()) {
+        log('⚙️ Configure o GitHub (botão no topo) antes de enviar imagens.', 'warning');
+    }
     // pequena espera para garantir que firebase-config.js já rodou
     setTimeout(carregarProdutos, 300);
 });

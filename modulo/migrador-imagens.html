@@ -47,6 +47,9 @@
                 <div class="flex items-start justify-between gap-4">
                     <h1 class="text-4xl font-black uppercase tracking-[0.25em] gold">Migrador de Imagens</h1>
                     <div class="flex gap-2 shrink-0">
+                        <button onclick="abrirModalCorrigirLinks()" id="btnCorrigirLinks" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-[#caa85c] hover:border-[#caa85c] transition-colors whitespace-nowrap">
+                            🔗 Corrigir Links Antigos
+                        </button>
                         <button onclick="abrirModalConfigGithub()" id="btnConfigGithub" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-[#caa85c] hover:border-[#caa85c] transition-colors whitespace-nowrap">
                             ⚙️ GitHub
                         </button>
@@ -228,6 +231,40 @@
             </div>
         </div>
         <button onclick="salvarConfigGithub()" class="btn-gold rounded-2xl h-12 w-full uppercase tracking-[0.2em] text-sm">💾 Salvar Configuração</button>
+    </div>
+</div>
+
+<!-- MODAL CORRIGIR LINKS ANTIGOS -->
+<div id="modalCorrigirLinks" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div class="glass rounded-[2rem] p-8 max-w-4xl w-full max-h-[85vh] flex flex-col space-y-4">
+        <div class="flex items-center justify-between shrink-0">
+            <h3 class="text-xl font-black">🔗 Corrigir Links Antigos</h3>
+            <button onclick="fecharModalCorrigirLinks()" class="text-zinc-500 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        <p class="text-zinc-500 text-xs leading-relaxed shrink-0">
+            Procura produtos cujo link de imagem ainda aponta pro Firebase Storage (ou é só o nome do arquivo antigo, ex: <code>PRG-71.png</code>) e verifica se já existe uma imagem correspondente no GitHub (<code>products/SKU.webp</code>). Não faz upload de nada — só corrige o link salvo no produto, para os que já foram migrados.
+        </p>
+        <div class="flex gap-3 shrink-0">
+            <button onclick="escanearLinksAntigos()" id="btnEscanear" class="btn-gold rounded-xl h-11 px-5 text-xs uppercase tracking-[0.15em] font-bold">🔍 Escanear Produtos</button>
+            <button onclick="aplicarCorrecoesLinks()" id="btnAplicarCorrecoes" disabled class="rounded-xl h-11 px-5 text-xs uppercase tracking-[0.15em] font-bold border border-zinc-800 text-zinc-500 disabled:opacity-40 enabled:text-emerald-400 enabled:border-emerald-800 enabled:hover:bg-emerald-950/30 transition-colors">✅ Aplicar Correções Selecionadas</button>
+            <span id="resumoEscaneio" class="text-xs text-zinc-500 self-center"></span>
+        </div>
+        <div class="overflow-y-auto flex-1 border border-zinc-800 rounded-xl">
+            <table class="w-full text-xs">
+                <thead class="sticky top-0 bg-zinc-950">
+                    <tr class="text-left text-zinc-500 uppercase tracking-wider">
+                        <th class="p-3 w-8"><input type="checkbox" id="checkTodosLinks" onclick="toggleTodosLinks(this.checked)"></th>
+                        <th class="p-3">Produto</th>
+                        <th class="p-3">Link Atual (salvo no banco)</th>
+                        <th class="p-3">Novo Link (GitHub/jsDelivr)</th>
+                        <th class="p-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorrecaoLinksBody">
+                    <tr><td colspan="5" class="p-6 text-center text-zinc-600">Clique em "Escanear Produtos" para começar.</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -703,6 +740,167 @@ async function enviarImagemParaProduto(produtoId, blob, ext) {
     });
 
     return url;
+}
+
+// =========================================================================
+// CORRIGIR LINKS ANTIGOS
+// Produtos cujo campo "imagem" ainda é o nome cru do arquivo (ex.: "PRG-71.png")
+// ou uma URL antiga do Firebase Storage. Verifica se já existe o arquivo
+// correspondente no GitHub e, se sim, corrige o link salvo — sem subir
+// nenhuma imagem nova.
+// =========================================================================
+let resultadosEscaneio = []; // { produtoId, nome, linkAntigo, linkNovo, caminho, existe }
+
+function jaEhLinkCdnAtual(valor) {
+    return typeof valor === 'string' && valor.startsWith(cdnBaseAtual());
+}
+
+function extrairIdentificadorDeLinkAntigo(valorAntigo) {
+    if (!valorAntigo || typeof valorAntigo !== 'string') return null;
+    const valor = valorAntigo.trim();
+    if (!valor) return null;
+    if (jaEhLinkCdnAtual(valor)) return null; // já está migrado
+
+    let nomeArquivo = valor;
+
+    // URL do Firebase Storage: .../o/images%2Fprodutos%2FCJI-3010.png?alt=media
+    if (valor.includes('firebasestorage.googleapis.com')) {
+        try {
+            const urlObj = new URL(valor);
+            const partesPath = decodeURIComponent(urlObj.pathname).split('/');
+            nomeArquivo = partesPath[partesPath.length - 1] || '';
+        } catch (e) {
+            const match = valor.match(/%2F([^%2F?]+)\?/) || valor.match(/\/([^/?]+)\?/);
+            nomeArquivo = match ? decodeURIComponent(match[1]) : '';
+        }
+    }
+    // gs://bucket/images/produtos/CJI-3010.png
+    else if (valor.startsWith('gs://')) {
+        const partes = valor.split('/');
+        nomeArquivo = partes[partes.length - 1] || '';
+    }
+    // Já é outra URL http(s) que não é do nosso CDN — não mexe.
+    else if (valor.startsWith('http://') || valor.startsWith('https://')) {
+        return null;
+    }
+    // Nome de arquivo cru, ex.: "PRG-71.png"
+    // (nomeArquivo já é o próprio valor nesse caso)
+
+    if (!nomeArquivo) return null;
+    return nomeArquivo.replace(/\.[a-zA-Z0-9]+$/, ''); // remove extensão -> SKU
+}
+
+async function escanearLinksAntigos() {
+    if (!githubConfigured()) {
+        alert('Configure o GitHub primeiro (botão "⚙️ GitHub" no topo da página).');
+        return;
+    }
+
+    const btn = document.getElementById('btnEscanear');
+    const tbody = document.getElementById('tabelaCorrecaoLinksBody');
+    const resumo = document.getElementById('resumoEscaneio');
+    btn.disabled = true;
+    btn.innerText = '🔍 Escaneando...';
+    tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-zinc-600">Escaneando produtos...</td></tr>`;
+    resultadosEscaneio = [];
+
+    const cfg = getGithubConfig();
+    const candidatos = Object.values(produtosCache).filter(p => p.imagem && !jaEhLinkCdnAtual(p.imagem));
+
+    let verificados = 0;
+    for (const produto of candidatos) {
+        const identificador = extrairIdentificadorDeLinkAntigo(produto.imagem);
+        verificados++;
+        resumo.innerText = `Verificando ${verificados}/${candidatos.length}...`;
+
+        if (!identificador) continue; // formato desconhecido, ignora
+
+        const caminho = `products/${identificador}.webp`;
+        let existe = false;
+        try {
+            const sha = await githubBuscarShaExistente(cfg, caminho);
+            existe = Boolean(sha);
+        } catch (err) {
+            existe = false;
+        }
+
+        resultadosEscaneio.push({
+            produtoId: produto.id,
+            nome: produto.nome,
+            linkAntigo: produto.imagem,
+            linkNovo: `${cdnBaseAtual()}/${caminho}`,
+            caminho,
+            existe
+        });
+    }
+
+    renderizarTabelaCorrecaoLinks();
+    const corrigiveis = resultadosEscaneio.filter(r => r.existe).length;
+    resumo.innerText = `${corrigiveis} de ${candidatos.length} já têm imagem no GitHub e podem ser corrigidos.`;
+    btn.disabled = false;
+    btn.innerText = '🔍 Escanear Produtos';
+    document.getElementById('btnAplicarCorrecoes').disabled = corrigiveis === 0;
+}
+
+function renderizarTabelaCorrecaoLinks() {
+    const tbody = document.getElementById('tabelaCorrecaoLinksBody');
+    if (resultadosEscaneio.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-zinc-600">Nenhum link antigo reconhecível encontrado (ou tudo já migrado).</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = resultadosEscaneio.map((r, i) => `
+        <tr class="border-t border-zinc-900 ${r.existe ? '' : 'opacity-40'}">
+            <td class="p-3"><input type="checkbox" ${r.existe ? 'checked' : 'disabled'} data-idx="${i}" class="check-link-item"></td>
+            <td class="p-3">${r.nome}</td>
+            <td class="p-3 text-zinc-500 break-all">${r.linkAntigo}</td>
+            <td class="p-3 text-emerald-400 break-all">${r.existe ? r.linkNovo : '—'}</td>
+            <td class="p-3">${r.existe ? '<span class="text-emerald-400">✅ encontrado no GitHub</span>' : '<span class="text-zinc-600">⚠️ ainda não migrado</span>'}</td>
+        </tr>
+    `).join('');
+}
+
+function toggleTodosLinks(marcado) {
+    document.querySelectorAll('.check-link-item:not(:disabled)').forEach(cb => cb.checked = marcado);
+}
+
+async function aplicarCorrecoesLinks() {
+    const checks = document.querySelectorAll('.check-link-item:checked');
+    if (checks.length === 0) { alert('Nenhum item selecionado.'); return; }
+    if (!confirm(`Corrigir o link de ${checks.length} produto(s)? Isso atualiza o banco de dados, sem subir nenhuma imagem nova.`)) return;
+
+    const btn = document.getElementById('btnAplicarCorrecoes');
+    btn.disabled = true;
+    let sucesso = 0, falhas = 0;
+
+    for (const check of checks) {
+        const item = resultadosEscaneio[Number(check.dataset.idx)];
+        try {
+            await db.ref(PRODUCTS_PATH).child(item.produtoId).update({
+                imagem: item.linkNovo,
+                image: item.linkNovo,
+                updatedAt: Date.now()
+            });
+            if (produtosCache[item.produtoId]) produtosCache[item.produtoId].imagem = item.linkNovo;
+            sucesso++;
+            log(`Link corrigido: ${item.nome} → ${item.caminho}`, 'success');
+        } catch (err) {
+            falhas++;
+            log(`Falha ao corrigir ${item.nome}: ${err.message}`, 'error');
+        }
+    }
+
+    log(`Correção concluída: ${sucesso} atualizados, ${falhas} falharam.`, sucesso > 0 ? 'success' : 'error');
+    atualizarStats();
+    renderizarGrid();
+    fecharModalCorrigirLinks();
+}
+
+function abrirModalCorrigirLinks() {
+    document.getElementById('modalCorrigirLinks').classList.remove('hidden');
+}
+function fecharModalCorrigirLinks() {
+    document.getElementById('modalCorrigirLinks').classList.add('hidden');
 }
 
 // =========================================================================

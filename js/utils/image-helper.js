@@ -1,21 +1,29 @@
 // ======================================================================
 // js/utils/image-helper.js
-// Abella Joias - ImageHelper v3.0 (Versão Unificada, Final e Corrigida)
-// Compatível com GitHub Pages • Resolução de Mapeamentos, Slugs e Storage
-// Arquitetura Homologada PMA V8 - Arquivo Completo e Selado
+// Abella Joias - ImageHelper v4.0 (Migrado para CDN jsDelivr / GitHub)
+// Substitui o Firebase Storage (indisponível) por um repositório
+// público de imagens servido via jsDelivr.
+// Mantém EXATAMENTE a mesma API pública da v3.0 para não exigir
+// nenhuma alteração em outras páginas (produtos.html, carrinho.html,
+// index.html, checkout.html, subcategorias.html, engine/render.js).
 // ======================================================================
 
 const ImageHelper = (() => {
     'use strict';
 
     // ==========================================================
-    // CONFIGURAÇÕES E CONSTANTES
+    // CONFIGURAÇÃO DO CDN
+    // ⚠️ AJUSTE AQUI: troque pelo seu usuário/repo/branch reais.
     // ==========================================================
-    const PLACEHOLDER = 'https://via.placeholder.com/800x800/111111/caa85c?text=ABELLA';
-    const FIREBASE_STORAGE_HOST = 'https://firebasestorage.googleapis.com/v0/b';
-    const BUCKET_NAME = 'catalogo-abella-joias.firebasestorage.app';
-    const STORAGE_ROOT = `gs://${BUCKET_NAME}/images`;
-    const CLOUD_FALLBACK = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
+const CDN_USER = 'abellajoiasim-maker';  // seu usuário do GitHub
+const CDN_REPO = 'abella-joias-cdn';     // nome do repositório
+const CDN_REF  = 'main';                 // branch ou tag (ex: 'main', 'v1')
+const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}`;
+    // Placeholder local, servido pelo próprio CDN (evita depender de
+    // serviços externos como via.placeholder.com, que podem cair).
+    // Suba uma imagem chamada "placeholder.webp" dentro de settings/.
+    const PLACEHOLDER = `${CDN_BASE}/settings/placeholder.webp`;
+    const CLOUD_FALLBACK = PLACEHOLDER;
 
     // ==========================================================
     // HELPERS INTERNOS DE SANITIZAÇÃO
@@ -40,98 +48,128 @@ const ImageHelper = (() => {
             .replace(/\s+/g, '-');
     }
 
+    // Remove a extensão de arquivo (.png, .jpg, .jpeg, .webp...) para
+    // extrair só o SKU, já que o banco pode ter salvo o nome com a
+    // extensão antiga (ex.: "CJI-3222.png") mas o arquivo real no CDN
+    // agora é sempre ".webp".
+    function extrairSku(nomeArquivo) {
+        return safeString(nomeArquivo).replace(/\.[a-zA-Z0-9]+$/, '');
+    }
+
     // ==========================================================
-    // NÚCLEO: CONVERTER GS:// OU PATH PARA HTTPS URL REAL
+    // NÚCLEO: RESOLVER QUALQUER VALOR PARA UMA URL DO CDN
+    // Mantém o nome "converterGsUrl" por compatibilidade de API,
+    // mas agora resolve para o jsDelivr em vez do Firebase.
     // ==========================================================
     function converterGsUrl(url = '') {
         try {
-            let pathOriginal = safeString(url);
+            const valor = safeString(url);
 
-            if (!pathOriginal) {
+            if (!valor) {
                 return CLOUD_FALLBACK;
             }
 
-            if (isHttpUrl(pathOriginal)) {
-                return pathOriginal;
+            // Já é uma URL http(s) completa (ex.: link externo) — usa direto.
+            if (isHttpUrl(valor)) {
+                return valor;
             }
 
-            if (
-                pathOriginal.startsWith('/images/') || pathOriginal.startsWith('images/') ||
-                pathOriginal.startsWith('/storage/') || pathOriginal.startsWith('storage/')
-            ) {
-                const cleanRelative = pathOriginal.replace(/^\/+/, '');
-                pathOriginal = `gs://${BUCKET_NAME}/${cleanRelative}`;
-            }
-
-            if (isGsUrl(pathOriginal)) {
-                const semGs = pathOriginal.replace('gs://', '');
+            // Formato antigo gs://bucket/images/produtos/ARQUIVO.ext
+            // ou gs://bucket/images/categorias/slug.jpg etc.
+            if (isGsUrl(valor)) {
+                const semGs = valor.replace('gs://', '');
                 const primeiraBarra = semGs.indexOf('/');
+                if (primeiraBarra === -1) return CLOUD_FALLBACK;
 
-                if (primeiraBarra === -1) {
-                    return CLOUD_FALLBACK;
+                const caminho = semGs.substring(primeiraBarra + 1); // ex: images/produtos/ARQUIVO.ext
+                const partes = caminho.split('/').filter(Boolean);
+
+                // pega o último segmento como nome de arquivo e tenta
+                // identificar a pasta (produtos, categorias, etc.)
+                const nomeArquivo = partes[partes.length - 1] || '';
+                const pastaAntiga = (partes[partes.length - 2] || '').toLowerCase();
+
+                if (pastaAntiga.includes('produto')) {
+                    return `${CDN_BASE}/products/${extrairSku(nomeArquivo)}.webp`;
                 }
-
-                const bucket = semGs.substring(0, primeiraBarra);
-                const caminho = semGs.substring(primeiraBarra + 1);
-
-                if (!bucket || !caminho) {
-                    return CLOUD_FALLBACK;
+                if (pastaAntiga.includes('categoria-grid')) {
+                    return `${CDN_BASE}/categories/${nomeArquivo}`;
                 }
-
-                return `${FIREBASE_STORAGE_HOST}/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
+                if (pastaAntiga.includes('categoria')) {
+                    return `${CDN_BASE}/categories/${nomeArquivo}`;
+                }
+                if (pastaAntiga.includes('subcategoria')) {
+                    return `${CDN_BASE}/subcategorias/${nomeArquivo}`;
+                }
+                if (pastaAntiga.includes('logo') || pastaAntiga.includes('home')) {
+                    return `${CDN_BASE}/home/${nomeArquivo}`;
+                }
+                return CLOUD_FALLBACK;
             }
 
-            return `${FIREBASE_STORAGE_HOST}/${BUCKET_NAME}/o/${encodeURIComponent(pathOriginal)}?alt=media`;
+            // Caminho relativo simples tipo "images/produtos/ARQUIVO.ext"
+            if (valor.startsWith('/images/') || valor.startsWith('images/')) {
+                return converterGsUrl(`gs://legacy/${valor.replace(/^\/+/, '')}`);
+            }
+
+            // Sem "/" = nome de arquivo simples de produto (ex.: "SKU.png")
+            if (!valor.includes('/')) {
+                return `${CDN_BASE}/products/${extrairSku(valor)}.webp`;
+            }
+
+            return CLOUD_FALLBACK;
 
         } catch (error) {
-            console.error('[PMA V8] [ImageHelper:converterGsUrl]', error);
+            console.error('[ImageHelper:converterGsUrl]', error);
             return CLOUD_FALLBACK;
         }
     }
 
     // ==========================================================
-    // RESOLUÇÃO DE IMAGENS POR INTERPOLAÇÃO / ESTRUTURA
+    // RESOLUÇÃO DE IMAGENS POR ESTRUTURA (mesma API da v3.0)
     // ==========================================================
     function obterImagemFallback() {
         return CLOUD_FALLBACK;
     }
 
     function obterLogo() {
-        return converterGsUrl(`${STORAGE_ROOT}/logo/logo.png`);
+        return `${CDN_BASE}/home/logo.webp`;
     }
 
     function obterImagemCategoria(slug) {
         const cleanSlug = normalizarSlug(slug);
         if (!cleanSlug) return obterImagemFallback();
-        return converterGsUrl(`${STORAGE_ROOT}/categorias/${cleanSlug}.jpg`);
+        return `${CDN_BASE}/categories/${cleanSlug}.jpg`;
     }
 
     function obterImagemCategoriaGrid(slug) {
         const cleanSlug = normalizarSlug(slug);
         if (!cleanSlug) return obterImagemFallback();
-        return converterGsUrl(`${STORAGE_ROOT}/categoria-grid/${cleanSlug}.jpg`);
+        return `${CDN_BASE}/categories/${cleanSlug}-grid.jpg`;
     }
 
     function obterImagemSubcategoria(slug) {
         const cleanSlug = normalizarSlug(slug);
         if (!cleanSlug) return obterImagemFallback();
-        return converterGsUrl(`${STORAGE_ROOT}/subcategorias/${cleanSlug}.jpg`);
+        return `${CDN_BASE}/subcategorias/${cleanSlug}.jpg`;
     }
 
     function obterImagemSubcategoriaGrid(slug) {
         const cleanSlug = normalizarSlug(slug);
         if (!cleanSlug) return obterImagemFallback();
-        return converterGsUrl(`${STORAGE_ROOT}/subcategoria-grid/${cleanSlug}.jpg`);
+        return `${CDN_BASE}/subcategorias/${cleanSlug}-grid.jpg`;
     }
 
     function obterImagemProduto(nomeArquivo) {
         if (!nomeArquivo) return obterImagemFallback();
-        
-        if (String(nomeArquivo).startsWith('gs://') || String(nomeArquivo).startsWith('http')) {
-            return converterGsUrl(nomeArquivo);
+
+        const valor = safeString(nomeArquivo);
+
+        if (isHttpUrl(valor) || isGsUrl(valor)) {
+            return converterGsUrl(valor);
         }
-        
-        return converterGsUrl(`${STORAGE_ROOT}/produtos/${nomeArquivo}`);
+
+        return `${CDN_BASE}/products/${extrairSku(valor)}.webp`;
     }
 
     function obterImagem(item = {}) {
@@ -139,9 +177,10 @@ const ImageHelper = (() => {
 
         const imagem = item.image || item.imagem || item.foto || item.thumbnail || item.thumb || item.capa ||
             (Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null) ||
-            (Array.isArray(item.imagens) && item.imagens.length > 0 ? item.imagens[0] : null) || 
-            CLOUD_FALLBACK;
+            (Array.isArray(item.imagens) && item.imagens.length > 0 ? item.imagens[0] : null) ||
+            null;
 
+        if (!imagem) return CLOUD_FALLBACK;
         return converterGsUrl(imagem);
     }
 
@@ -164,11 +203,11 @@ const ImageHelper = (() => {
     }
 
     // ==========================================================
-    // EXPORTAÇÃO COMPACTA E CONGELADA
+    // EXPORTAÇÃO COMPACTA E CONGELADA (mesma API pública da v3.0)
     // ==========================================================
     return Object.freeze({
         PLACEHOLDER,
-        STORAGE_ROOT,
+        CDN_BASE,
         converterGsUrl,
         obterLogo,
         obterImagemFallback,
@@ -192,7 +231,6 @@ const ImageHelper = (() => {
 Object.defineProperty(window, 'ImageHelper', { value: ImageHelper, writable: false, configurable: false });
 Object.defineProperty(window, 'imageHelper', { value: ImageHelper, writable: false, configurable: false });
 
-// Atalhos Globais Corrigidos (Apontando diretamente para as propriedades exportadas e congeladas)
 Object.defineProperty(window, 'obterImagemProduto', { value: ImageHelper.obterImagemProduto, writable: false, configurable: false });
 Object.defineProperty(window, 'obterImagemCategoria', { value: ImageHelper.obterImagemCategoria, writable: false, configurable: false });
 Object.defineProperty(window, 'obterImagemCategoriaGrid', { value: ImageHelper.obterImagemCategoriaGrid, writable: false, configurable: false });
@@ -203,24 +241,18 @@ Object.defineProperty(window, 'obterImagemFallback', { value: ImageHelper.obterI
 
 // ==========================================================
 // PONTE GLOBAL: resolverImagemFirebase
-// Usada pelo engine/render.js e várias páginas (produtos.html,
-// carrinho.html, index.html, checkout.html, subcategorias.html)
-// para converter o valor salvo no banco (nome de arquivo simples
-// como "SKU.png", caminho relativo, gs:// ou URL completa) na
-// URL real e carregável do Firebase Storage.
-// Antes desta função não existir em lugar nenhum do projeto,
-// causando 404 em todas as imagens de produto.
+// Mantido com o mesmo nome por compatibilidade com engine/render.js
+// e as páginas que já chamam essa função — agora resolve para o CDN
+// jsDelivr em vez do Firebase Storage.
 // ==========================================================
 function resolverImagemFirebase(valor) {
-    const fallbackUrl = (typeof CLOUD_FALLBACK !== 'undefined') ? CLOUD_FALLBACK : '';
-
     if (typeof valor !== 'string' || !valor.trim()) {
-        return fallbackUrl;
+        return ImageHelper.PLACEHOLDER;
     }
     if (ImageHelper.isHttpUrl(valor) || ImageHelper.isGsUrl(valor)) {
         return ImageHelper.converterGsUrl(valor);
     }
-    // Sem barra "/" = nome de arquivo de produto (ex: "SKU.png")
+    // Sem barra "/" = nome de arquivo de produto (ex: "SKU.png" ou "SKU")
     if (!valor.includes('/')) {
         return ImageHelper.obterImagemProduto(valor);
     }
@@ -230,4 +262,4 @@ function resolverImagemFirebase(valor) {
 
 Object.defineProperty(window, 'resolverImagemFirebase', { value: resolverImagemFirebase, writable: false, configurable: false });
 
-console.info('[PMA V8] 🖼️ ImageHelper v3.0 unificado, fixado e blindado globalmente.');
+console.info('[ImageHelper v4.0] Migrado para CDN jsDelivr:', ImageHelper.CDN_BASE);

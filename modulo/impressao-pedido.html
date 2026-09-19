@@ -125,13 +125,17 @@
         <div id="render-target"></div>
 
         <!-- Totais Consolidados de Rodapé -->
-        <div class="border-t-2 border-black pt-4 grid grid-cols-3 text-center font-mono text-xs font-bold bg-zinc-50 p-3 rounded-xl border border-zinc-200 break-inside-avoid">
+        <div class="border-t-2 border-black pt-4 grid grid-cols-4 text-center font-mono text-xs font-bold bg-zinc-50 p-3 rounded-xl border border-zinc-200 break-inside-avoid">
+            <div>
+                <p class="text-[9px] text-zinc-500 uppercase">Total de Itens</p>
+                <p id="resumo-itens" class="text-base text-black mt-0.5">0</p>
+            </div>
             <div>
                 <p class="text-[9px] text-zinc-500 uppercase">Total de Peças</p>
                 <p id="resumo-qtd" class="text-base text-black mt-0.5">0 pçs</p>
             </div>
             <div>
-                <p class="text-[9px] text-zinc-500 uppercase">Massa Total Bruta</p>
+                <p class="text-[9px] text-zinc-500 uppercase">Peso Total</p>
                 <p id="resumo-peso" class="text-base text-black mt-0.5">0.00 grs</p>
             </div>
             <div id="bloco-financeiro-total">
@@ -291,6 +295,14 @@
         document.getElementById('ent-cidade-uf').innerText = textoEntrega;
 
         // Totais do Rodapé
+        // Conta itens aqui mesmo (mesma normalização usada na listagem, mais
+        // abaixo) porque essa contagem agora só existe neste grid — não se
+        // repete mais dentro do Resumo Financeiro.
+        let itensParaContagem = p.itens || p.produtos || [];
+        if (typeof itensParaContagem === 'object' && !Array.isArray(itensParaContagem)) {
+            itensParaContagem = Object.values(itensParaContagem);
+        }
+        document.getElementById('resumo-itens').innerText = itensParaContagem.length || 0;
         document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
         document.getElementById('resumo-peso').innerText = formatarPesoLocal(p.pesoTotal || p.peso || 0);
         document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
@@ -399,16 +411,10 @@
 
             return `
             <div class="mt-4 border-t-2 border-black pt-3 break-inside-avoid">
-                <h3 class="font-bold text-[11px] uppercase tracking-wider mb-2 text-zinc-800">RESUMO FINANCEIRO COBRANÇA</h3>
+                <h3 class="font-bold text-[11px] uppercase tracking-wider mb-2 text-zinc-800">RESUMO FINANCEIRO</h3>
                 <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
-                    <div class="text-zinc-500">Total de Itens distintos:</div>
-                    <div class="text-right font-mono">${itens.length || 0}</div>
-                    <div class="text-zinc-500">Total de Peças:</div>
-                    <div class="text-right font-mono">${p.totalPecas || p.qtd || 0} pçs</div>
-                    <div class="text-zinc-500">Massa Bruta Estimada:</div>
-                    <div class="text-right font-mono">${formatarPesoLocal(p.pesoTotal || p.peso || 0)}</div>
-                    <div class="font-bold text-zinc-800 border-t border-zinc-300 pt-1.5">Subtotal Bruto (sem descontos):</div>
-                    <div class="font-bold text-right font-mono border-t border-zinc-300 pt-1.5 text-zinc-800">${formatarMoedaLocal(p.subtotalBruto || p.subtotal || 0)}</div>
+                    <div class="font-bold text-zinc-800">Subtotal Bruto (sem descontos):</div>
+                    <div class="font-bold text-right font-mono text-zinc-800">${formatarMoedaLocal(p.subtotalBruto || p.subtotal || 0)}</div>
                     ${linhasHtml}
                     <div class="font-bold border-t border-black pt-1.5 text-xs text-black">VALOR FINAL LÍQUIDO</div>
                     <div class="font-black text-right border-t border-black pt-1.5 text-xs text-black font-mono">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>

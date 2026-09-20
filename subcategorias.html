@@ -71,7 +71,10 @@
                 <a href="./galvanicas.html">Galvânicas</a>
             </nav>
             <div class="brand">
-                <div class="brand-logo"><span style="font-family:var(--font-heading);font-weight:600;">A</span></div>
+                <div class="brand-logo" id="abellaLogoContainer">
+                    <span id="abellaLogoFallback" style="font-family:var(--font-heading); font-weight:600;">A</span>
+                    <img id="abellaLogoImg" src="" alt="Abella Joias" style="width:100%;height:100%;object-fit:contain;display:none;">
+                </div>
                 <div><p class="brand-name">Abella</p></div>
             </div>
             <div class="actions">
@@ -139,6 +142,25 @@
 
             const cartEl = document.getElementById('cart-count');
             if (cartEl && window.carrinhoService) cartEl.innerText = carrinhoService.obterContagem();
+
+            // Logo do cabeçalho — mesma lógica já usada em index.html e
+            // checkout.html. Roda separado do restante (não bloqueia a busca
+            // da categoria) e nunca derruba a página se falhar.
+            if (typeof db !== 'undefined') {
+                db.ref('abella/settings').once('value').then(snap => {
+                    if (!snap || !snap.exists()) return;
+                    const cfg = snap.val();
+                    const logoUrlReal = cfg.logoUrl || cfg.logo;
+                    if (!logoUrlReal) return;
+                    const logoImg = document.getElementById('abellaLogoImg');
+                    const logoFallback = document.getElementById('abellaLogoFallback');
+                    if (logoImg) {
+                        logoImg.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
+                        logoImg.style.display = 'block';
+                        if (logoFallback) logoFallback.style.display = 'none';
+                    }
+                }).catch(() => {});
+            }
 
             const params = new URLSearchParams(window.location.search);
             const categoriaSlug = (params.get('categoria') || params.get('id') || '').toString().trim();

@@ -60,7 +60,10 @@
                 <a href="./galvanicas.html">Galvânicas</a>
             </nav>
             <div class="brand">
-                <div class="brand-logo"><span style="font-family:var(--font-heading);font-weight:600;">A</span></div>
+                <div class="brand-logo" id="abellaLogoContainer">
+                    <span id="abellaLogoFallback" style="font-family:var(--font-heading); font-weight:600;">A</span>
+                    <img id="abellaLogoImg" src="" alt="Abella Joias" style="width:100%;height:100%;object-fit:contain;display:none;">
+                </div>
                 <div><p class="brand-name">Abella</p></div>
             </div>
             <div class="actions">
@@ -332,6 +335,27 @@
                 } catch (e) {
                     console.warn('[Carrinho] Falha ao pré-carregar settings:', e);
                 }
+            }
+
+            // Logo do cabeçalho — mesma lógica já usada em index.html,
+            // checkout.html e produtos.html. Feita à parte do ConfigService
+            // acima porque ele normaliza só o campo "logo", e o painel salva
+            // como "logoUrl" — mantém consistência com as páginas que já
+            // exibem a logo corretamente.
+            if (typeof db !== 'undefined') {
+                db.ref('abella/settings').once('value').then(snap => {
+                    if (!snap || !snap.exists()) return;
+                    const cfg = snap.val();
+                    const logoUrlReal = cfg.logoUrl || cfg.logo;
+                    if (!logoUrlReal) return;
+                    const logoImg = document.getElementById('abellaLogoImg');
+                    const logoFallback = document.getElementById('abellaLogoFallback');
+                    if (logoImg) {
+                        logoImg.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
+                        logoImg.style.display = 'block';
+                        if (logoFallback) logoFallback.style.display = 'none';
+                    }
+                }).catch(() => {});
             }
 
             renderizarCarrinho();

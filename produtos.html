@@ -106,7 +106,10 @@
                 <a href="./galvanicas.html">Galvânicas</a>
             </nav>
             <div class="brand">
-                <div class="brand-logo"><span style="font-family:var(--font-heading);font-weight:600;">A</span></div>
+                <div class="brand-logo" id="abellaLogoContainer">
+                    <span id="abellaLogoFallback" style="font-family:var(--font-heading); font-weight:600;">A</span>
+                    <img id="abellaLogoImg" src="" alt="Abella Joias" style="width:100%;height:100%;object-fit:contain;display:none;">
+                </div>
                 <div><p class="brand-name">Abella</p></div>
             </div>
             <div class="actions">
@@ -528,6 +531,20 @@
                     const snapSettings = await db.ref('abella/settings').once('value').catch(() => null);
                     if (snapSettings && snapSettings.exists()) {
                         const cfg = snapSettings.val();
+
+                        // Logo do cabeçalho — mesma lógica usada em index.html e
+                        // checkout.html, que já funcionava. Faltava só aqui.
+                        const logoUrlReal = cfg.logoUrl || cfg.logo;
+                        if (logoUrlReal) {
+                            const logoImg = document.getElementById('abellaLogoImg');
+                            const logoFallback = document.getElementById('abellaLogoFallback');
+                            if (logoImg) {
+                                logoImg.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
+                                logoImg.style.display = 'block';
+                                if (logoFallback) logoFallback.style.display = 'none';
+                            }
+                        }
+
                         const urlBannerProd = cfg.bannerProduto || cfg.banner_produto;
                         if (urlBannerProd) {
                             const img = document.getElementById('produtoBannerImg');

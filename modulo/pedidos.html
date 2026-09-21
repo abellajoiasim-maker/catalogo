@@ -80,6 +80,7 @@
                 <button id="filter-ped-todos" onclick="mudarFiltroStatusPedido('Todos')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black">Todos</button>
                 <button id="filter-ped-novo" onclick="mudarFiltroStatusPedido('Novo')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white">Novos</button>
                 <button id="filter-ped-aprovado" onclick="mudarFiltroStatusPedido('Aprovado')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white">Aprovados</button>
+                <button id="filter-ped-entregue" onclick="mudarFiltroStatusPedido('Entregue')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white">Entregues</button>
                 <button id="filter-ped-cancelado" onclick="mudarFiltroStatusPedido('Cancelado')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white">Cancelados</button>
             </div>
             
@@ -467,6 +468,38 @@
         var _PEDIDOS_CACHE = {};
         var _statusFiltroAtual = "Todos";
 
+        // Data/hora do pedido, tentando todos os campos possíveis dependendo
+        // de como o pedido foi criado (checkout do cliente x avulso pelo
+        // painel) — sem isso, pedidos com formatos de ID diferentes (ex.:
+        // "PED-172..." do checkout x chave automática "-Nabc..." do avulso)
+        // não ordenam corretamente juntos numa mesma linha do tempo.
+        function obterTimestampPedido(p, id) {
+            if (p && Number.isFinite(Number(p.timestamp))) return Number(p.timestamp);
+            const camposData = [p?.criadoEm, p?.dataCriacao, p?.data];
+            for (const valor of camposData) {
+                if (!valor) continue;
+                const t = Date.parse(valor);
+                if (Number.isFinite(t)) return t;
+            }
+            // Chaves no formato "PED-<epoch>" (geradas no checkout do cliente)
+            // carregam o timestamp dentro do próprio texto do ID.
+            const match = String(id || '').match(/PED-(\d{10,})/);
+            if (match) return Number(match[1]);
+            return 0;
+        }
+
+        // Número de exibição do pedido ("Nº ..."). Prioriza o idPedido salvo;
+        // sem ele, evita mostrar fragmentos da chave automática do Firebase
+        // (que podem sair com letras/underscore, tipo "Etxn_x") e usa o
+        // timestamp disponível pra montar um número limpo.
+        function obterNumeroExibicaoPedido(p, id) {
+            if (p && p.idPedido) return p.idPedido;
+            if (/^PED-\d+$/.test(id)) return id;
+            const ts = obterTimestampPedido(p, id);
+            if (ts > 0) return 'PED-' + String(ts).slice(-6);
+            return id.substring(id.length - 6);
+        }
+
         // Fallback robusto e nativo de formatação financeira caso a classe externa falhe
         const formatarMoeda = (valor) => {
             if (window.MoneyUtils && typeof window.MoneyUtils.format === 'function') {
@@ -514,7 +547,9 @@
                 loading.classList.add('hidden');
 
                 _PEDIDOS_CACHE = pedidos || {};
-                const keys = Object.keys(_PEDIDOS_CACHE).reverse();
+                const keys = Object.keys(_PEDIDOS_CACHE).sort((a, b) =>
+                    obterTimestampPedido(_PEDIDOS_CACHE[b], b) - obterTimestampPedido(_PEDIDOS_CACHE[a], a)
+                );
 
                 if (keys.length === 0) {
                     container.innerHTML = `
@@ -545,6 +580,7 @@
                     
                     let statusColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
                     if (p.status === "Aprovado") statusColor = "text-green-400 bg-green-500/10 border-green-500/20";
+                    if (p.status === "Entregue") statusColor = "text-blue-400 bg-blue-500/10 border-blue-500/20";
                     if (p.status === "Cancelado") statusColor = "text-red-400 bg-red-500/10 border-red-500/20";
 
                     const totalPecas = p.totalPecas || p.qtd || 0;
@@ -557,7 +593,7 @@
                                 <span class="text-xs text-white font-bold uppercase truncate max-w-[240px] block tracking-wide">${p.cliente || p.nome || 'Cliente não identificado'}</span>
                                 <span class="text-[9px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wider ${statusColor}">${p.status || 'Novo'}</span>
                                 <span class="text-[9px] font-mono text-[#caa85c] font-bold">
-                                    Nº ${p.idPedido || id.substring(id.length - 6)}
+                                    Nº ${obterNumeroExibicaoPedido(p, id)}
                                       </span>
                             </div>
                             <p class="text-[11px] text-zinc-400 font-mono truncate">
@@ -573,6 +609,7 @@
                             <select onchange="alterarStatusPedidoUI('${id}', this.value)" class="bg-zinc-950 border border-zinc-800 text-zinc-300 text-[11px] px-2.5 py-1.5 rounded-xl font-bold outline-none focus:border-[#caa85c] cursor-pointer transition-colors w-full sm:w-auto">
                                 <option value="Novo" ${p.status === 'Novo' ? 'selected' : ''}>Novo</option>
                                 <option value="Aprovado" ${p.status === 'Aprovado' ? 'selected' : ''}>Aprovado</option>
+                                <option value="Entregue" ${p.status === 'Entregue' ? 'selected' : ''}>Entregue</option>
                                 <option value="Cancelado" ${p.status === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
                             </select>
                             <div class="flex gap-1.5 w-full sm:w-auto">
@@ -627,7 +664,7 @@
                 btn.className = "btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white";
             });
             
-            var mapaId = { 'Todos': 'todos', 'Novo': 'novo', 'Aprovado': 'aprovado', 'Cancelado': 'cancelado' };
+            var mapaId = { 'Todos': 'todos', 'Novo': 'novo', 'Aprovado': 'aprovado', 'Entregue': 'entregue', 'Cancelado': 'cancelado' };
             var btnAtivo = document.getElementById('filter-ped-' + (mapaId[status] || 'todos'));
             if (btnAtivo) {
                 btnAtivo.className = "btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black";

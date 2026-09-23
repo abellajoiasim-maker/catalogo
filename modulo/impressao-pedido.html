@@ -303,25 +303,10 @@
         document.getElementById('ent-bairro').innerText = destBairro.toUpperCase();
         document.getElementById('ent-cidade-uf').innerText = textoEntrega;
 
-        // Totais do Rodapé
-        // Conta itens aqui mesmo (mesma normalização usada na listagem, mais
-        // abaixo) porque essa contagem agora só existe neste grid — não se
-        // repete mais dentro do Resumo Financeiro.
-        let itensParaContagem = p.itens || p.produtos || [];
-        if (typeof itensParaContagem === 'object' && !Array.isArray(itensParaContagem)) {
-            itensParaContagem = Object.values(itensParaContagem);
-        }
-        document.getElementById('resumo-itens').innerText = itensParaContagem.length || 0;
-        document.getElementById('resumo-qtd').innerText = `${p.totalPecas || p.qtd || 0} pçs`;
-        document.getElementById('resumo-peso').innerText = formatarPesoLocal(p.pesoTotal || p.peso || 0);
-        document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(p.total || p.valorTotal || 0);
-        
-        if (tipo === 'conferencia') {
-            const blocoFin = document.getElementById('bloco-financeiro-total');
-            if (blocoFin) blocoFin.classList.add('invisible');
-        }
-
-        // Normalização do Array de Itens
+        // Normalização do Array de Itens (feita cedo, antes de qualquer cálculo,
+        // porque agora TODO o resumo financeiro é recalculado a partir daqui —
+        // nunca mais a partir dos campos agregados prontos do banco, que já
+        // vieram errados de outras telas em alguns pedidos).
         let itens = p.itens || p.produtos || [];
         if (typeof itens === 'object' && !Array.isArray(itens)) {
             itens = Object.values(itens);
@@ -331,6 +316,23 @@
         itens = itens.map(item => ({ ...item, sku: item.sku || item.id || item.codigo || '-' }));
         // Ordena a listagem por SKU em ordem alfabética crescente.
         itens.sort((a, b) => String(a.sku).localeCompare(String(b.sku), 'pt-BR', { numeric: true, sensitivity: 'base' }));
+
+        // Recalcula tudo (peças, peso, subtotal e total líquido) a partir dos
+        // itens de verdade — nunca a partir de p.subtotal/p.total prontos,
+        // que é justamente onde vinha o valor errado (soma da coluna "Unit."
+        // em vez de "Unit. x Qtd").
+        const resumoFin = calcularResumoFinanceiroPedido(p, itens);
+
+        // Totais do Rodapé
+        document.getElementById('resumo-itens').innerText = itens.length || 0;
+        document.getElementById('resumo-qtd').innerText = `${resumoFin.totalPecas} pçs`;
+        document.getElementById('resumo-peso').innerText = formatarPesoLocal(resumoFin.pesoTotal);
+        document.getElementById('resumo-financeiro').innerText = formatarMoedaLocal(resumoFin.total);
+        
+        if (tipo === 'conferencia') {
+            const blocoFin = document.getElementById('bloco-financeiro-total');
+            if (blocoFin) blocoFin.classList.add('invisible');
+        }
 
         // Seleção e Renderização
         const modelo = `${layout}_${tipo}`;
@@ -361,53 +363,90 @@
 }
         /* ==================== RENDERS DE COMPONENTES ==================== */
 
-        function renderResumoFinanceiro(p, itens) {
-            // Cada linha de desconto/custo só é exibida quando o valor for
-            // diferente de zero — evita poluir o romaneio com "-R$ 0,00" em
-            // toda promoção que não se aplicou àquele pedido específico.
+        // Única fonte de verdade para os números do romaneio: soma peças, peso
+        // e subtotal direto da lista de itens (qtd x unitário de cada linha) e
+        // só então aplica os descontos e o frete. Isso substitui o valor pronto
+        // que vinha do banco (p.subtotal/p.total), que em alguns pedidos estava
+        // sendo gravado como a soma da coluna "Unit." sem multiplicar pela Qtd.
+        function calcularResumoFinanceiroPedido(p, itens) {
+            let subtotal = 0, totalPecas = 0, pesoTotal = 0;
+            itens.forEach(item => {
+                const unit = parseFloat(item.precoFinal || item.price || item.preco || 0);
+                const qtd = parseInt(item.quantidade || 1);
+                const peso = parseFloat(item.peso || item.weight || 0);
+                subtotal += unit * qtd;
+                totalPecas += qtd;
+                pesoTotal += peso * qtd;
+            });
+
             const valorDescontoOfertas = parseFloat(p.descontoOfertas || p.descontoCategoria || p.descontoCampanha || 0);
             const valorDescontoFaixa = parseFloat(p.descontoFaixaValor || p.descontoFaixa?.desconto || 0);
             const valorDescontoCupom = parseFloat(p.descontoCupom || 0);
             const valorDescontoPeso = parseFloat(p.descontoPeso || 0);
-            const valorDescontoPix = parseFloat(p.descontoPix || p.desconto || 0);
-            const percentualDescontoAplicado = parseFloat(p.percentualDesconto || p.percentualDescontoPix || 0);
             const valorFrete = parseFloat(p.frete || 0);
+
+            // Se o pedido guardou um PERCENTUAL de desconto (novo campo
+            // percentualDesconto/percentualDescontoPix), o valor em R$ é
+            // recalculado em cima do subtotal correto acima — nunca lido
+            // pronto do banco, que poderia ter sido calculado sobre o
+            // subtotal errado. Só cai no valor fixo salvo (p.descontoPix/
+            // p.desconto) quando o pedido não usa percentual.
+            const percentualDescontoAplicado = parseFloat(p.percentualDesconto || p.percentualDescontoPix || 0);
+            const valorDescontoPix = percentualDescontoAplicado > 0
+                ? (subtotal * percentualDescontoAplicado / 100)
+                : parseFloat(p.descontoPix || p.desconto || 0);
+
+            const totalDescontos = valorDescontoOfertas + valorDescontoFaixa + valorDescontoCupom + valorDescontoPeso + valorDescontoPix;
+            const total = Math.max(0, subtotal - totalDescontos + valorFrete);
+
+            return {
+                subtotal, totalPecas, pesoTotal, total,
+                valorDescontoOfertas, valorDescontoFaixa, valorDescontoCupom,
+                valorDescontoPeso, valorDescontoPix, percentualDescontoAplicado, valorFrete
+            };
+        }
+
+        function renderResumoFinanceiro(p, itens) {
+            // Cada linha de desconto/custo só é exibida quando o valor for
+            // diferente de zero — evita poluir o romaneio com "-R$ 0,00" em
+            // toda promoção que não se aplicou àquele pedido específico.
+            const r = calcularResumoFinanceiroPedido(p, itens);
 
             const linhas = [
                 {
-                    valor: valorDescontoOfertas,
+                    valor: r.valorDescontoOfertas,
                     label: 'Descontos de Ofertas:',
-                    html: `-${formatarMoedaLocal(valorDescontoOfertas)}`,
+                    html: `-${formatarMoedaLocal(r.valorDescontoOfertas)}`,
                     cor: 'text-red-600'
                 },
                 {
-                    valor: valorDescontoFaixa,
+                    valor: r.valorDescontoFaixa,
                     label: `Desconto por Valor de Compra${p.faixaValorAplicada ? ` (${formatarMoedaLocal(p.faixaValorAplicada)}+)` : ''}:`,
-                    html: `-${formatarMoedaLocal(valorDescontoFaixa)}`,
+                    html: `-${formatarMoedaLocal(r.valorDescontoFaixa)}`,
                     cor: 'text-red-600'
                 },
                 {
-                    valor: valorDescontoCupom,
+                    valor: r.valorDescontoCupom,
                     label: `Cupom${p.cupomAplicado ? ` (${p.cupomAplicado})` : ''}:`,
-                    html: `-${formatarMoedaLocal(valorDescontoCupom)}`,
+                    html: `-${formatarMoedaLocal(r.valorDescontoCupom)}`,
                     cor: 'text-red-600'
                 },
                 {
-                    valor: valorDescontoPeso,
+                    valor: r.valorDescontoPeso,
                     label: 'Desconto por Peso Acumulado:',
-                    html: `-${formatarMoedaLocal(valorDescontoPeso)}`,
+                    html: `-${formatarMoedaLocal(r.valorDescontoPeso)}`,
                     cor: 'text-red-600'
                 },
                 {
-                    valor: valorDescontoPix,
-                    label: `Desconto${(p.formaPagamento || p.pagamento) ? ` Modalidade ${(p.formaPagamento || p.pagamento).toUpperCase()}` : ''}${percentualDescontoAplicado ? ` (${percentualDescontoAplicado}%)` : ''}:`,
-                    html: `-${formatarMoedaLocal(valorDescontoPix)}`,
+                    valor: r.valorDescontoPix,
+                    label: `Desconto${(p.formaPagamento || p.pagamento) ? ` Modalidade ${(p.formaPagamento || p.pagamento).toUpperCase()}` : ''}${r.percentualDescontoAplicado ? ` (${r.percentualDescontoAplicado}%)` : ''}:`,
+                    html: `-${formatarMoedaLocal(r.valorDescontoPix)}`,
                     cor: 'text-red-600'
                 },
                 {
-                    valor: valorFrete,
+                    valor: r.valorFrete,
                     label: 'Custo Adicional de Frete:',
-                    html: formatarMoedaLocal(valorFrete),
+                    html: formatarMoedaLocal(r.valorFrete),
                     cor: 'text-green-700'
                 }
             ];
@@ -424,10 +463,10 @@
                 <h3 class="font-bold text-[11px] uppercase tracking-wider mb-2 text-zinc-800">RESUMO FINANCEIRO</h3>
                 <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-[11px]">
                     <div class="font-bold text-zinc-800">Subtotal Bruto (sem descontos):</div>
-                    <div class="font-bold text-right font-mono text-zinc-800">${formatarMoedaLocal(p.subtotalBruto || p.subtotal || 0)}</div>
+                    <div class="font-bold text-right font-mono text-zinc-800">${formatarMoedaLocal(r.subtotal)}</div>
                     ${linhasHtml}
                     <div class="font-bold border-t border-black pt-1.5 text-xs text-black">VALOR FINAL LÍQUIDO</div>
-                    <div class="font-black text-right border-t border-black pt-1.5 text-xs text-black font-mono">${formatarMoedaLocal(p.total || p.valorTotal || 0)}</div>
+                    <div class="font-black text-right border-t border-black pt-1.5 text-xs text-black font-mono">${formatarMoedaLocal(r.total)}</div>
                 </div>
             </div>`;
         }

@@ -232,8 +232,16 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3 text-xs pt-1">
                     <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Desconto PIX (R$)</label>
+                        <label class="flex items-center justify-between mb-1">
+                            <span class="text-[9px] font-mono text-zinc-500 uppercase">Desconto</span>
+                            <span class="flex bg-zinc-950 border border-zinc-800 rounded-md overflow-hidden">
+                                <button type="button" id="editDescTipoBtn-valor" onclick="alterarTipoDescontoModal('valor')" class="px-2 py-0.5 text-[9px] font-black transition-colors">R$</button>
+                                <button type="button" id="editDescTipoBtn-percentual" onclick="alterarTipoDescontoModal('percentual')" class="px-2 py-0.5 text-[9px] font-black transition-colors">%</button>
+                            </span>
+                        </label>
                         <input type="number" id="editPedidoDesconto" step="0.01" min="0" value="0" oninput="recalcularResumoFinanceiroModal()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        <input type="hidden" id="editPedidoDescontoTipo" value="valor">
+                        <p id="editDescontoValorCalculado" class="text-[9px] text-zinc-500 font-mono mt-1 hidden"></p>
                     </div>
                     <div>
                         <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Frete (R$)</label>
@@ -393,8 +401,16 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3 text-xs pt-1">
                     <div>
-                        <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Desconto (R$)</label>
+                        <label class="flex items-center justify-between mb-1">
+                            <span class="text-[9px] font-mono text-zinc-500 uppercase">Desconto</span>
+                            <span class="flex bg-zinc-950 border border-zinc-800 rounded-md overflow-hidden">
+                                <button type="button" id="avulsoDescTipoBtn-valor" onclick="alterarTipoDescontoAvulso('valor')" class="px-2 py-0.5 text-[9px] font-black transition-colors">R$</button>
+                                <button type="button" id="avulsoDescTipoBtn-percentual" onclick="alterarTipoDescontoAvulso('percentual')" class="px-2 py-0.5 text-[9px] font-black transition-colors">%</button>
+                            </span>
+                        </label>
                         <input type="number" id="avulsoDesconto" step="0.01" min="0" value="0" oninput="recalcularResumoFinanceiroAvulso()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-[#caa85c] transition-colors">
+                        <input type="hidden" id="avulsoDescontoTipo" value="valor">
+                        <p id="avulsoDescontoValorCalculado" class="text-[9px] text-zinc-500 font-mono mt-1 hidden"></p>
                     </div>
                     <div>
                         <label class="block text-[9px] font-mono text-zinc-500 uppercase mb-1">Frete (R$)</label>
@@ -688,6 +704,30 @@
             return lista;
         }
 
+        // Estiliza os botões R$/% do seletor de tipo de desconto, marcando
+        // como ativo o que corresponde ao tipo atualmente selecionado.
+        function estilizarBotoesTipoDesconto(prefixoId, tipoAtivo) {
+            ['valor', 'percentual'].forEach(function(tipo) {
+                var btn = document.getElementById(prefixoId + '-' + tipo);
+                if (!btn) return;
+                if (tipo === tipoAtivo) {
+                    btn.className = "px-2 py-0.5 text-[9px] font-black transition-colors bg-[#caa85c] text-black";
+                } else {
+                    btn.className = "px-2 py-0.5 text-[9px] font-black transition-colors text-zinc-400 hover:text-white";
+                }
+            });
+        }
+
+        // Converte o valor digitado no campo de desconto (que pode ser um
+        // valor fixo em R$ ou uma porcentagem) no valor final em R$ a ser
+        // abatido do subtotal. Nunca deixa o desconto ultrapassar o subtotal.
+        function calcularValorDesconto(inputValor, tipo, subtotal) {
+            var num = parseFloat(inputValor) || 0;
+            if (num < 0) num = 0;
+            var valorFinal = (tipo === 'percentual') ? (subtotal * (num / 100)) : num;
+            return Math.min(Math.max(0, valorFinal), subtotal);
+        }
+
         function calcularTotaisItens(itens) {
             var subtotal = 0, totalPecas = 0, pesoTotal = 0;
             itens.forEach(function(it) {
@@ -745,7 +785,19 @@ document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
             document.getElementById('editEntregaBairro').value = entrega.bairro || '';
             document.getElementById('editEntregaCidade').value = entrega.cidade || p.cidade || '';
 
-            document.getElementById('editPedidoDesconto').value = Math.round((parseFloat(p.desconto || 0)) * 100) / 100;
+            // Se o pedido já tem uma porcentagem de desconto salva (ex.: vindo do
+            // checkout do cliente ou de uma edição anterior), o campo abre no modo
+            // "%" mostrando esse percentual; caso contrário abre em "R$" com o
+            // valor absoluto já gravado.
+            var percentualExistente = parseFloat(p.percentualDesconto || p.percentualDescontoPix || 0);
+            var tipoDescontoInicial = (p.tipoDesconto === 'percentual' || percentualExistente > 0) ? 'percentual' : 'valor';
+            var valorCampoDesconto = tipoDescontoInicial === 'percentual'
+                ? percentualExistente
+                : Math.round((parseFloat(p.desconto || 0)) * 100) / 100;
+
+            document.getElementById('editPedidoDesconto').value = valorCampoDesconto;
+            document.getElementById('editPedidoDescontoTipo').value = tipoDescontoInicial;
+            estilizarBotoesTipoDesconto('editDescTipoBtn', tipoDescontoInicial);
             document.getElementById('editPedidoFrete').value = parseFloat(p.frete || 0);
 
             // Descontos e promoções ativos no momento da compra (ofertas/campanhas,
@@ -985,13 +1037,21 @@ document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
             recalcularResumoFinanceiroModal();
         }
 
+        function alterarTipoDescontoModal(tipo) {
+            document.getElementById('editPedidoDescontoTipo').value = tipo;
+            estilizarBotoesTipoDesconto('editDescTipoBtn', tipo);
+            recalcularResumoFinanceiroModal();
+        }
+
         function recalcularResumoFinanceiroModal() {
             var id = document.getElementById('editPedidoId').value;
             var p = _PEDIDOS_CACHE[id];
             if (!p) return;
 
             var totais = calcularTotaisItens(p.itens || []);
-            var desconto = parseFloat(document.getElementById('editPedidoDesconto').value) || 0;
+            var descontoInput = document.getElementById('editPedidoDesconto').value;
+            var descontoTipo = document.getElementById('editPedidoDescontoTipo').value || 'valor';
+            var desconto = calcularValorDesconto(descontoInput, descontoTipo, totais.subtotal);
             var frete = parseFloat(document.getElementById('editPedidoFrete').value) || 0;
             var total = Math.max(0, totais.subtotal - desconto + frete);
 
@@ -999,6 +1059,14 @@ document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
             document.getElementById('editResumoPeso').innerText = `${totais.pesoTotal.toFixed(2)}g`;
             document.getElementById('editResumoSubtotal').innerText = formatarMoeda(totais.subtotal);
             document.getElementById('editResumoTotal').innerText = formatarMoeda(total);
+
+            var infoDesconto = document.getElementById('editDescontoValorCalculado');
+            if (descontoTipo === 'percentual') {
+                infoDesconto.innerText = `= ${formatarMoeda(desconto)} de desconto`;
+                infoDesconto.classList.remove('hidden');
+            } else {
+                infoDesconto.classList.add('hidden');
+            }
         }
 
        async function salvarAlteracoesPedido() {
@@ -1008,7 +1076,10 @@ document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
 
     var itens = p.itens || [];
     var totais = calcularTotaisItens(itens);
-    var desconto = parseFloat(document.getElementById('editPedidoDesconto').value) || 0;
+    var descontoInput = parseFloat(document.getElementById('editPedidoDesconto').value) || 0;
+    var descontoTipo = document.getElementById('editPedidoDescontoTipo').value || 'valor';
+    var desconto = calcularValorDesconto(descontoInput, descontoTipo, totais.subtotal);
+    var percentualDesconto = descontoTipo === 'percentual' ? descontoInput : 0;
     var frete = parseFloat(document.getElementById('editPedidoFrete').value) || 0;
     var total = Math.max(0, totais.subtotal - desconto + frete);
 
@@ -1037,6 +1108,9 @@ document.getElementById('editPedidoObservacoes').value = p.observacoes || '';
         produtos: itens,
         subtotal: totais.subtotal,
         desconto: desconto,
+        tipoDesconto: descontoTipo,
+        percentualDesconto: percentualDesconto,
+        percentualDescontoPix: percentualDesconto,
         frete: frete,
         total: total,
         valorTotal: total,
@@ -1209,6 +1283,8 @@ doc.text(`PEDIDO: ${p.numeroPedido || 'N/A'}`, 40, 14, { align: "center" });
             document.getElementById('avulsoEntregaBairro').value = '';
             document.getElementById('avulsoEntregaCidade').value = '';
             document.getElementById('avulsoDesconto').value = '0';
+            document.getElementById('avulsoDescontoTipo').value = 'valor';
+            estilizarBotoesTipoDesconto('avulsoDescTipoBtn', 'valor');
             document.getElementById('avulsoFrete').value = '0';
 
             ocultarFormAdicionarItemAvulso();
@@ -1373,9 +1449,17 @@ doc.text(`PEDIDO: ${p.numeroPedido || 'N/A'}`, 40, 14, { align: "center" });
             recalcularResumoFinanceiroAvulso();
         }
 
+        function alterarTipoDescontoAvulso(tipo) {
+            document.getElementById('avulsoDescontoTipo').value = tipo;
+            estilizarBotoesTipoDesconto('avulsoDescTipoBtn', tipo);
+            recalcularResumoFinanceiroAvulso();
+        }
+
         function recalcularResumoFinanceiroAvulso() {
             var totais = calcularTotaisItens(_ITENS_PEDIDO_AVULSO);
-            var desconto = parseFloat(document.getElementById('avulsoDesconto').value) || 0;
+            var descontoInput = document.getElementById('avulsoDesconto').value;
+            var descontoTipo = document.getElementById('avulsoDescontoTipo').value || 'valor';
+            var desconto = calcularValorDesconto(descontoInput, descontoTipo, totais.subtotal);
             var frete = parseFloat(document.getElementById('avulsoFrete').value) || 0;
             var total = Math.max(0, totais.subtotal - desconto + frete);
 
@@ -1383,6 +1467,14 @@ doc.text(`PEDIDO: ${p.numeroPedido || 'N/A'}`, 40, 14, { align: "center" });
             document.getElementById('avulsoResumoPeso').innerText = `${totais.pesoTotal.toFixed(2)}g`;
             document.getElementById('avulsoResumoSubtotal').innerText = formatarMoeda(totais.subtotal);
             document.getElementById('avulsoResumoTotal').innerText = formatarMoeda(total);
+
+            var infoDesconto = document.getElementById('avulsoDescontoValorCalculado');
+            if (descontoTipo === 'percentual') {
+                infoDesconto.innerText = `= ${formatarMoeda(desconto)} de desconto`;
+                infoDesconto.classList.remove('hidden');
+            } else {
+                infoDesconto.classList.add('hidden');
+            }
         }
 
         async function salvarNovoPedidoAvulso() {
@@ -1404,7 +1496,10 @@ doc.text(`PEDIDO: ${p.numeroPedido || 'N/A'}`, 40, 14, { align: "center" });
             var entregaCidade = document.getElementById('avulsoEntregaCidade').value.trim();
 
             var totais = calcularTotaisItens(_ITENS_PEDIDO_AVULSO);
-            var desconto = parseFloat(document.getElementById('avulsoDesconto').value) || 0;
+            var descontoInput = parseFloat(document.getElementById('avulsoDesconto').value) || 0;
+            var descontoTipo = document.getElementById('avulsoDescontoTipo').value || 'valor';
+            var desconto = calcularValorDesconto(descontoInput, descontoTipo, totais.subtotal);
+            var percentualDesconto = descontoTipo === 'percentual' ? descontoInput : 0;
             var frete = parseFloat(document.getElementById('avulsoFrete').value) || 0;
             var total = Math.max(0, totais.subtotal - desconto + frete);
 
@@ -1435,6 +1530,9 @@ doc.text(`PEDIDO: ${p.numeroPedido || 'N/A'}`, 40, 14, { align: "center" });
                 produtos: _ITENS_PEDIDO_AVULSO,
                 subtotal: totais.subtotal,
                 desconto: desconto,
+                tipoDesconto: descontoTipo,
+                percentualDesconto: percentualDesconto,
+                percentualDescontoPix: percentualDesconto,
                 frete: frete,
                 total: total,
                 valorTotal: total,

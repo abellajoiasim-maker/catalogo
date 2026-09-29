@@ -256,7 +256,10 @@
                 <a href="./galvanicas.html">Galvânicas</a>
             </nav>
             <div class="brand">
-                <div class="brand-logo"><span style="font-family:var(--font-heading);font-weight:600;">A</span></div>
+                <div class="brand-logo" id="abellaLogoContainer">
+                    <span id="abellaLogoFallback" style="font-family:var(--font-heading); font-weight:600;">A</span>
+                    <img id="abellaLogoImg" src="" alt="Abella Joias" style="width:100%;height:100%;object-fit:contain;display:none;">
+                </div>
                 <div><p class="brand-name">Abella</p></div>
             </div>
             <div class="actions">
@@ -280,7 +283,7 @@
             
             <p style="font-size:14px; color:var(--color-secondary); margin-top: var(--space-4); line-height:1.6;">
                 A Abella Joias facilita a etapa final da sua produção conectando atacadistas aos melhores serviços de <strong>galvanoplastia</strong> do mercado de Limeira-SP. Compre suas joias no bruto conosco e entregamos diretamente na <strong>galvânica</strong> da sua preferência para realizar o processo de <strong>banho</strong> e <strong>folheação</strong> de seus <strong>folheados</strong> com máxima qualidade.
-                <strong style="color:var(--color-primary-hover); display:block; margin-top:4px;">Frete grátis para entregas em galvânicas parceiras acima de R$100.</strong>
+                <strong style="color:var(--color-primary-hover); display:block; margin-top:4px;">Frete grátis para qualquer Galvânica de Limeira nas compras acima de R$100.</strong>
             </p>
 
             <div class="galv-stats">
@@ -308,7 +311,7 @@
                     <details>
                         <summary>Como funciona a entrega das peças no bruto na galvânica parceira?</summary>
                         <p style="font-size: 13.5px; color: var(--color-secondary); margin-top: var(--space-3); line-height: 1.6;">
-                            Após finalizar a compra do seu lote de joias no bruto na Abella Joias, nossa equipe faz a entrega diretamente na empresa de <strong>galvanoplastia</strong> ou <strong>banho</strong> da sua preferência em Limeira-SP. As etapas do processo de <strong>folheação</strong> são alinhadas diretamente entre você e a galvânica escolhida.
+                            Após finalizar a compra do seu lote de joias no bruto na Abella Joias, nossa equipe faz a entrega diretamente na empresa de <strong>galvanoplastia</strong> ou <strong>banho</strong> da sua preferência em Limeira-SP. As etapas do processo de <strong>folheação</strong> são alinhadas diretamente entre você e a galvânica parceira escolhida.
                         </p>
                     </details>
 
@@ -337,6 +340,7 @@
     </main>
 
     <script src="js/firebase/firebase-config.js"></script>
+    <script src="js/utils/image-helper.js"></script>
     <script src="js/services/galvanicaService.js"></script>
 
     <script>
@@ -357,6 +361,18 @@
                 const snap = await db.ref(_path('settings')).once('value');
                 if (!snap.exists()) return;
                 const cfg = snap.val() || {};
+
+                // Logótipo oficial da marca (alinhado com a index.html)
+                const logoUrlReal = cfg.logoUrl || cfg.logo;
+                if (logoUrlReal) {
+                    const img = document.getElementById('abellaLogoImg');
+                    const fallback = document.getElementById('abellaLogoFallback');
+                    if (img) {
+                        img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
+                        img.style.display = 'block';
+                        if (fallback) fallback.style.display = 'none';
+                    }
+                }
 
                 if (cfg.bannerAtivo && cfg.bannerTexto) {
                     document.getElementById('promoTexto').innerText = cfg.bannerTexto;

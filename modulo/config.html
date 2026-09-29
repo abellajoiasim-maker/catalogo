@@ -54,7 +54,7 @@
             outline: none;
         }
 
-        /* TOGGLE SWITCH — corrigido */
+        /* TOGGLE SWITCH */
         .toggle-wrapper { position: relative; width: 48px; height: 26px; flex-shrink: 0; }
         .toggle-wrapper input[type="checkbox"] { opacity: 0; width: 0; height: 0; position: absolute; }
         .toggle-track {
@@ -121,8 +121,6 @@
             pointer-events: none;
         }
     </style>
-
-
 </head>
 <body class="pb-28">
 
@@ -163,7 +161,7 @@
     <form id="form-configuracoes" onsubmit="salvarConfiguracoesAdmin(event)" class="space-y-8">
 
         <!-- ══════════════════════════════════════════════
-             SEÇÃO 1 — IDENTIDADE DA MARCA
+             SEÇÃO 1 — IDENTIDADE DA MARCA & SOCIAL PREVIEW
         ══════════════════════════════════════════════ -->
         <section class="glass-panel rounded-[2rem] p-6 md:p-8 space-y-6">
             <div class="flex items-center gap-3 border-b border-zinc-900 pb-4">
@@ -213,6 +211,25 @@
                                placeholder="https://... ou gs://..."
                                oninput="atualizarPreview('cfg-logoUrl','previewLogo','placeholderLogo')">
                         <p class="text-[10px] text-zinc-500 mt-1.5">Cole a URL da logomarca. Aparece no header de todas as páginas e nos romaneios.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IMAGEM DE COMPARTILHAMENTO (OG:IMAGE / SOCIAL PREVIEW) -->
+            <div class="border-t border-zinc-900/80 pt-5">
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-3">Imagem de Pré-visualização Social (WhatsApp / OG Image)</label>
+                <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-black/30 p-4 rounded-2xl border border-zinc-900">
+                    <div class="preview-box w-40 h-24 shrink-0 rounded-xl">
+                        <img id="previewOgImage" src="" alt="Preview OG Image" class="hidden"
+                             onerror="this.classList.add('hidden'); document.getElementById('placeholderOgImage').classList.remove('hidden')">
+                        <span id="placeholderOgImage" class="placeholder-label">1200x630<br>Social Preview</span>
+                    </div>
+                    <div class="flex-1 w-full">
+                        <input type="text" id="cfg-ogImageUrl"
+                               class="w-full rounded-xl px-4 py-3 text-sm font-mono"
+                               placeholder="https://... ou gs://..."
+                               oninput="atualizarPreview('cfg-ogImageUrl','previewOgImage','placeholderOgImage')">
+                        <p class="text-[10px] text-zinc-500 mt-1.5">Imagem exibida ao enviar os links do site/catálogo no WhatsApp, Facebook e LinkedIn (Recomendado JPG/PNG em 1200x630px).</p>
                     </div>
                 </div>
             </div>
@@ -579,7 +596,7 @@ function _setVal(id, val) {
 }
 
 // ================================================================
-// PROMOÇÕES DA HOME — abella/promocoes (editável pelo painel)
+// PROMOÇÕES DA HOME — abella/promocoes
 // ================================================================
 function _promoTemplate(idx, dados = {}) {
     return `
@@ -672,6 +689,11 @@ async function carregarConfiguracoes() {
         _setVal('cfg-logoUrl', logoUrl);
         if (logoUrl) atualizarPreview('cfg-logoUrl', 'previewLogo', 'placeholderLogo');
 
+        // Imagem de Compartilhamento Social (OG Image)
+        const ogImageUrl = d.ogImageUrl ?? d.ogImage ?? '';
+        _setVal('cfg-ogImageUrl', ogImageUrl);
+        if (ogImageUrl) atualizarPreview('cfg-ogImageUrl', 'previewOgImage', 'placeholderOgImage');
+
         // Banners
         const bannerHero = d.bannerHeroUrl ?? '';
         const bannerSub  = d.bannerSubcategoria ?? d.banner_subcategoria ?? '';
@@ -753,7 +775,11 @@ async function salvarConfiguracoesAdmin(e) {
         slogan:   sanitize(_getVal('cfg-slogan')),
         whatsapp: whatsRaw,
         logoUrl:  _getVal('cfg-logoUrl'),
-        logo:     _getVal('cfg-logoUrl'),   // compatibilidade com páginas antigas
+        logo:     _getVal('cfg-logoUrl'),   // compatibilidade
+        
+        // Imagem de Compartilhamento Social (OG Image)
+        ogImageUrl: _getVal('cfg-ogImageUrl'),
+        ogImage:    _getVal('cfg-ogImageUrl'), // compatibilidade
 
         // Redes sociais & institucional
         instagram:     sanitize(_getVal('cfg-instagram')),

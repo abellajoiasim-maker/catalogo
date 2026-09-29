@@ -215,21 +215,40 @@
                 </div>
             </div>
 
-            <!-- IMAGEM DE COMPARTILHAMENTO (OG:IMAGE / SOCIAL PREVIEW) -->
+            <!-- IMAGEM DE COMPARTILHAMENTO - SITE INSTITUCIONAL -->
             <div class="border-t border-zinc-900/80 pt-5">
-                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-3">Imagem de Pré-visualização Social (WhatsApp / OG Image)</label>
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-3">Imagem Social Preview (Site Institucional)</label>
                 <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-black/30 p-4 rounded-2xl border border-zinc-900">
                     <div class="preview-box w-40 h-24 shrink-0 rounded-xl">
-                        <img id="previewOgImage" src="" alt="Preview OG Image" class="hidden"
-                             onerror="this.classList.add('hidden'); document.getElementById('placeholderOgImage').classList.remove('hidden')">
-                        <span id="placeholderOgImage" class="placeholder-label">1200x630<br>Social Preview</span>
+                        <img id="previewOgInstitutional" src="" alt="Preview Institucional" class="hidden"
+                             onerror="this.classList.add('hidden'); document.getElementById('placeholderOgInstitutional').classList.remove('hidden')">
+                        <span id="placeholderOgInstitutional" class="placeholder-label">1200x630<br>Institucional</span>
                     </div>
                     <div class="flex-1 w-full">
-                        <input type="text" id="cfg-ogImageUrl"
+                        <input type="text" id="cfg-ogImageUrlInstitutional"
                                class="w-full rounded-xl px-4 py-3 text-sm font-mono"
                                placeholder="https://... ou gs://..."
-                               oninput="atualizarPreview('cfg-ogImageUrl','previewOgImage','placeholderOgImage')">
-                        <p class="text-[10px] text-zinc-500 mt-1.5">Imagem exibida ao enviar os links do site/catálogo no WhatsApp, Facebook e LinkedIn (Recomendado JPG/PNG em 1200x630px).</p>
+                               oninput="atualizarPreview('cfg-ogImageUrlInstitutional','previewOgInstitutional','placeholderOgInstitutional')">
+                        <p class="text-[10px] text-zinc-500 mt-1.5">Imagem de compartilhamento exclusiva para o site institucional (abellajoias.com.br).</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IMAGEM DE COMPARTILHAMENTO - CATÁLOGO DE PRODUTOS -->
+            <div class="border-t border-zinc-900/80 pt-5">
+                <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold mb-3">Imagem Social Preview (Catálogo de Produtos)</label>
+                <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-black/30 p-4 rounded-2xl border border-zinc-900">
+                    <div class="preview-box w-40 h-24 shrink-0 rounded-xl">
+                        <img id="previewOgCatalog" src="" alt="Preview Catálogo" class="hidden"
+                             onerror="this.classList.add('hidden'); document.getElementById('placeholderOgCatalog').classList.remove('hidden')">
+                        <span id="placeholderOgCatalog" class="placeholder-label">1200x630<br>Catálogo</span>
+                    </div>
+                    <div class="flex-1 w-full">
+                        <input type="text" id="cfg-ogImageUrlCatalog"
+                               class="w-full rounded-xl px-4 py-3 text-sm font-mono"
+                               placeholder="https://... ou gs://..."
+                               oninput="atualizarPreview('cfg-ogImageUrlCatalog','previewOgCatalog','placeholderOgCatalog')">
+                        <p class="text-[10px] text-zinc-500 mt-1.5">Imagem de compartilhamento exclusiva para o catálogo de produtos e vendas.</p>
                     </div>
                 </div>
             </div>
@@ -689,10 +708,15 @@ async function carregarConfiguracoes() {
         _setVal('cfg-logoUrl', logoUrl);
         if (logoUrl) atualizarPreview('cfg-logoUrl', 'previewLogo', 'placeholderLogo');
 
-        // Imagem de Compartilhamento Social (OG Image)
-        const ogImageUrl = d.ogImageUrl ?? d.ogImage ?? '';
-        _setVal('cfg-ogImageUrl', ogImageUrl);
-        if (ogImageUrl) atualizarPreview('cfg-ogImageUrl', 'previewOgImage', 'placeholderOgImage');
+        // Imagem de Compartilhamento Social - Institucional
+        const ogInst = d.ogImageUrlInstitutional ?? d.ogImageUrl ?? d.ogImage ?? '';
+        _setVal('cfg-ogImageUrlInstitutional', ogInst);
+        if (ogInst) atualizarPreview('cfg-ogImageUrlInstitutional', 'previewOgInstitutional', 'placeholderOgInstitutional');
+
+        // Imagem de Compartilhamento Social - Catálogo
+        const ogCat = d.ogImageUrlCatalog ?? d.ogImageUrl ?? d.ogImage ?? '';
+        _setVal('cfg-ogImageUrlCatalog', ogCat);
+        if (ogCat) atualizarPreview('cfg-ogImageUrlCatalog', 'previewOgCatalog', 'placeholderOgCatalog');
 
         // Banners
         const bannerHero = d.bannerHeroUrl ?? '';
@@ -778,8 +802,10 @@ async function salvarConfiguracoesAdmin(e) {
         logo:     _getVal('cfg-logoUrl'),   // compatibilidade
         
         // Imagem de Compartilhamento Social (OG Image)
-        ogImageUrl: _getVal('cfg-ogImageUrl'),
-        ogImage:    _getVal('cfg-ogImageUrl'), // compatibilidade
+        ogImageUrlInstitutional: _getVal('cfg-ogImageUrlInstitutional'),
+        ogImageUrlCatalog:       _getVal('cfg-ogImageUrlCatalog'),
+        ogImageUrl:              _getVal('cfg-ogImageUrlCatalog'), // fallback geral
+        ogImage:                 _getVal('cfg-ogImageUrlCatalog'), // compatibilidade
 
         // Redes sociais & institucional
         instagram:     sanitize(_getVal('cfg-instagram')),

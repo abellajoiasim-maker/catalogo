@@ -429,19 +429,33 @@
                     db.ref('abella/categories').once('value').catch(() => null)
                 ]);
 
-                if (snapSettings && snapSettings.exists()) {
-                    const cfg = snapSettings.val();
+               if (snapSettings && snapSettings.exists()) {
+    const cfg = snapSettings.val();
 
-                    const logoUrlReal = cfg.logoUrl || cfg.logo;
-                    if (logoUrlReal) {
-                        const img = document.getElementById('abellaLogoImg');
-                        const fallback = document.getElementById('abellaLogoFallback');
-                        if (img) {
-                            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
-                            img.style.display = 'block';
-                            if (fallback) fallback.style.display = 'none';
-                        }
-                    }
+    // Logo e Fallback
+    const logoUrlReal = cfg.logoUrl || cfg.logo;
+    if (logoUrlReal) {
+        const img = document.getElementById('abellaLogoImg');
+        const fallback = document.getElementById('abellaLogoFallback');
+        if (img) {
+            img.src = typeof resolverImagemFirebase !== 'undefined' ? resolverImagemFirebase(logoUrlReal) : logoUrlReal;
+            img.style.display = 'block';
+            if (fallback) fallback.style.display = 'none';
+        }
+    }
+
+    // Atualização dinâmica do OG Image (WhatsApp / Redes Sociais)
+    const ogImageBruta = cfg.ogImageUrl || cfg.ogImage || '';
+    if (ogImageBruta) {
+        const ogImageUrlReal = typeof resolverImagemFirebase !== 'undefined' 
+            ? resolverImagemFirebase(ogImageBruta) 
+            : ogImageBruta;
+
+        document.querySelectorAll('meta[property="og:image"], meta[property="og:image:secure_url"], meta[name="twitter:image"]').forEach(meta => {
+            meta.setAttribute('content', ogImageUrlReal);
+        });
+    }
+}
 
                     if (cfg.name) document.getElementById('nome').innerText = cfg.name;
                     if (cfg.slogan) document.getElementById('slogan').innerText = cfg.slogan;

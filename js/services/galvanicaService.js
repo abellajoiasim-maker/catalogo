@@ -1,6 +1,6 @@
 // ======================================================================
 // js/firebase/services/galvanicaService.js
-// Abella Joias - GalvanicaService v4.0
+// Abella Joias - GalvanicaService v4.1 (SEO Enhanced)
 // ======================================================================
 
 const GalvanicaService = {
@@ -20,14 +20,9 @@ const GalvanicaService = {
     // ==========================================================
 
     _db() {
-
         if (!window.db) {
-
-            throw new Error(
-                'Firebase Database não inicializado.'
-            );
+            throw new Error('Firebase Database não inicializado.');
         }
-
         return window.db;
     },
 
@@ -36,18 +31,10 @@ const GalvanicaService = {
     // ==========================================================
 
     _path(path = '') {
-
-        if (
-            typeof window.getAbellaPath !== 'function'
-        ) {
-
-            console.error(
-                '[GalvanicaService] getAbellaPath() não encontrado.'
-            );
-
+        if (typeof window.getAbellaPath !== 'function') {
+            console.error('[GalvanicaService] getAbellaPath() não encontrado.');
             return `abella/${path}`;
         }
-
         return window.getAbellaPath(path);
     },
 
@@ -56,116 +43,72 @@ const GalvanicaService = {
     // ==========================================================
 
     _safeString(valor = '') {
-
-        return String(valor || '')
-            .trim();
+        return String(valor || '').trim();
     },
 
     _safeNumber(valor = 0) {
-
-        const numero =
-            Number(valor);
-
-        return Number.isFinite(numero)
-            ? numero
-            : 0;
+        const numero = Number(valor);
+        return Number.isFinite(numero) ? numero : 0;
     },
 
     _onlyNumbers(valor = '') {
-
-        return String(valor || '')
-            .replace(/\D/g, '');
+        return String(valor || '').replace(/\D/g, '');
     },
 
     // ==========================================================
-    // CACHE
+    // CACHE MANAGEMENT
     // ==========================================================
 
     _isCacheValid() {
-
         return (
-
-            Object.keys(this._cache)
-                .length > 0 &&
-
-            (
-                Date.now() -
-                this._cacheTimestamp
-            ) < this._cacheTTL
+            Object.keys(this._cache).length > 0 &&
+            (Date.now() - this._cacheTimestamp) < this._cacheTTL
         );
     },
 
     invalidateCache() {
-
         this._cache = {};
-
         this._cacheTimestamp = 0;
     },
 
     // ==========================================================
-    // NORMALIZAÇÃO
+    // NORMALIZAÇÃO E ENRIQUECIMENTO SEO
     // ==========================================================
 
     normalizar(id, raw = {}) {
+        const idLimpo = this._safeString(id);
+        const nome = this._safeString(raw.nome || raw.name || 'Galvânica Parceira');
+        const selo = this._safeString(raw.selo || 'PARCEIRO');
+        const whatsappNum = this._onlyNumbers(raw.whatsapp);
+        const telefoneNum = this._onlyNumbers(raw.telefone);
+        const endereco = this._safeString(raw.endereco || 'Limeira-SP');
+        const imagem = this._safeString(raw.imagem || raw.image);
+
+        // Texto ALT enriquecido com palavras-chave estratégicas para motores de busca
+        const altSeo = raw.altSeo || 
+            `${nome} — Galvânica parceira Abella Joias para banho, folheação e galvanoplastia em ${endereco}`;
+
+        // Ligação formatada para o WhatsApp com mensagem de conversão
+        const mensagemWhats = encodeURIComponent(
+            `Olá ${nome}. Sou cliente da Abella Joias e gostaria de solicitar informações sobre o serviço de banho e folheação de semijoias no bruto. Como podemos prosseguir?`
+        );
+        const whatsUrl = whatsappNum ? `https://wa.me/${whatsappNum}?text=${mensagemWhats}` : null;
 
         return {
-
-            id:
-                this._safeString(id),
-
-            nome:
-                this._safeString(
-                    raw.nome
-                ),
-
-            selo:
-                this._safeString(
-                    raw.selo ||
-                    'PARCEIRO'
-                ),
-
-            whatsapp:
-                this._onlyNumbers(
-                    raw.whatsapp
-                ),
-
-            telefone:
-                this._onlyNumbers(
-                    raw.telefone
-                ),
-
-            descricao:
-                this._safeString(
-                    raw.descricao
-                ),
-
-            endereco:
-                this._safeString(
-                    raw.endereco
-                ),
-
-            imagem:
-                this._safeString(
-                    raw.imagem ||
-                    raw.image
-                ),
-
-            image:
-                this._safeString(
-                    raw.image ||
-                    raw.imagem
-                ),
-
-            active:
-                raw.active !== false,
-
-            createdAt:
-                raw.createdAt ||
-                null,
-
-            updatedAt:
-                raw.updatedAt ||
-                null
+            id: idLimpo,
+            nome,
+            selo,
+            whatsapp: whatsappNum,
+            telefone: telefoneNum,
+            descricao: this._safeString(raw.descricao),
+            endereco,
+            imagem,
+            image: imagem,
+            active: raw.active !== false && raw.ativo !== false,
+            altSeo,
+            whatsUrl,
+            createdAt: raw.createdAt || null,
+            updatedAt: raw.updatedAt || null
         };
     },
 
@@ -174,56 +117,27 @@ const GalvanicaService = {
     // ==========================================================
 
     async getAll(forceRefresh = false) {
-
         try {
-
-            if (
-                !forceRefresh &&
-                this._isCacheValid()
-            ) {
-
+            if (!forceRefresh && this._isCacheValid()) {
                 return this._cache;
             }
 
-            const snapshot =
-                await this
-                    ._db()
-                    .ref(
-                        this._path(
-                            'galvanicas'
-                        )
-                    )
-                    .once('value');
+            const snapshot = await this._db()
+                .ref(this._path('galvanicas'))
+                .once('value');
 
-            const data =
-                snapshot.val() || {};
-
+            const data = snapshot.val() || {};
             this._cache = {};
 
-            Object.entries(data)
-                .forEach(
-                    ([id, raw]) => {
+            Object.entries(data).forEach(([id, raw]) => {
+                this._cache[id] = this.normalizar(id, raw);
+            });
 
-                        this._cache[id] =
-                            this.normalizar(
-                                id,
-                                raw
-                            );
-                    }
-                );
-
-            this._cacheTimestamp =
-                Date.now();
-
+            this._cacheTimestamp = Date.now();
             return this._cache;
 
         } catch (error) {
-
-            console.error(
-                '[GalvanicaService:getAll]',
-                error
-            );
-
+            console.error('[GalvanicaService:getAll]', error);
             return {};
         }
     },
@@ -233,26 +147,11 @@ const GalvanicaService = {
     // ==========================================================
 
     async obterParceiros() {
-
         try {
-
-            const dados =
-                await this.getAll();
-
-            return Object
-                .values(dados)
-                .filter(
-                    parceiro =>
-                        parceiro.active
-                );
-
+            const dados = await this.getAll();
+            return Object.values(dados).filter(parceiro => parceiro.active);
         } catch (error) {
-
-            console.error(
-                '[GalvanicaService:obterParceiros]',
-                error
-            );
-
+            console.error('[GalvanicaService:obterParceiros]', error);
             return [];
         }
     },
@@ -262,60 +161,28 @@ const GalvanicaService = {
     // ==========================================================
 
     async getById(id) {
-
         try {
+            id = this._safeString(id);
+            if (!id) return null;
 
-            id =
-                this._safeString(id);
-
-            if (!id) {
-
-                return null;
-            }
-
-            if (
-                this._cache[id]
-            ) {
-
+            if (this._cache[id]) {
                 return this._cache[id];
             }
 
-            const snapshot =
-                await this
-                    ._db()
-                    .ref(
-                        this._path(
-                            `galvanicas/${id}`
-                        )
-                    )
-                    .once('value');
+            const snapshot = await this._db()
+                .ref(this._path(`galvanicas/${id}`))
+                .once('value');
 
-            const data =
-                snapshot.val();
+            const data = snapshot.val();
+            if (!data) return null;
 
-            if (!data) {
-
-                return null;
-            }
-
-            const parceiro =
-                this.normalizar(
-                    id,
-                    data
-                );
-
-            this._cache[id] =
-                parceiro;
+            const parceiro = this.normalizar(id, data);
+            this._cache[id] = parceiro;
 
             return parceiro;
 
         } catch (error) {
-
-            console.error(
-                '[GalvanicaService:getById]',
-                error
-            );
-
+            console.error('[GalvanicaService:getById]', error);
             return null;
         }
     },
@@ -324,138 +191,50 @@ const GalvanicaService = {
     // SAVE
     // ==========================================================
 
-    async save(
-        id,
-        data = {}
-    ) {
-
+    async save(id, data = {}) {
         try {
-
-            const nome =
-                this._safeString(
-                    data.nome
-                );
+            const nome = this._safeString(data.nome);
 
             if (!nome) {
-
-                throw new Error(
-                    'Nome obrigatório.'
-                );
+                throw new Error('Nome obrigatório.');
             }
 
-            const existente =
-                id
-                    ? await this.getById(id)
-                    : null;
+            const existente = id ? await this.getById(id) : null;
 
             const record = {
-
                 nome,
-
-                selo:
-                    this._safeString(
-                        data.selo ||
-                        'PARCEIRO'
-                    ),
-
-                whatsapp:
-                    this._onlyNumbers(
-                        data.whatsapp
-                    ),
-
-                telefone:
-                    this._onlyNumbers(
-                        data.telefone
-                    ),
-
-                descricao:
-                    this._safeString(
-                        data.descricao
-                    ),
-
-                endereco:
-                    this._safeString(
-                        data.endereco
-                    ),
-
-                imagem:
-                    this._safeString(
-                        data.imagem ||
-                        data.image
-                    ),
-
-                image:
-                    this._safeString(
-                        data.image ||
-                        data.imagem
-                    ),
-
-                active:
-                    data.active !== false,
-
-                createdAt:
-                    existente?.createdAt ||
-                    Date.now(),
-
-                updatedAt:
-                    Date.now()
+                selo: this._safeString(data.selo || 'PARCEIRO'),
+                whatsapp: this._onlyNumbers(data.whatsapp),
+                telefone: this._onlyNumbers(data.telefone),
+                descricao: this._safeString(data.descricao),
+                endereco: this._safeString(data.endereco),
+                imagem: this._safeString(data.imagem || data.image),
+                image: this._safeString(data.image || data.imagem),
+                active: data.active !== false && data.ativo !== false,
+                createdAt: existente?.createdAt || Date.now(),
+                updatedAt: Date.now()
             };
 
-            // ==================================================
-            // UPDATE
-            // ==================================================
-
             if (id) {
-
-                await this
-                    ._db()
-                    .ref(
-                        this._path(
-                            `galvanicas/${id}`
-                        )
-                    )
+                await this._db()
+                    .ref(this._path(`galvanicas/${id}`))
                     .update(record);
 
-                this._cache[id] =
-                    this.normalizar(
-                        id,
-                        record
-                    );
-
+                this._cache[id] = this.normalizar(id, record);
                 return id;
             }
 
-            // ==================================================
-            // CREATE
-            // ==================================================
-
-            const ref =
-                this
-                    ._db()
-                    .ref(
-                        this._path(
-                            'galvanicas'
-                        )
-                    )
-                    .push();
+            const ref = this._db()
+                .ref(this._path('galvanicas'))
+                .push();
 
             await ref.set(record);
 
-            this._cache[ref.key] =
-                this.normalizar(
-                    ref.key,
-                    record
-                );
-
+            this._cache[ref.key] = this.normalizar(ref.key, record);
             return ref.key;
 
         } catch (error) {
-
-            console.error(
-                '[GalvanicaService:save]',
-                error
-            );
-
+            console.error('[GalvanicaService:save]', error);
             throw error;
         }
     },
@@ -465,60 +244,31 @@ const GalvanicaService = {
     // ==========================================================
 
     async toggleStatus(id) {
-
         try {
-
-            const parceiro =
-                await this.getById(id);
+            const parceiro = await this.getById(id);
 
             if (!parceiro) {
-
-                throw new Error(
-                    'Parceiro não encontrado.'
-                );
+                throw new Error('Parceiro não encontrado.');
             }
 
-            const novoStatus =
-                !parceiro.active;
+            const novoStatus = !parceiro.active;
 
-            await this
-                ._db()
-                .ref(
-                    this._path(
-                        `galvanicas/${id}`
-                    )
-                )
+            await this._db()
+                .ref(this._path(`galvanicas/${id}`))
                 .update({
-
-                    active:
-                        novoStatus,
-
-                    updatedAt:
-                        Date.now()
+                    active: novoStatus,
+                    updatedAt: Date.now()
                 });
 
-            if (
-                this._cache[id]
-            ) {
-
-                this._cache[id]
-                    .active =
-                    novoStatus;
-
-                this._cache[id]
-                    .updatedAt =
-                    Date.now();
+            if (this._cache[id]) {
+                this._cache[id].active = novoStatus;
+                this._cache[id].updatedAt = Date.now();
             }
 
             return true;
 
         } catch (error) {
-
-            console.error(
-                '[GalvanicaService:toggleStatus]',
-                error
-            );
-
+            console.error('[GalvanicaService:toggleStatus]', error);
             return false;
         }
     },
@@ -528,37 +278,19 @@ const GalvanicaService = {
     // ==========================================================
 
     async delete(id) {
-
         try {
+            id = this._safeString(id);
+            if (!id) return false;
 
-            id =
-                this._safeString(id);
-
-            if (!id) {
-
-                return false;
-            }
-
-            await this
-                ._db()
-                .ref(
-                    this._path(
-                        `galvanicas/${id}`
-                    )
-                )
+            await this._db()
+                .ref(this._path(`galvanicas/${id}`))
                 .remove();
 
             delete this._cache[id];
-
             return true;
 
         } catch (error) {
-
-            console.error(
-                '[GalvanicaService:delete]',
-                error
-            );
-
+            console.error('[GalvanicaService:delete]', error);
             return false;
         }
     },
@@ -567,86 +299,39 @@ const GalvanicaService = {
     // REGRA FRETE GRÁTIS
     // ==========================================================
 
-    verificarFreteGratis(
-        totalPedido = 0
-    ) {
-
-        return this._safeNumber(
-            totalPedido
-        ) >= 100;
+    verificarFreteGratis(totalPedido = 0) {
+        return this._safeNumber(totalPedido) >= 100;
     },
 
     // ==========================================================
-    // SUBSCRIBE
+    // SUBSCRIBE (SINCRONIZAÇÃO EM TEMPO REAL)
     // ==========================================================
 
     subscribe(callback) {
-
         try {
+            const ref = this._db().ref(this._path('galvanicas'));
 
-            const ref =
-                this
-                    ._db()
-                    .ref(
-                        this._path(
-                            'galvanicas'
-                        )
-                    );
+            ref.on('value', snapshot => {
+                const data = snapshot.val() || {};
+                this._cache = {};
 
-            ref.on(
+                Object.entries(data).forEach(([id, raw]) => {
+                    this._cache[id] = this.normalizar(id, raw);
+                });
 
-                'value',
+                this._cacheTimestamp = Date.now();
 
-                snapshot => {
-
-                    const data =
-                        snapshot.val() || {};
-
-                    this._cache = {};
-
-                    Object.entries(data)
-                        .forEach(
-                            ([id, raw]) => {
-
-                                this._cache[id] =
-                                    this.normalizar(
-                                        id,
-                                        raw
-                                    );
-                            }
-                        );
-
-                    this._cacheTimestamp =
-                        Date.now();
-
-                    if (
-                        typeof callback ===
-                        'function'
-                    ) {
-
-                        callback(
-                            this._cache
-                        );
-                    }
-                },
-
-                error => {
-
-                    console.error(
-                        '[GalvanicaService:subscribe]',
-                        error
-                    );
+                if (typeof callback === 'function') {
+                    callback(this._cache);
                 }
-            );
+            }, error => {
+                console.error('[GalvanicaService:subscribe]', error);
+            });
 
             return ref;
 
         } catch (error) {
-
-            console.error(
-                '[GalvanicaService:subscribe]',
-                error
-            );
+            console.error('[GalvanicaService:subscribe]', error);
         }
     },
 
@@ -655,53 +340,30 @@ const GalvanicaService = {
     // ==========================================================
 
     unsubscribe(ref) {
-
         try {
-
-            if (
-                ref &&
-                typeof ref.off === 'function'
-            ) {
-
+            if (ref && typeof ref.off === 'function') {
                 ref.off();
             }
-
         } catch (error) {
-
-            console.error(
-                '[GalvanicaService:unsubscribe]',
-                error
-            );
+            console.error('[GalvanicaService:unsubscribe]', error);
         }
     }
 };
 
 // ==========================================================
-// EXPORTS
+// EXPORTS GLOBAIS
 // ==========================================================
 
-window.GalvanicaService =
-    GalvanicaService;
-
-window.galvanicaService =
-    GalvanicaService;
+window.GalvanicaService = GalvanicaService;
+window.galvanicaService = GalvanicaService;
 
 // ==========================================================
-// LEGADO
+// ALIASES LEGADOS
 // ==========================================================
 
-GalvanicaService.listarTodas =
-    GalvanicaService.getAll;
+GalvanicaService.listarTodas = GalvanicaService.getAll;
+GalvanicaService.buscarPorId = GalvanicaService.getById;
+GalvanicaService.salvar = GalvanicaService.save;
+GalvanicaService.excluir = GalvanicaService.delete;
 
-GalvanicaService.buscarPorId =
-    GalvanicaService.getById;
-
-GalvanicaService.salvar =
-    GalvanicaService.save;
-
-GalvanicaService.excluir =
-    GalvanicaService.delete;
-
-console.log(
-    '⚙️ GalvanicaService v4.0 carregado.'
-);
+console.log('⚙️ GalvanicaService v4.1 (SEO Enhanced) carregado.');

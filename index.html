@@ -16,23 +16,30 @@
     <link rel="icon" href="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media" type="image/jpeg">
     <meta name="theme-color" content="#111111">
 
-    <!-- Meta Tags Open Graph (WhatsApp, Facebook, LinkedIn) -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         PRÉ-VISUALIZAÇÃO SOCIAL (Open Graph + Twitter Card) — CATÁLOGO
+         IMPORTANTE: WhatsApp/Facebook/Instagram/X/LinkedIn NÃO executam JavaScript.
+         Eles leem SOMENTE as tags abaixo. O JS da página só atualiza a aba do
+         navegador; para o link compartilhado mudar, troque a URL de og:image
+         e twitter:image aqui (o config.html gera o bloco pronto para colar).
+         Requisitos da imagem: URL https pública, JPG/PNG, 1200x630, até ~300 KB.
+         ═══════════════════════════════════════════════════════════════ -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Abella Joias">
+    <meta property="og:locale" content="pt_BR">
     <meta property="og:title" content="Abella Joias • Atacado de Joias no Bruto">
     <meta property="og:description" content="Atacado de joias no bruto, direto de fábrica em Limeira-SP. Encontre o catálogo completo de peças e galvânicas parceiras.">
     <meta property="og:url" content="https://catalogo.abellajoias.com.br/">
     <meta property="og:image" content="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media">
     <meta property="og:image:secure_url" content="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media">
-    <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Abella Joias — Catálogo de atacado de joias no bruto em Limeira-SP">
+    <!-- og:image:type/width/height: só declare quando a imagem for realmente 1200x630 (valores errados fazem o Facebook ignorar/cortar a imagem) -->
 
-    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Abella Joias • Atacado de Joias no Bruto">
     <meta name="twitter:description" content="Atacado de joias no bruto, direto de fábrica em Limeira-SP.">
     <meta name="twitter:image" content="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media">
+    <meta name="twitter:image:alt" content="Abella Joias — Catálogo de atacado de joias no bruto em Limeira-SP">
 
     <!-- Scripts de Configuração Inicial e Firebase -->
     <script>window.AURORA_FALLBACK_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';</script>
@@ -403,6 +410,16 @@
     <script src="engine/mobile-nav.js"></script>
 
     <script>
+        // Converte gs://bucket/caminho em URL https pública (fallback caso image-helper.js não converta)
+        function converterGsUrlOg(url) {
+            const v = String(url || '').trim();
+            if (!v.startsWith('gs://')) return v;
+            const sem = v.replace('gs://', '');
+            const i = sem.indexOf('/');
+            if (i === -1) return '';
+            return `https://firebasestorage.googleapis.com/v0/b/${sem.slice(0, i)}/o/${encodeURIComponent(sem.slice(i + 1))}?alt=media`;
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             const grid = document.getElementById('grid-categorias');
             const loading = document.getElementById('loading');
@@ -445,16 +462,21 @@
                         }
                     }
 
-                    // Atualização dinâmica do OG Image (Priorizando a específica do catálogo, depois geral)
+                    // Atualização dinâmica do OG Image (Catálogo: ogImageUrlCatalog → ogImageUrl → ogImage)
+                    // Obs.: isto só afeta o navegador/inspeção. Robôs sociais leem as tags estáticas do <head>.
                     const ogImageBruta = cfg.ogImageUrlCatalog || cfg.ogImageUrl || cfg.ogImage || '';
                     if (ogImageBruta) {
-                        const ogImageUrlReal = typeof resolverImagemFirebase !== 'undefined' 
-                            ? resolverImagemFirebase(ogImageBruta) 
-                            : ogImageBruta;
+                        const ogImageUrlReal = typeof resolverImagemFirebase === 'function'
+                            ? resolverImagemFirebase(ogImageBruta)
+                            : converterGsUrlOg(ogImageBruta);
 
-                        document.querySelectorAll('meta[property="og:image"], meta[property="og:image:secure_url"], meta[name="twitter:image"]').forEach(meta => {
-                            meta.setAttribute('content', ogImageUrlReal);
-                        });
+                        if (ogImageUrlReal) {
+                            document.querySelectorAll('meta[property="og:image"], meta[property="og:image:secure_url"], meta[name="twitter:image"]').forEach(meta => {
+                                meta.setAttribute('content', ogImageUrlReal);
+                            });
+                            // dimensões/tipo do arquivo novo são desconhecidos: remove para não ficarem incoerentes
+                            document.querySelectorAll('meta[property="og:image:width"], meta[property="og:image:height"], meta[property="og:image:type"]').forEach(m => m.remove());
+                        }
                     }
                 }
 

@@ -228,8 +228,9 @@
                         <input type="text" id="cfg-ogImageUrlInstitutional"
                                class="w-full rounded-xl px-4 py-3 text-sm font-mono"
                                placeholder="https://... ou gs://..."
-                               oninput="atualizarPreview('cfg-ogImageUrlInstitutional','previewOgInstitutional','placeholderOgInstitutional')">
+                               oninput="atualizarPreview('cfg-ogImageUrlInstitutional','previewOgInstitutional','placeholderOgInstitutional'); validarImagemOg('cfg-ogImageUrlInstitutional','statusOgInstitutional'); atualizarCodigoOg()">
                         <p class="text-[10px] text-zinc-500 mt-1.5">Imagem de compartilhamento exclusiva para o site institucional (abellajoias.com.br).</p>
+                        <p id="statusOgInstitutional" class="text-[10px] mt-1.5 font-semibold"></p>
                     </div>
                 </div>
             </div>
@@ -247,9 +248,40 @@
                         <input type="text" id="cfg-ogImageUrlCatalog"
                                class="w-full rounded-xl px-4 py-3 text-sm font-mono"
                                placeholder="https://... ou gs://..."
-                               oninput="atualizarPreview('cfg-ogImageUrlCatalog','previewOgCatalog','placeholderOgCatalog')">
+                               oninput="atualizarPreview('cfg-ogImageUrlCatalog','previewOgCatalog','placeholderOgCatalog'); validarImagemOg('cfg-ogImageUrlCatalog','statusOgCatalog'); atualizarCodigoOg()">
                         <p class="text-[10px] text-zinc-500 mt-1.5">Imagem de compartilhamento exclusiva para o catálogo de produtos e vendas.</p>
+                        <p id="statusOgCatalog" class="text-[10px] mt-1.5 font-semibold"></p>
                     </div>
+                </div>
+            </div>
+
+            <!-- CÓDIGO ESTÁTICO PARA O <head> -->
+            <div class="border-t border-zinc-900/80 pt-5 space-y-4">
+                <div class="bg-amber-950/30 border border-amber-800/50 rounded-2xl p-4">
+                    <p class="text-[11px] text-amber-300 font-bold uppercase tracking-wider mb-1">⚠️ Por que a imagem não aparece no WhatsApp/Facebook?</p>
+                    <p class="text-[11px] text-amber-200/80 leading-relaxed">
+                        Salvar a URL aqui grava no Firebase, mas os robôs do WhatsApp, Facebook, Instagram, X e LinkedIn <b>não executam JavaScript</b>:
+                        eles leem apenas as meta tags escritas direto no HTML. Depois de salvar, copie o bloco abaixo e cole no
+                        <code>&lt;head&gt;</code> do respectivo <code>index.html</code> (substituindo as linhas <code>og:image</code>,
+                        <code>og:image:secure_url</code> e <code>twitter:image</code>). Depois, atualize o cache em
+                        <a class="underline" href="https://developers.facebook.com/tools/debug/" target="_blank" rel="noopener">Facebook Sharing Debugger</a>.
+                    </p>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold">Bloco para o index Institucional</label>
+                        <button type="button" onclick="copiarCodigoOg('codigoOgInstitutional')" class="text-[10px] font-bold uppercase tracking-wider text-[#caa85c] hover:underline">Copiar</button>
+                    </div>
+                    <textarea id="codigoOgInstitutional" readonly rows="5" class="w-full rounded-xl px-4 py-3 text-[11px] font-mono"></textarea>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs uppercase tracking-wider text-zinc-400 font-bold">Bloco para o index do Catálogo</label>
+                        <button type="button" onclick="copiarCodigoOg('codigoOgCatalog')" class="text-[10px] font-bold uppercase tracking-wider text-[#caa85c] hover:underline">Copiar</button>
+                    </div>
+                    <textarea id="codigoOgCatalog" readonly rows="5" class="w-full rounded-xl px-4 py-3 text-[11px] font-mono"></textarea>
                 </div>
             </div>
         </section>
@@ -579,6 +611,78 @@ function atualizarPreview(inputId, imgId, placeholderId) {
     }
 }
 
+
+// ================================================================
+// SOCIAL PREVIEW — validação e gerador de meta tags estáticas
+// ================================================================
+function _escAttr(v) {
+    return String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function validarImagemOg(inputId, statusId) {
+    const st  = document.getElementById(statusId);
+    if (!st) return;
+    const raw = document.getElementById(inputId)?.value?.trim() || '';
+    const url = resolverGsUrl(raw);
+    st.className = 'text-[10px] mt-1.5 font-semibold text-zinc-500';
+
+    if (!url) { st.textContent = ''; return; }
+    if (!/^https:\/\//i.test(url)) {
+        st.className = 'text-[10px] mt-1.5 font-semibold text-rose-400';
+        st.textContent = '❌ A URL precisa começar com https:// (ou gs://). Redes sociais não aceitam http nem caminhos relativos.';
+        return;
+    }
+    st.textContent = '⏳ Verificando imagem...';
+    const img = new Image();
+    img.onload = () => {
+        const w = img.naturalWidth, h = img.naturalHeight, r = w / h;
+        const problemas = [];
+        if (w < 600 || h < 315) problemas.push('menor que 600x315 (o Facebook ignora)');
+        if (Math.abs(r - 1.91) > 0.15) problemas.push(`proporção ${r.toFixed(2)}:1 — o ideal é 1,91:1 (1200x630); será cortada`);
+        if (problemas.length) {
+            st.className = 'text-[10px] mt-1.5 font-semibold text-amber-400';
+            st.textContent = `⚠️ ${w}x${h}px — ${problemas.join('; ')}.`;
+        } else {
+            st.className = 'text-[10px] mt-1.5 font-semibold text-emerald-400';
+            st.textContent = `✅ ${w}x${h}px — proporção adequada.`;
+        }
+    };
+    img.onerror = () => {
+        st.className = 'text-[10px] mt-1.5 font-semibold text-rose-400';
+        st.textContent = '❌ Não foi possível carregar a imagem. Verifique se o arquivo existe e se está público (no Firebase Storage, use a URL com ?alt=media e regras que permitam leitura pública).';
+    };
+    img.src = url;
+}
+
+function _blocoOg(url, alt) {
+    const u = _escAttr(url);
+    if (!u) return '<!-- Informe a URL da imagem acima para gerar o código -->';
+    return [
+        `<meta property="og:image" content="${u}">`,
+        `<meta property="og:image:secure_url" content="${u}">`,
+        `<meta property="og:image:alt" content="${_escAttr(alt)}">`,
+        `<meta name="twitter:image" content="${u}">`,
+        `<meta name="twitter:image:alt" content="${_escAttr(alt)}">`
+    ].join('\n');
+}
+
+function atualizarCodigoOg() {
+    const inst = resolverGsUrl(document.getElementById('cfg-ogImageUrlInstitutional')?.value?.trim() || '');
+    const cat  = resolverGsUrl(document.getElementById('cfg-ogImageUrlCatalog')?.value?.trim() || '');
+    const a = document.getElementById('codigoOgInstitutional');
+    const b = document.getElementById('codigoOgCatalog');
+    if (a) a.value = _blocoOg(inst, 'Abella Joias — Atacado de joias no bruto em Limeira-SP');
+    if (b) b.value = _blocoOg(cat,  'Abella Joias — Catálogo de atacado de joias no bruto em Limeira-SP');
+}
+
+function copiarCodigoOg(id) {
+    const el = document.getElementById(id);
+    if (!el || !el.value) return;
+    const ok = () => spawnToast('Código copiado! Cole no <head> do index.');
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(el.value).then(ok).catch(() => { el.select(); document.execCommand('copy'); ok(); });
+    else { el.select(); document.execCommand('copy'); ok(); }
+}
+
 function selecionarTema(tema, silencioso = false) {
     const hidden = document.getElementById('cfg-theme');
     if (hidden) hidden.value = tema;
@@ -717,6 +821,9 @@ async function carregarConfiguracoes() {
         const ogCat = d.ogImageUrlCatalog ?? d.ogImageUrl ?? d.ogImage ?? '';
         _setVal('cfg-ogImageUrlCatalog', ogCat);
         if (ogCat) atualizarPreview('cfg-ogImageUrlCatalog', 'previewOgCatalog', 'placeholderOgCatalog');
+        validarImagemOg('cfg-ogImageUrlInstitutional', 'statusOgInstitutional');
+        validarImagemOg('cfg-ogImageUrlCatalog', 'statusOgCatalog');
+        atualizarCodigoOg();
 
         // Banners
         const bannerHero = d.bannerHeroUrl ?? '';
@@ -802,10 +909,11 @@ async function salvarConfiguracoesAdmin(e) {
         logo:     _getVal('cfg-logoUrl'),   // compatibilidade
         
         // Imagem de Compartilhamento Social (OG Image)
-        ogImageUrlInstitutional: _getVal('cfg-ogImageUrlInstitutional'),
-        ogImageUrlCatalog:       _getVal('cfg-ogImageUrlCatalog'),
-        ogImageUrl:              _getVal('cfg-ogImageUrlCatalog'), // fallback geral
-        ogImage:                 _getVal('cfg-ogImageUrlCatalog'), // compatibilidade
+        // gs:// é convertido para https pública: robôs sociais só entendem https
+        ogImageUrlInstitutional: resolverGsUrl(_getVal('cfg-ogImageUrlInstitutional')),
+        ogImageUrlCatalog:       resolverGsUrl(_getVal('cfg-ogImageUrlCatalog')),
+        ogImageUrl:              resolverGsUrl(_getVal('cfg-ogImageUrlCatalog')), // fallback geral (catálogo)
+        ogImage:                 resolverGsUrl(_getVal('cfg-ogImageUrlCatalog')), // compatibilidade
 
         // Redes sociais & institucional
         instagram:     sanitize(_getVal('cfg-instagram')),

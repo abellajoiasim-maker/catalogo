@@ -12,21 +12,40 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Geração de PDF feita na mão (html2canvas "fotografa" o romaneio tal
-         como está na tela, e o jsPDF monta o arquivo fatiando essa foto em
-         páginas) em vez de usar o html2pdf.js. O html2pdf.js clona o conteúdo
-         dentro de um container com largura própria antes de capturar, o que
-         conflita com qualquer ajuste de layout nosso e foi a causa do corte
-         lateral e das páginas quebradas de forma estranha. -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background: white; color: black; }
         .font-cinzel { font-family: 'Cinzel', serif; }
+
+        /* Marca cada linha da tabela (e os blocos já marcados com
+           .break-inside-avoid, como o resumo financeiro e a barra de totais)
+           para nunca serem cortados ao meio — nem na impressão nativa do
+           navegador, nem na geração de PDF via html2pdf.js (que lê esse
+           "break-inside: avoid" computado para decidir onde pode quebrar a
+           página). Fica fora do @media print de propósito: o html2pdf.js
+           "fotografa" a página em estado normal de tela, não em modo de
+           impressão, então uma regra só dentro de @media print não seria
+           enxergada por ele na hora de gerar o PDF. */
+        tr, .break-inside-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
         @media print {
+            /* Define explicitamente o tamanho/margens da página impressa.
+               Sem isso, alguns navegadores (principalmente no celular) podem
+               calcular a paginação errado e mostrar uma pré-visualização em
+               branco até o conteúdo terminar de carregar. */
+            @page {
+                size: A4;
+                margin: 10mm 8mm;
+            }
             body { background: white; color: black; padding: 0; }
             .no-print { display: none !important; }
-            .break-inside-avoid { break-inside: avoid; }
+            /* Garantia extra: se o usuário imprimir antes do conteúdo
+               terminar de carregar, o loader nunca aparece impresso — melhor
+               uma página em branco momentânea do que o texto "carregando". */
+            #loader { display: none !important; }
             /* Sem isto, o navegador ignora cores de fundo na impressão (pra
                economizar tinta) — e a etiqueta escura de quantidade na grade
                (bg-black/bg-zinc-900 com texto branco) sai só com o texto
@@ -78,17 +97,18 @@
             navigator.canShare({ files: [new File(['x'], 'teste.pdf', { type: 'application/pdf' })] }));
 
         // Gera o PDF do romaneio e guarda o resultado em memória — não baixa
-        // nem abre nada sozinho.
+        // nem abre nada sozinho. Usa o motor de paginação do próprio
+        // html2pdf.js (mode: 'css'), que lê o "break-inside: avoid" que já
+        // está marcado no CSS em cada linha da tabela e em cada bloco
+        // importante (resumo financeiro, barra de totais) pra decidir onde
+        // pode cortar a página — preenchendo cada página o máximo possível e
+        // só empurrando pra próxima quando o bloco realmente não cabe mais.
         //
-        // Como funciona: o html2canvas tira uma "foto" (canvas) fiel do
-        // romaneio exatamente como está na tela, na largura real do aparelho
-        // — sem redimensionar nada, pra nunca arriscar cortar ou deslocar o
-        // conteúdo. Depois, em vez de deixar uma lib de terceiro decidir
-        // sozinha onde cortar as páginas (o que causava páginas soltas e,
-        // numa tentativa anterior de ajuste, até corte lateral), nós mesmos
-        // fatiamos essa foto em pedaços do tamanho de uma página A4, sempre
-        // recuando o corte para ANTES de qualquer linha da tabela ou do bloco
-        // de resumo financeiro — nunca no meio deles.
+        // IMPORTANTE: não force nenhuma largura/viewport artificial aqui. O
+        // próprio html2pdf.js já clona o conteúdo num container do tamanho
+        // exato da folha A4 antes de capturar — mexer nisso por fora (como
+        // numa tentativa anterior) conflita com esse container interno e foi
+        // a causa do corte lateral que apareceu num teste anterior.
         async function gerarPDFRomaneio() {
             const conteudo = document.getElementById('romaneio-conteudo');
             const botaoGerar = document.getElementById('btn-gerar-pdf');
@@ -108,78 +128,21 @@
             _pdfNomeArquivo = `Romaneio-${idParaArquivo}.pdf`;
 
             try {
-                // 1) Fotografa o romaneio tal como está na tela.
-                const canvas = await html2canvas(conteudo, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: '#ffffff'
-                });
+                const blob = await html2pdf().set({
+                    margin: [10, 8, 10, 8],
+                    filename: _pdfNomeArquivo,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    // Só 'css': respeita o break-inside:avoid que já está no
+                    // CSS (linhas da tabela, resumo, barra de totais). Sem
+                    // 'avoid-all', que tratava TODO elemento da árvore (cada
+                    // div, td, span...) como intocável e empurrava blocos
+                    // inteiros pra página seguinte mesmo sobrando espaço —
+                    // essa era a causa das 3 páginas soltas.
+                    pagebreak: { mode: ['css'] }
+                }).from(conteudo).outputPdf('blob');
 
-                // 2) Mapeia cada linha da tabela e cada bloco "intocável"
-                //    (resumo financeiro, barra de totais, cards da grade de
-                //    fotos) para a posição correspondente dentro do canvas.
-                const blocosProtegidos = Array.from(
-                    conteudo.querySelectorAll('tr, .break-inside-avoid')
-                );
-                const retConteudo = conteudo.getBoundingClientRect();
-                const escalaTelaParaCanvas = canvas.width / retConteudo.width;
-                const faixasProtegidas = blocosProtegidos
-                    .map(el => {
-                        const r = el.getBoundingClientRect();
-                        return {
-                            topo: (r.top - retConteudo.top) * escalaTelaParaCanvas,
-                            base: (r.bottom - retConteudo.top) * escalaTelaParaCanvas
-                        };
-                    })
-                    .filter(f => f.base > f.topo)
-                    .sort((a, b) => a.topo - b.topo);
-
-                // 3) Monta o PDF fatiando o canvas por página, recuando o
-                //    corte quando ele cairia em cima de um bloco protegido.
-                const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-                const margemTopoMM = 10, margemLadoMM = 8, margemBaixoMM = 10;
-                const larguraUtilMM = pdf.internal.pageSize.getWidth() - margemLadoMM * 2;
-                const alturaUtilMM = pdf.internal.pageSize.getHeight() - margemTopoMM - margemBaixoMM;
-                const pxPorMM = canvas.width / larguraUtilMM;
-                const alturaUtilPx = alturaUtilMM * pxPorMM;
-
-                let y0 = 0;
-                let primeiraPagina = true;
-                while (y0 < canvas.height - 1) {
-                    let y1 = Math.min(y0 + alturaUtilPx, canvas.height);
-
-                    // Existe algum bloco protegido começando depois de y0 que
-                    // seria cortado ao meio por essa fatia? Se sim, recua o
-                    // fim da fatia para logo antes dele.
-                    for (const faixa of faixasProtegidas) {
-                        if (faixa.topo > y0 + 1 && faixa.topo < y1 && faixa.base > y1) {
-                            y1 = faixa.topo;
-                            break;
-                        }
-                    }
-                    // Segurança: nunca deixa a fatia ficar vazia/infinita (ex.:
-                    // um bloco sozinho mais alto que uma página inteira).
-                    if (y1 - y0 < 1) {
-                        y1 = Math.min(y0 + alturaUtilPx, canvas.height);
-                    }
-
-                    const fatia = document.createElement('canvas');
-                    fatia.width = canvas.width;
-                    fatia.height = y1 - y0;
-                    fatia.getContext('2d').drawImage(
-                        canvas, 0, y0, canvas.width, y1 - y0,
-                        0, 0, canvas.width, y1 - y0
-                    );
-
-                    const imgDataFatia = fatia.toDataURL('image/jpeg', 0.95);
-                    if (!primeiraPagina) pdf.addPage();
-                    pdf.addImage(imgDataFatia, 'JPEG', margemLadoMM, margemTopoMM, larguraUtilMM, (y1 - y0) / pxPorMM);
-
-                    y0 = y1;
-                    primeiraPagina = false;
-                }
-
-                const blob = pdf.output('blob');
                 _pdfBlobGerado = blob;
                 _pdfFileGerado = new File([blob], _pdfNomeArquivo, { type: 'application/pdf' });
 

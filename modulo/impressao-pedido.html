@@ -12,7 +12,14 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Geração de PDF feita na mão (html2canvas "fotografa" o romaneio tal
+         como está na tela, e o jsPDF monta o arquivo fatiando essa foto em
+         páginas) em vez de usar o html2pdf.js. O html2pdf.js clona o conteúdo
+         dentro de um container com largura própria antes de capturar, o que
+         conflita com qualquer ajuste de layout nosso e foi a causa do corte
+         lateral e das páginas quebradas de forma estranha. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background: white; color: black; }
         .font-cinzel { font-family: 'Cinzel', serif; }
@@ -71,9 +78,17 @@
             navigator.canShare({ files: [new File(['x'], 'teste.pdf', { type: 'application/pdf' })] }));
 
         // Gera o PDF do romaneio e guarda o resultado em memória — não baixa
-        // nem abre nada sozinho. Usa html2pdf.js, que tira uma "foto" fiel do
-        // romaneio já montado na tela e monta o arquivo a partir dela, por
-        // isso só funciona depois que o conteúdo terminar de carregar.
+        // nem abre nada sozinho.
+        //
+        // Como funciona: o html2canvas tira uma "foto" (canvas) fiel do
+        // romaneio exatamente como está na tela, na largura real do aparelho
+        // — sem redimensionar nada, pra nunca arriscar cortar ou deslocar o
+        // conteúdo. Depois, em vez de deixar uma lib de terceiro decidir
+        // sozinha onde cortar as páginas (o que causava páginas soltas e,
+        // numa tentativa anterior de ajuste, até corte lateral), nós mesmos
+        // fatiamos essa foto em pedaços do tamanho de uma página A4, sempre
+        // recuando o corte para ANTES de qualquer linha da tabela ou do bloco
+        // de resumo financeiro — nunca no meio deles.
         async function gerarPDFRomaneio() {
             const conteudo = document.getElementById('romaneio-conteudo');
             const botaoGerar = document.getElementById('btn-gerar-pdf');
@@ -92,33 +107,79 @@
                 .replace(/[^a-zA-Z0-9-]/g, '');
             _pdfNomeArquivo = `Romaneio-${idParaArquivo}.pdf`;
 
-            // Força uma largura fixa (equivalente à área útil de uma folha A4)
-            // só durante a captura. Sem isso, no celular o html2canvas "fotografa"
-            // a div na largura da tela do aparelho (bem mais estreita), o texto
-            // quebra em mais linhas, o conteúdo fica muito mais alto e a
-            // paginação sai diferente do computador — às vezes espalhando
-            // cabeçalho, lista e resumo em páginas separadas.
-            const larguraOriginal = conteudo.style.width;
-            const maxLarguraOriginal = conteudo.style.maxWidth;
-            const LARGURA_CAPTURA_PX = 780;
-            conteudo.style.width = `${LARGURA_CAPTURA_PX}px`;
-            conteudo.style.maxWidth = `${LARGURA_CAPTURA_PX}px`;
-
             try {
-                const blob = await html2pdf().set({
-                    margin: [10, 8, 10, 8],
-                    filename: _pdfNomeArquivo,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: {
-                        scale: 2,
-                        useCORS: true,
-                        backgroundColor: '#ffffff',
-                        windowWidth: LARGURA_CAPTURA_PX
-                    },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'avoid-all'] }
-                }).from(conteudo).outputPdf('blob');
+                // 1) Fotografa o romaneio tal como está na tela.
+                const canvas = await html2canvas(conteudo, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                });
 
+                // 2) Mapeia cada linha da tabela e cada bloco "intocável"
+                //    (resumo financeiro, barra de totais, cards da grade de
+                //    fotos) para a posição correspondente dentro do canvas.
+                const blocosProtegidos = Array.from(
+                    conteudo.querySelectorAll('tr, .break-inside-avoid')
+                );
+                const retConteudo = conteudo.getBoundingClientRect();
+                const escalaTelaParaCanvas = canvas.width / retConteudo.width;
+                const faixasProtegidas = blocosProtegidos
+                    .map(el => {
+                        const r = el.getBoundingClientRect();
+                        return {
+                            topo: (r.top - retConteudo.top) * escalaTelaParaCanvas,
+                            base: (r.bottom - retConteudo.top) * escalaTelaParaCanvas
+                        };
+                    })
+                    .filter(f => f.base > f.topo)
+                    .sort((a, b) => a.topo - b.topo);
+
+                // 3) Monta o PDF fatiando o canvas por página, recuando o
+                //    corte quando ele cairia em cima de um bloco protegido.
+                const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                const margemTopoMM = 10, margemLadoMM = 8, margemBaixoMM = 10;
+                const larguraUtilMM = pdf.internal.pageSize.getWidth() - margemLadoMM * 2;
+                const alturaUtilMM = pdf.internal.pageSize.getHeight() - margemTopoMM - margemBaixoMM;
+                const pxPorMM = canvas.width / larguraUtilMM;
+                const alturaUtilPx = alturaUtilMM * pxPorMM;
+
+                let y0 = 0;
+                let primeiraPagina = true;
+                while (y0 < canvas.height - 1) {
+                    let y1 = Math.min(y0 + alturaUtilPx, canvas.height);
+
+                    // Existe algum bloco protegido começando depois de y0 que
+                    // seria cortado ao meio por essa fatia? Se sim, recua o
+                    // fim da fatia para logo antes dele.
+                    for (const faixa of faixasProtegidas) {
+                        if (faixa.topo > y0 + 1 && faixa.topo < y1 && faixa.base > y1) {
+                            y1 = faixa.topo;
+                            break;
+                        }
+                    }
+                    // Segurança: nunca deixa a fatia ficar vazia/infinita (ex.:
+                    // um bloco sozinho mais alto que uma página inteira).
+                    if (y1 - y0 < 1) {
+                        y1 = Math.min(y0 + alturaUtilPx, canvas.height);
+                    }
+
+                    const fatia = document.createElement('canvas');
+                    fatia.width = canvas.width;
+                    fatia.height = y1 - y0;
+                    fatia.getContext('2d').drawImage(
+                        canvas, 0, y0, canvas.width, y1 - y0,
+                        0, 0, canvas.width, y1 - y0
+                    );
+
+                    const imgDataFatia = fatia.toDataURL('image/jpeg', 0.95);
+                    if (!primeiraPagina) pdf.addPage();
+                    pdf.addImage(imgDataFatia, 'JPEG', margemLadoMM, margemTopoMM, larguraUtilMM, (y1 - y0) / pxPorMM);
+
+                    y0 = y1;
+                    primeiraPagina = false;
+                }
+
+                const blob = pdf.output('blob');
                 _pdfBlobGerado = blob;
                 _pdfFileGerado = new File([blob], _pdfNomeArquivo, { type: 'application/pdf' });
 
@@ -127,11 +188,9 @@
                 botaoGerar.innerHTML = '🔄 Gerar Novamente';
             } catch (err) {
                 console.error('[gerarPDFRomaneio] erro ao gerar PDF:', err);
-                alert('Não foi possível gerar o PDF automaticamente. Use Ctrl+P e escolha "Salvar como PDF" como alternativa.');
+                alert('Não foi possível gerar o PDF automaticamente. Use "🖨️ Imprimir" e escolha "Salvar como PDF" como alternativa.');
                 botaoGerar.innerHTML = textoOriginal;
             } finally {
-                conteudo.style.width = larguraOriginal;
-                conteudo.style.maxWidth = maxLarguraOriginal;
                 botaoGerar.disabled = false;
             }
         }

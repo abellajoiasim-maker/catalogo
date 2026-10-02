@@ -37,50 +37,139 @@
 <body class="p-4 md:p-6 bg-white text-black">
 
     <!-- Botão de Comando Flutuante -->
-    <div class="no-print mb-6 flex justify-end gap-3">
+    <div class="no-print mb-6 flex flex-wrap justify-end gap-3">
         <button onclick="window.print()" class="bg-white text-black font-black px-6 py-2 rounded-xl text-xs uppercase tracking-wider shadow-lg border border-zinc-300 hover:bg-zinc-100 transition-all cursor-pointer">
             🖨️ Imprimir
         </button>
-        <button id="btn-baixar-pdf" onclick="baixarPDF()" class="bg-[#caa85c] text-black font-black px-6 py-2 rounded-xl text-xs uppercase tracking-wider shadow-lg hover:bg-[#b5944f] transition-all cursor-pointer">
-            📄 Baixar PDF do Romaneio
+        <button id="btn-gerar-pdf" onclick="gerarPDFRomaneio()" class="bg-[#caa85c] text-black font-black px-6 py-2 rounded-xl text-xs uppercase tracking-wider shadow-lg hover:bg-[#b5944f] transition-all cursor-pointer">
+            📄 Gerar PDF do Romaneio
         </button>
+        <!-- Só aparece depois que o PDF termina de ser gerado, em memória —
+             assim o usuário decide se baixa, reenvia direto pro cliente ou
+             descarta e gera de novo. Nada é baixado automaticamente. -->
+        <div id="pdf-acoes" class="flex flex-wrap gap-3" style="display: none;">
+            <button id="btn-baixar-pdf-final" onclick="baixarPdfGerado()" class="bg-white text-black font-black px-6 py-2 rounded-xl text-xs uppercase tracking-wider shadow-lg border border-zinc-300 hover:bg-zinc-100 transition-all cursor-pointer">
+                ⬇️ Baixar
+            </button>
+            <button id="btn-compartilhar-pdf" style="display: none;" class="bg-black text-white font-black px-6 py-2 rounded-xl text-xs uppercase tracking-wider shadow-lg hover:bg-zinc-800 transition-all cursor-pointer" onclick="compartilharPdfGerado()">
+                📤 Enviar para Cliente
+            </button>
+        </div>
     </div>
 
     <script>
-        // Gera e baixa o PDF diretamente (sem passar pela caixa de diálogo de
-        // impressão do navegador). Usa html2pdf.js, que tira uma "foto" fiel
-        // do romaneio já montado na tela e monta o arquivo a partir dela —
-        // por isso só funciona depois que o conteúdo terminar de carregar.
-        async function baixarPDF() {
+        // Guarda o PDF já gerado (em memória, como Blob/File) para os botões
+        // de Baixar/Enviar usarem depois — nada é escrito em disco sozinho.
+        let _pdfBlobGerado = null;
+        let _pdfFileGerado = null;
+        let _pdfNomeArquivo = 'romaneio.pdf';
+
+        // Alguns navegadores (principalmente desktop) nem sempre suportam
+        // compartilhar arquivo via Web Share API. Testamos uma vez, com um
+        // arquivo fake, e só mostramos o botão "Enviar para Cliente" se der.
+        const suportaCompartilharArquivo = !!(navigator.canShare && navigator.share &&
+            navigator.canShare({ files: [new File(['x'], 'teste.pdf', { type: 'application/pdf' })] }));
+
+        // Gera o PDF do romaneio e guarda o resultado em memória — não baixa
+        // nem abre nada sozinho. Usa html2pdf.js, que tira uma "foto" fiel do
+        // romaneio já montado na tela e monta o arquivo a partir dela, por
+        // isso só funciona depois que o conteúdo terminar de carregar.
+        async function gerarPDFRomaneio() {
             const conteudo = document.getElementById('romaneio-conteudo');
-            const botao = document.getElementById('btn-baixar-pdf');
+            const botaoGerar = document.getElementById('btn-gerar-pdf');
+            const painelAcoes = document.getElementById('pdf-acoes');
             if (!conteudo || conteudo.style.display === 'none') {
                 alert('O romaneio ainda está carregando. Aguarde um instante e tente novamente.');
                 return;
             }
 
-            const textoOriginal = botao.innerHTML;
-            botao.disabled = true;
-            botao.innerHTML = '⏳ Gerando PDF...';
+            const textoOriginal = botaoGerar.innerHTML;
+            botaoGerar.disabled = true;
+            botaoGerar.innerHTML = '⏳ Gerando PDF...';
+            painelAcoes.style.display = 'none';
 
             const idParaArquivo = (document.getElementById('doc-id')?.innerText || 'romaneio')
                 .replace(/[^a-zA-Z0-9-]/g, '');
+            _pdfNomeArquivo = `Romaneio-${idParaArquivo}.pdf`;
+
+            // Força uma largura fixa (equivalente à área útil de uma folha A4)
+            // só durante a captura. Sem isso, no celular o html2canvas "fotografa"
+            // a div na largura da tela do aparelho (bem mais estreita), o texto
+            // quebra em mais linhas, o conteúdo fica muito mais alto e a
+            // paginação sai diferente do computador — às vezes espalhando
+            // cabeçalho, lista e resumo em páginas separadas.
+            const larguraOriginal = conteudo.style.width;
+            const maxLarguraOriginal = conteudo.style.maxWidth;
+            const LARGURA_CAPTURA_PX = 780;
+            conteudo.style.width = `${LARGURA_CAPTURA_PX}px`;
+            conteudo.style.maxWidth = `${LARGURA_CAPTURA_PX}px`;
 
             try {
-                await html2pdf().set({
+                const blob = await html2pdf().set({
                     margin: [10, 8, 10, 8],
-                    filename: `Romaneio-${idParaArquivo}.pdf`,
+                    filename: _pdfNomeArquivo,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        windowWidth: LARGURA_CAPTURA_PX
+                    },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['css', 'avoid-all'] }
-                }).from(conteudo).save();
+                }).from(conteudo).outputPdf('blob');
+
+                _pdfBlobGerado = blob;
+                _pdfFileGerado = new File([blob], _pdfNomeArquivo, { type: 'application/pdf' });
+
+                document.getElementById('btn-compartilhar-pdf').style.display = suportaCompartilharArquivo ? '' : 'none';
+                painelAcoes.style.display = 'flex';
+                botaoGerar.innerHTML = '🔄 Gerar Novamente';
             } catch (err) {
-                console.error('[baixarPDF] erro ao gerar PDF:', err);
+                console.error('[gerarPDFRomaneio] erro ao gerar PDF:', err);
                 alert('Não foi possível gerar o PDF automaticamente. Use Ctrl+P e escolha "Salvar como PDF" como alternativa.');
+                botaoGerar.innerHTML = textoOriginal;
             } finally {
-                botao.disabled = false;
-                botao.innerHTML = textoOriginal;
+                conteudo.style.width = larguraOriginal;
+                conteudo.style.maxWidth = maxLarguraOriginal;
+                botaoGerar.disabled = false;
+            }
+        }
+
+        // Baixa o PDF já gerado (guardado em memória) — não gera de novo.
+        function baixarPdfGerado() {
+            if (!_pdfBlobGerado) return;
+            const url = URL.createObjectURL(_pdfBlobGerado);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = _pdfNomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+
+        // Abre o painel de compartilhamento nativo do aparelho (no celular,
+        // isso inclui enviar direto pelo WhatsApp) com o PDF já gerado anexado.
+        async function compartilharPdfGerado() {
+            if (!_pdfFileGerado) return;
+            if (!suportaCompartilharArquivo) {
+                alert('Este navegador não aceita compartilhar arquivos diretamente. Use o botão Baixar e envie manualmente.');
+                return;
+            }
+            try {
+                await navigator.share({
+                    files: [_pdfFileGerado],
+                    title: 'Romaneio Abella Joias',
+                    text: `Romaneio ${document.getElementById('doc-id')?.innerText || ''}`.trim()
+                });
+            } catch (err) {
+                // AbortError acontece quando o usuário só fecha a caixa de
+                // compartilhamento sem escolher nada — não é um erro de verdade.
+                if (err.name !== 'AbortError') {
+                    console.error('[compartilharPdfGerado] erro ao compartilhar:', err);
+                    alert('Não foi possível abrir o compartilhamento. Use o botão Baixar e envie manualmente.');
+                }
             }
         }
     </script>

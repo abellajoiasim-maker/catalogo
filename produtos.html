@@ -103,6 +103,7 @@
         <div class="bar aurora-container">
             <nav class="nav-links">
                 <a href="index.html">Home</a>
+                <a href="produtos.html?lancamentos=1">Lançamentos</a>
                 <a href="./galvanicas.html">Galvânicas</a>
             </nav>
             <div class="brand">
@@ -515,11 +516,16 @@
             const categoriaSlug = (params.get('categoria') || '').toString().trim();
             const subcategoriaSlug = (params.get('subcategoria') || params.get('sub') || '').toString().trim();
             const buscaInicial = (params.get('busca') || '').toString().trim();
+            const lancamentos = ['1', 'true'].includes((params.get('lancamentos') || '').toLowerCase());
+            if (lancamentos) {
+                const mensagemVazia = document.querySelector('#no-result p');
+                if (mensagemVazia) mensagemVazia.textContent = 'Ainda não há produtos marcados como lançamento.';
+            }
 
             // A listagem de produtos só pode ser aberta por uma subcategoria,
             // categoria sem subcategorias ou uma busca explícita. Sem contexto,
             // o fluxo correto retorna à home em vez de exibir o catálogo inteiro.
-            if (!categoriaSlug && !subcategoriaSlug && !buscaInicial) {
+            if (!categoriaSlug && !subcategoriaSlug && !buscaInicial && !lancamentos) {
                 window.location.replace('index.html');
                 return;
             }
@@ -569,6 +575,14 @@
                 });
                 filtrados.sort((a, b) => (b._ehVitrine === true) - (a._ehVitrine === true));
 
+                // Lançamentos são os mesmos produtos do catálogo, filtrados pelo campo
+                // salvo no editor; não há cópia nem cadastro paralelo.
+                if (lancamentos) {
+                    filtrados = filtrados
+                        .filter(p => p.lancamento === true && !p._ehVitrine)
+                        .sort((a, b) => Number(b.lancamentoEm || 0) - Number(a.lancamentoEm || 0));
+                }
+
                 if (categoriaSlug) {
                     filtrados = filtrados.filter(p =>
                         String(p.categoriaId || p.category || '').toLowerCase() === categoriaSlug.toLowerCase()
@@ -587,17 +601,20 @@
 
                 const nomeExibicao = buscaInicial
                     ? `Resultados para "${buscaInicial}"`
-                    : (subcategoriaSlug ? tituloCase(subcategoriaSlug) : (categoriaSlug ? tituloCase(categoriaSlug) : 'Todos os produtos'));
+                    : (lancamentos ? 'Lançamentos' : (subcategoriaSlug ? tituloCase(subcategoriaSlug) : (categoriaSlug ? tituloCase(categoriaSlug) : 'Todos os produtos')));
 
                 document.getElementById('categoriaNome').innerText = nomeExibicao;
                 const resumo = document.getElementById('categoriaResumo');
                 if (resumo) {
-                    resumo.innerText = subcategoriaSlug
-                        ? `Veja a vitrine ambientada e os modelos de ${nomeExibicao} disponíveis para compra no atacado. Selecione uma peça para conferir detalhes, variações e adicionar ao pedido.`
-                        : `Explore os modelos de ${nomeExibicao} no catálogo da Abella Joias e avance diretamente para o seu pedido.`;
+                    resumo.innerText = lancamentos
+                        ? 'Confira as novidades do catálogo. Abra qualquer peça para escolher as variações e adicioná-la ao mesmo pedido do restante dos produtos.'
+                        : (subcategoriaSlug
+                            ? `Veja a vitrine ambientada e os modelos de ${nomeExibicao} disponíveis para compra no atacado. Selecione uma peça para conferir detalhes, variações e adicionar ao pedido.`
+                            : `Explore os modelos de ${nomeExibicao} no catálogo da Abella Joias e avance diretamente para o seu pedido.`);
                 }
 
                 const crumbs = [{ label: 'Home', href: 'index.html' }];
+                if (lancamentos) crumbs.push({ label: 'Lançamentos', ...(buscaInicial ? { href: 'produtos.html?lancamentos=1' } : {}) });
                 if (categoriaSlug) crumbs.push({ label: categoriaSlug.replace(/-/g, ' '), href: `subcategorias.html?categoria=${encodeURIComponent(categoriaSlug)}` });
                 if (subcategoriaSlug) crumbs.push({ label: subcategoriaSlug.replace(/-/g, ' ') });
                 if (buscaInicial) crumbs.push({ label: `Busca: ${buscaInicial}` });
@@ -620,23 +637,31 @@
                     };
 
                     const qtd = filtrados.length;
-                    const tituloSeo = subcategoriaSlug
-                        ? `${tituloCase(subcategoriaSlug)} Atacado | Abella Joias`
-                        : (categoriaSlug ? `${tituloCase(categoriaSlug)} Atacado | Abella Joias` : 'Catálogo Completo Atacado | Abella Joias');
-                    const descSeo = (subcategoriaSlug
-                        ? `Compre ${tituloCase(subcategoriaSlug)} no atacado direto de fábrica em Limeira-SP. ${qtd} modelos disponíveis, preço de fábrica e entrega para todo o Brasil. Abella Joias.`
-                        : (categoriaSlug
-                            ? `Confira todos os modelos de ${tituloCase(categoriaSlug)} no atacado da Abella Joias. Preço de fábrica, qualidade garantida e envio para todo o Brasil.`
-                            : `Catálogo completo Abella Joias: semijoias e joias no bruto no atacado, direto de fábrica em Limeira-SP.`)).slice(0, 158);
+                    const tituloSeo = lancamentos
+                        ? 'Lançamentos de Joias no Atacado | Abella Joias'
+                        : (subcategoriaSlug
+                            ? `${tituloCase(subcategoriaSlug)} Atacado | Abella Joias`
+                            : (categoriaSlug ? `${tituloCase(categoriaSlug)} Atacado | Abella Joias` : 'Catálogo Completo Atacado | Abella Joias'));
+                    const descSeo = (lancamentos
+                        ? `Conheça os lançamentos da Abella Joias: novidades em joias no bruto para revenda, direto de fábrica em Limeira-SP. Confira os modelos disponíveis e monte seu pedido.`
+                        : (subcategoriaSlug
+                            ? `Compre ${tituloCase(subcategoriaSlug)} no atacado direto de fábrica em Limeira-SP. ${qtd} modelos disponíveis, preço de fábrica e entrega para todo o Brasil. Abella Joias.`
+                            : (categoriaSlug
+                                ? `Confira todos os modelos de ${tituloCase(categoriaSlug)} no atacado da Abella Joias. Preço de fábrica, qualidade garantida e envio para todo o Brasil.`
+                                : `Catálogo completo Abella Joias: semijoias e joias no bruto no atacado, direto de fábrica em Limeira-SP.`))).slice(0, 158);
 
                     const baseUrl = window.location.origin + window.location.pathname;
-                    const canonicalUrl = categoriaSlug
-                        ? `${baseUrl}?categoria=${encodeURIComponent(categoriaSlug)}${subcategoriaSlug ? `&subcategoria=${encodeURIComponent(subcategoriaSlug)}` : ''}`
-                        : baseUrl;
+                    const canonicalUrl = lancamentos
+                        ? `${baseUrl}?lancamentos=1`
+                        : (categoriaSlug
+                            ? `${baseUrl}?categoria=${encodeURIComponent(categoriaSlug)}${subcategoriaSlug ? `&subcategoria=${encodeURIComponent(subcategoriaSlug)}` : ''}`
+                            : baseUrl);
 
                     // Usa a imagem vitrine desta subcategoria como imagem social, se existir
                     const vitrineDaPagina = filtrados.find(p => p._ehVitrine);
-                    const imagemSeo = (vitrineDaPagina && (vitrineDaPagina.imagem || vitrineDaPagina.image)) || window.AURORA_FALLBACK_IMAGE;
+                    const imagemSeo = (vitrineDaPagina && (vitrineDaPagina.imagem || vitrineDaPagina.image))
+                        || (lancamentos && filtrados[0] && (filtrados[0].imagem || filtrados[0].image))
+                        || window.AURORA_FALLBACK_IMAGE;
 
                     document.title = tituloSeo;
                     setMeta('name', 'description', descSeo);

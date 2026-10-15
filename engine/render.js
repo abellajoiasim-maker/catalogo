@@ -152,11 +152,16 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
             const etiquetaOferta = (window.descontoService && typeof window.descontoService.obterEtiquetaOferta === 'function')
                 ? window.descontoService.obterEtiquetaOferta(data)
                 : null;
-            const badgeHTML = etiquetaOferta
-                ? `<div class="badges"><span class="aurora-badge aurora-badge--offer">${etiquetaOferta}</span></div>`
-                : (data.badge
-                    ? `<div class="badges"><span class="aurora-badge aurora-badge--${data.badge}">${data.badgeLabel || data.badge}</span></div>`
-                    : '');
+            const badges = [];
+            if (data.lancamento === true) {
+                badges.push('<span class="aurora-badge aurora-badge--lancamento">Lançamento</span>');
+            }
+            if (etiquetaOferta) {
+                badges.push(`<span class="aurora-badge aurora-badge--offer">${etiquetaOferta}</span>`);
+            } else if (data.badge) {
+                badges.push(`<span class="aurora-badge aurora-badge--${data.badge}">${data.badgeLabel || data.badge}</span>`);
+            }
+            const badgeHTML = badges.length ? `<div class="badges">${badges.join('')}</div>` : '';
 
             const clickAttr = onClickHandlerName ? `onclick="${onClickHandlerName}('${data.id || ''}')"` : '';
 

@@ -1,272 +1,296 @@
-/*
-==========================================================
-ABELLA JOIAS — LUXURY EXPERIENCE V11 (Project AURORA)
-Sprint 2 — Luxury UI Engine
-Módulo: Render Engine
-
-Arquivo:
-engine/render.js
-
-Responsabilidade:
-Transformar dados vindos do Firebase (categorias, subcategorias,
-produtos) em HTML dos componentes do Sprint 1 — SEM decidir nada
-sobre lógica de negócio (isso continua nos services existentes:
-carrinhoService.js, produtoService.js etc.)
-
-Este arquivo NÃO acessa o Firebase. Ele só recebe objetos já
-carregados e devolve strings de HTML. Isso é o que o documento
-mestre chama de "cada página é composição de componentes prontos".
-
-Mantém, de propósito, o MESMO formato de dados que já existe hoje em
-produção (subcategorias aninhadas em categoria.subcategories,
-fallback de imagem image/imagem/cover/banner, filtro paused, etc.)
-para não perder nada do catálogo atual.
-
-Depende de: nenhum (puro JS + classes CSS do Sprint 1)
-==========================================================
-*/
+// ======================================================================
+// js/services/produtoService.js
+// Abella Joias - ProdutoService v8.1 (Arquitetura PMA V8 Corrigida)
+// CRUD Completo, Seguro, Reativo e Integrado ao Ecossistema Abella
+// ======================================================================
 
 (function () {
     'use strict';
 
-    function slugify(texto) {
-        return String(texto || '')
-            .toLowerCase()
-            .trim()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/\s+/g, '-');
-    }
+    const PRODUCTS_PATH = typeof window.getAbellaPath === 'function'
+        ? window.getAbellaPath('products')
+        : 'abella/products';
 
-    function resolveImage(url) {
-        if (!url) return '';
-        return (typeof window.resolverImagemFirebase === 'function')
-            ? window.resolverImagemFirebase(url)
-            : url;
-    }
+    // MEMÓRIA VOLÁTIL DE CACHE ISOLADA DO CONGELAMENTO (SOLUÇÃO DO TYPEERROR)
+    let camadaCacheInterno = null;
+    let camadaCacheTimestamp = 0;
+    const camadaCacheTTL = 60000;
 
-    function fallbackImg() {
-        return window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg';
-    }
-
-    function escapeHtml(value) {
-        return String(value ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
-
-    function safeUrl(value) {
-        const url = String(value || '').trim();
-        return /^(https?:|data:image\/|\/|\.\/|\.\.\/)/i.test(url) ? url : fallbackImg();
-    }
-
-    const AuroraRender = {
-
-        /**
-         * CategoryCard — usado na Home.
-         * data: { nome|name, slug, imagem|image }
-         */
-        categoryCard(data) {
-            const nome = data.nome || data.name || 'Joia';
-            const slug = data.slug || data.categorySlug || slugify(nome);
-            const img = safeUrl(resolveImage(data.imagem || data.image) || fallbackImg());
-            const nomeEsc = escapeHtml(nome);
-            const fallbackEsc = escapeHtml(fallbackImg());
-
-            return `
-                <a class="aurora-card aurora-card--category" href="subcategorias.html?categoria=${encodeURIComponent(slug)}" aria-label="Ver subcategorias de ${nomeEsc}">
-                    <div class="media">
-                        <img src="${img}" alt="${nomeEsc}" loading="lazy" onerror="this.src='${fallbackEsc}'">
-                        <div class="overlay"><h3 class="title">${nomeEsc}</h3></div>
-                    </div>
-                </a>
-            `;
-        },
-
-        /**
-         * SubcategoryCard — usado em subcategorias.html.
-         * data: { nome|name, image|imagem|cover|banner }
-         * imagemCategoriaFallback: imagem da categoria-mãe, usada se a subcategoria não tiver imagem própria.
-         */
-        subcategoryCard(subSlug, data, categoriaSlug, imagemCategoriaFallback) {
-            const nome = data.nome || data.name || subSlug;
-            const descricao = data.descricao || data.description || `Explore ${nome} no atacado.`;
-            const imgBruta = data.image || data.imagem || data.cover || data.banner || data.imagemAmbientada || data.imagemSubcategoria || imagemCategoriaFallback || '';
-            const img = safeUrl(resolveImage(imgBruta) || fallbackImg());
-            const nomeEsc = escapeHtml(nome);
-            const descricaoEsc = escapeHtml(descricao);
-            const fallbackEsc = escapeHtml(fallbackImg());
-
-            return `
-                <a class="aurora-card aurora-card--subcategory" data-subcategoria-slug="${escapeHtml(subSlug)}"
-                   href="produtos.html?categoria=${encodeURIComponent(categoriaSlug)}&subcategoria=${encodeURIComponent(subSlug)}"
-                   aria-label="Ver produtos de ${nomeEsc}">
-                    <div class="media">
-                        <img src="${img}" alt="${nomeEsc} — Abella Joias" loading="lazy" onerror="this.src='${fallbackEsc}'">
-                    </div>
-                    <div class="body">
-                        <p class="title">${nomeEsc}</p>
-                        <p class="description" style="font-size:12px;color:var(--color-secondary);line-height:1.5;">${descricaoEsc}</p>
-                        <span class="aurora-btn aurora-btn--outline" style="margin-top:var(--space-3);width:fit-content;">Ver produtos</span>
-                    </div>
-                </a>
-            `;
-        },
-
-        /**
-         * ProductCard — usado em produtos.html.
-         * data: { nome|name, preco|price, precoAntigo|oldPrice, peso|weight, imagem|image, badge }
-         */
-        productCard(data, onClickHandlerName) {
-            const nome = data.nome || data.name || 'Joia';
-            const img = safeUrl(resolveImage(data.imagem || data.image) || fallbackImg());
-            const precoOriginal = data.preco ?? data.price ?? 0;
-            const precoAntigoInformado = data.precoAntigo ?? data.oldPrice ?? data.precoOriginal ?? null;
-            const precoCalculado = (window.descontoService && typeof window.descontoService.calcularPrecoComDesconto === 'function')
-                ? window.descontoService.calcularPrecoComDesconto(data)
-                : Number(precoOriginal) || 0;
-            const preco = Number(precoCalculado) || 0;
-            const precoAntigo = Number(precoAntigoInformado) > preco
-                ? Number(precoAntigoInformado)
-                : (Number(precoOriginal) > preco ? Number(precoOriginal) : null);
-            const peso = data.peso ?? data.weight ?? null;
-            const eyebrow = data.colecao || data.eyebrow || '';
-            const sku = data.sku || data.codigo || '';
-            const estoqueControlado = data.estoqueControlado === true || data.estoqueLimitadoAtivo === true || data.controleEstoque === true;
-            const estoqueQuantidade = Math.max(0, parseInt(data.estoqueQuantidade ?? data.estoque ?? 0, 10) || 0);
-            const estoqueHTML = estoqueControlado && data.mostrarEstoqueGrid !== false
-                ? `<p class="stock-counter ${estoqueQuantidade === 0 ? 'stock-counter--soldout' : ''}" aria-label="${estoqueQuantidade === 0 ? 'Produto esgotado' : `${estoqueQuantidade} unidades disponíveis`}">${estoqueQuantidade === 0 ? 'Esgotado' : `Últimas ${estoqueQuantidade} unidades`}</p>`
-                : '';
-
-            const precoFmt = (typeof window.formatarMoeda === 'function')
-                ? window.formatarMoeda(preco)
-                : `R$ ${Number(preco).toFixed(2).replace('.', ',')}`;
-
-            const precoAntigoHTML = precoAntigo
-                ? `<span class="price-old">${(typeof window.formatarMoeda === 'function') ? window.formatarMoeda(precoAntigo) : precoAntigo}</span>`
-                : '';
-
-            const etiquetaOferta = (window.descontoService && typeof window.descontoService.obterEtiquetaOferta === 'function')
-                ? window.descontoService.obterEtiquetaOferta(data)
-                : null;
-            const badges = [];
-            if (data.lancamento === true) {
-                badges.push('<span class="aurora-badge aurora-badge--lancamento">Lançamento</span>');
+    const produtoService = {
+        // CONEXÃO COM A ABSTRAÇÃO DE BASE DE DADOS
+        _db() {
+            if (!window.db) {
+                throw new Error('[PMA V8] [ProdutoService] Infraestrutura Firebase Realtime Database indisponível.');
             }
-            if (etiquetaOferta) {
-                badges.push(`<span class="aurora-badge aurora-badge--offer">${etiquetaOferta}</span>`);
-            } else if (data.badge) {
-                badges.push(`<span class="aurora-badge aurora-badge--${data.badge}">${data.badgeLabel || data.badge}</span>`);
+            return window.db;
+        },
+
+        // ATALHO EXCLUSIVO DE ACESSO AO NÓ DE PRODUTOS
+        _ref() {
+            return this._db().ref(PRODUCTS_PATH);
+        },
+
+        // VALIDAÇÃO CRONOLÓGICA DO CACHE EM MEMÓRIA
+        _isCacheValid() {
+            return Boolean(
+                camadaCacheInterno &&
+                (Date.now() - camadaCacheTimestamp) < camadaCacheTTL
+            );
+        },
+
+        // INVALIDAÇÃO FORÇADA E ATUALIZAÇÃO DO SISTEMA
+        invalidateCache() {
+            camadaCacheInterno = null;
+            camadaCacheTimestamp = 0;
+            
+            // Força o CatalogService a reconstruir a árvore reativa se estiver disponível
+            if (window.CatalogService && typeof window.CatalogService.getCatalog === 'function') {
+                window.CatalogService.getCatalog(true).then(novoCatalogo => {
+                    if (window.StateManager && typeof window.StateManager.setState === 'function') {
+                        window.StateManager.setState('catalog', novoCatalogo);
+                    }
+                }).catch(err => console.error('[PMA V8] [ProdutoService] Erro ao sincronizar StateManager:', err));
             }
-            const badgeHTML = badges.length ? `<div class="badges">${badges.join('')}</div>` : '';
-
-            const clickAttr = onClickHandlerName ? `onclick="${onClickHandlerName}('${data.id || ''}')"` : '';
-
-            const altTexto = (typeof window.SeoAltGenerator !== 'undefined')
-                ? window.SeoAltGenerator.gerarAltProduto(data)
-                : nome;
-
-            return `
-                <div class="aurora-card aurora-card--product" ${clickAttr}>
-                    <div class="media">
-                        <img src="${img}" alt="${altTexto}" loading="lazy" onerror="this.src='${fallbackImg()}'">
-                        ${badgeHTML}
-                    </div>
-                    <div class="body">
-                        ${eyebrow ? `<p class="eyebrow">${eyebrow}</p>` : ''}
-                        ${sku ? `<p style="font-size:11px; color:var(--color-secondary); letter-spacing:.04em; margin-bottom:2px;">SKU: ${sku}</p>` : ''}
-                        <p class="title">${nome}</p>
-                        <div class="price-row"><span class="price">${precoFmt}</span>${precoAntigoHTML}</div>
-                        ${estoqueHTML}
-                        ${peso ? `<p class="weight">${peso}g</p>` : ''}
-                    </div>
-                </div>
-            `;
         },
 
-        /**
-         * BannerCard — banner de campanha full-bleed.
-         */
-        bannerCard(data) {
-            const img = resolveImage(data.imagem || data.image) || fallbackImg();
-            return `
-                <div class="aurora-card aurora-card--banner">
-                    <div class="media">
-                        <img src="${img}" alt="${data.titulo || ''}" loading="lazy">
-                        <div class="overlay"><h2 class="title">${data.titulo || data.title || ''}</h2></div>
-                    </div>
-                </div>
-            `;
+        // HELPERS DE SANITIZAÇÃO DE TIPOS OPERACIONAIS
+        _safeString(valor = '') {
+            return String(valor || '').trim();
         },
 
-        /**
-         * CollectionCard — coleção em destaque, com descrição e CTA.
-         */
-        collectionCard(data) {
-            const img = resolveImage(data.imagem || data.image) || fallbackImg();
-            return `
-                <div class="aurora-card aurora-card--collection">
-                    <div class="media"><img src="${img}" alt="${data.nome || ''}" loading="lazy"></div>
-                    <div class="body">
-                        <p class="title">${data.nome || data.name || ''}</p>
-                        <p class="description">${data.descricao || data.description || ''}</p>
-                        ${data.link ? `<a class="aurora-btn aurora-btn--outline" style="width:fit-content;margin-top:var(--space-5);" href="${data.link}">Ver coleção</a>` : ''}
-                    </div>
-                </div>
-            `;
+        // SANEADOR DE PRODUTOS (ALINHADO COM CATALOGSERVICE)
+        normalizarProduto(id, produto = {}) {
+            if (!id || !produto) return null;
+
+            const nome = this._safeString(produto.nome || produto.name || 'Produto Sem Nome');
+            const precoOriginal = parseFloat(produto.precoOriginal ?? produto.precoAntigo ?? produto.oldPrice ?? 0) || 0;
+            const precoVenda = parseFloat(produto.preco ?? produto.precoFinal ?? produto.price ?? produto.valor ?? 0) || 0;
+
+            // Tratamento dinâmico para garantir que variações/grades venham estruturadas
+            let listaVariacoesLimpa = [];
+            if (Array.isArray(produto.variacoes)) {
+                listaVariacoesLimpa = produto.variacoes;
+            } else if (produto.variacoes && typeof produto.variacoes === 'object') {
+                listaVariacoesLimpa = Object.values(produto.variacoes);
+            }
+            const medidas = Array.isArray(produto.medidas)
+                ? produto.medidas
+                : (produto.medidas && typeof produto.medidas === 'object' ? Object.values(produto.medidas) : []);
+
+            // CORREÇÃO (sincronização Editor <-> Modal): quando o produto não tem o
+            // campo variacoesPrecoModo/variacoesPesoModo explicitamente salvo no banco
+            // (produtos legados ou criados antes desse campo existir), NÃO forçar 'unico'.
+            // Em vez disso, inferir o modo pela presença de preço/peso individual em
+            // cada linha de medida — exatamente a mesma lógica que o editor usa para
+            // pré-selecionar o dropdown. Isso evita que o editor mostre "individual"
+            // enquanto o modal de compra aplica "único" por trás.
+            const temPrecoIndividual = medidas.some(m => typeof m === 'object' && m !== null && m.preco !== undefined && m.preco !== null && m.preco !== '' && Number(m.preco) > 0);
+            const temPesoIndividual = medidas.some(m => typeof m === 'object' && m !== null && m.peso !== undefined && m.peso !== null && m.peso !== '' && Number(m.peso) > 0);
+
+return {
+                id: this._safeString(id),
+                codigo: this._safeString(produto.codigo || produto.sku || id),
+                sku: this._safeString(produto.sku || produto.codigo || id),
+                nome: nome,
+                name: nome,
+                descricao: this._safeString(produto.descricao || produto.description || ''),
+                precoOriginal: precoOriginal || precoVenda,
+                preco: precoVenda,
+                price: precoVenda,
+                precoFinal: precoVenda,
+                imagem: this._safeString(produto.imagem || produto.image || produto.img || ''),
+                image: this._safeString(produto.imagem || produto.image || produto.img || ''),
+                categoriaId: this._safeString(produto.categoriaId || produto.categoria || produto.category || ''),
+                category: this._safeString(produto.categoriaId || produto.categoria || produto.category || ''),
+                subcategoriaId: this._safeString(produto.subcategoriaId || produto.subcategoria || produto.subcategory || produto.subCategory || ''),
+                subcategory: this._safeString(produto.subcategoriaId || produto.subcategoria || produto.subcategory || produto.subCategory || ''),
+                ativo: produto.ativo !== false && produto.paused !== true,
+                paused: produto.paused === true || produto.ativo === false,
+                estoque: parseInt(produto.estoque ?? produto.estoqueQuantidade ?? 1) || 0,
+                estoqueQuantidade: Math.max(0, parseInt(produto.estoqueQuantidade ?? produto.estoque ?? 0, 10) || 0),
+                estoqueControlado: produto.estoqueControlado === true || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true,
+                mostrarEstoqueGrid: produto.mostrarEstoqueGrid !== false,
+                venderSemEstoque: produto.venderSemEstoque === true,
+                destaque: Boolean(produto.destaque ?? false),
+                lancamento: produto.lancamento === true || produto.lancamento === 'true' || produto.lancamento === 1,
+                lancamentoEm: produto.lancamentoEm || null,
+                variacoes: listaVariacoesLimpa,
+                medidas,
+                variacoesPrecoModo: produto.variacoesPrecoModo || produto.politicaPrecoVariacao || (temPrecoIndividual ? 'individual' : 'unico'),
+                variacoesPesoModo: produto.variacoesPesoModo || produto.politicaPesoVariacao || (temPesoIndividual ? 'individual' : 'unico'),
+                dizeres:  Array.isArray(produto.dizeres)  ? produto.dizeres  : (Array.isArray(produto.sayings)  ? produto.sayings  : []),
+                iniciais: Array.isArray(produto.iniciais) ? produto.iniciais : (Array.isArray(produto.initials) ? produto.initials : []),
+                sayings:  Array.isArray(produto.sayings)  ? produto.sayings  : (Array.isArray(produto.dizeres)  ? produto.dizeres  : []),
+                initials: Array.isArray(produto.initials) ? produto.initials : (Array.isArray(produto.iniciais) ? produto.iniciais : []),
+                peso: parseFloat(produto.peso || produto.weight || 0),
+                weight: parseFloat(produto.peso || produto.weight || 0),
+                // Produto "vitrine": foto ambientada de referência da coleção, não é vendável
+                vitrine: produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine',
+                legendaVitrine: this._safeString(produto.legendaVitrine || ''),
+                metadados: {
+                    finish: this._safeString(produto.metadados?.finish || produto.acabamento || ''),
+                    loop: this._safeString(produto.metadados?.loop || produto.passador || '')
+                },
+                createdAt: produto.createdAt || Date.now()
+            };
         },
 
-        /**
-         * LookbookCard — puramente editorial, sem preço/CTA.
-         */
-        lookbookCard(data) {
-            const img = resolveImage(data.imagem || data.image) || fallbackImg();
-            return `
-                <div class="aurora-card aurora-card--lookbook">
-                    <div class="media"><img src="${img}" alt="" loading="lazy"></div>
-                    <div class="body"><p class="caption">${data.legenda || data.caption || ''}</p></div>
-                </div>
-            `;
+        // ======================================================
+        // OPERAÇÕES DE LEITURA (READ)
+        // ======================================================
+
+        async listarTodos() {
+            try {
+                if (this._isCacheValid()) {
+                    return Object.values(camadaCacheInterno);
+                }
+
+                const snapshot = await this._ref().once('value');
+                const data = snapshot.val() || {};
+                
+                camadaCacheInterno = {};
+                Object.keys(data).forEach(id => {
+                    const norm = this.normalizarProduto(id, data[id]);
+                    if (norm) camadaCacheInterno[id] = norm;
+                });
+
+                camadaCacheTimestamp = Date.now();
+                return Object.values(camadaCacheInterno);
+            } catch (error) {
+                console.error('[PMA V8] [ProdutoService:listarTodos]', error);
+                return [];
+            }
         },
 
-        /**
-         * Breadcrumb trail.
-         * itens: [{ label, href }] — o último item vira o "is-current" (sem link).
-         */
-        breadcrumb(itens) {
-            const partes = itens.map((item, i) => {
-                const isLast = i === itens.length - 1;
-                const sep = i > 0 ? `<span class="sep">/</span>` : '';
-                const conteudo = isLast
-                    ? `<span class="is-current">${item.label}</span>`
-                    : `<a href="${item.href}">${item.label}</a>`;
-                return sep + conteudo;
-            });
-            return `<nav class="aurora-breadcrumb" aria-label="breadcrumb">${partes.join('')}</nav>`;
+        async buscarPorId(produtoId) {
+            try {
+                const id = this._safeString(produtoId);
+                if (!id) return null;
+
+                if (camadaCacheInterno && camadaCacheInterno[id]) {
+                    return camadaCacheInterno[id];
+                }
+
+                const snapshot = await this._ref().child(id).once('value');
+                const produtoRaw = snapshot.val();
+                
+                if (!produtoRaw) return null;
+                return this.normalizarProduto(id, produtoRaw);
+            } catch (error) {
+                console.error('[PMA V8] [ProdutoService:buscarPorId]', error);
+                return null;
+            }
         },
 
-        /**
-         * Skeleton de card, pra mostrar enquanto os dados reais carregam.
-         */
-        skeletonCard() {
-            return `
-                <div class="aurora-skeleton-card">
-                    <div class="aurora-skeleton aurora-skeleton--image"></div>
-                    <div class="aurora-skeleton aurora-skeleton--text"></div>
-                    <div class="aurora-skeleton aurora-skeleton--text-sm"></div>
-                </div>
-            `;
+        // ======================================================
+        // OPERAÇÕES DE ESCRITA MUTADORA (CUD + EXTENSÕES)
+        // ======================================================
+
+        async salvar(id = null, produtoData = {}) {
+            try {
+                const targetId = id ? this._safeString(id) : this._ref().push().key;
+                if (!targetId) throw new Error('Falha ao gerar chave identificadora única.');
+
+                const norm = this.normalizarProduto(targetId, produtoData);
+                
+                const payload = {
+                    codigo: norm.codigo,
+                    nome: norm.nome,
+                    descricao: norm.descricao,
+                    precoOriginal: norm.precoOriginal,
+                    preco: norm.preco,
+                    imagem: norm.imagem,
+                    categoriaId: norm.categoriaId,
+                    subcategoriaId: norm.subcategoriaId,
+                    ativo: norm.ativo,
+                    estoque: norm.estoque,
+                    estoqueQuantidade: norm.estoqueControlado ? norm.estoqueQuantidade : null,
+                    estoqueControlado: norm.estoqueControlado,
+                    mostrarEstoqueGrid: norm.mostrarEstoqueGrid,
+                    venderSemEstoque: norm.venderSemEstoque,
+                    destaque: norm.destaque,
+                    lancamento: norm.lancamento,
+                    lancamentoEm: norm.lancamentoEm,
+                    variacoes: norm.variacoes,
+                    medidas: norm.medidas,
+                    variacoesPrecoModo: norm.variacoesPrecoModo,
+                    variacoesPesoModo: norm.variacoesPesoModo,
+                    dizeres: norm.dizeres,
+                    sayings: norm.sayings,
+                    iniciais: norm.iniciais,
+                    initials: norm.initials,
+                    peso: norm.peso,
+                    vitrine: norm.vitrine,
+                    legendaVitrine: norm.legendaVitrine,
+                    metadados: norm.metadados,
+                    createdAt: norm.createdAt,
+                    updatedAt: Date.now()
+                };
+
+                await this._ref().child(targetId).set(payload);
+                this.invalidateCache();
+                return targetId;
+            } catch (error) {
+                console.error('[PMA V8] [ProdutoService:salvar]', error);
+                return null;
+            }
         },
 
-        skeletonGrid(qtd) {
-            return Array.from({ length: qtd || 8 }).map(() => this.skeletonCard()).join('');
+        async remover(produtoId) {
+            try {
+                const id = this._safeString(produtoId);
+                if (!id) return false;
+
+                await this._ref().child(id).remove();
+                this.invalidateCache();
+                return true;
+            } catch (error) {
+                console.error('[PMA V8] [ProdutoService:remover]', error);
+                return false;
+            }
         },
 
-        _slugify: slugify
+        async pausar(produtoId, statusAtivo = false) {
+            try {
+                const id = this._safeString(produtoId);
+                if (!id) return false;
+
+                await this._ref().child(id).update({ ativo: Boolean(statusAtivo) });
+                this.invalidateCache();
+                return true;
+            } catch (error) {
+                console.error('[PMA V8] [ProdutoService:pausar]', error);
+                return false;
+            }
+        },
+
+        async duplicarProduto(produtoId) {
+            try {
+                const itemOriginal = await this.buscarPorId(produtoId);
+                if (!itemOriginal) throw new Error('Produto base original não localizado.');
+
+                const novoPayload = {
+                    ...itemOriginal,
+                    nome: `${itemOriginal.nome} (Cópia)`,
+                    codigo: `${itemOriginal.codigo}-C`,
+                    createdAt: Date.now()
+                };
+                delete novoPayload.id;
+
+                return await this.salvar(null, novoPayload);
+            } catch (error) {
+                console.error('[PMA V8] [ProdutoService:duplicarProduto]', error);
+                return null;
+            }
+        }
     };
 
-    window.AuroraRender = AuroraRender;
+    // CONGELAMENTO SEGURO DA CAMADA DE PERSISTÊNCIA NO ESCOPO WINDOW
+    Object.defineProperty(window, 'produtoService', {
+        value: Object.freeze(produtoService),
+        writable: false,
+        configurable: false
+    });
+
+    console.info('[PMA V8] [ProdutoService] Camada de persistência especializada em produtos homologada com correção de Cache.');
 })();

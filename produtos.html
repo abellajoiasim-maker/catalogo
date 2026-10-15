@@ -144,6 +144,21 @@
 
             <section id="vitrine-container" class="hidden" style="margin-bottom:var(--space-8);"></section>
 
+            <div id="filtros-lancamentos" class="hidden" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:var(--space-3);margin-bottom:var(--space-5);">
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--color-secondary);">
+                    Categoria
+                    <select id="filtro-categoria-lancamentos" class="aurora-input" aria-label="Filtrar lançamentos por categoria">
+                        <option value="">Todas as categorias</option>
+                    </select>
+                </label>
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--color-secondary);">
+                    Subcategoria
+                    <select id="filtro-subcategoria-lancamentos" class="aurora-input" aria-label="Filtrar lançamentos por subcategoria">
+                        <option value="">Todas as subcategorias</option>
+                    </select>
+                </label>
+            </div>
+
             <div id="grid-produtos" class="aurora-grid"></div>
 
             <div id="no-result" class="hidden" style="grid-column:1/-1; text-align:center; padding: var(--space-8) 0;">
@@ -568,6 +583,12 @@
                     if (snap.exists()) todos = Object.entries(snap.val()).map(([id, p]) => ({ id, ...p }));
                 }
 
+                let categoriasCatalogo = {};
+                if (lancamentos && typeof db !== 'undefined') {
+                    const snapCategorias = await db.ref('abella/categories').once('value').catch(() => null);
+                    if (snapCategorias && snapCategorias.exists()) categoriasCatalogo = snapCategorias.val() || {};
+                }
+
                 let filtrados = todos.filter(p => p && p.ativo !== false && p.paused !== true);
                 const vitrineContainer = document.getElementById('vitrine-container');
                 filtrados.forEach(p => {
@@ -578,9 +599,87 @@
                 // Lançamentos são os mesmos produtos do catálogo, filtrados pelo campo
                 // salvo no editor; não há cópia nem cadastro paralelo.
                 if (lancamentos) {
-                    filtrados = filtrados
-                        .filter(p => p.lancamento === true && !p._ehVitrine)
+                    const produtosLancamentos = filtrados
+                        .filter(p => (p.lancamento === true || p.lancamento === 'true' || p.lancamento === 1) && !p._ehVitrine)
                         .sort((a, b) => Number(b.lancamentoEm || 0) - Number(a.lancamentoEm || 0));
+                    filtrados = produtosLancamentos;
+
+                    const filtrosLancamentos = document.getElementById('filtros-lancamentos');
+                    const selectCategoria = document.getElementById('filtro-categoria-lancamentos');
+                    const selectSubcategoria = document.getElementById('filtro-subcategoria-lancamentos');
+                    filtrosLancamentos?.classList.remove('hidden');
+
+                    const rotuloSlug = slug => String(slug || '').replace(/-/g, ' ').replace(/\b\w/g, letra => letra.toUpperCase());
+                    const buscarCategoria = slug => categoriasCatalogo[slug] || Object.entries(categoriasCatalogo)
+                        .find(([id, cat]) => String(cat?.slug || id).toLowerCase() === String(slug).toLowerCase())?.[1];
+                    const nomeCategoria = slug => {
+                        const categoria = buscarCategoria(slug);
+                        return categoria?.name || categoria?.nome || rotuloSlug(slug);
+                    };
+                    const nomeSubcategoria = (categoriaSlug, subcategoriaSlug) => {
+                        const categoria = buscarCategoria(categoriaSlug);
+                        const subs = categoria?.subcategories || categoria?.subcategorias || {};
+                        const sub = subs[subcategoriaSlug];
+                        return sub?.name || sub?.nome || sub?.title || rotuloSlug(subcategoriaSlug);
+                    };
+                    const preencherSelect = (select, opcoes, valorAtual) => {
+                        if (!select) return '';
+                        const textoInicial = select.options[0]?.textContent || 'Todas';
+                        select.replaceChildren(new Option(textoInicial, ''));
+                        opcoes.forEach(({ valor, rotulo }) => select.add(new Option(rotulo, valor)));
+                        const selecionado = opcoes.find(opcao => opcao.valor.toLowerCase() === String(valorAtual || '').toLowerCase());
+                        select.value = selecionado?.valor || '';
+                        return select.value;
+                    };
+
+                    const categoriasDisponiveis = [...new Set(produtosLancamentos
+                        .map(p => String(p.categoriaId || p.category || '').trim()).filter(Boolean))]
+                        .sort((a, b) => nomeCategoria(a).localeCompare(nomeCategoria(b), 'pt-BR'));
+                    const categoriasOpcoes = categoriasDisponiveis.map(valor => ({ valor, rotulo: nomeCategoria(valor) }));
+                    let categoriaSelecionada = preencherSelect(selectCategoria, categoriasOpcoes, categoriaSlug);
+                    if (!categoriaSelecionada && subcategoriaSlug) {
+                        categoriaSelecionada = String(produtosLancamentos.find(p =>
+                            String(p.subcategoriaId || p.subcategory || '').toLowerCase() === subcategoriaSlug.toLowerCase()
+                        )?.categoriaId || produtosLancamentos.find(p =>
+                            String(p.subcategoriaId || p.subcategory || '').toLowerCase() === subcategoriaSlug.toLowerCase()
+                        )?.category || '');
+                        if (selectCategoria) selectCategoria.value = categoriaSelecionada;
+                    }
+
+                    const montarSubcategorias = (catSelecionada, subSelecionada = '') => {
+                        const produtosDaCategoria = produtosLancamentos.filter(p => !catSelecionada
+                            || String(p.categoriaId || p.category || '').toLowerCase() === catSelecionada.toLowerCase());
+                        const subCategorias = new Map();
+                        produtosDaCategoria.forEach(p => {
+                            const sub = String(p.subcategoriaId || p.subcategory || '').trim();
+                            if (sub && !subCategorias.has(sub)) subCategorias.set(sub, String(p.categoriaId || p.category || catSelecionada || ''));
+                        });
+                        const opcoes = [...subCategorias.entries()]
+                            .map(([valor, catDoProduto]) => ({ valor, rotulo: nomeSubcategoria(catSelecionada || catDoProduto, valor) }))
+                            .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR'));
+                        return preencherSelect(selectSubcategoria, opcoes, subSelecionada);
+                    };
+                    montarSubcategorias(categoriaSelecionada, subcategoriaSlug);
+
+                    if (selectCategoria) selectCategoria.addEventListener('change', () => {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('lancamentos', '1');
+                        if (selectCategoria.value) url.searchParams.set('categoria', selectCategoria.value);
+                        else url.searchParams.delete('categoria');
+                        url.searchParams.delete('subcategoria');
+                        url.searchParams.delete('sub');
+                        window.location.href = url.toString();
+                    });
+                    if (selectSubcategoria) selectSubcategoria.addEventListener('change', () => {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('lancamentos', '1');
+                        if (selectCategoria?.value) url.searchParams.set('categoria', selectCategoria.value);
+                        else url.searchParams.delete('categoria');
+                        if (selectSubcategoria.value) url.searchParams.set('subcategoria', selectSubcategoria.value);
+                        else url.searchParams.delete('subcategoria');
+                        url.searchParams.delete('sub');
+                        window.location.href = url.toString();
+                    });
                 }
 
                 if (categoriaSlug) {
@@ -601,7 +700,9 @@
 
                 const nomeExibicao = buscaInicial
                     ? `Resultados para "${buscaInicial}"`
-                    : (lancamentos ? 'Lançamentos' : (subcategoriaSlug ? tituloCase(subcategoriaSlug) : (categoriaSlug ? tituloCase(categoriaSlug) : 'Todos os produtos')));
+                    : (lancamentos
+                        ? (subcategoriaSlug ? `${tituloCase(subcategoriaSlug)} — Lançamentos` : (categoriaSlug ? `${tituloCase(categoriaSlug)} — Lançamentos` : 'Lançamentos'))
+                        : (subcategoriaSlug ? tituloCase(subcategoriaSlug) : (categoriaSlug ? tituloCase(categoriaSlug) : 'Todos os produtos')));
 
                 document.getElementById('categoriaNome').innerText = nomeExibicao;
                 const resumo = document.getElementById('categoriaResumo');
@@ -615,7 +716,9 @@
 
                 const crumbs = [{ label: 'Home', href: 'index.html' }];
                 if (lancamentos) crumbs.push({ label: 'Lançamentos', ...(buscaInicial ? { href: 'produtos.html?lancamentos=1' } : {}) });
-                if (categoriaSlug) crumbs.push({ label: categoriaSlug.replace(/-/g, ' '), href: `subcategorias.html?categoria=${encodeURIComponent(categoriaSlug)}` });
+                if (categoriaSlug) crumbs.push({ label: categoriaSlug.replace(/-/g, ' '), href: lancamentos
+                    ? `produtos.html?lancamentos=1&categoria=${encodeURIComponent(categoriaSlug)}`
+                    : `subcategorias.html?categoria=${encodeURIComponent(categoriaSlug)}` });
                 if (subcategoriaSlug) crumbs.push({ label: subcategoriaSlug.replace(/-/g, ' ') });
                 if (buscaInicial) crumbs.push({ label: `Busca: ${buscaInicial}` });
                 if (crumbs.length === 1) crumbs.push({ label: 'Produtos' });
@@ -652,7 +755,7 @@
 
                     const baseUrl = window.location.origin + window.location.pathname;
                     const canonicalUrl = lancamentos
-                        ? `${baseUrl}?lancamentos=1`
+                        ? `${baseUrl}?lancamentos=1${categoriaSlug ? `&categoria=${encodeURIComponent(categoriaSlug)}` : ''}${subcategoriaSlug ? `&subcategoria=${encodeURIComponent(subcategoriaSlug)}` : ''}`
                         : (categoriaSlug
                             ? `${baseUrl}?categoria=${encodeURIComponent(categoriaSlug)}${subcategoriaSlug ? `&subcategoria=${encodeURIComponent(subcategoriaSlug)}` : ''}`
                             : baseUrl);

@@ -528,10 +528,17 @@
             }
 
             const params = new URLSearchParams(window.location.search);
-            const categoriaSlug = (params.get('categoria') || '').toString().trim();
-            const subcategoriaSlug = (params.get('subcategoria') || params.get('sub') || '').toString().trim();
+            const categoriaSolicitada = (params.get('categoria') || '').toString().trim();
+            const subcategoriaSolicitada = (params.get('subcategoria') || params.get('sub') || '').toString().trim();
             const buscaInicial = (params.get('busca') || '').toString().trim();
-            const lancamentos = ['1', 'true'].includes((params.get('lancamentos') || '').toLowerCase());
+            // Compatibilidade com o link que já está publicado no menu:
+            // produtos.html?categoria=lancamentos&subcategoria=lancamentos
+            const rotaLegadaLancamentos = categoriaSolicitada.toLowerCase() === 'lancamentos'
+                && subcategoriaSolicitada.toLowerCase() === 'lancamentos';
+            const lancamentos = ['1', 'true'].includes((params.get('lancamentos') || '').toLowerCase())
+                || rotaLegadaLancamentos;
+            const categoriaSlug = rotaLegadaLancamentos ? '' : categoriaSolicitada;
+            const subcategoriaSlug = rotaLegadaLancamentos ? '' : subcategoriaSolicitada;
             if (lancamentos) {
                 const mensagemVazia = document.querySelector('#no-result p');
                 if (mensagemVazia) mensagemVazia.textContent = 'Ainda não há produtos marcados como lançamento.';
@@ -836,19 +843,20 @@
                 if (vitrineContainer) {
                     if (vitrines.length > 0) {
                         vitrineContainer.innerHTML = vitrines.map(p => {
+                            const nomeVitrine = p.nome || p.name || p.title || 'Vitrine da coleção';
                             const imgV = typeof resolverImagemFirebase === 'function'
                                 ? resolverImagemFirebase(p.imagem || p.image || '')
                                 : (p.imagem || p.image || window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg');
                             const legenda = p.legendaVitrine || p.descricao || 'Veja como esta coleção fica no corpo.';
                             const altVitrine = typeof window.SeoAltGenerator !== 'undefined'
                                 ? window.SeoAltGenerator.gerarAltVitrine(p)
-                                : p.nome;
+                                : nomeVitrine;
                             return `<div class="col-12" data-vitrine-id="${p.id}" data-aurora-reveal style="max-width:860px; margin-inline:auto;">
                                 <figure class="aurora-card media" style="position:relative; aspect-ratio:16/9; overflow:hidden; margin:0;">
                                     <img src="${imgV}" alt="${altVitrine}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='${window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg'}'">
                                     <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(30,26,20,.85),rgba(30,26,20,.08) 60%,transparent);"></div>
                                     <figcaption style="position:absolute;left:0;right:0;bottom:0;padding:var(--space-5);">
-                                        <p style="font-family:var(--font-heading);color:#fff;font-size:clamp(16px,2.4vw,26px);font-weight:600;">${p.nome}</p>
+                                        <p style="font-family:var(--font-heading);color:#fff;font-size:clamp(16px,2.4vw,26px);font-weight:600;">${nomeVitrine}</p>
                                         <p style="color:rgba(255,255,255,.8);font-size:13px;margin-top:var(--space-1);">${formatarDescricao(legenda)}</p>
                                     </figcaption>
                                 </figure>

@@ -23,8 +23,22 @@ function xmlEscape(str) {
     .replace(/"/g, '&quot;');
 }
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+function toDate(value) {
+  if (value === null || value === undefined || value === '') return null;
+  let date;
+  if (typeof value === 'number' || /^\d+$/.test(String(value))) {
+    let timestamp = Number(value);
+    if (!Number.isFinite(timestamp)) return null;
+    if (timestamp > 0 && timestamp < 1e12) timestamp *= 1000; // Unix seconds -> milliseconds
+    date = new Date(timestamp);
+  } else {
+    date = new Date(value);
+  }
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+function addLastmod(url, value) {
+  const lastmod = toDate(value);
+  return lastmod ? { ...url, lastmod } : url;
 }
 
 async function main() {
@@ -44,58 +58,49 @@ async function main() {
   for (const p of produtosAtivos) {
     const cat = String(p.categoriaId || p.category || '').trim();
     const sub = String(p.subcategoriaId || p.subcategory || '').trim();
-    const lastmod = p.updatedAt || p.createdAt || Date.now();
+    const lastmod = p.updatedAt || p.createdAt || null;
 
     if (cat) {
-      const atual = categoriasAtivas.get(cat) || 0;
-      categoriasAtivas.set(cat, Math.max(atual, lastmod));
+      const atual = categoriasAtivas.get(cat) || null;
+      if (lastmod !== null) categoriasAtivas.set(cat, Math.max(atual || 0, Number(lastmod) || new Date(lastmod).getTime()));
+      else if (!categoriasAtivas.has(cat)) categoriasAtivas.set(cat, null);
     }
     if (cat && sub) {
       const chave = `${cat}|${sub}`;
-      const atual = paresCategoriaSub.get(chave) || 0;
-      paresCategoriaSub.set(chave, Math.max(atual, lastmod));
+      const atual = paresCategoriaSub.get(chave) || null;
+      if (lastmod !== null) paresCategoriaSub.set(chave, Math.max(atual || 0, Number(lastmod) || new Date(lastmod).getTime()));
+      else if (!paresCategoriaSub.has(chave)) paresCategoriaSub.set(chave, null);
     }
   }
 
-  const toDate = (ts) => {
-    try {
-      return new Date(ts).toISOString().slice(0, 10);
-    } catch {
-      return todayISO();
-    }
-  };
 
   const urls = [];
 
   // 1. Páginas Estáticas Principais (Com prioridade impulsionada para Galvânicas)
-  urls.push({ loc: `${SITE_URL}/`, priority: '1.0', changefreq: 'daily', lastmod: todayISO() });
-  urls.push({ loc: `${SITE_URL}/produtos.html`, priority: '0.9', changefreq: 'daily', lastmod: todayISO() });
-  urls.push({ loc: `${SITE_URL}/galvanicas.html`, priority: '0.85', changefreq: 'weekly', lastmod: todayISO() });
+  urls.push({ loc: `${SITE_URL}/`, priority: '1.0', changefreq: 'daily' });
+  urls.push({ loc: `${SITE_URL}/galvanicas.html`, priority: '0.85', changefreq: 'weekly' });
 
   // 2. Páginas de Categorias (subcategorias.html?categoria=X)
   for (const [cat, lastmod] of categoriasAtivas.entries()) {
-    urls.push({
+    urls.push(addLastmod({
       loc: `${SITE_URL}/subcategorias.html?categoria=${encodeURIComponent(cat)}`,
       priority: '0.80',
-      changefreq: 'weekly',
-      lastmod: toDate(lastmod)
-    });
+      changefreq: 'weekly'
+    }, lastmod));
   }
 
   // 3. Páginas de Subcategorias / Vitrines (produtos.html?categoria=X&subcategoria=Y)
   for (const [chave, lastmod] of paresCategoriaSub.entries()) {
     const [cat, sub] = chave.split('|');
-    urls.push({
+    urls.push(addLastmod({
       loc: `${SITE_URL}/produtos.html?categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`,
       priority: '0.85',
-      changefreq: 'weekly',
-      lastmod: toDate(lastmod)
-    });
+      changefreq: 'weekly'
+    }, lastmod));
   }
 
   const body = urls.map(u => `  <url>
-    <loc>${xmlEscape(u.loc)}</loc>
-    <lastmod>${u.lastmod}</lastmod>
+    <loc>${xmlEscape(u.loc)}</loc>${u.lastmod ? `\n    <lastmod>${u.lastmod}</lastmod>` : ''}
     <changefreq>${u.changefreq}</changefreq>
     <priority>${u.priority}</priority>
   </url>`).join('\n');

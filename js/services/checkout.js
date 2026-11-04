@@ -13,7 +13,8 @@
         WHATSAPP_FALLBACK: '5519999999999'
     };
 
-    const FALLBACK_IMG = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';
+    const FALLBACK_IMG = 'https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/settings/placeholder.webp';
+    const LOGO_IMG = 'https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/home/logo.webp';
 
     // Cache de configurações do Firebase
     let _configCache = null;
@@ -56,15 +57,12 @@
     function _resolverImagem(url) {
         if (!url) return FALLBACK_IMG;
         const s = String(url).trim();
-        if (s.startsWith('http://') || s.startsWith('https://')) return s;
-        if (s.startsWith('gs://')) {
-            const sem = s.replace('gs://', '');
-            const idx = sem.indexOf('/');
-            if (idx === -1) return FALLBACK_IMG;
-            return `https://firebasestorage.googleapis.com/v0/b/${sem.substring(0, idx)}/o/${encodeURIComponent(sem.substring(idx + 1))}?alt=media`;
-        }
-        if (typeof resolverImagemFirebase === 'function') return resolverImagemFirebase(s);
-        return s || FALLBACK_IMG;
+        if (!s) return FALLBACK_IMG;
+        // Qualquer origem (http, gs://, nome de arquivo) passa pelo ImageHelper,
+        // que converte links antigos do Firebase Storage para o CDN jsDelivr.
+        if (typeof resolverImagemFirebase === 'function') return resolverImagemFirebase(s) || FALLBACK_IMG;
+        if (s.startsWith('gs://')) return FALLBACK_IMG;
+        return s;
     }
 
     // =====================================================
@@ -146,11 +144,11 @@
         // Logo
         const logoImg  = document.getElementById('abellaLogoImg');
         const fallback = document.getElementById('abellaLogoFallback');
-        let logoFinal  = (cfg.logoUrl || cfg.logo || '').trim() || FALLBACK_IMG;
+        let logoFinal  = (cfg.logoUrl || cfg.logo || '').trim() || LOGO_IMG;
         if (logoImg) {
             logoImg.src    = _resolverImagem(logoFinal);
             logoImg.onload = () => { logoImg.classList.remove('hidden'); if (fallback) fallback.classList.add('hidden'); };
-            logoImg.onerror = () => { logoImg.src = FALLBACK_IMG; };
+            logoImg.onerror = () => { logoImg.onerror = null; logoImg.src = LOGO_IMG; };
         }
     }
 
@@ -181,7 +179,7 @@
                         <div class="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl">
                             <img src="${_resolverImagem(item.imagem)}"
                                  class="w-12 h-12 rounded-xl object-cover shrink-0 border border-white/10"
-                                 onerror="this.src='${FALLBACK_IMG}'">
+                                 onerror="this.onerror=null;this.src='${FALLBACK_IMG}'">
                             <div class="flex-1 min-w-0">
                                 <h4 class="text-xs font-bold text-zinc-200 truncate">${item.nome}</h4>
                                 ${variacaoHtml}

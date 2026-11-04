@@ -56,7 +56,7 @@ class SeoOrchestrator {
     return {
       ogTitle: `${product.nome} | Abella Joias`,
       ogDescription: product.descricao || "Atacado de Joias no Bruto.",
-      ogImage: product.imagemPrincipal || "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media",
+      ogImage: product.imagemPrincipal || "https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/home/og-catalogo.jpg",
       ogUrl: this.buildCatalogUrl(product),
       ogType: "product"
     };

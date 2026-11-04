@@ -40,6 +40,21 @@ const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}
         return url.startsWith('gs://');
     }
 
+    function isFirebaseStorageUrl(url = '') {
+        return url.includes('firebasestorage.googleapis.com') || url.includes('firebasestorage.app');
+    }
+
+    // Extrai o caminho do objeto (ex.: "images/produtos/SKU.png") de uma URL do
+    // Firebase Storage: .../v0/b/<bucket>/o/<caminho-codificado>?alt=media
+    function caminhoDeUrlFirebase(url = '') {
+        try {
+            const m = url.match(/\/o\/([^?#]+)/);
+            return m ? decodeURIComponent(m[1]) : '';
+        } catch (e) {
+            return '';
+        }
+    }
+
     function normalizarSlug(valor) {
         return safeString(valor)
             .toLowerCase()
@@ -67,6 +82,19 @@ const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}
 
             if (!valor) {
                 return CLOUD_FALLBACK;
+            }
+
+            // Logo antiga (hospedada no Firebase Storage, que passou a responder 402):
+            // sempre resolve para a logo servida pelo CDN.
+            if (valor.includes('InCollage_20250630_100544920')) {
+                return obterLogo();
+            }
+
+            // URL antiga do Firebase Storage gravada no banco: reaproveita o mapeamento
+            // de pastas já usado para gs:// e entrega pelo CDN, sem tocar no Firebase.
+            if (isHttpUrl(valor) && isFirebaseStorageUrl(valor)) {
+                const caminho = caminhoDeUrlFirebase(valor);
+                return caminho ? converterGsUrl(`gs://legacy/${caminho}`) : CLOUD_FALLBACK;
             }
 
             // Já é uma URL http(s) completa (ex.: link externo) — usa direto.

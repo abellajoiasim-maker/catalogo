@@ -14,7 +14,7 @@
     <meta name="keywords" content="joias no bruto para revenda, atacado de joias, semijoias no atacado, fábrica de joias Limeira-SP, catálogo Abella Joias">
     <meta name="robots" content="index,follow">
     <link rel="canonical" href="https://catalogo.abellajoias.com.br/">
-    <link rel="icon" href="https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media" type="image/jpeg">
+    <link rel="icon" href="https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/home/logo.webp" type="image/webp">
     <meta name="theme-color" content="#111111">
 
     <!-- ═══════════════════════════════════════════════════════════════
@@ -46,7 +46,7 @@
     <meta name="twitter:image:alt" content="Abella Joias — Catálogo de atacado de joias no bruto em Limeira-SP">
 
     <!-- Scripts de Configuração Inicial e Firebase -->
-    <script>window.AURORA_FALLBACK_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media';</script>
+    <script>window.AURORA_FALLBACK_IMAGE = 'https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/settings/placeholder.webp';</script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     
@@ -63,7 +63,7 @@
           "@id": "https://catalogo.abellajoias.com.br/#organization",
           "name": "Abella Joias",
           "url": "https://catalogo.abellajoias.com.br/",
-          "logo": "https://firebasestorage.googleapis.com/v0/b/catalogo-abella-joias.firebasestorage.app/o/images%2Flogo%2FInCollage_20250630_100544920-01.jpeg?alt=media",
+          "logo": "https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/home/logo.webp",
           "description": "Atacado de Joias no Bruto, direto de fábrica em Limeira-SP."
         },
         {
@@ -422,7 +422,10 @@
             const sem = v.replace('gs://', '');
             const i = sem.indexOf('/');
             if (i === -1) return '';
-            return `https://firebasestorage.googleapis.com/v0/b/${sem.slice(0, i)}/o/${encodeURIComponent(sem.slice(i + 1))}?alt=media`;
+            // Firebase Storage indisponível (402): resolve pelo CDN via ImageHelper
+            return (window.ImageHelper && typeof ImageHelper.converterGsUrl === 'function')
+                ? ImageHelper.converterGsUrl(v)
+                : '';
         }
 
         document.addEventListener('DOMContentLoaded', async () => {

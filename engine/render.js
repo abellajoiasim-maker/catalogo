@@ -79,7 +79,7 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
             return `
                 <a class="aurora-card aurora-card--category" href="subcategorias.html?categoria=${encodeURIComponent(slug)}" aria-label="Ver subcategorias de ${nomeEsc}">
                     <div class="media">
-                        <img src="${img}" alt="${nomeEsc}" loading="lazy" onerror="this.src='${fallbackEsc}'">
+                        <img src="${img}" alt="${nomeEsc}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackEsc}'">
                         <div class="overlay"><h3 class="title">${nomeEsc}</h3></div>
                     </div>
                 </a>
@@ -105,7 +105,7 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
                    href="produtos.html?categoria=${encodeURIComponent(categoriaSlug)}&subcategoria=${encodeURIComponent(subSlug)}"
                    aria-label="Ver produtos de ${nomeEsc}">
                     <div class="media">
-                        <img src="${img}" alt="${nomeEsc} — Abella Joias" loading="lazy" onerror="this.src='${fallbackEsc}'">
+                        <img src="${img}" alt="${nomeEsc} — Abella Joias" loading="lazy" onerror="this.onerror=null;this.src='${fallbackEsc}'">
                     </div>
                     <div class="body">
                         <p class="title">${nomeEsc}</p>
@@ -172,7 +172,7 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
             return `
                 <div class="aurora-card aurora-card--product" ${clickAttr}>
                     <div class="media">
-                        <img src="${img}" alt="${altTexto}" loading="lazy" onerror="this.src='${fallbackImg()}'">
+                        <img src="${img}" alt="${altTexto}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackImg()}'">
                         ${badgeHTML}
                     </div>
                     <div class="body">

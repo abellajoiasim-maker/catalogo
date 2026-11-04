@@ -93,7 +93,11 @@
                     const arquivo = partes.join('/');
 
                     if (!bucket || !arquivo) return '';
-                    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(arquivo)}?alt=media`;
+                    // Firebase Storage indisponível (402): resolve pelo CDN via ImageHelper
+                    if (window.ImageHelper && typeof window.ImageHelper.converterGsUrl === 'function') {
+                        return window.ImageHelper.converterGsUrl(imagem);
+                    }
+                    return '';
                 } catch (error) {
                     console.error('[PMA V8] [CategoriaService:resolverImagem] Falha no parser do link gs://:', error);
                     return '';

@@ -2,752 +2,781 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <title>Finalizar Pedido • Abella Joias</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <script src="./js/analytics.js"></script>
-    <title>Finalizar Pedido • Abella Joias</title>
-    <meta name="description" content="Finalize seu pedido de joias no bruto com a Abella Joias.">
-    <meta name="robots" content="noindex, nofollow">
 
-    <script>window.AURORA_FALLBACK_IMAGE = 'https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/settings/placeholder.webp';</script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <link rel="stylesheet" href="components/index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
     <style>
-        .cart-line{ display:flex; align-items:center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-border); }
-        .cart-line img{ width:48px; height:48px; border-radius: var(--radius-sm); object-fit:cover; }
-        .summary-row{ display:flex; justify-content:space-between; font-size:13px; padding-block: var(--space-2); color: var(--color-secondary); }
-        .summary-total{ display:flex; justify-content:space-between; font-family: var(--font-heading); font-size:22px; padding-top: var(--space-4); margin-top: var(--space-3); border-top: 1px solid var(--color-border); }
-        .payment-option{
-            border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4);
-            cursor: pointer; display:flex; align-items:center; justify-content:space-between;
-            transition: border-color var(--duration-fast) var(--ease);
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
         }
-        .payment-option:has(input:checked){ border-color: var(--color-primary); background: var(--color-primary-tint, rgba(var(--color-primary-rgb),.06)); }
+        :root{
+            --gold:#caa85c;
+            --bg:#050505;
+            --card:#111111;
+            --line:#222222;
+        }
+        body{
+            background: radial-gradient(circle at top,#171717 0%,#050505 45%);
+            color:#fff;
+            font-family:'Inter',sans-serif;
+            min-height:100vh;
+            overflow-x:hidden;
+        }
 
-        #print-checkout-a4{ display:none; }
-        @media print{
-            body *{ display: none !important; }
-            #print-checkout-a4, #print-checkout-a4 *{ display: revert !important; }
-            #print-checkout-a4{
-                display: block !important;
-                position: static !important;
-                width: 100%; padding: 12mm; color:#000;
+        /* BOTÃO VOLTAR PREMIUM ABELLA */
+        .back-button{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            height:52px;
+            padding:0 22px;
+            border-radius:18px;
+            background: linear-gradient(135deg, rgba(202,168,92,.18), rgba(202,168,92,.08));
+            border:1px solid rgba(202,168,92,.35);
+            color:#f5e7c2;
+            font-size:12px;
+            font-weight:900;
+            letter-spacing:.18em;
+            text-transform:uppercase;
+            cursor:pointer;
+            transition:.28s ease;
+            backdrop-filter:blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,.35);
+        }
+        .back-button:hover{
+            transform:translateY(-2px);
+            border-color:#caa85c;
+            background: linear-gradient(135deg, rgba(202,168,92,.28), rgba(202,168,92,.12));
+            box-shadow: 0 0 24px rgba(202,168,92,.18), 0 12px 34px rgba(0,0,0,.45);
+        }
+        .back-button:active{
+            transform:scale(.98);
+        }
+        .back-button-icon{
+            width:32px;
+            height:32px;
+            border-radius:12px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:rgba(255,255,255,.08);
+            font-size:16px;
+            flex-shrink:0;
+        }
+
+        .serif{
+            font-family:'Cinzel',serif;
+        }
+        .gold{
+            color:var(--gold);
+        }
+        .glass{
+            background:rgba(18,18,18,.92);
+            backdrop-filter:blur(18px);
+            border:1px solid rgba(255,255,255,.06);
+        }
+        .hero-glow{
+            position:absolute;
+            width:600px;
+            height:600px;
+            background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+            opacity:.05;
+            filter:blur(80px);
+            pointer-events:none;
+        }
+        input, textarea, select{
+            background:#181818 !important;
+            border:1px solid #2b2b2b !important;
+            color:#fff !important;
+            transition:.25s ease;
+        }
+        input:focus, textarea:focus, select:focus{
+            border-color:var(--gold) !important;
+            box-shadow: 0 0 0 3px rgba(202,168,92,.15);
+            outline:none;
+        }
+        .scrollbar::-webkit-scrollbar{
+            width:6px;
+        }
+        .scrollbar::-webkit-scrollbar-thumb{
+            background:#333;
+            border-radius:20px;
+        }
+        .fade-in{
+            animation:fade .35s ease forwards;
+        }
+        @keyframes fade{
+            from{
+                opacity:0;
+                transform:translateY(10px);
             }
-            #print-checkout-a4 table{ width:100%; border-collapse:collapse; font-size:10px; }
-            #print-checkout-a4 th, #print-checkout-a4 td{ border:1px solid #999; padding:4px 6px; }
+            to{
+                opacity:1;
+                transform:translateY(0);
+            }
+        }
+
+        @media(max-width:768px) {
+            header .h-20 {
+                height: auto;
+                min-height: 76px;
+                padding: 14px 0;
+            }
+            .back-button {
+                height: 44px;
+                padding: 0 16px;
+                border-radius: 14px;
+                gap: 8px;
+            }
+            .back-button span:last-child {
+                display: none;
+            }
+            .back-button-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 14px;
+            }
+        }
+
+        @media(max-width:640px){
+            .back-button{
+                width:100%;
+                justify-content:center;
+                height:54px;
+                font-size:11px;
+            }
+            .back-button span:last-child {
+                display: inline;
+            }
         }
     </style>
-    <link rel="icon" href="https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/home/logo.webp" type="image/webp">
 </head>
-<body>
+<body class="pb-20">
 
-    <div class="aurora-header">
-        <div class="bar aurora-container">
-            <nav class="nav-links"><a href="index.html">Home</a></nav>
-            <div class="brand">
-                <div class="brand-logo" id="abellaLogoContainer">
-                    <span id="abellaLogoFallback" style="font-family:var(--font-heading); font-weight:600;">A</span>
-                    <img id="abellaLogoImg" src="" alt="Abella Joias" style="width:100%;height:100%;object-fit:contain;display:none;">
+    <div class="hero-glow top-[-200px] left-[-200px]"></div>
+    <div class="hero-glow bottom-[-200px] right-[-200px]"></div>
+
+    <header class="sticky top-0 z-50 border-b border-white/5 bg-black/70 backdrop-blur-2xl">
+        <div class="max-w-7xl mx-auto px-4 md:px-8 h-20 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <button onclick="window.history.back()" class="back-button">
+                    <span class="back-button-icon">←</span>
+                    <span>Voltar</span>
+                </button>
+
+                <div id="abellaLogoContainer" class="w-11 h-11 rounded-2xl overflow-hidden bg-gradient-to-br from-[#caa85c] to-[#8b6a2b] flex items-center justify-center border border-[#caa85c]/20 shadow-lg shrink-0">
+                    <span id="abellaLogoFallback" class="text-black font-black text-lg serif">A</span>
+                    <img id="abellaLogoImg" src="" alt="Abella Joias" class="w-full h-full object-cover hidden">
                 </div>
-                <div><p class="brand-name" id="nomeLojaHeader">Abella</p></div>
+
+                <div class="min-w-0">
+                    <h1 class="serif gold text-base md:text-2xl uppercase tracking-[0.2em] truncate">
+                        Abella Joias
+                    </h1>
+                    <p class="text-[9px] md:text-[10px] uppercase tracking-[0.3em] text-zinc-500 mt-1">
+                        Finalização Premium
+                    </p>
+                </div>
             </div>
-            <div class="actions">
-                <a href="carrinho.html" class="aurora-btn aurora-btn--ghost aurora-btn--sm">← Sacola</a>
-            </div>
+
+            <a href="carrinho.html" class="h-12 px-5 rounded-2xl glass flex items-center justify-center text-[10px] font-black uppercase tracking-[0.15em] hover:border-[#caa85c] transition-all shrink-0 whitespace-nowrap">
+                ← Carrinho
+            </a>
         </div>
-    </div>
+    </header>
 
-    <div id="banner" class="hidden" style="background:var(--color-text); text-align:center; padding-block: var(--space-3);">
-        <p id="bannerTexto" style="color: var(--color-primary); font-weight:700; text-transform:uppercase; letter-spacing:.2em; font-size:12px;"></p>
-    </div>
+    <main class="max-w-7xl mx-auto px-4 md:px-8 py-10 fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <div class="lg:col-span-7 space-y-6">
 
-    <main class="aurora-container">
-        <div id="breadcrumb-slot"></div>
+                <section class="glass rounded-[2rem] p-6">
+                    <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+                        <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
+                        <h2 class="serif text-xl">Dados do Cliente</h2>
+                    </div>
 
-        <div class="aurora-grid" style="margin-top: var(--space-5);">
-
-            <div class="col-7">
-                <section class="aurora-card" style="cursor:default; padding: var(--space-6); margin-bottom: var(--space-5); box-shadow:none; border:1px solid var(--color-border);">
-                    <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom:1px solid var(--color-border);">Dados do Cliente</h2>
-                    <div class="aurora-grid">
-                        <div class="col-12">
-                            <div class="aurora-field">
-                                <label class="aurora-label">Nome Completo *</label>
-                                <input type="text" id="cli-nome" class="aurora-input" placeholder="Ex: João Silva">
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Nome Completo *</label>
+                            <input type="text" id="cli-nome" required class="w-full rounded-2xl px-5 py-4 text-sm" placeholder="Ex: João Silva">
                         </div>
-                        <div class="col-6">
-                            <div class="aurora-field">
-                                <label class="aurora-label">WhatsApp *</label>
-                                <input type="text" id="cli-whats" class="aurora-input" placeholder="(19) 99999-9999">
-                            </div>
+                        <div>
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">WhatsApp *</label>
+                            <input type="text" id="cli-whats" required class="w-full rounded-2xl px-5 py-4 text-sm" placeholder="(19) 99999-9999">
                         </div>
-                        <div class="col-6">
-                            <div class="aurora-field">
-                                <label class="aurora-label">Cidade do Cliente *</label>
-                                <input type="text" id="cli-cidade" class="aurora-input" placeholder="Ex: Limeira - SP">
-                            </div>
+                        <div>
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">CPF / CNPJ *</label>
+                            <input type="text" id="cli-documento" required class="w-full rounded-2xl px-5 py-4 text-sm" placeholder="000.000.000-00">
                         </div>
                     </div>
                 </section>
 
-                <section class="aurora-card" style="cursor:default; padding: var(--space-6); margin-bottom: var(--space-5); box-shadow:none; border:1px solid var(--color-border);">
-                    <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom:1px solid var(--color-border);">Entrega</h2>
-                    <div class="aurora-grid">
-                        <div class="col-12">
-                            <div class="aurora-field">
-                                <label class="aurora-label">Nome do Local de Entrega *</label>
-                                <input type="text" id="ent-local" class="aurora-input" placeholder="Ex: Loja Centro Limeira">
-                            </div>
+                <section class="glass rounded-[2rem] p-6">
+                    <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+                        <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
+                        <h2 class="serif text-xl">Entrega</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                        <div class="md:col-span-4">
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">CEP *</label>
+                            <input type="text" id="ent-cep" required class="w-full rounded-2xl px-5 py-4 text-sm" placeholder="13480-000">
                         </div>
-                        <div class="col-8">
-                            <div class="aurora-field">
-                                <label class="aurora-label">Rua *</label>
-                                <input type="text" id="ent-rua" class="aurora-input" placeholder="Ex: Rua Boa Morte">
-                            </div>
+                        <div class="md:col-span-8">
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Endereço *</label>
+                            <input type="text" id="ent-rua" required class="w-full rounded-2xl px-5 py-4 text-sm" placeholder="Rua Exemplo">
                         </div>
-                        <div class="col-4">
-                            <div class="aurora-field">
-                                <label class="aurora-label">Nº *</label>
-                                <input type="text" id="ent-numero" class="aurora-input" placeholder="150">
-                            </div>
+                        <div class="md:col-span-4">
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Número *</label>
+                            <input type="text" id="ent-numero" required class="w-full rounded-2xl px-5 py-4 text-sm">
                         </div>
-                        <div class="col-6">
-                            <div class="aurora-field">
-                                <label class="aurora-label">Bairro *</label>
-                                <input type="text" id="ent-bairro" class="aurora-input" placeholder="Centro">
-                            </div>
+                        <div class="md:col-span-8">
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Bairro *</label>
+                            <input type="text" id="ent-bairro" required class="w-full rounded-2xl px-5 py-4 text-sm">
                         </div>
-                        <div class="col-6">
-                            <div class="aurora-field">
-                                <label class="aurora-label">Cidade *</label>
-                                <input type="text" id="ent-cidade" class="aurora-input" placeholder="Limeira">
-                            </div>
+                        <div class="md:col-span-6">
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Cidade *</label>
+                            <input type="text" id="ent-cidade" required class="w-full rounded-2xl px-5 py-4 text-sm">
+                        </div>
+                        <div class="md:col-span-6">
+                            <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">UF *</label>
+                            <select id="ent-uf" class="w-full rounded-2xl px-5 py-4 text-sm">
+                                <option value="SP">São Paulo</option>
+                                <option value="MG">Minas Gerais</option>
+                                <option value="RJ">Rio de Janeiro</option>
+                                <option value="PR">Paraná</option>
+                                <option value="SC">Santa Catarina</option>
+                            </select>
                         </div>
                     </div>
                 </section>
 
-                <section class="aurora-card" style="cursor:default; padding: var(--space-6); box-shadow:none; border:1px solid var(--color-border);">
-                    <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom:1px solid var(--color-border);">Pagamento</h2>
-                    <div class="aurora-grid">
-                        <div class="col-6">
-                            <label class="payment-option">
+                <section class="glass rounded-[2rem] p-6">
+                    <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+                        <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
+                        <h2 class="serif text-xl">Pagamento</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-[#caa85c] transition-all">
+                            <div class="flex items-center justify-between">
                                 <div>
-                                    <p style="font-weight:700;">PIX</p>
-                                    <p id="labelDescontoPix" style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">5% de desconto</p>
+                                    <h3 class="font-black">PIX</h3>
+                                    <p class="text-zinc-500 text-xs mt-1">Desconto automático</p>
                                 </div>
-                                <input type="radio" name="formaPagamento" value="PIX" checked onchange="atualizarResumoAurora()">
-                            </label>
-                        </div>
-                        <div class="col-6">
-                            <label class="payment-option">
-                                <div>
-                                    <p style="font-weight:700;">Cartão</p>
-                                    <p id="labelParcelasCartao" style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">Em até 6x</p>
-                                </div>
-                                <input type="radio" name="formaPagamento" value="Cartão" onchange="atualizarResumoAurora()">
-                            </label>
-                        </div>
-                        <div class="col-12">
-                            <div class="aurora-field">
-                                <label class="aurora-label">Observações</label>
-                                <textarea id="obs-pedido" class="aurora-textarea" placeholder="Informações adicionais..."></textarea>
+                                <input type="radio" name="formaPagamento" value="PIX" checked onchange="atualizarResumo()">
                             </div>
-                        </div>
+                        </label>
+
+                        <label class="border border-white/5 rounded-2xl p-5 cursor-pointer hover:border-[#caa85c] transition-all">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="font-black">Cartão</h3>
+                                    <p class="text-zinc-500 text-xs mt-1">Parcelamento</p>
+                                </div>
+                                <input type="radio" name="formaPagamento" value="Cartão" onchange="atualizarResumo()">
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="mt-5">
+                        <label class="block text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">Observações</label>
+                        <textarea id="obs-pedido" rows="4" class="w-full rounded-2xl px-5 py-4 text-sm" placeholder="Informações adicionais..."></textarea>
                     </div>
                 </section>
             </div>
 
-            <div class="col-5">
-                <div class="aurora-card" style="cursor:default; padding: var(--space-6); box-shadow: var(--shadow-md); border:1px solid var(--color-border); position:sticky; top:100px;">
-                    <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom: var(--space-5); padding-bottom: var(--space-4); border-bottom:1px solid var(--color-border);">Resumo</h2>
-
-                    <div id="lista-itens-checkout" style="max-height:280px; overflow-y:auto;"></div>
-
-                    <div style="margin-top: var(--space-5); padding-top: var(--space-4); border-top:1px solid var(--color-border);">
-                        <div class="summary-row"><span>Quantidade</span><span id="res-qtd">0 pçs</span></div>
-                        <div class="summary-row"><span>Peso Total</span><span id="res-peso">0,00 grs.</span></div>
-                        <div id="alertaProgressoFaixaCheckout" style="display:none; margin:0 0 var(--space-4); padding:var(--space-3) var(--space-4); border-radius:var(--radius-md); background:rgba(var(--color-primary-rgb),.08); border:1px solid var(--color-border); font-size:12px; line-height:1.45; color:var(--color-text);"></div>
-                        <div class="summary-row"><span>Subtotal</span><span id="res-subtotal">R$ 0,00</span></div>
-                        <div class="summary-row hidden" id="box-desconto-ofertas" style="color:var(--color-success);"><span>Desconto de ofertas</span><span id="res-desconto-ofertas">- R$ 0,00</span></div>
-                        <div class="summary-row hidden" id="box-desconto" style="color:var(--color-success);"><span>Desconto PIX</span><span id="res-desconto">- R$ 0,00</span></div>
-                        <div class="summary-row hidden" id="box-cupom" style="color:var(--color-success);"><span>Cupom <strong id="res-cupom-codigo"></strong></span><span id="res-desconto-cupom">- R$ 0,00</span></div>
-                        <div class="summary-row hidden" id="box-faixa" style="color:var(--color-success);"><span id="res-faixa-label">Desconto por valor</span><span id="res-desconto-faixa">- R$ 0,00</span></div>
-                        <div class="summary-row"><span>Frete</span><span id="res-frete">R$ 0,00</span></div>
-                        <div class="summary-total"><span>Total</span><span id="res-total" style="color:var(--color-primary-hover);">R$ 0,00</span></div>
+            <div class="lg:col-span-5">
+                <div class="glass rounded-[2rem] p-6 lg:sticky lg:top-24">
+                    <div class="flex items-center gap-3 border-b border-white/5 pb-4 mb-6">
+                        <span class="w-2 h-6 bg-[#caa85c] rounded-full"></span>
+                        <h2 class="serif text-xl">Resumo</h2>
                     </div>
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap: var(--space-3); margin: var(--space-5) 0;">
-                        <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="verRomaneioAurora()">👁️ Ver Romaneio</button>
-                        <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="prepararImpressao()">📄 Baixar PDF</button>
-                        <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" onclick="prepararImpressao()">🖨️ Imprimir</button>
+                    <div id="lista-itens-checkout" class="space-y-3 max-h-[320px] overflow-y-auto scrollbar pr-2"></div>
+
+                    <div class="mt-6 border-t border-white/5 pt-5 space-y-3">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-zinc-500">Quantidade</span>
+                            <span id="res-qtd" class="font-bold">0 pçs</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-zinc-500">Peso Total</span>
+                            <span id="res-peso" class="font-bold">0g</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-zinc-500">Subtotal</span>
+                            <span id="res-subtotal" class="font-bold">R$ 0,00</span>
+                        </div>
+                        <div id="box-desconto" class="hidden flex items-center justify-between text-sm text-emerald-400">
+                            <span>Desconto PIX</span>
+                            <span id="res-desconto">- R$ 0,00</span>
+                        </div>
+                        <div class="border-t border-white/5 pt-4 flex items-center justify-between">
+                            <span class="uppercase tracking-[0.2em] text-sm font-black">Total</span>
+                            <span id="res-total" class="text-3xl gold font-black">R$ 0,00</span>
+                        </div>
                     </div>
 
-                    <button class="aurora-btn aurora-btn--primary aurora-btn--block aurora-btn--lg" id="btnFinalizar" onclick="finalizarPedidoAurora(event)">
-                        🚀 Finalizar Pedido via WhatsApp
-                    </button>
+                    <div class="mt-8 space-y-3">
+                        <button onclick="visualizarRomaneio()" class="w-full h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">👁 Visualizar Romaneio</button>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="gerarPDF(false)" class="h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">PDF</button>
+                            <button onclick="gerarPDF(true)" class="h-14 rounded-2xl border border-white/5 hover:border-[#caa85c] transition-all text-sm font-black uppercase tracking-[0.15em]">Imprimir</button>
+                        </div>
+
+                        <button id="btnFinalizar" onclick="finalizarPedido()" class="w-full h-16 rounded-2xl bg-[#caa85c] hover:bg-[#b99a53] text-black font-black uppercase tracking-[0.2em] transition-all">Finalizar Pedido</button>
+                    </div>
                 </div>
             </div>
 
         </div>
     </main>
 
-    <footer class="aurora-footer">
-        <div class="aurora-container">
-            <div class="bottom">
-                <span>© Abella Joias — atacado de joias no bruto</span>
-                <a href="carrinho.html" style="color:var(--color-secondary);">← Voltar para a sacola</a>
+    <div id="modal-romaneio" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 p-4 flex items-center justify-center">
+        <div class="w-full max-w-3xl glass rounded-[2rem] overflow-hidden">
+            <div class="h-16 px-6 border-b border-white/5 flex items-center justify-between">
+                <h3 class="serif gold">Romaneio</h3>
+                <button onclick="fecharModal()" class="text-zinc-500 hover:text-white text-2xl">×</button>
             </div>
-        </div>
-    </footer>
-
-    <!-- Modal único (Sprint 1) — usado pro Romaneio -->
-    <div class="aurora-modal-overlay" id="auroraModal">
-        <div class="aurora-modal" role="dialog" aria-modal="true">
-            <div class="header"><h3 class="title" id="auroraModalTitle"></h3><button class="close-btn" onclick="AuroraModal.close()">✕</button></div>
-            <div class="body" id="auroraModalBody"></div>
-            <div class="footer" id="auroraModalFooter"></div>
+            <div id="conteudo-romaneio" class="p-6 max-h-[70vh] overflow-y-auto scrollbar"></div>
         </div>
     </div>
 
-    <!-- Espelho de impressão A4 -->
-    <div id="print-checkout-a4">
-        <h2 id="print-nome-loja" style="font-family: serif; margin-bottom:2px;">ABELLA JOIAS</h2>
-        <p style="font-size:11px;">Documento: <span id="print-doc-id"></span> — <span id="print-doc-data"></span></p>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px; font-size:11px;">
-            <div>
-                <strong>Cliente</strong>
-                <p id="print-cli-nome"></p>
-                <p>WhatsApp: <span id="print-cli-whats"></span></p>
-                <p>Cidade: <span id="print-cli-cidade"></span></p>
-            </div>
-            <div>
-                <strong>Entrega</strong>
-                <p id="print-ent-local"></p>
-                <p id="print-ent-endereco"></p>
-                <p>Cidade: <span id="print-ent-cidade"></span></p>
-            </div>
-        </div>
-
-        <table style="margin-top:12px;">
-            <thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Qtd</th><th>Peso</th><th>Subtotal</th></tr></thead>
-            <tbody id="print-itens-tbody"></tbody>
-        </table>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px; font-size:11px;">
-            <div>
-                <p>Peças: <strong id="print-fin-pecas"></strong></p>
-                <p>Peso Total: <strong id="print-fin-peso"></strong></p>
-                <p>Pagamento: <strong id="print-fin-forma"></strong></p>
-                <p>Obs: <span id="print-obs-texto"></span></p>
-            </div>
-            <div style="text-align:right;">
-                <p>Subtotal: <strong id="print-fin-subtotal"></strong></p>
-                <p id="print-fin-linha-ofertas" style="display:none;color:#0a7a4d;">Descontos de ofertas: <strong id="print-fin-ofertas"></strong></p>
-                <p id="print-fin-linha-faixa" style="display:none;color:#0a7a4d;">Desconto por valor: <strong id="print-fin-faixa"></strong></p>
-                <p id="print-fin-linha-cupom" style="display:none;color:#0a7a4d;">Cupom: <strong id="print-fin-cupom"></strong></p>
-                <p id="print-fin-linha-desc" style="display:none;color:#0a7a4d;">Desconto PIX: <strong id="print-fin-desconto"></strong></p>
-                <p>Frete: <strong id="print-fin-frete"></strong></p>
-                <p style="font-size:14px; margin-top:4px;">TOTAL: <strong id="print-fin-total"></strong></p>
-            </div>
-        </div>
-    </div>
-
-    <script src="./js/firebase/firebase-config.js"></script>
-    <script src="./js/utils/money.js"></script>
-    <script src="./js/utils/peso.js"></script>
-    <script src="./js/utils/storage.js"></script>
-    <script src="./js/services/configService.js"></script>
-    <script src="./js/services/descontoService.js"></script>
-    <script src="./js/services/cupomService.js"></script>
-    <script src="./js/services/carrinhoService.js"></script>
-    <script src="./js/utils/image-helper.js"></script>
-
-    <script src="components/modal.js"></script>
-    <script src="engine/render.js"></script>
+    <script src="js/firebase/firebase-config.js"></script>
 
     <script>
-        // ==================================================================
-        // Réplica fiel da lógica de js/services/checkout.js (a que realmente
-        // roda em produção, por sobrescrever a versão antiga inline).
-        // Mesmos nomes de campos de configuração, mesma fórmula de desconto/
-        // frete, mesmo formato de payload salvo em abella/orders.
-        // ==================================================================
+        const db = firebase.database();
 
-        let _configCache = null;
+        const CONFIG = {
+    descontoPix: 5,
+    parcelasMax: 6,
+    freteFixo: 15,
+    freteGratisAlvo: 100,
+    pedidoMinimo: 300,
+    whatsEmpresa: '5519999999999'
+};
+        let itensCarrinho = [];
 
-        function fmtMoeda(v) {
-            return window.MoneyUtils?.format ? window.MoneyUtils.format(v) : `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
-        }
-        // Arredonda para 2 casas decimais evitando ruído de ponto flutuante
-        // (ex.: 179.67 * 0.05 pode resultar em 8.983500000000001 em JS).
-        // Sem isso, o valor "sujo" é salvo no Firebase e aparece assim em
-        // qualquer tela que releia o pedido (ex.: campo Desconto em pedidos.html).
-        function round2(v) {
-            return Math.round((Number(v) || 0) * 100) / 100;
-        }
-        function fmtPeso(g) {
-            if (window.PesoUtils?.formatarPeso) return PesoUtils.formatarPeso(g);
-            const n = parseFloat(g) || 0;
-            return n >= 1000 ? (n / 1000).toFixed(2).replace('.', ',') + ' Kg.' : n.toFixed(2).replace('.', ',') + ' grs.';
-        }
-        function resolverImg(url) {
-            if (!url) return window.AURORA_FALLBACK_IMAGE;
-            return (typeof resolverImagemFirebase !== 'undefined') ? resolverImagemFirebase(url) : url;
-        }
-
-        async function carregarConfigAurora() {
-            if (_configCache) return _configCache;
-            try {
-                const snap = await db.ref('abella/settings').once('value');
-                _configCache = snap.exists() ? snap.val() : {};
-            } catch (e) {
-                console.warn('Falha ao carregar settings:', e);
-                _configCache = {};
+        const money = {
+            formatar(v){
+                return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(v || 0);
             }
-            return _configCache;
-        }
+        };
 
-        function itensNormalizados() {
-            const raw = (window.carrinhoService ? carrinhoService.listar() : []) || [];
-            const itens = raw.map(item => {
-                const qtd = parseInt(item.quantidade || 0);
-                const precoOriginal = parseFloat(item.preco ?? item.price ?? 0) || 0;
-                // precoVendaUnitario já vem com o desconto de categoria/global aplicado (descontoService)
-                const preco = parseFloat(item.precoVendaUnitario ?? precoOriginal);
-                const peso = parseFloat(item.peso || 0);
-                return {
-                    id: item.id || '',
-                    sku: item.sku || item.codigo || item.id || '',
-                    nome: item.name || item.nome || 'Produto',
-                    imagem: item.image || item.imagem || '',
-                    precoOriginal, preco, peso, quantidade: qtd,
-                    subtotal: preco * qtd,
-                    descontoOferta: Math.max(0, (precoOriginal - preco) * qtd),
-                    pesoTotal: peso * qtd,
-                    variacao: item.variacao || ''
-                };
-            });
-            // Ordena por SKU (id) em ordem alfabética crescente — reflete no carrinho,
-            // na impressão, no romaneio e no pedido salvo no Firebase.
-            itens.sort((a, b) => String(a.id).localeCompare(String(b.id), 'pt-BR', { numeric: true, sensitivity: 'base' }));
-            return itens;
-        }
-
-        async function atualizarResumoAurora() {
-            const cfg = await carregarConfigAurora();
-            const descontoPix = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
-            const freteFixo = parseFloat(cfg.freteFixo || cfg.frete || 0);
-            const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
-
-            const itens = itensNormalizados();
-            const lista = document.getElementById('lista-itens-checkout');
-
-            if (itens.length === 0) {
-                lista.innerHTML = `<p style="font-size:12px;color:var(--color-secondary);text-align:center;padding:var(--space-4) 0;">Nenhum item no carrinho.</p>`;
-            } else {
-                lista.innerHTML = itens.map(item => `
-                    <div class="cart-line">
-                        <img src="${resolverImg(item.imagem)}" onerror="this.onerror=null;this.src='${window.AURORA_FALLBACK_IMAGE}'">
-                        <div style="flex:1; min-width:0;">
-                            <p style="font-size:12px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.nome}</p>
-                            ${item.variacao ? `<p style="font-size:10px; color:var(--color-primary-hover);">🔹 ${item.variacao}</p>` : ''}
-                            <p style="font-size:10px; color:var(--color-secondary);">${item.quantidade} pçs • ${fmtPeso(item.pesoTotal)}</p>
-                        </div>
-                        <span style="font-size:12px; font-weight:700; color:var(--color-primary-hover); text-align:right;">
-                            ${item.precoOriginal > item.preco + 0.001 ? `<s style="display:block;font-size:10px;color:var(--color-secondary);font-weight:400;">${fmtMoeda(item.precoOriginal * item.quantidade)}</s>` : ''}
-                            ${fmtMoeda(item.subtotal)}
-                        </span>
-                    </div>
-                `).join('');
-            }
-
-            const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
-            const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
-            const subtotalBruto = round2(itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0));
-            const subtotal = round2(itens.reduce((a, i) => a + i.subtotal, 0));
-            const descontoOfertas = round2(Math.max(0, subtotalBruto - subtotal));
-
-            const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
-            const desconto = round2(formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0);
-
-            // Cupom aplicado no carrinho — segue valendo no checkout, sobre o subtotal já com desconto de categoria
-            const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
-            const descontoCupom = round2(window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0);
-            const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
-            const descontoFaixa = round2(window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0);
-
-            const frete = round2(subtotal >= freteGratis ? 0 : freteFixo);
-            const total = round2(Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete));
-
-            document.getElementById('box-desconto').classList.toggle('hidden', desconto === 0);
-            document.getElementById('labelDescontoPix').innerText = `${descontoPix}% de desconto`;
-            document.getElementById('labelParcelasCartao').innerText = `Em até ${cfg.maxInstallments || cfg.parcelas || 6}x`;
-
-            const boxCupom = document.getElementById('box-cupom');
-            if (cupomAplicado && descontoCupom > 0.001) {
-                boxCupom.classList.remove('hidden');
-                document.getElementById('res-cupom-codigo').innerText = cupomAplicado.code;
-                document.getElementById('res-desconto-cupom').innerText = `- ${fmtMoeda(descontoCupom)}`;
-            } else {
-                boxCupom.classList.add('hidden');
-            }
-
-            const boxDescontoOfertas = document.getElementById('box-desconto-ofertas');
-            if (boxDescontoOfertas) {
-                boxDescontoOfertas.classList.toggle('hidden', descontoOfertas <= 0.001);
-                document.getElementById('res-desconto-ofertas').innerText = `- ${fmtMoeda(descontoOfertas)}`;
-            }
-
-            const progressoFaixa = window.carrinhoService?.obterProgressoFaixaValor?.();
-            const alertaFaixa = document.getElementById('alertaProgressoFaixaCheckout');
-            if (alertaFaixa && progressoFaixa?.temFaixas && progressoFaixa.mensagem) {
-                alertaFaixa.style.display = 'block';
-                alertaFaixa.innerHTML = progressoFaixa.mensagem;
-            } else if (alertaFaixa) {
-                alertaFaixa.style.display = 'none';
-                alertaFaixa.innerHTML = '';
-            }
-
-            const boxFaixa = document.getElementById('box-faixa');
-            if (faixaAplicada && descontoFaixa > 0.001) {
-                boxFaixa.classList.remove('hidden');
-                document.getElementById('res-faixa-label').innerText = `Compra acima de ${fmtMoeda(faixaAplicada.valorMinimo)}`;
-                document.getElementById('res-desconto-faixa').innerText = `- ${fmtMoeda(descontoFaixa)}`;
-            } else {
-                boxFaixa.classList.add('hidden');
-            }
-
-            document.getElementById('res-qtd').innerText = `${qtdTotal} pçs`;
-            document.getElementById('res-peso').innerText = fmtPeso(pesoTotal);
-            document.getElementById('res-subtotal').innerText = fmtMoeda(subtotal);
-            document.getElementById('res-desconto').innerText = `- ${fmtMoeda(desconto)}`;
-            document.getElementById('res-frete').innerText = frete === 0 ? 'Grátis' : fmtMoeda(frete);
-            document.getElementById('res-total').innerText = fmtMoeda(total);
-        }
-
-        function coletarDadosCompletos() {
-            const itens = itensNormalizados();
-            const cfg = _configCache || {};
-
-            const form = {
-                nome: document.getElementById('cli-nome')?.value.trim() || '(Não preenchido)',
-                whats: document.getElementById('cli-whats')?.value.trim() || '(Não preenchido)',
-                cidadeCli: document.getElementById('cli-cidade')?.value.trim() || '(Não preenchido)',
-                local: document.getElementById('ent-local')?.value.trim() || '(Não preenchido)',
-                rua: document.getElementById('ent-rua')?.value.trim() || '',
-                numero: document.getElementById('ent-numero')?.value.trim() || '',
-                bairro: document.getElementById('ent-bairro')?.value.trim() || '',
-                cidadeEnt: document.getElementById('ent-cidade')?.value.trim() || '(Não preenchido)',
-                formaPag: document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX',
-                obs: document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma'
-            };
-
-            const descontoPix = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
-            const freteFixo = parseFloat(cfg.freteFixo || cfg.frete || 0);
-            const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
-
-            const subtotalBruto = round2(itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0));
-            const subtotal = round2(itens.reduce((a, i) => a + i.subtotal, 0));
-            const descontoOfertas = round2(Math.max(0, subtotalBruto - subtotal));
-            const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
-            const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
-            const desconto = round2(form.formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0);
-            const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
-            const descontoCupom = round2(window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0);
-            const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
-            const descontoFaixa = round2(window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0);
-            const frete = round2(subtotal >= freteGratis ? 0 : freteFixo);
-            const total = round2(Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete));
-
-            return { itens, form, calc: { subtotalBruto, subtotal, descontoOfertas, pesoTotal, qtdTotal, desconto, descontoCupom, descontoFaixa, faixaAplicada, cupomAplicado, frete, total } };
-        }
-
-        function prepararImpressao() {
-            const dados = coletarDadosCompletos();
-            if (!dados.itens.length) { alert('Nenhum item no carrinho para imprimir.'); return; }
-
-            const nomeLoja = document.getElementById('nomeLojaHeader')?.innerText || 'ABELLA JOIAS';
-            document.getElementById('print-nome-loja').innerText = nomeLoja.toUpperCase();
-
-            const agora = new Date();
-            document.getElementById('print-doc-id').innerText = 'PED-' + Date.now().toString().slice(-8);
-            document.getElementById('print-doc-data').innerText = agora.toLocaleDateString('pt-BR') + ' às ' + agora.toLocaleTimeString('pt-BR');
-
-            document.getElementById('print-cli-nome').innerText = dados.form.nome;
-            document.getElementById('print-cli-whats').innerText = dados.form.whats;
-            document.getElementById('print-cli-cidade').innerText = dados.form.cidadeCli;
-            document.getElementById('print-ent-local').innerText = dados.form.local;
-            document.getElementById('print-ent-endereco').innerText = dados.form.rua ? `${dados.form.rua}, ${dados.form.numero} - ${dados.form.bairro}` : 'Não informado';
-            document.getElementById('print-ent-cidade').innerText = dados.form.cidadeEnt;
-            document.getElementById('print-obs-texto').innerText = dados.form.obs;
-
-            document.getElementById('print-itens-tbody').innerHTML = dados.itens.map((item, idx) => `
-                <tr>
-                    <td style="text-align:center;">${idx + 1}</td>
-                    <td style="text-align:center; font-family:monospace;">${item.id}</td>
-                    <td>${item.nome}${item.variacao ? ` [Var: ${item.variacao}]` : ''}</td>
-                    <td style="text-align:center;">${item.quantidade}</td>
-                    <td style="text-align:right;">${fmtPeso(item.pesoTotal)}</td>
-                    <td style="text-align:right;">${fmtMoeda(item.subtotal)}</td>
-                </tr>
-            `).join('');
-
-            document.getElementById('print-fin-pecas').innerText = `${dados.calc.qtdTotal} pçs`;
-            document.getElementById('print-fin-peso').innerText = fmtPeso(dados.calc.pesoTotal);
-            document.getElementById('print-fin-forma').innerText = dados.form.formaPag.toUpperCase();
-            document.getElementById('print-fin-subtotal').innerText = fmtMoeda(dados.calc.subtotal);
-            document.getElementById('print-fin-frete').innerText = dados.calc.frete === 0 ? 'Grátis' : fmtMoeda(dados.calc.frete);
-            document.getElementById('print-fin-total').innerText = fmtMoeda(dados.calc.total);
-
-            const linhasImpressao = [
-                ['print-fin-linha-ofertas', 'print-fin-ofertas', dados.calc.descontoOfertas],
-                ['print-fin-linha-faixa', 'print-fin-faixa', dados.calc.descontoFaixa],
-                ['print-fin-linha-cupom', 'print-fin-cupom', dados.calc.descontoCupom],
-                ['print-fin-linha-desc', 'print-fin-desconto', dados.calc.desconto]
-            ];
-            linhasImpressao.forEach(([linhaId, valorId, valor]) => {
-                const linha = document.getElementById(linhaId);
-                if (!linha) return;
-                const ativo = Number(valor || 0) > 0.001;
-                linha.style.display = ativo ? '' : 'none';
-                if (ativo) document.getElementById(valorId).innerText = `- ${fmtMoeda(valor)}`;
-            });
-
-            window.print();
-        }
-
-        function verRomaneioAurora() {
-            const dados = coletarDadosCompletos();
-            if (!dados.itens.length) { alert('Nenhum item no carrinho para gerar romaneio.'); return; }
-
-            const linhas = dados.itens.map((item, idx) => `
-                <div style="display:flex; justify-content:space-between; gap:var(--space-3); padding: var(--space-2) 0; border-bottom:1px solid var(--color-border); font-size:12px;">
-                    <span style="flex:1;">
-                        ${String(idx + 1).padStart(2, '0')}. <strong>${item.nome}</strong>
-                        <span style="color:var(--color-secondary); font-family:monospace; font-size:11px;"> (SKU ${item.id})</span>
-                        ${item.variacao ? `<span style="color:var(--color-primary-hover);"> 🔹 ${item.variacao}</span>` : ''}
-                    </span>
-                    <span style="white-space:nowrap;">${item.quantidade} pçs</span>
-                    <span style="white-space:nowrap; font-weight:700; color:var(--color-primary-hover);">${fmtMoeda(item.subtotal)}</span>
-                </div>
-            `).join('');
-
-            const bodyHTML = `
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-5); font-size:13px; margin-bottom:var(--space-5); padding-bottom:var(--space-4); border-bottom:1px solid var(--color-border);">
-                    <div>
-                        <p style="font-weight:700; margin-bottom:var(--space-1);">Cliente</p>
-                        <p>${dados.form.nome}</p>
-                        <p style="color:var(--color-secondary);">WhatsApp: ${dados.form.whats}</p>
-                        <p style="color:var(--color-secondary);">Cidade Base: ${dados.form.cidadeCli}</p>
-                    </div>
-                    <div>
-                        <p style="font-weight:700; margin-bottom:var(--space-1);">Entrega</p>
-                        <p>${dados.form.local}</p>
-                        <p style="color:var(--color-secondary);">${dados.form.rua ? `${dados.form.rua}, ${dados.form.numero} — ${dados.form.bairro}` : 'Não informado'}</p>
-                        <p style="color:var(--color-secondary);">Destino: ${dados.form.cidadeEnt}</p>
-                    </div>
-                </div>
-                <div>${linhas}</div>
-                <div style="margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--color-border); font-size:13px;">
-                    <div style="display:flex;justify-content:space-between;"><span>Total de peças</span><strong>${dados.calc.qtdTotal} pçs</strong></div>
-                    <div style="display:flex;justify-content:space-between;"><span>Peso total</span><strong>${fmtPeso(dados.calc.pesoTotal)}</strong></div>
-                    <div style="display:flex;justify-content:space-between;"><span>Forma de pagamento</span><strong>${dados.form.formaPag}</strong></div>
-                    <div style="display:flex;justify-content:space-between;"><span>Subtotal</span><strong>${fmtMoeda(dados.calc.subtotal)}</strong></div>
-                    ${dados.calc.descontoOfertas > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Descontos de ofertas</span><strong>- ${fmtMoeda(dados.calc.descontoOfertas)}</strong></div>` : ''}
-                    ${dados.calc.descontoFaixa > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Desconto por valor${dados.calc.faixaAplicada?.valorMinimo ? ` (${fmtMoeda(dados.calc.faixaAplicada.valorMinimo)})` : ''}</span><strong>- ${fmtMoeda(dados.calc.descontoFaixa)}</strong></div>` : ''}
-                    ${dados.calc.descontoCupom > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Cupom${dados.calc.cupomAplicado?.code ? ` (${dados.calc.cupomAplicado.code})` : ''}</span><strong>- ${fmtMoeda(dados.calc.descontoCupom)}</strong></div>` : ''}
-                    ${dados.calc.desconto > 0 ? `<div style="display:flex;justify-content:space-between; color:var(--color-success);"><span>Desconto PIX</span><strong>- ${fmtMoeda(dados.calc.desconto)}</strong></div>` : ''}
-                    <div style="display:flex;justify-content:space-between;"><span>Frete</span><strong>${dados.calc.frete === 0 ? 'Grátis' : fmtMoeda(dados.calc.frete)}</strong></div>
-                    <div style="display:flex;justify-content:space-between;font-size:18px;margin-top:var(--space-2);"><span>Total</span><strong style="color:var(--color-primary-hover);">${fmtMoeda(dados.calc.total)}</strong></div>
-                </div>
-            `;
-
-            AuroraModal.open({ title: 'Romaneio do Pedido', bodyHTML, footerHTML: `
-                <button class="aurora-btn aurora-btn--ghost" onclick="AuroraModal.close()">Fechar</button>
-                <button class="aurora-btn aurora-btn--primary" onclick="prepararImpressao()">🖨️ Imprimir</button>
-            ` });
-        }
-
-        async function finalizarPedidoAurora(event) {
-            if (event) event.preventDefault();
-
-            const itens = itensNormalizados();
-            if (!itens.length) { alert('Seu carrinho está vazio!'); return; }
-
-            const nome = document.getElementById('cli-nome')?.value.trim();
-            const whats = document.getElementById('cli-whats')?.value.trim();
-            const cidadeCli = document.getElementById('cli-cidade')?.value.trim();
-            const localEnt = document.getElementById('ent-local')?.value.trim();
-            const ruaEnt = document.getElementById('ent-rua')?.value.trim();
-            const numEnt = document.getElementById('ent-numero')?.value.trim();
-            const bairroEnt = document.getElementById('ent-bairro')?.value.trim();
-            const cidadeEnt = document.getElementById('ent-cidade')?.value.trim();
-            const formaPag = document.querySelector('input[name="formaPagamento"]:checked')?.value || 'PIX';
-            const obs = document.getElementById('obs-pedido')?.value.trim() || 'Nenhuma';
-
-            if (!nome || !whats || !cidadeCli || !localEnt || !ruaEnt || !numEnt || !bairroEnt || !cidadeEnt) {
-                alert('Por favor, preencha todos os campos obrigatórios (*).');
-                return;
-            }
-
-            const btn = document.getElementById('btnFinalizar');
-            if (btn) { btn.disabled = true; btn.innerText = '⏳ Processando...'; }
-
-            try {
-                const cfg = await carregarConfigAurora();
-                const descontoPix = parseFloat(cfg.discountPix || cfg.descontoPix || cfg.pix || 5);
-                const freteFixo = parseFloat(cfg.freteFixo || cfg.frete || 0);
-                const freteGratis = parseFloat(cfg.freteGratisAlvo || cfg.freteGratis || 100);
-                const whatsDestino = cfg.whatsapp || '5519999999999';
-                const nomeLoja = cfg.name || 'Abella Joias';
-
-                const subtotalBruto = round2(itens.reduce((a, i) => a + (i.precoOriginal * i.quantidade), 0));
-                const subtotal = round2(itens.reduce((a, i) => a + i.subtotal, 0));
-                const descontoOfertas = round2(Math.max(0, subtotalBruto - subtotal));
-                const pesoTotal = itens.reduce((a, i) => a + i.pesoTotal, 0);
-                const qtdTotal = itens.reduce((a, i) => a + i.quantidade, 0);
-                const desconto = round2(formaPag === 'PIX' ? subtotal * (descontoPix / 100) : 0);
-
-                const cupomAplicado = window.carrinhoService ? carrinhoService.obterCupomAplicado() : null;
-                const descontoCupom = round2(window.carrinhoService ? carrinhoService.obterDescontoCupom() : 0);
-                const faixaAplicada = window.carrinhoService ? carrinhoService.obterFaixaValorAplicada() : null;
-                const descontoFaixa = round2(window.carrinhoService ? carrinhoService.obterDescontoFaixaValor() : 0);
-
-                const frete = round2(subtotal >= freteGratis ? 0 : freteFixo);
-                const total = round2(Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete));
-
-                const pedidoId = 'PED-' + Date.now();
-
-                // Mesmo payload exato que o checkout.js real grava — todos os campos
-                // duplicados existem de propósito, é o que o pedidos.html espera ler.
-                const dadosPedido = {
-                    id: pedidoId,
-                    idPedido: pedidoId,
-
-                    cliente: nome,
-                    nome: nome,
-                    whats: whats,
-                    whatsapp: whats,
-                    contato: whats,
-                    cidade: cidadeCli,
-                    cidadeCliente: cidadeCli,
-
-                    entrega: `${localEnt} — ${ruaEnt}, ${numEnt}, ${bairroEnt}, ${cidadeEnt}`,
-                    enderecoEntrega: { local: localEnt, rua: ruaEnt, numero: numEnt, bairro: bairroEnt, cidade: cidadeEnt },
-
-                    pagamento: formaPag,
-                    formaPagamento: formaPag,
-
-                    subtotalBruto,
-                    subtotal,
-                    descontoOfertas,
-                    desconto,
-                    descontoPix: desconto || 0,
-                    percentualDescontoPix: formaPag === 'PIX' ? descontoPix : 0,
-                    frete,
-                    total,
-                    valorTotal: total,
-                    pesoTotal,
-                    totalPecas: qtdTotal,
-                    qtd: qtdTotal,
-
-                    cupomAplicado: cupomAplicado ? cupomAplicado.code : null,
-                    descontoCupom: descontoCupom || 0,
-                    faixaValorAplicada: faixaAplicada ? faixaAplicada.valorMinimo : null,
-                    descontoFaixaValor: descontoFaixa || 0,
-                    percentualDescontoFaixa: faixaAplicada ? (parseFloat(faixaAplicada.percentual) || 0) : 0,
-                    descontoFaixa: faixaAplicada ? {
-                        valorMinimo: parseFloat(faixaAplicada.valorMinimo) || 0,
-                        percentual: parseFloat(faixaAplicada.percentual) || 0,
-                        desconto: descontoFaixa || 0
-                    } : null,
-
-                    observacoes: obs,
-
-                    itens: itens.map(i => ({
-                        id: i.id, sku: i.sku, codigo: i.sku, nome: i.nome, name: i.nome, variacao: i.variacao,
-                        precoOriginal: i.precoOriginal,
-                        preco: i.preco, price: i.preco, precoFinal: i.preco,
-                        descontoOferta: i.descontoOferta,
-                        quantidade: i.quantidade, subtotal: i.subtotal,
-                        peso: i.peso, pesoTotal: i.pesoTotal,
-                        imagem: i.imagem, image: i.imagem
-                    })),
-
-                    status: 'Novo',
-                    dataCriacao: new Date().toISOString(),
-                    data: new Date().toLocaleDateString('pt-BR')
-                };
-
-                if (!window.db) throw new Error('Instância global do Firebase (window.db) não inicializada.');
-                await db.ref(`abella/orders/${pedidoId}`).set(dadosPedido);
-
-                if (window.carrinhoService && typeof carrinhoService.limpar === 'function') {
-                    carrinhoService.limpar();
-                    carrinhoService.removerCupom();
+        const carrinhoService = {
+            obterItens(){
+                try{
+                    // Alinhamento com a chave unificada do ecossistema Abella Joias
+                    return JSON.parse(localStorage.getItem('abella_carrinho') || '[]');
+                }catch(e){
+                    return [];
                 }
+            },
+            limpar(){
+                localStorage.removeItem('abella_carrinho');
+            }
+        };
 
-                // Mensagem WhatsApp resumida — só os dados essenciais do pedido.
-                // O pedido completo (itens, variações, valores, entrega) continua
-                // salvo no Firebase e disponível no painel/romaneio.
-                const Q = '\n';
-                let msg = `*Novo pedido — ${nomeLoja}*${Q}${Q}`;
-                msg += `*Nome:* ${nome}${Q}`;
-                msg += `*Telefone:* ${whats}${Q}`;
-                msg += `*Cidade:* ${cidadeCli}${Q}`;
-                msg += `*Valor da compra:* ${fmtMoeda(total)}${Q}`;
-                msg += `*Forma de pagamento:* ${formaPag}`;
-
-                const urlWhats = `https://api.whatsapp.com/send?phone=${whatsDestino}&text=${encodeURIComponent(msg)}`;
-                window.open(urlWhats, '_blank');
-                window.location.href = 'index.html';
-
+        function resolverImagemFirebase(url) {
+            try {
+                if (!url) return 'https://via.placeholder.com/100/111111/caa85c?text=Joia';
+                url = String(url).trim();
+                if (url.startsWith('http://') || url.startsWith('https://')) return url;
+                if (url.startsWith('gs://')) {
+                    const semGs = url.replace('gs://', '');
+                    const primeiraBarra = semGs.indexOf('/');
+                    if (primeiraBarra === -1) return url;
+                    const bucket = semGs.substring(0, primeiraBarra);
+                    const caminho = semGs.substring(primeiraBarra + 1);
+                    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodeURIComponent(caminho)}?alt=media`;
+                }
+                return url;
             } catch (err) {
-                console.error('[Aurora Checkout] Erro ao finalizar pedido:', err);
-                alert('Erro técnico ao processar o pedido. Tente novamente.');
-                if (btn) { btn.disabled = false; btn.innerText = '🚀 Finalizar Pedido via WhatsApp'; }
+                return 'https://via.placeholder.com/100/111111/caa85c?text=Joia';
             }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            document.getElementById('breadcrumb-slot').innerHTML = AuroraRender.breadcrumb([
-                { label: 'Home', href: 'index.html' },
-                { label: 'Sacola', href: 'carrinho.html' },
-                { label: 'Finalizar Pedido' }
-            ]);
+            await carregarConfiguracoes();
+            
+            itensCarrinho = carrinhoService.obterItens();
+            if (!Array.isArray(itensCarrinho)) {
+                itensCarrinho = [];
+            }
 
-            const cfg = await carregarConfigAurora();
+            if (itensCarrinho.length === 0) {
+                alert('Seu carrinho está vazio.');
+                window.location.href = 'index.html';
+                return;
+            }
 
-            // Pré-carrega o cache normalizado usado pelo descontoService,
-            // incluindo as faixas progressivas de valor de compra.
-            if (window.ConfigService) {
-                try { await ConfigService.getSettings(true); } catch (e) {
-                    console.warn('Falha ao pré-carregar regras de desconto:', e);
+            renderizarItens();
+            atualizarResumo();
+        });
+
+        async function carregarConfiguracoes(){
+            try{
+                if (typeof window.getAbellaPath !== 'function') return;
+
+                const snap = await db.ref(window.getAbellaPath('settings')).once('value');
+                if (snap.exists()) {
+                    const s = snap.val() || {};
+                    CONFIG.descontoPix = parseFloat(
+    s.pix ??
+    s.pixDesc ??
+    s.descontoPix ??
+    5
+);
+
+CONFIG.parcelasMax = parseInt(
+    s.parcelas ??
+    s.parcelasMax ??
+    6
+);
+
+CONFIG.freteFixo = parseFloat(
+    s.freteFixo ?? 15
+);
+
+CONFIG.freteGratisAlvo = parseFloat(
+    s.freteGratisAlvo ?? 100
+);
+
+CONFIG.pedidoMinimo = parseFloat(
+    s.pedidoMinimo ?? 300
+);
+                    CONFIG.whatsEmpresa = (s.whatsapp || s.whatsEmpresa || '5519999999999').replace(/\D/g,'');
+
+                    // Carregamento da Logo Dinâmica no cabeçalho
+                    let logoPath = s.logo || s.logoUrl || '';
+                    if (logoPath) {
+                        const img = document.getElementById('abellaLogoImg');
+                        const fallback = document.getElementById('abellaLogoFallback');
+                        if (img) {
+                            img.src = resolverImagemFirebase(logoPath);
+                            img.onload = () => {
+                                img.classList.remove('hidden');
+                                fallback?.classList.add('hidden');
+                            };
+                        }
+                    }
+                }
+            }catch(e){
+                console.warn('Erro ao carregar configurações globais:', e);
+            }
+        }
+
+        function renderizarItens(){
+            const container = document.getElementById('lista-itens-checkout');
+            if(!container) return;
+            container.innerHTML = '';
+
+            itensCarrinho.forEach(item => {
+                const qtd = parseInt(item.quantidade || item.qtd || 1);
+                const preco = parseFloat(
+    item.precoFinal ??
+    item.price ??
+    item.preco ??
+    item.precoUnitario ??
+    0
+)
+                const total = preco * qtd;
+                const imagem = resolverImagemFirebase(item.image || item.imagem);
+
+                // Sanitização estrita anti-XSS
+                const nomeLimpo = String(item.name || item.nome || item.titulo || 'Produto').replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+                container.innerHTML += `
+                    <div class="flex items-center gap-4 border border-white/5 rounded-2xl p-3 bg-zinc-900/40">
+                        <img src="${imagem}" class="w-16 h-16 rounded-xl object-cover bg-black border border-zinc-800" alt="${nomeLimpo}" onerror="this.src='https://via.placeholder.com/100/111111/caa85c?text=Joia'">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-sm truncate text-white">${nomeLimpo}</h3>
+                            <p class="text-zinc-500 text-xs mt-1">${qtd}x • ${money.formatar(preco)}</p>
+                        </div>
+                        <span class="font-black text-sm text-[#caa85c]">${money.formatar(total)}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function calcularTotais() {
+
+    let qtd = 0;
+    let peso = 0;
+    let subtotal = 0;
+
+    itensCarrinho.forEach(item => {
+
+        const quantidade = parseInt(
+            item.quantidade ??
+            item.qtd ??
+            1,
+            10
+        );
+
+        const preco = Number(
+            item.precoFinal ??
+            item.price ??
+            item.preco ??
+            item.precoUnitario ??
+            0
+        ) || 0;
+
+        const pesoItem = Number(
+            item.peso ??
+            item.pesoUnitario ??
+            item.weight ??
+            0
+        ) || 0;
+
+        qtd += quantidade;
+        peso += pesoItem * quantidade;
+        subtotal += preco * quantidade;
+
+    });
+
+    const pagamento =
+        document.querySelector(
+            'input[name="formaPagamento"]:checked'
+        )?.value || 'PIX';
+
+    let desconto = 0;
+
+    if (pagamento === 'PIX') {
+        desconto =
+            subtotal *
+            ((CONFIG.descontoPix || 0) / 100);
+    }
+
+    let frete = 0;
+
+    if (
+        subtotal > 0 &&
+        subtotal < (CONFIG.freteGratisAlvo || 0)
+    ) {
+        frete = Number(CONFIG.freteFixo || 0);
+    }
+
+    const total =
+        subtotal -
+        desconto +
+        frete;
+
+    return {
+        qtd,
+        peso,
+        subtotal,
+        desconto,
+        frete,
+        total,
+        pagamento
+    };
+}
+
+        function atualizarResumo(){
+            const t = calcularTotais();
+
+            document.getElementById('res-qtd').innerText = `${t.qtd} pçs`;
+            document.getElementById('res-peso').innerText = `${t.peso.toFixed(2)}g`;
+            document.getElementById('res-subtotal').innerText = money.formatar(t.subtotal);
+            document.getElementById('res-total').innerText = money.formatar(t.total);
+
+            const box = document.getElementById('box-desconto');
+            if (t.desconto > 0) {
+                box.classList.remove('hidden');
+                document.getElementById('res-desconto').innerText = `- ${money.formatar(t.desconto)}`;
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        function construirTextoRomaneio(){
+            const t = calcularTotais();
+            const nome = document.getElementById('cli-nome').value || 'Não informado';
+            const whats = document.getElementById('cli-whats').value || 'Não informado';
+            const documento = document.getElementById('cli-documento').value || 'Não informado';
+            
+            const rua = document.getElementById('ent-rua').value || '';
+            const numero = document.getElementById('ent-numero').value || '';
+            const bairro = document.getElementById('ent-bairro').value || '';
+            const cidade = document.getElementById('ent-cidade').value || '';
+            const uf = document.getElementById('ent-uf').value || '';
+            const cep = document.getElementById('ent-cep').value || '';
+            const obs = document.getElementById('obs-pedido').value || 'Sem observações';
+
+            let texto = '';
+            texto += 'ABELLA JOIAS\n';
+            texto += 'ROMANEIO DE PEDIDO\n';
+            texto += '====================================\n\n';
+            texto += `CLIENTE: ${nome}\n`;
+            texto += `WHATSAPP: ${whats}\n`;
+            texto += `CPF/CNPJ: ${documento}\n\n`;
+            texto += 'ENDEREÇO DE ENTREGA\n';
+            texto += `${rua}, ${numero}\n`;
+            texto += `${bairro}\n`;
+            texto += `${cidade} - ${uf}\n`;
+            texto += `CEP: ${cep}\n\n`;
+            texto += 'ITENS DO PEDIDO\n';
+            texto += '------------------------------------\n';
+
+            itensCarrinho.forEach(item => {
+                const qtd = parseInt(item.quantidade || item.qtd || 1);
+                const preco = parseFloat(
+    item.precoFinal ??
+    item.price ??
+    item.preco ??
+    item.precoUnitario ??
+    0
+)
+                const nomeItem = item.name || item.nome || 'Produto';
+                texto += `${qtd}x ${nomeItem} - ${money.formatar(preco * qtd)}\n`;
+            });
+
+            texto += '------------------------------------\n';
+            texto += `TOTAL PEÇAS: ${t.qtd}\n`;
+            texto += `PESO TOTAL: ${t.peso.toFixed(2)}g\n`;
+            texto += `SUBTOTAL: ${money.formatar(t.subtotal)}\n`;
+            if (t.desconto > 0) {
+                texto += `DESCONTO PIX (${CONFIG.descontoPix}%): ${money.formatar(t.desconto)}\n`;
+            }
+            texto += `TOTAL GERAL: ${money.formatar(t.total)}\n`;
+            texto += `FORMA DE PAGAMENTO: ${t.pagamento}\n\n`;
+            texto += `OBSERVAÇÕES:\n${obs}\n`;
+
+            return texto;
+        }
+
+        function visualizarRomaneio(){
+            // Escape básico de caracteres no pre para exibição segura
+            const textoRomaneio = construirTextoRomaneio().replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            document.getElementById('conteudo-romaneio').innerHTML = `
+                <pre class="whitespace-pre-wrap text-zinc-300 text-xs leading-6 font-mono">${textoRomaneio}</pre>
+            `;
+            document.getElementById('modal-romaneio').classList.remove('hidden');
+        }
+
+        function fecharModal(){
+            document.getElementById('modal-romaneio').classList.add('hidden');
+        }
+
+        function gerarPDF(imprimir = false){
+            try{
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const texto = construirTextoRomaneio();
+
+                doc.setFont('Courier', 'normal');
+                doc.setFontSize(10);
+
+                const linhas = doc.splitTextToSize(texto, 180);
+                doc.text(linhas, 15, 20);
+
+                if (imprimir) {
+                    doc.autoPrint();
+                    window.open(doc.output('bloburl'), '_blank');
+                } else {
+                    doc.save(`romaneio_abella_${Date.now()}.pdf`);
+                }
+            }catch(e){
+                console.error('Erro PDF:', e);
+                alert('Erro ao gerar romaneio em PDF.');
+            }
+        }
+
+        async function finalizarPedido(){
+            const btn = document.getElementById('btnFinalizar');
+            const campos = ['cli-nome', 'cli-whats', 'cli-documento', 'ent-cep', 'ent-rua', 'ent-numero', 'ent-bairro', 'ent-cidade'];
+
+            for (const id of campos) {
+                const el = document.getElementById(id);
+                if (!el || !el.value.trim()) {
+                    el?.focus();
+                    alert('Por favor, preencha todos os campos obrigatórios de cadastro e entrega.');
+                    return;
                 }
             }
 
-            if (cfg.name) {
-                document.getElementById('nomeLojaHeader').innerText = cfg.name;
-                document.getElementById('print-nome-loja').innerText = cfg.name.toUpperCase();
-            }
-            const logoUrlReal = cfg.logoUrl || cfg.logo;
-            if (logoUrlReal) {
-                const img = document.getElementById('abellaLogoImg');
-                img.src = resolverImg(logoUrlReal);
-                img.style.display = 'block';
-                document.getElementById('abellaLogoFallback').style.display = 'none';
-            }
-            if (cfg.bannerAtivo && cfg.bannerTexto) {
-                document.getElementById('banner').classList.remove('hidden');
-                document.getElementById('bannerTexto').innerText = cfg.bannerTexto;
-            }
+            try{
+                if (typeof window.getAbellaPath !== 'function') return;
 
-            await atualizarResumoAurora();
-        });
+                btn.disabled = true;
+                btn.innerText = 'FINALIZANDO...';
+
+                const t = calcularTotais();
+                if (t.subtotal < CONFIG.pedidoMinimo) {
+    alert(
+        `Pedido mínimo de ${money.formatar(CONFIG.pedidoMinimo)} não atingido.`
+    );
+
+    btn.disabled = false;
+    btn.innerText = 'Finalizar Pedido';
+    return;
+}
+                const payload = {
+                    cliente: document.getElementById('cli-nome').value.trim(),
+                    whatsapp: document.getElementById('cli-whats').value.trim(),
+                    documento: document.getElementById('cli-documento').value.trim(),
+                    entrega: {
+                        cep: document.getElementById('ent-cep').value.trim(),
+                        rua: document.getElementById('ent-rua').value.trim(),
+                        numero: document.getElementById('ent-numero').value.trim(),
+                        bairro: document.getElementById('ent-bairro').value.trim(),
+                        cidade: document.getElementById('ent-cidade').value.trim(),
+                        uf: document.getElementById('ent-uf').value
+                    },
+                    observacoes: document.getElementById('obs-pedido').value.trim(),
+                    formaPagamento: t.pagamento,
+                    itens: itensCarrinho,
+                    subtotal: t.subtotal,
+                    desconto: t.desconto,
+                    total: t.total,
+                    totalPecas: t.qtd,
+                    pesoTotal: parseFloat(t.peso.toFixed(2)),
+                    status: 'Novo',
+                    data: new Date().toLocaleString('pt-BR'),
+                    timestamp: Date.now()
+                };
+
+                // Inserção em nó isolado dinamicamente via getAbellaPath
+                const ref = await db.ref(window.getAbellaPath('orders')).push(payload);
+                
+                // Marca o carrinho salvo na nuvem como finalizado (não conta como abandonado)
+                try{
+                    const cartId = localStorage.getItem('abella_cart_id');
+                    if (cartId) {
+                        await db.ref(window.getAbellaPath('carts/' + cartId)).update({
+                            status: 'finalizado',
+                            pedidoId: ref.key,
+                            updatedAt: Date.now()
+                        });
+                        localStorage.removeItem('abella_cart_id');
+                    }
+                }catch(e){ console.warn('Não foi possível finalizar carrinho na nuvem:', e); }
+
+                carrinhoService.limpar();
+
+                const mensagem = `Olá! Meu pedido foi realizado com sucesso.%0A%0ACliente: ${encodeURIComponent(payload.cliente)}%0ATotal: ${encodeURIComponent(money.formatar(payload.total))}%0AForma de Pagamento: ${encodeURIComponent(payload.formaPagamento)}%0A%0AID do Pedido: ${encodeURIComponent(ref.key)}`;
+                window.location.href = `https://api.whatsapp.com/send?phone=${CONFIG.whatsEmpresa}&text=${mensagem}`;
+            }catch(e){
+                console.error('Erro checkout:', e);
+                alert('Houve um erro técnico ao registrar seu pedido. Tente novamente.');
+                btn.disabled = false;
+                btn.innerText = 'Finalizar Pedido';
+            }
+        }
     </script>
 </body>
 </html>

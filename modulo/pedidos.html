@@ -175,6 +175,7 @@
         <div class="flex flex-wrap items-center gap-3">
             <div class="flex flex-wrap gap-1.5 bg-black/40 p-1 rounded-xl border border-zinc-800" id="botoes-filtro-pedidos">
                 <button id="filter-ped-todos" onclick="mudarFiltroStatusPedido('Todos')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black">Todos</button>
+                <button id="filter-ped-sacola" onclick="mudarFiltroStatusPedido('Sacola')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white">🛍️ Sacolas</button>
                 <button id="filter-ped-novo" onclick="mudarFiltroStatusPedido('Novo')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white">Novos</button>
                 <button id="filter-ped-aprovado" onclick="mudarFiltroStatusPedido('Aprovado')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white">Aprovados</button>
                 <button id="filter-ped-entregue" onclick="mudarFiltroStatusPedido('Entregue')" class="btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white">Entregues</button>
@@ -692,6 +693,7 @@
                     div.className = "bg-zinc-900/40 border border-zinc-800/70 rounded-2xl p-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 transition-all hover:border-zinc-700/80 hover:bg-zinc-900/60";
                     
                     let statusColor = "text-amber-400 bg-amber-500/10 border-amber-500/20";
+                    if (p.status === "Sacola") statusColor = "text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/30";
                     if (p.status === "Aprovado") statusColor = "text-green-400 bg-green-500/10 border-green-500/20";
                     if (p.status === "Entregue") statusColor = "text-blue-400 bg-blue-500/10 border-blue-500/20";
                     if (p.status === "Cancelado") statusColor = "text-red-400 bg-red-500/10 border-red-500/20";
@@ -720,12 +722,14 @@
                         </div>
                         <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full lg:w-auto shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-zinc-800">
                             <select onchange="alterarStatusPedidoUI('${id}', this.value)" class="bg-zinc-950 border border-zinc-800 text-zinc-300 text-[11px] px-2.5 py-1.5 rounded-xl font-bold outline-none focus:border-[#caa85c] cursor-pointer transition-colors w-full sm:w-auto">
+                                <option value="Sacola" ${p.status === 'Sacola' ? 'selected' : ''}>Sacola (não finalizada)</option>
                                 <option value="Novo" ${p.status === 'Novo' ? 'selected' : ''}>Novo</option>
                                 <option value="Aprovado" ${p.status === 'Aprovado' ? 'selected' : ''}>Aprovado</option>
                                 <option value="Entregue" ${p.status === 'Entregue' ? 'selected' : ''}>Entregue</option>
                                 <option value="Cancelado" ${p.status === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
                             </select>
                             <div class="flex gap-1.5 w-full sm:w-auto">
+                                ${(function(){ var d = String(p.whats || p.whatsapp || p.contato || '').replace(/\D/g, ''); if (d.length < 10) return ''; if (d.length <= 11) d = '55' + d; var txt = p.status === 'Sacola' ? 'Olá ' + (p.cliente || p.nome || '') + '! Vi que você montou uma sacola na Abella Joias. Posso te ajudar a finalizar?' : 'Olá ' + (p.cliente || p.nome || '') + '!'; return '<a href="https://wa.me/' + d + '?text=' + encodeURIComponent(txt) + '" target="_blank" rel="noopener" class="flex-1 sm:flex-none text-center bg-emerald-900/30 hover:bg-emerald-900/60 border border-emerald-700/50 text-emerald-300 font-bold text-[11px] px-3 py-1.5 rounded-xl transition-all">💬 WhatsApp</a>'; })()}
                                 <button onclick="abrirModalEditarPedido('${id}')" class="flex-1 sm:flex-none bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl transition-all">✏️ Editar</button>
                                 <button onclick="abrirMenuRomaneio('${id}')" class="flex-1 sm:flex-none bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-xl transition-all">🖨️ Romaneio</button>
                                 <button onclick="deletarPedidoUI('${id}')" class="bg-rose-950/20 hover:bg-rose-950/50 border border-rose-900/40 text-rose-400 font-bold text-[11px] px-2.5 py-1.5 rounded-xl transition-all">Deletar</button>
@@ -777,7 +781,7 @@
                 btn.className = "btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400 hover:text-white";
             });
             
-            var mapaId = { 'Todos': 'todos', 'Novo': 'novo', 'Aprovado': 'aprovado', 'Entregue': 'entregue', 'Cancelado': 'cancelado' };
+            var mapaId = { 'Todos': 'todos', 'Sacola': 'sacola', 'Novo': 'novo', 'Aprovado': 'aprovado', 'Entregue': 'entregue', 'Cancelado': 'cancelado' };
             var btnAtivo = document.getElementById('filter-ped-' + (mapaId[status] || 'todos'));
             if (btnAtivo) {
                 btnAtivo.className = "btn-filtro-pedido px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all bg-[#caa85c] text-black";

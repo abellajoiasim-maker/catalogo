@@ -14,7 +14,12 @@
      * Recupera os itens do carrinho com tratamento seguro de erros
      * @returns {Array} Lista de itens do carrinho
      */
+    // Sacola compartilhada aberta via link (?s=...). Fica só em memória:
+    // não toca no localStorage de quem está visualizando.
+    let itensTemporarios = null;
+
     function obterItens() {
+        if (itensTemporarios) return itensTemporarios;
         try {
             const dados = localStorage.getItem(STORAGE_KEY);
             return dados ? JSON.parse(dados) : [];
@@ -29,6 +34,7 @@
      * @param {Array} itens - Lista de itens atualizada
      */
     function salvarItens(itens) {
+        if (itensTemporarios) { itensTemporarios = itens; return; }
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(itens));
         } catch (error) {
@@ -40,6 +46,7 @@
     const CUPOM_KEY = 'pma_v8_cupom_aplicado';
 
     function obterCupomSalvo() {
+        if (itensTemporarios) return null;
         try {
             const dados = localStorage.getItem(CUPOM_KEY);
             return dados ? JSON.parse(dados) : null;
@@ -49,9 +56,147 @@
         }
     }
 
+
+    // ------------------------------------------------------------------
+    // Link compartilhável da sacola
+    // Formato: carrinho.html?s=1.<base64url(JSON)>, JSON = [[id, qtd, variacao, preco, peso], ...]
+    // ------------------------------------------------------------------
+    const VERSAO_LINK = '1';
+
+    function b64urlEncode(texto) {
+        const bytes = new TextEncoder().encode(texto);
+        let bin = '';
+        bytes.forEach(b => { bin += String.fromCharCode(b); });
+        return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function b64urlDecode(codigo) {
+        const b64 = codigo.replace(/-/g, '+').replace(/_/g, '/');
+        const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
+        const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+        return new TextDecoder().decode(bytes);
+    }
+
+    function codificarItens(itens) {
+        const compacto = itens.map(i => [
+            i.id,
+            parseInt(i.quantidade, 10) || 1,
+            i.variacao || '',
+            parseFloat(i.preco) || 0,
+            parseFloat(i.peso) || 0
+        ]);
+        return VERSAO_LINK + '.' + b64urlEncode(JSON.stringify(compacto));
+    }
+
+    function decodificarItens(codigo) {
+        try {
+            const [versao, corpo] = String(codigo || '').split('.');
+            if (versao !== VERSAO_LINK || !corpo) return [];
+            const lista = JSON.parse(b64urlDecode(corpo));
+            if (!Array.isArray(lista)) return [];
+            return lista
+                .filter(l => Array.isArray(l) && l[0] !== undefined && l[0] !== '')
+                .map(l => ({
+                    id: String(l[0]),
+                    quantidade: Math.max(1, parseInt(l[1], 10) || 1),
+                    variacao: String(l[2] || ''),
+                    preco: Math.max(0, parseFloat(l[3]) || 0),
+                    peso: Math.max(0, parseFloat(l[4]) || 0)
+                }));
+        } catch (error) {
+            console.error('[carrinhoService] Link de sacola inválido:', error);
+            return [];
+        }
+    }
+
+    // Completa nome/foto/estoque/categoria com os dados atuais do produto no Firebase.
+    async function hidratarItens(basicos) {
+        const base = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('products') : 'abella/products';
+        const ids = [...new Set(basicos.map(i => i.id))];
+        const produtos = {};
+        await Promise.all(ids.map(async id => {
+            try {
+                if (!window.db) return;
+                const snap = await window.db.ref(base).child(id).once('value');
+                produtos[id] = snap.val();
+            } catch (e) { produtos[id] = null; }
+        }));
+
+        const resultado = [];
+        const indisponiveis = [];
+        basicos.forEach(b => {
+            const p = produtos[b.id];
+            if (!p || p.paused === true || p.ativo === false) {
+                indisponiveis.push(b.id);
+                return;
+            }
+            const estoqueControlado = p.estoqueControlado === true || p.estoqueLimitadoAtivo === true || p.controleEstoque === true;
+            const estoqueQuantidade = Math.max(0, parseInt(p.estoqueQuantidade ?? p.estoque ?? 0, 10) || 0);
+            let quantidade = b.quantidade;
+            if (estoqueControlado && p.venderSemEstoque !== true) {
+                quantidade = Math.min(quantidade, estoqueQuantidade);
+                if (quantidade <= 0) { indisponiveis.push(b.id); return; }
+            }
+            resultado.push({
+                id: b.id,
+                sku: p.sku || p.codigo || b.id,
+                codigo: p.codigo || p.sku || b.id,
+                name: p.nome || p.name || 'Produto',
+                preco: b.preco || parseFloat(p.preco ?? p.price ?? 0) || 0,
+                category: p.categoriaId || p.category || p.categoria || '',
+                subcategory: p.subcategoriaId || p.subcategory || p.subcategoria || '',
+                image: p.imagem || p.image || p.img || '',
+                peso: b.peso || parseFloat(p.peso || p.weight || 0) || 0,
+                quantidade,
+                variacao: b.variacao,
+                estoqueControlado,
+                estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
+                venderSemEstoque: p.venderSemEstoque === true
+            });
+        });
+        return { itens: resultado, indisponiveis };
+    }
+
     // Instanciação do serviço com os métodos públicos
     const carrinhoService = {
         
+
+        /**
+         * Gera o link que reabre esta sacola em qualquer aparelho. Retorna '' se vazia.
+         */
+        gerarLinkCompartilhavel: function () {
+            const itens = obterItens();
+            if (!itens.length) return '';
+            const base = window.location.href.split('#')[0].split('?')[0];
+            return base + '?s=' + codificarItens(itens);
+        },
+
+        /**
+         * Abre uma sacola compartilhada em modo visualização (somente memória).
+         * Retorna { itens, indisponiveis }.
+         */
+        carregarCompartilhada: async function (codigo) {
+            const basicos = decodificarItens(codigo);
+            if (!basicos.length) return { itens: [], indisponiveis: [] };
+            const r = await hidratarItens(basicos);
+            itensTemporarios = r.itens;
+            return r;
+        },
+
+        /** true enquanto uma sacola compartilhada está sendo visualizada. */
+        emModoVisualizacao: function () {
+            return itensTemporarios !== null;
+        },
+
+        /** Grava a sacola compartilhada no localStorage do visitante (substitui a atual). */
+        usarSacolaCompartilhada: function () {
+            if (!itensTemporarios) return false;
+            const itens = itensTemporarios;
+            itensTemporarios = null;
+            salvarItens(itens);
+            return true;
+        },
+
         /**
          * Retorna todos os itens do carrinho com os cálculos de desconto atualizados dinamicamente
          */

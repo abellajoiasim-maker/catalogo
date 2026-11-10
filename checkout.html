@@ -686,6 +686,14 @@
                 if (!window.db) throw new Error('Instância global do Firebase (window.db) não inicializada.');
                 await db.ref(`abella/orders/${pedidoId}`).set(dadosPedido);
 
+                // Se este cliente havia enviado a sacola antes (status "Sacola"), ela virou pedido: remove o registro.
+                try {
+                    const dig = String(whats).replace(/\D/g, '');
+                    for (const d of new Set([dig, (dig.length === 10 || dig.length === 11) ? '55' + dig : dig, dig.replace(/^55/, '')])) {
+                        if (d) await db.ref(`abella/orders/SAC-${d}`).remove();
+                    }
+                } catch (e) { console.warn('[Checkout] Sacola anterior não removida:', e); }
+
                 if (window.carrinhoService && typeof carrinhoService.limpar === 'function') {
                     carrinhoService.limpar();
                     carrinhoService.removerCupom();

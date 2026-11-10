@@ -125,6 +125,21 @@
         </div>
     </main>
 
+
+    <div id="modalContatoSacola" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:9999; display:none; align-items:center; justify-content:center; padding:var(--space-5);">
+        <div style="background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-6); width:100%; max-width:380px;">
+            <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom:var(--space-2);">Enviar minha sacola</h2>
+            <p style="font-size:12px; color:var(--color-secondary); margin-bottom:var(--space-4);">Informe seu contato para a Abella retornar com sua sacola.</p>
+            <input type="text" id="contatoNome" class="aurora-input" placeholder="Seu nome" autocomplete="name" style="margin-bottom:var(--space-3);">
+            <input type="tel" id="contatoWhats" class="aurora-input" placeholder="Seu WhatsApp com DDD (19) 99999-9999" autocomplete="tel">
+            <p id="contatoErro" style="font-size:11px; color:var(--color-danger); min-height:14px; margin-top:var(--space-2);"></p>
+            <div style="display:flex; gap:var(--space-2); margin-top:var(--space-3);">
+                <button type="button" id="btnContatoCancelar" class="aurora-btn aurora-btn--ghost" style="flex:1;">Cancelar</button>
+                <button type="button" id="btnContatoEnviar" class="aurora-btn aurora-btn--primary" style="flex:2;">Enviar pelo WhatsApp</button>
+            </div>
+        </div>
+    </div>
+
     <footer class="aurora-footer">
         <div class="aurora-container">
             <div class="bottom">
@@ -322,24 +337,131 @@
             }
         }
 
-        async function enviarSacolaWhatsApp() {
+        const CHAVE_CONTATO = 'abella_contato_sacola';
+
+        function somenteDigitos(v) { return String(v || '').replace(/\D/g, ''); }
+
+        function whatsComDDI(digitos) {
+            // 10/11 dígitos = DDD + número (Brasil) → acrescenta 55
+            return (digitos.length === 10 || digitos.length === 11) ? '55' + digitos : digitos;
+        }
+
+        function abrirModalContato() {
             const itens = carrinhoService.listar();
             if (!itens.length) { mostrarMsgCompartilhar('Sua sacola está vazia.'); return; }
+            try {
+                const salvo = JSON.parse(localStorage.getItem(CHAVE_CONTATO) || '{}');
+                if (salvo.nome) document.getElementById('contatoNome').value = salvo.nome;
+                if (salvo.whats) document.getElementById('contatoWhats').value = salvo.whats;
+            } catch (e) {}
+            document.getElementById('contatoErro').innerText = '';
+            const m = document.getElementById('modalContatoSacola');
+            m.classList.remove('hidden');
+            m.style.display = 'flex';
+            document.getElementById(document.getElementById('contatoNome').value ? 'contatoWhats' : 'contatoNome').focus();
+        }
 
+        function fecharModalContato() {
+            const m = document.getElementById('modalContatoSacola');
+            m.classList.add('hidden');
+            m.style.display = 'none';
+        }
+
+        // Grava a sacola em abella/orders com status "Sacola". O id é fixo por
+        // WhatsApp (SAC-<numero>): se o cliente reenviar, atualiza em vez de duplicar.
+        async function salvarSacolaNoPainel(nome, whatsDigitos, itens) {
+            if (!window.db) throw new Error('Firebase indisponível');
+            const id = 'SAC-' + whatsComDDI(whatsDigitos);
+            const agora = new Date();
+            const subtotalBruto = Math.round(carrinhoService.obterTotalBruto() * 100) / 100;
+            const total = Math.round(carrinhoService.obterTotal() * 100) / 100;
+            const subtotal = itens.reduce((a, i) => a + i.precoVendaUnitario * i.quantidade, 0);
+            const cupom = carrinhoService.obterCupomAplicado();
+            const qtd = itens.reduce((a, i) => a + (parseInt(i.quantidade, 10) || 0), 0);
+            const peso = itens.reduce((a, i) => a + (parseFloat(i.peso) || 0) * (parseInt(i.quantidade, 10) || 0), 0);
+
+            const dados = {
+                id, idPedido: id,
+                origem: 'sacola',
+                cliente: nome, nome,
+                whats: whatsComDDI(whatsDigitos), whatsapp: whatsComDDI(whatsDigitos), contato: whatsComDDI(whatsDigitos),
+                cidade: '', cidadeCliente: '',
+                pagamento: '', formaPagamento: '',
+                subtotalBruto,
+                subtotal: Math.round(subtotal * 100) / 100,
+                descontoOfertas: Math.max(0, Math.round((subtotalBruto - subtotal) * 100) / 100),
+                desconto: 0, frete: 0,
+                total, valorTotal: total,
+                pesoTotal: Math.round(peso * 100) / 100,
+                totalPecas: qtd, qtd,
+                cupomAplicado: cupom ? cupom.code : null,
+                observacoes: 'Sacola enviada pelo cliente (pedido ainda não finalizado).',
+                linkSacola: carrinhoService.gerarLinkCompartilhavel(),
+                itens: itens.map(i => ({
+                    id: i.id, sku: i.sku, codigo: i.sku, nome: i.name, name: i.name, variacao: i.variacao || '',
+                    precoOriginal: parseFloat(i.preco) || 0,
+                    preco: i.precoVendaUnitario, price: i.precoVendaUnitario, precoFinal: i.precoVendaUnitario,
+                    quantidade: i.quantidade,
+                    subtotal: Math.round(i.precoVendaUnitario * i.quantidade * 100) / 100,
+                    peso: parseFloat(i.peso) || 0,
+                    pesoTotal: (parseFloat(i.peso) || 0) * i.quantidade,
+                    imagem: i.image || '', image: i.image || ''
+                })),
+                status: 'Sacola',
+                timestamp: agora.getTime(),
+                dataCriacao: agora.toISOString(),
+                data: agora.toLocaleDateString('pt-BR')
+            };
+            await db.ref(`abella/orders/${id}`).set(dados);
+        }
+
+        async function confirmarEnvioSacola() {
+            const nome = document.getElementById('contatoNome').value.trim();
+            const whatsDigitos = somenteDigitos(document.getElementById('contatoWhats').value);
+            const erro = document.getElementById('contatoErro');
+
+            if (nome.length < 2) { erro.innerText = 'Informe seu nome.'; return; }
+            if (whatsDigitos.length < 10 || whatsDigitos.length > 13) { erro.innerText = 'Informe o WhatsApp com DDD. Ex.: (19) 99999-9999'; return; }
+
+            const btn = document.getElementById('btnContatoEnviar');
+            btn.disabled = true; btn.innerText = 'Enviando...';
+
+            // Abre a aba já no clique (evita bloqueio de pop-up no celular) e preenche depois.
+            const aba = window.open('', '_blank');
+
+            try { localStorage.setItem(CHAVE_CONTATO, JSON.stringify({ nome, whats: document.getElementById('contatoWhats').value.trim() })); } catch (e) {}
+
+            const itens = carrinhoService.listar();
             const cfg = await obterConfigLoja();
-            const whats = String(cfg.whatsapp || cfg.whatsEmpresa || '5519988207658').replace(/\D/g, '');
+            const lojaWhats = somenteDigitos(cfg.whatsapp || cfg.whatsEmpresa || '5519988207658');
             const nomeLoja = cfg.name || cfg.nomeEmpresa || 'Abella Joias';
-            const Q = '\n';
 
+            // Salva no painel; se falhar, o WhatsApp ainda abre (o lead não se perde).
+            try {
+                await Promise.race([
+                    salvarSacolaNoPainel(nome, whatsDigitos, itens),
+                    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
+                ]);
+            } catch (e) {
+                console.warn('[Carrinho] Não foi possível salvar a sacola no painel:', e);
+            }
+
+            const Q = '\n';
             let msg = `*Minha sacola — ${nomeLoja}*${Q}${Q}`;
+            msg += `*Nome:* ${nome}${Q}*WhatsApp:* ${document.getElementById('contatoWhats').value.trim()}${Q}${Q}`;
             itens.forEach(i => {
-                const var_ = i.variacao ? ` (${i.variacao})` : '';
-                msg += `• ${i.quantidade}x ${i.name}${var_} — ${formatarMoeda(i.precoVendaUnitario * i.quantidade)}${Q}`;
+                const v = i.variacao ? ` (${i.variacao})` : '';
+                msg += `• ${i.quantidade}x ${i.name}${v} — ${formatarMoeda(i.precoVendaUnitario * i.quantidade)}${Q}`;
             });
             msg += `${Q}*Total:* ${formatarMoeda(carrinhoService.obterTotal())}${Q}${Q}`;
             msg += `Ver sacola: ${carrinhoService.gerarLinkCompartilhavel()}`;
 
-            window.open(`https://api.whatsapp.com/send?phone=${whats}&text=${encodeURIComponent(msg)}`, '_blank');
+            const url = `https://api.whatsapp.com/send?phone=${lojaWhats}&text=${encodeURIComponent(msg)}`;
+            if (aba) aba.location.href = url; else window.location.href = url;
+
+            btn.disabled = false; btn.innerText = 'Enviar pelo WhatsApp';
+            fecharModalContato();
+            mostrarMsgCompartilhar('✅ Sacola enviada! Finalize no WhatsApp.');
         }
 
         function aplicarModoVisualizacao(info) {
@@ -470,7 +592,10 @@
             await iniciarSacolaCompartilhada();
             renderizarCarrinho();
 
-            document.getElementById('btnWhatsSacola').addEventListener('click', enviarSacolaWhatsApp);
+            document.getElementById('btnWhatsSacola').addEventListener('click', abrirModalContato);
+            document.getElementById('btnContatoCancelar').addEventListener('click', fecharModalContato);
+            document.getElementById('btnContatoEnviar').addEventListener('click', confirmarEnvioSacola);
+            document.getElementById('contatoWhats').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirmarEnvioSacola(); } });
             document.getElementById('btnCompartilharSacola').addEventListener('click', copiarLinkSacola);
 
             document.getElementById('btnAplicarCupom').addEventListener('click', aplicarCupomUI);

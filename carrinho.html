@@ -83,6 +83,11 @@
             <button class="aurora-btn aurora-btn--ghost aurora-btn--sm" id="btnLimpar">Limpar sacola</button>
         </div>
 
+        <div id="banner-compartilhada" class="hidden" style="background:rgba(var(--color-primary-rgb),.08); border:1px solid var(--color-border); border-radius:var(--radius-md); padding: var(--space-4) var(--space-5); margin-bottom: var(--space-5); font-size:13px;">
+            <strong>🔗 Sacola compartilhada</strong>
+            <p id="bannerCompartilhadaTexto" style="margin-top:var(--space-2); color:var(--color-secondary);"></p>
+        </div>
+
         <div id="lista-itens"></div>
 
         <div id="empty-cart" class="empty-cart hidden">
@@ -111,7 +116,12 @@
             <div class="summary-row" id="linhaDescontoFaixa" style="display:none;"><span id="labelFaixa">Desconto por valor</span><span id="descontoFaixaValor" style="color:var(--color-success);"></span></div>
             <div class="summary-row" id="linhaDescontoCupom" style="display:none;"><span>Cupom</span><span id="descontoCupomValor" style="color:var(--color-success);"></span></div>
             <div class="summary-total"><span>Total</span><span id="total">R$ 0,00</span></div>
-            <a href="checkout.html" class="aurora-btn aurora-btn--primary aurora-btn--block" style="margin-top: var(--space-5);">Finalizar Pedido</a>
+            <a href="checkout.html" id="btnFinalizarSacola" class="aurora-btn aurora-btn--primary aurora-btn--block" style="margin-top: var(--space-5);">Finalizar Pedido</a>
+            <div id="acoesSacola" style="display:flex; flex-direction:column; gap: var(--space-2); margin-top: var(--space-3);">
+                <button type="button" id="btnWhatsSacola" class="aurora-btn aurora-btn--outline aurora-btn--block">💬 Enviar minha sacola para a Abella</button>
+                <button type="button" id="btnCompartilharSacola" class="aurora-btn aurora-btn--ghost aurora-btn--block">🔗 Copiar link da sacola</button>
+                <p id="msgCompartilhar" style="font-size:11px; color:var(--color-secondary); text-align:center; min-height:14px;"></p>
+            </div>
         </div>
     </main>
 
@@ -275,6 +285,105 @@
             }
         }
 
+
+        // ------------------------------------------------------------------
+        // Sacola compartilhada: link + WhatsApp
+        // ------------------------------------------------------------------
+        let _cfgLoja = null;
+        async function obterConfigLoja() {
+            if (_cfgLoja) return _cfgLoja;
+            try {
+                const snap = await db.ref('abella/settings').once('value');
+                _cfgLoja = snap && snap.exists() ? snap.val() : {};
+            } catch (e) { _cfgLoja = {}; }
+            return _cfgLoja;
+        }
+
+        function mostrarMsgCompartilhar(texto) {
+            const el = document.getElementById('msgCompartilhar');
+            if (!el) return;
+            el.innerText = texto;
+            setTimeout(() => { if (el.innerText === texto) el.innerText = ''; }, 4000);
+        }
+
+        async function copiarLinkSacola() {
+            const link = carrinhoService.gerarLinkCompartilhavel();
+            if (!link) { mostrarMsgCompartilhar('Sua sacola está vazia.'); return; }
+            try {
+                if (navigator.share && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                    await navigator.share({ title: 'Minha sacola — Abella Joias', url: link });
+                    return;
+                }
+                await navigator.clipboard.writeText(link);
+                mostrarMsgCompartilhar('✅ Link copiado! Cole onde quiser enviar.');
+            } catch (e) {
+                if (e && e.name === 'AbortError') return;
+                window.prompt('Copie o link da sacola:', link);
+            }
+        }
+
+        async function enviarSacolaWhatsApp() {
+            const itens = carrinhoService.listar();
+            if (!itens.length) { mostrarMsgCompartilhar('Sua sacola está vazia.'); return; }
+
+            const cfg = await obterConfigLoja();
+            const whats = String(cfg.whatsapp || cfg.whatsEmpresa || '5519988207658').replace(/\D/g, '');
+            const nomeLoja = cfg.name || cfg.nomeEmpresa || 'Abella Joias';
+            const Q = '\n';
+
+            let msg = `*Minha sacola — ${nomeLoja}*${Q}${Q}`;
+            itens.forEach(i => {
+                const var_ = i.variacao ? ` (${i.variacao})` : '';
+                msg += `• ${i.quantidade}x ${i.name}${var_} — ${formatarMoeda(i.precoVendaUnitario * i.quantidade)}${Q}`;
+            });
+            msg += `${Q}*Total:* ${formatarMoeda(carrinhoService.obterTotal())}${Q}${Q}`;
+            msg += `Ver sacola: ${carrinhoService.gerarLinkCompartilhavel()}`;
+
+            window.open(`https://api.whatsapp.com/send?phone=${whats}&text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function aplicarModoVisualizacao(info) {
+            const banner = document.getElementById('banner-compartilhada');
+            const texto = document.getElementById('bannerCompartilhadaTexto');
+            banner.classList.remove('hidden');
+
+            let aviso = 'Você está vendo uma sacola enviada por link. Nada foi alterado na sua própria sacola.';
+            if (info.indisponiveis.length) {
+                aviso += ` ${info.indisponiveis.length} item(ns) não estão mais disponíveis e foram omitidos.`;
+            }
+            texto.innerText = aviso;
+
+            document.getElementById('btnLimpar').style.display = 'none';
+            document.getElementById('cupomBox').style.display = 'none';
+            document.getElementById('acoesSacola').style.display = 'none';
+
+            const btn = document.getElementById('btnFinalizarSacola');
+            btn.innerText = 'Usar esta sacola e finalizar';
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const atual = JSON.parse(localStorage.getItem('pma_v8_carrinho_itens') || '[]');
+                if (atual.length && !confirm('Você já tem itens na sua sacola. Substituir pela sacola do link?')) return;
+                carrinhoService.usarSacolaCompartilhada();
+                window.location.href = 'checkout.html';
+            });
+        }
+
+        async function iniciarSacolaCompartilhada() {
+            const codigo = new URLSearchParams(window.location.search).get('s');
+            if (!codigo) return;
+            const lista = document.getElementById('lista-itens');
+            lista.innerHTML = '<p style="font-size:13px; color:var(--color-secondary);">Carregando sacola...</p>';
+            const info = await carrinhoService.carregarCompartilhada(codigo);
+            if (!info.itens.length) {
+                lista.innerHTML = '';
+                const banner = document.getElementById('banner-compartilhada');
+                banner.classList.remove('hidden');
+                document.getElementById('bannerCompartilhadaTexto').innerText = 'Não foi possível abrir esta sacola: o link está incompleto ou os produtos não estão mais disponíveis.';
+                return;
+            }
+            aplicarModoVisualizacao(info);
+        }
+
         function alterarQuantidade(id, variacao, novaQtd) {
             if (novaQtd < 1) {
                 removerItem(id, variacao);
@@ -358,7 +467,11 @@
                 }).catch(() => {});
             }
 
+            await iniciarSacolaCompartilhada();
             renderizarCarrinho();
+
+            document.getElementById('btnWhatsSacola').addEventListener('click', enviarSacolaWhatsApp);
+            document.getElementById('btnCompartilharSacola').addEventListener('click', copiarLinkSacola);
 
             document.getElementById('btnAplicarCupom').addEventListener('click', aplicarCupomUI);
             document.getElementById('inputCupom').addEventListener('keydown', (e) => {

@@ -28,3 +28,12 @@ Os comandos individuais são:
 npm run seo:sitemap
 npm run seo:merchant
 ```
+
+## Diagnóstico de imagens
+
+Imagens "sumindo" quase sempre significam que o arquivo esperado não existe no CDN (`abella-joias-cdn`). Duas ferramentas ajudam:
+
+- **No navegador:** abra qualquer página com `?debugImagens=1` — imagens que caíram no placeholder ganham borda vermelha tracejada. No console, `ImageHelper.relatorioFalhas()` lista as URLs que deram erro.
+- **Auditoria completa:** `npm run images:check` lê o Firebase, resolve cada imagem com o mesmo `image-helper.js` do site e confere no CDN. Gera `relatorio-imagens.csv` com o motivo de cada falha (sem imagem, arquivo inexistente, nome ≠ SKU, ainda no Firebase...). Requer Node 20+.
+
+O feed do Merchant (`npm run seo:merchant`) agora grava `image_link` como URL absoluta do CDN.

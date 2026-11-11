@@ -672,7 +672,7 @@ function blobParaBase64(blob) {
 // =========================================================================
 async function githubBuscarShaExistente(cfg, caminho) {
     const resp = await fetch(
-        `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${caminho}?ref=${cfg.branch}`,
+        `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${caminho.split('/').map(encodeURIComponent).join('/')}?ref=${cfg.branch}`,
         { headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json' } }
     );
     if (resp.status === 404) return null;
@@ -692,7 +692,7 @@ async function githubEnviarArquivo(cfg, caminho, base64Conteudo, mensagem) {
     if (shaExistente) corpo.sha = shaExistente;
 
     const resp = await fetch(
-        `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${caminho}`,
+        `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${caminho.split('/').map(encodeURIComponent).join('/')}`,
         {
             method: 'PUT',
             headers: {
@@ -717,7 +717,7 @@ async function githubEnviarArquivo(cfg, caminho, base64Conteudo, mensagem) {
 function purgarCacheJsdelivr(cfg, caminho) {
     // Best-effort: dispara a purga do cache do jsDelivr pra esse arquivo
     // específico. Não bloqueia o fluxo caso falhe (CORS/timeout).
-    const url = `https://purge.jsdelivr.net/gh/${cfg.owner}/${cfg.repo}@${cfg.branch}/${caminho}`;
+    const url = `https://purge.jsdelivr.net/gh/${cfg.owner}/${cfg.repo}@${cfg.branch}/${caminho.split("/").map(encodeURIComponent).join("/")}`;
     fetch(url, { mode: 'no-cors' }).catch(() => {});
 }
 
@@ -731,7 +731,10 @@ async function enviarImagemParaProduto(produtoId, blob, ext) {
     if (!produto) throw new Error('Produto não encontrado.');
 
     // Nome do arquivo = SKU/código do produto (padrão do CDN), nunca o ID interno.
-    const identificador = normalizarTexto(produto.codigo || produto.sku || produto.id).toUpperCase() || produto.id;
+    // "/", "\\", "#", "?" e "%" quebram o caminho/URL do arquivo no GitHub/jsDelivr.
+    const identificador = normalizarTexto(produto.codigo || produto.sku || produto.id)
+        .toUpperCase()
+        .replace(/[\/\\#?%]+/g, '-');
     if (!identificador) throw new Error('Produto sem código/SKU definido — não é possível nomear o arquivo.');
 
     const webpBlob = await converterBlobParaWebp(blob, 0.82);
@@ -741,7 +744,8 @@ async function enviarImagemParaProduto(produtoId, blob, ext) {
     await githubEnviarArquivo(cfg, caminho, base64, `feat: imagem do produto ${identificador} via migrador`);
     purgarCacheJsdelivr(cfg, caminho);
 
-    const url = `${cdnBaseAtual()}/products/${identificador}.webp`;
+    // encodeURIComponent: espaço, "#", acento etc. no nome não podem quebrar a URL salva no banco.
+    const url = `${cdnBaseAtual()}/products/${encodeURIComponent(identificador)}.webp`;
 
     await db.ref(PRODUCTS_PATH).child(produtoId).update({
         imagem: url,
@@ -797,7 +801,8 @@ function extrairIdentificadorDeLinkAntigo(valorAntigo) {
     // (nomeArquivo já é o próprio valor nesse caso)
 
     if (!nomeArquivo) return null;
-    return nomeArquivo.replace(/\.[a-zA-Z0-9]+$/, ''); // remove extensão -> SKU
+    // remove só extensão de imagem conhecida (um código como "BF-01.0001" não pode ser cortado)
+    return nomeArquivo.replace(/\.(png|jpe?g|webp|gif|avif|bmp|svg|tiff?|heic)$/i, ''); // -> SKU
 }
 
 async function escanearLinksAntigos() {
@@ -838,7 +843,7 @@ async function escanearLinksAntigos() {
             produtoId: produto.id,
             nome: produto.nome,
             linkAntigo: produto.imagem,
-            linkNovo: `${cdnBaseAtual()}/${caminho}`,
+            linkNovo: `${cdnBaseAtual()}/${caminho.split('/').map(encodeURIComponent).join('/')}`,
             caminho,
             existe
         });

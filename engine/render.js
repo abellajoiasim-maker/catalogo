@@ -45,8 +45,11 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
             : url;
     }
 
+    // Antes o último recurso era 'images/fallback.jpg', arquivo que não existe no projeto.
     function fallbackImg() {
-        return window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg';
+        return window.AURORA_FALLBACK_IMAGE
+            || (window.ImageHelper && (window.ImageHelper.PLACEHOLDER || window.ImageHelper.FALLBACK_INLINE))
+            || 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 4 4%22%3E%3Crect width=%224%22 height=%224%22 fill=%22%23f1ede6%22/%3E%3C/svg%3E';
     }
 
     function escapeHtml(value) {
@@ -172,7 +175,7 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
             return `
                 <div class="aurora-card aurora-card--product" ${clickAttr}>
                     <div class="media">
-                        <img src="${img}" alt="${altTexto}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackImg()}'">
+                        <img src="${img}" alt="${escapeHtml(altTexto)}" loading="lazy" onerror="this.onerror=null;this.src='${escapeHtml(fallbackImg())}'">
                         ${badgeHTML}
                     </div>
                     <div class="body">
@@ -191,11 +194,11 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
          * BannerCard — banner de campanha full-bleed.
          */
         bannerCard(data) {
-            const img = resolveImage(data.imagem || data.image) || fallbackImg();
+            const img = safeUrl(resolveImage(data.imagem || data.image) || fallbackImg());
             return `
                 <div class="aurora-card aurora-card--banner">
                     <div class="media">
-                        <img src="${img}" alt="${data.titulo || ''}" loading="lazy">
+                        <img src="${img}" alt="${escapeHtml(data.titulo || '')}" loading="lazy" onerror="this.onerror=null;this.src='${escapeHtml(fallbackImg())}'">
                         <div class="overlay"><h2 class="title">${data.titulo || data.title || ''}</h2></div>
                     </div>
                 </div>
@@ -206,10 +209,10 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
          * CollectionCard — coleção em destaque, com descrição e CTA.
          */
         collectionCard(data) {
-            const img = resolveImage(data.imagem || data.image) || fallbackImg();
+            const img = safeUrl(resolveImage(data.imagem || data.image) || fallbackImg());
             return `
                 <div class="aurora-card aurora-card--collection">
-                    <div class="media"><img src="${img}" alt="${data.nome || ''}" loading="lazy"></div>
+                    <div class="media"><img src="${img}" alt="${escapeHtml(data.nome || '')}" loading="lazy" onerror="this.onerror=null;this.src='${escapeHtml(fallbackImg())}'"></div>
                     <div class="body">
                         <p class="title">${data.nome || data.name || ''}</p>
                         <p class="description">${data.descricao || data.description || ''}</p>
@@ -223,10 +226,10 @@ Depende de: nenhum (puro JS + classes CSS do Sprint 1)
          * LookbookCard — puramente editorial, sem preço/CTA.
          */
         lookbookCard(data) {
-            const img = resolveImage(data.imagem || data.image) || fallbackImg();
+            const img = safeUrl(resolveImage(data.imagem || data.image) || fallbackImg());
             return `
                 <div class="aurora-card aurora-card--lookbook">
-                    <div class="media"><img src="${img}" alt="" loading="lazy"></div>
+                    <div class="media"><img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${escapeHtml(fallbackImg())}'"></div>
                     <div class="body"><p class="caption">${data.legenda || data.caption || ''}</p></div>
                 </div>
             `;

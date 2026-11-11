@@ -5,6 +5,9 @@
 // aceito gratuitamente pelo Google Merchant Center via "Buscar conteúdo" agendado).
 
 import { writeFileSync } from 'fs';
+import { carregarImageHelper } from './lib/image-resolver.mjs';
+
+const ImageHelper = carregarImageHelper();
 
 const DB_URL = 'https://catalogo-abella-joias-default-rtdb.firebaseio.com';
 const SITE_URL = 'https://catalogo.abellajoias.com.br';
@@ -55,15 +58,22 @@ async function main() {
     return true;
   });
 
+  const idsVistos = new Set(); // Merchant rejeita <g:id> repetido
   const items = vendaveis.map(p => {
     const id = xmlEscape(p.sku || p.codigo || p.id);
     const nome = xmlEscape(p.nome || p.name);
     const descricao = xmlEscape(p.descricao || `${p.nome || p.name} — Atacado de semijoias Abella Joias, direto de fábrica em Limeira-SP.`);
     const link = xmlEscape(linkDoProduto(p));
-    const imagem = xmlEscape(p.imagem || p.image || '');
+    // O Merchant Center exige URL ABSOLUTA. O banco guarda nomes crus ("PRG-71.png") e
+    // links antigos do Firebase; o ImageHelper os converte para a URL real do CDN.
+    const imagemBruta = String(p.imagem || p.image || '').trim();
+    const imagemUrl = imagemBruta ? ImageHelper.obterImagem(p) : '';
+    const imagem = (imagemUrl && imagemUrl !== ImageHelper.PLACEHOLDER) ? xmlEscape(imagemUrl) : '';
     const disponibilidade = (Number(p.estoque) > 0 || p.estoque === undefined) ? 'in_stock' : 'out_of_stock';
 
     if (!imagem) return null; // Merchant Center rejeita item sem imagem — pula em vez de quebrar o feed inteiro
+    if (idsVistos.has(id)) return null;
+    idsVistos.add(id);
 
     return `  <item>
     <g:id>${id}</g:id>

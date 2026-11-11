@@ -1,32 +1,64 @@
 // ======================================================================
 // js/utils/image-helper.js
-// Abella Joias - ImageHelper v4.0 (Migrado para CDN jsDelivr / GitHub)
-// Substitui o Firebase Storage (indisponível) por um repositório
-// público de imagens servido via jsDelivr.
-// Mantém EXATAMENTE a mesma API pública da v3.0 para não exigir
-// nenhuma alteração em outras páginas (produtos.html, carrinho.html,
-// index.html, checkout.html, subcategorias.html, engine/render.js).
+// Abella Joias - ImageHelper v4.1 (CDN jsDelivr / GitHub)
+//
+// Mantém EXATAMENTE a mesma API pública da v4.0 (nenhuma página precisa
+// mudar), mas corrige os pontos que faziam imagens "sumirem":
+//
+//  1. Caminhos já no layout do CDN ("categories/x.jpg", "products/X.webp",
+//     "home/banner.jpg"...) caíam no placeholder. Agora são resolvidos.
+//  2. Imagens de subcategoria vindas de gs:// / Firebase eram enviadas para
+//     /categories/ (o teste "categoria" vinha antes de "subcategoria").
+//  3. extrairSku() cortava qualquer coisa depois do último ponto: um código
+//     sem extensão como "BF-01.0001" virava "BF-01". Agora só remove
+//     extensões de imagem conhecidas.
+//  4. Nomes com espaço, "#", "?", "%" ou acento geravam URL inválida
+//     (ex.: "ABC#1.webp" pedia só "ABC"). Agora o nome do arquivo é
+//     codificado com encodeURIComponent.
+//  5. O placeholder era hospedado no próprio CDN: se o CDN falhasse, a
+//     imagem de "fallback" também falhava e o card ficava vazio. Agora há
+//     um fallback embutido (SVG data-URI) como último recurso.
+//  6. Watchdog global: toda <img> que falhar é registrada
+//     (ImageHelper.relatorioFalhas()) e trocada pelo placeholder, mesmo em
+//     templates que esqueceram o onerror. Use ?debugImagens=1 na URL para
+//     destacar visualmente as imagens que caíram no fallback.
+//  7. Carregar este arquivo duas vezes não lança mais erro.
 // ======================================================================
 
-const ImageHelper = (() => {
+(function () {
     'use strict';
+
+    if (typeof window === 'undefined' || window.ImageHelper) return;
 
     // ==========================================================
     // CONFIGURAÇÃO DO CDN
-    // ⚠️ AJUSTE AQUI: troque pelo seu usuário/repo/branch reais.
+    // ⚠️ AJUSTE AQUI: usuário/repo/branch reais do repositório de imagens.
+    // (Deve ser o MESMO configurado em "⚙️ GitHub" no Migrador de Imagens.)
     // ==========================================================
-const CDN_USER = 'abellajoiasim-maker';  // seu usuário do GitHub
-const CDN_REPO = 'abella-joias-cdn';     // nome do repositório
-const CDN_REF  = 'main';                 // branch ou tag (ex: 'main', 'v1')
-const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}`;
-    // Placeholder local, servido pelo próprio CDN (evita depender de
-    // serviços externos como via.placeholder.com, que podem cair).
-    // Suba uma imagem chamada "placeholder.webp" dentro de settings/.
+    const CDN_USER = 'abellajoiasim-maker';
+    const CDN_REPO = 'abella-joias-cdn';
+    const CDN_REF  = 'main';
+    const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}`;
+
+    // Pastas que existem no repositório do CDN.
+    const PASTAS_CDN = ['products', 'categories', 'subcategorias', 'home', 'settings'];
+
     const PLACEHOLDER = `${CDN_BASE}/settings/placeholder.webp`;
     const CLOUD_FALLBACK = PLACEHOLDER;
 
+    // Último recurso: não depende de rede nem do CDN.
+    const FALLBACK_INLINE = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">' +
+        '<rect width="400" height="400" fill="#f1ede6"/>' +
+        '<path d="M200 140l45 45-45 75-45-75z" fill="none" stroke="#caa85c" stroke-width="6" stroke-linejoin="round"/>' +
+        '<text x="200" y="320" text-anchor="middle" font-family="Georgia,serif" font-size="22" letter-spacing="6" fill="#b9a67a">ABELLA</text>' +
+        '</svg>'
+    );
+
+    const EXT_IMAGEM = /\.(png|jpe?g|webp|gif|avif|bmp|svg|tiff?|heic)$/i;
+
     // ==========================================================
-    // HELPERS INTERNOS DE SANITIZAÇÃO
+    // HELPERS INTERNOS
     // ==========================================================
     function safeString(valor = '') {
         return String(valor || '').trim();
@@ -63,86 +95,106 @@ const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}
             .replace(/\s+/g, '-');
     }
 
-    // Remove a extensão de arquivo (.png, .jpg, .jpeg, .webp...) para
-    // extrair só o SKU, já que o banco pode ter salvo o nome com a
-    // extensão antiga (ex.: "CJI-3222.png") mas o arquivo real no CDN
-    // agora é sempre ".webp".
+    // decodeURIComponent que não explode com "%" solto.
+    function decodificarSeguro(valor) {
+        const s = safeString(valor);
+        if (!/%[0-9a-f]{2}/i.test(s)) return s;
+        try { return decodeURIComponent(s); } catch (e) { return s; }
+    }
+
+    // Remove SOMENTE extensões de imagem conhecidas.
+    // "CJI-3222.png" -> "CJI-3222" | "BF-01.0001" -> "BF-01.0001" (intacto)
     function extrairSku(nomeArquivo) {
-        return safeString(nomeArquivo).replace(/\.[a-zA-Z0-9]+$/, '');
+        return safeString(nomeArquivo).replace(EXT_IMAGEM, '');
+    }
+
+    // Monta a URL final de um arquivo do CDN (codifica o nome do arquivo).
+    function cdnUrl(pasta, arquivo) {
+        const limpo = decodificarSeguro(arquivo).replace(/^\/+/, '');
+        const codificado = limpo.split('/').map(encodeURIComponent).join('/');
+        return `${CDN_BASE}/${pasta}/${codificado}`;
+    }
+
+    // Produtos: o arquivo é sempre <SKU EM MAIÚSCULAS>.webp
+    // (é exatamente o padrão que o Migrador de Imagens grava).
+    function urlProdutoPorNome(nome) {
+        // Mesma regra do Migrador: sem acento, em maiúsculas.
+        const sku = extrairSku(decodificarSeguro(nome))
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase();
+        if (!sku) return CLOUD_FALLBACK;
+        return cdnUrl('products', `${sku}.webp`);
+    }
+
+    // Converte um caminho legado (gs:// ou Firebase) para a pasta equivalente do CDN.
+    function mapearCaminhoLegado(caminho) {
+        const partes = String(caminho || '').split('/').filter(Boolean);
+        const nomeArquivo = partes[partes.length - 1] || '';
+        const pastaAntiga = (partes[partes.length - 2] || '').toLowerCase();
+        if (!nomeArquivo) return CLOUD_FALLBACK;
+
+        if (pastaAntiga.includes('produto'))      return urlProdutoPorNome(nomeArquivo);
+        // ATENÇÃO: "subcategoria" precisa ser testado ANTES de "categoria",
+        // porque "subcategorias".includes("categoria") === true.
+        if (pastaAntiga.includes('subcategoria')) return cdnUrl('subcategorias', nomeArquivo);
+        if (pastaAntiga.includes('categoria'))    return cdnUrl('categories', nomeArquivo);
+        if (/logo|home|banner|setting/.test(pastaAntiga)) return cdnUrl('home', nomeArquivo);
+        return CLOUD_FALLBACK;
     }
 
     // ==========================================================
     // NÚCLEO: RESOLVER QUALQUER VALOR PARA UMA URL DO CDN
-    // Mantém o nome "converterGsUrl" por compatibilidade de API,
-    // mas agora resolve para o jsDelivr em vez do Firebase.
+    // (nome "converterGsUrl" mantido por compatibilidade de API)
     // ==========================================================
     function converterGsUrl(url = '') {
         try {
             const valor = safeString(url);
 
-            if (!valor) {
-                return CLOUD_FALLBACK;
-            }
+            if (!valor) return CLOUD_FALLBACK;
 
-            // Logo antiga (hospedada no Firebase Storage, que passou a responder 402):
-            // sempre resolve para a logo servida pelo CDN.
+            // Logo antiga hospedada no Firebase Storage -> logo do CDN.
             if (valor.includes('InCollage_20250630_100544920')) {
                 return obterLogo();
             }
 
-            // URL antiga do Firebase Storage gravada no banco: reaproveita o mapeamento
-            // de pastas já usado para gs:// e entrega pelo CDN, sem tocar no Firebase.
+            // URL antiga do Firebase Storage gravada no banco.
             if (isHttpUrl(valor) && isFirebaseStorageUrl(valor)) {
                 const caminho = caminhoDeUrlFirebase(valor);
-                return caminho ? converterGsUrl(`gs://legacy/${caminho}`) : CLOUD_FALLBACK;
+                return caminho ? mapearCaminhoLegado(caminho) : CLOUD_FALLBACK;
             }
 
-            // Já é uma URL http(s) completa (ex.: link externo) — usa direto.
+            // URL http(s) completa (CDN atual ou link externo) — usa direto.
+            // Só garante que espaços não quebrem o atributo/URL.
             if (isHttpUrl(valor)) {
-                return valor;
+                return valor.replace(/ /g, '%20');
             }
 
-            // Formato antigo gs://bucket/images/produtos/ARQUIVO.ext
-            // ou gs://bucket/images/categorias/slug.jpg etc.
+            // gs://bucket/images/<pasta>/ARQUIVO.ext
             if (isGsUrl(valor)) {
                 const semGs = valor.replace('gs://', '');
                 const primeiraBarra = semGs.indexOf('/');
                 if (primeiraBarra === -1) return CLOUD_FALLBACK;
-
-                const caminho = semGs.substring(primeiraBarra + 1); // ex: images/produtos/ARQUIVO.ext
-                const partes = caminho.split('/').filter(Boolean);
-
-                // pega o último segmento como nome de arquivo e tenta
-                // identificar a pasta (produtos, categorias, etc.)
-                const nomeArquivo = partes[partes.length - 1] || '';
-                const pastaAntiga = (partes[partes.length - 2] || '').toLowerCase();
-
-                if (pastaAntiga.includes('produto')) {
-                    return `${CDN_BASE}/products/${extrairSku(nomeArquivo)}.webp`;
-                }
-                if (pastaAntiga.includes('categoria-grid')) {
-                    return `${CDN_BASE}/categories/${nomeArquivo}`;
-                }
-                if (pastaAntiga.includes('categoria')) {
-                    return `${CDN_BASE}/categories/${nomeArquivo}`;
-                }
-                if (pastaAntiga.includes('subcategoria')) {
-                    return `${CDN_BASE}/subcategorias/${nomeArquivo}`;
-                }
-                if (pastaAntiga.includes('logo') || pastaAntiga.includes('home')) {
-                    return `${CDN_BASE}/home/${nomeArquivo}`;
-                }
-                return CLOUD_FALLBACK;
+                return mapearCaminhoLegado(semGs.substring(primeiraBarra + 1));
             }
 
-            // Caminho relativo simples tipo "images/produtos/ARQUIVO.ext"
-            if (valor.startsWith('/images/') || valor.startsWith('images/')) {
-                return converterGsUrl(`gs://legacy/${valor.replace(/^\/+/, '')}`);
+            const semBarraInicial = valor.replace(/^\/+/, '');
+
+            // Caminho legado relativo: "images/produtos/ARQUIVO.ext"
+            if (/^images\//i.test(semBarraInicial)) {
+                return mapearCaminhoLegado(semBarraInicial);
             }
 
-            // Sem "/" = nome de arquivo simples de produto (ex.: "SKU.png")
-            if (!valor.includes('/')) {
-                return `${CDN_BASE}/products/${extrairSku(valor)}.webp`;
+            // Caminho já no layout do CDN: "categories/x.jpg", "products/X.webp"...
+            const [primeiro, ...resto] = semBarraInicial.split('/');
+            if (resto.length > 0 && PASTAS_CDN.includes(primeiro.toLowerCase())) {
+                const pasta = primeiro.toLowerCase();
+                if (pasta === 'products') return urlProdutoPorNome(resto.join('/'));
+                return cdnUrl(pasta, resto.join('/'));
+            }
+
+            // Sem "/" = nome simples de produto (ex.: "SKU.png" ou "SKU")
+            if (!semBarraInicial.includes('/')) {
+                return urlProdutoPorNome(semBarraInicial);
             }
 
             return CLOUD_FALLBACK;
@@ -154,7 +206,7 @@ const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}
     }
 
     // ==========================================================
-    // RESOLUÇÃO DE IMAGENS POR ESTRUTURA (mesma API da v3.0)
+    // RESOLUÇÃO DE IMAGENS POR ESTRUTURA (mesma API da v3/v4.0)
     // ==========================================================
     function obterImagemFallback() {
         return CLOUD_FALLBACK;
@@ -167,46 +219,43 @@ const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}
     function obterImagemCategoria(slug) {
         const cleanSlug = normalizarSlug(slug);
         if (!cleanSlug) return obterImagemFallback();
-        return `${CDN_BASE}/categories/${cleanSlug}.jpg`;
+        return cdnUrl('categories', `${cleanSlug}.jpg`);
     }
 
     function obterImagemCategoriaGrid(slug) {
         const cleanSlug = normalizarSlug(slug);
         if (!cleanSlug) return obterImagemFallback();
-        return `${CDN_BASE}/categories/${cleanSlug}-grid.jpg`;
+        return cdnUrl('categories', `${cleanSlug}-grid.jpg`);
     }
 
     function obterImagemSubcategoria(slug) {
         const cleanSlug = normalizarSlug(slug);
         if (!cleanSlug) return obterImagemFallback();
-        return `${CDN_BASE}/subcategorias/${cleanSlug}.jpg`;
+        return cdnUrl('subcategorias', `${cleanSlug}.jpg`);
     }
 
     function obterImagemSubcategoriaGrid(slug) {
         const cleanSlug = normalizarSlug(slug);
         if (!cleanSlug) return obterImagemFallback();
-        return `${CDN_BASE}/subcategorias/${cleanSlug}-grid.jpg`;
+        return cdnUrl('subcategorias', `${cleanSlug}-grid.jpg`);
     }
 
     function obterImagemProduto(nomeArquivo) {
         if (!nomeArquivo) return obterImagemFallback();
-
-        const valor = safeString(nomeArquivo);
-
-        if (isHttpUrl(valor) || isGsUrl(valor)) {
-            return converterGsUrl(valor);
-        }
-
-        return `${CDN_BASE}/products/${extrairSku(valor)}.webp`;
+        return converterGsUrl(safeString(nomeArquivo));
     }
 
     function obterImagem(item = {}) {
         if (!item || typeof item !== 'object') return CLOUD_FALLBACK;
 
+        const primeiroDaLista = (lista) => {
+            if (!Array.isArray(lista) || lista.length === 0) return null;
+            const x = lista[0];
+            return (x && typeof x === 'object') ? (x.url || x.src || x.imagem || x.image || null) : x;
+        };
+
         const imagem = item.image || item.imagem || item.foto || item.thumbnail || item.thumb || item.capa ||
-            (Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null) ||
-            (Array.isArray(item.imagens) && item.imagens.length > 0 ? item.imagens[0] : null) ||
-            null;
+            primeiroDaLista(item.images) || primeiroDaLista(item.imagens) || null;
 
         if (!imagem) return CLOUD_FALLBACK;
         return converterGsUrl(imagem);
@@ -231,10 +280,69 @@ const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}
     }
 
     // ==========================================================
-    // EXPORTAÇÃO COMPACTA E CONGELADA (mesma API pública da v3.0)
+    // WATCHDOG DE IMAGENS QUEBRADAS
     // ==========================================================
-    return Object.freeze({
+    const falhas = new Map(); // url -> { src, alt, pagina, vezes }
+
+    function registrarFalha(img, src) {
+        const existente = falhas.get(src);
+        if (existente) { existente.vezes++; return; }
+        falhas.set(src, {
+            src,
+            alt: img.getAttribute('alt') || '',
+            pagina: location.pathname + location.search,
+            vezes: 1
+        });
+        console.warn('[ImageHelper] Imagem não carregou (404/bloqueada):', src);
+    }
+
+    function relatorioFalhas() {
+        return Array.from(falhas.values());
+    }
+
+    function instalarWatchdog() {
+        if (typeof document === 'undefined') return;
+        if (window.ABELLA_IMAGE_WATCHDOG === false) return;
+        // No painel admin o "quebrado" precisa continuar visível para quem edita.
+        if (/\/modulo\//.test(location.pathname)) return;
+
+        if (/[?&]debugImagens=1/.test(location.search)) {
+            const st = document.createElement('style');
+            st.textContent = 'img[data-img-fallback]{outline:3px dashed #e11d48 !important;outline-offset:-3px}';
+            document.head.appendChild(st);
+        }
+
+        // Evento "error" de <img> não faz bubble, mas pode ser capturado no document.
+        document.addEventListener('error', (ev) => {
+            const img = ev.target;
+            if (!img || img.tagName !== 'IMG' || img.hasAttribute('data-sem-fallback')) return;
+
+            const atual = img.getAttribute('src') || '';
+            if (!atual || atual === FALLBACK_INLINE) return;
+
+            const ehPlaceholder = atual === PLACEHOLDER || atual === window.AURORA_FALLBACK_IMAGE;
+            if (ehPlaceholder) {
+                // até o placeholder do CDN falhou -> SVG embutido (nunca mais falha)
+                img.setAttribute('data-img-fallback', 'inline');
+                img.src = FALLBACK_INLINE;
+                return;
+            }
+
+            registrarFalha(img, atual);
+            img.setAttribute('data-img-fallback', 'cdn');
+            img.setAttribute('data-img-original', atual);
+            img.src = PLACEHOLDER;
+        }, true);
+    }
+
+    instalarWatchdog();
+
+    // ==========================================================
+    // EXPORTAÇÃO COMPACTA E CONGELADA (API pública preservada + novidades)
+    // ==========================================================
+    const ImageHelper = Object.freeze({
         PLACEHOLDER,
+        FALLBACK_INLINE,
         CDN_BASE,
         converterGsUrl,
         obterLogo,
@@ -249,45 +357,32 @@ const CDN_BASE = `https://cdn.jsdelivr.net/gh/${CDN_USER}/${CDN_REPO}@${CDN_REF}
         aplicarImagem,
         possuiImagem,
         isGsUrl,
-        isHttpUrl
+        isHttpUrl,
+        relatorioFalhas
     });
+
+    // ==========================================================
+    // PONTE GLOBAL: resolverImagemFirebase
+    // (nome mantido por compatibilidade com engine/render.js e as páginas)
+    // ==========================================================
+    function resolverImagemFirebase(valor) {
+        if (typeof valor !== 'string' || !valor.trim()) return PLACEHOLDER;
+        return converterGsUrl(valor);
+    }
+
+    const fixar = (nome, valor) =>
+        Object.defineProperty(window, nome, { value: valor, writable: false, configurable: false });
+
+    fixar('ImageHelper', ImageHelper);
+    fixar('imageHelper', ImageHelper);
+    fixar('obterImagemProduto', obterImagemProduto);
+    fixar('obterImagemCategoria', obterImagemCategoria);
+    fixar('obterImagemCategoriaGrid', obterImagemCategoriaGrid);
+    fixar('obterImagemSubcategoria', obterImagemSubcategoria);
+    fixar('obterImagemSubcategoriaGrid', obterImagemSubcategoriaGrid);
+    fixar('obterLogo', obterLogo);
+    fixar('obterImagemFallback', obterImagemFallback);
+    fixar('resolverImagemFirebase', resolverImagemFirebase);
+
+    console.info('[ImageHelper v4.1] CDN jsDelivr:', CDN_BASE);
 })();
-
-// ==========================================================
-// FIXAÇÃO DAS PROPRIEDADES NO ESCOPO GLOBAL (WINDOW)
-// ==========================================================
-Object.defineProperty(window, 'ImageHelper', { value: ImageHelper, writable: false, configurable: false });
-Object.defineProperty(window, 'imageHelper', { value: ImageHelper, writable: false, configurable: false });
-
-Object.defineProperty(window, 'obterImagemProduto', { value: ImageHelper.obterImagemProduto, writable: false, configurable: false });
-Object.defineProperty(window, 'obterImagemCategoria', { value: ImageHelper.obterImagemCategoria, writable: false, configurable: false });
-Object.defineProperty(window, 'obterImagemCategoriaGrid', { value: ImageHelper.obterImagemCategoriaGrid, writable: false, configurable: false });
-Object.defineProperty(window, 'obterImagemSubcategoria', { value: ImageHelper.obterImagemSubcategoria, writable: false, configurable: false });
-Object.defineProperty(window, 'obterImagemSubcategoriaGrid', { value: ImageHelper.obterImagemSubcategoriaGrid, writable: false, configurable: false });
-Object.defineProperty(window, 'obterLogo', { value: ImageHelper.obterLogo, writable: false, configurable: false });
-Object.defineProperty(window, 'obterImagemFallback', { value: ImageHelper.obterImagemFallback, writable: false, configurable: false });
-
-// ==========================================================
-// PONTE GLOBAL: resolverImagemFirebase
-// Mantido com o mesmo nome por compatibilidade com engine/render.js
-// e as páginas que já chamam essa função — agora resolve para o CDN
-// jsDelivr em vez do Firebase Storage.
-// ==========================================================
-function resolverImagemFirebase(valor) {
-    if (typeof valor !== 'string' || !valor.trim()) {
-        return ImageHelper.PLACEHOLDER;
-    }
-    if (ImageHelper.isHttpUrl(valor) || ImageHelper.isGsUrl(valor)) {
-        return ImageHelper.converterGsUrl(valor);
-    }
-    // Sem barra "/" = nome de arquivo de produto (ex: "SKU.png" ou "SKU")
-    if (!valor.includes('/')) {
-        return ImageHelper.obterImagemProduto(valor);
-    }
-    // Com barra = caminho relativo (categorias, banners, logo, etc.)
-    return ImageHelper.converterGsUrl(valor);
-}
-
-Object.defineProperty(window, 'resolverImagemFirebase', { value: resolverImagemFirebase, writable: false, configurable: false });
-
-console.info('[ImageHelper v4.0] Migrado para CDN jsDelivr:', ImageHelper.CDN_BASE);

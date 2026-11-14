@@ -57,6 +57,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
     <link rel="stylesheet" href="components/index.css">
+    <link rel="stylesheet" href="components/compra-rapida.css">
+    <script>document.documentElement.classList.toggle('modo-compra-rapida', new URLSearchParams(window.location.search).get('modo') === 'rapida');</script>
    <style>
         .produto-modal-grid{
             display:grid;
@@ -116,6 +118,7 @@
                 <a href="index.html">Home</a>
                 <a href="produtos.html?lancamentos=1">Lançamentos</a>
                 <a href="./galvanicas.html">Galvânicas</a>
+                <a href="produtos.html?modo=rapida">Compra rápida</a>
             </nav>
             <div class="brand">
                 <div class="brand-logo" id="abellaLogoContainer">
@@ -147,6 +150,22 @@
                            class="aurora-input" style="padding-left: var(--space-8);">
                     <span style="position:absolute; left:var(--space-4); top:50%; transform:translateY(-50%); color:var(--color-secondary);">🔎</span>
                 </div>
+                <div id="modo-compra-switch" role="group" aria-label="Escolha o modo de compra">
+                    <a id="modo-compra-completa" href="index.html#categorias">Compra completa</a>
+                    <a id="modo-compra-rapida" href="produtos.html?modo=rapida">Compra rápida</a>
+                </div>
+                <button type="button" id="quick-buy-search-submit">Buscar no catálogo</button>
+                <section id="quick-buy-navigation" aria-label="Navegar por categorias e subcategorias">
+                    <div class="quick-buy-category-row">
+                        <label for="quick-buy-category">Categorias
+                            <select id="quick-buy-category" class="aurora-input">
+                                <option value="">Selecione uma categoria</option>
+                            </select>
+                        </label>
+                        <div id="quick-buy-subcategories" role="group" aria-label="Subcategorias"></div>
+                    </div>
+                    <p id="quick-buy-status" aria-live="polite"></p>
+                </section>
             </div>
 
             <div id="loading" style="text-align:center; padding: var(--space-6) 0;">
@@ -177,6 +196,11 @@
             </div>
         </section>
     </main>
+
+    <div id="quick-cart-bar" aria-label="Resumo da sacola">
+        <div id="quick-cart-summary"><span id="quick-cart-count">0 itens</span><strong id="quick-cart-total">R$ 0,00</strong></div>
+        <a id="quick-cart-link" href="carrinho.html">Ver sacola</a>
+    </div>
 
     <footer class="aurora-footer">
         <div class="aurora-container">
@@ -239,6 +263,7 @@
         function atualizarContadorSacola() {
             const el = document.getElementById('cart-count');
             if (el && window.carrinhoService) el.innerText = carrinhoService.obterContagem();
+            if (window.CompraRapida) window.CompraRapida.atualizarSacola();
         }
 
         function normalizarValorVariacao(valor, fallback = '') {
@@ -539,9 +564,11 @@
             }
 
             const params = new URLSearchParams(window.location.search);
-            const categoriaSolicitada = (params.get('categoria') || '').toString().trim();
+            const categoriaSolicitada = (params.get('categoria') || params.get('id') || '').toString().trim();
             const subcategoriaSolicitada = (params.get('subcategoria') || params.get('sub') || '').toString().trim();
             const buscaInicial = (params.get('busca') || '').toString().trim();
+            const modoCompraRapida = params.get('modo') === 'rapida';
+            const verTodosCategoria = params.get('todos') === '1';
             // Compatibilidade com o link que já está publicado no menu:
             // produtos.html?categoria=lancamentos&subcategoria=lancamentos
             const rotaLegadaLancamentos = categoriaSolicitada.toLowerCase() === 'lancamentos'
@@ -558,7 +585,7 @@
             // A listagem de produtos só pode ser aberta por uma subcategoria,
             // categoria sem subcategorias ou uma busca explícita. Sem contexto,
             // o fluxo correto retorna à home em vez de exibir o catálogo inteiro.
-            if (!categoriaSlug && !subcategoriaSlug && !buscaInicial && !lancamentos) {
+            if (!modoCompraRapida && !categoriaSlug && !subcategoriaSlug && !buscaInicial && !lancamentos) {
                 window.location.replace('index.html');
                 return;
             }
@@ -602,7 +629,7 @@
                 }
 
                 let categoriasCatalogo = {};
-                if (lancamentos && typeof db !== 'undefined') {
+                if (typeof db !== 'undefined') {
                     const snapCategorias = await db.ref('abella/categories').once('value').catch(() => null);
                     if (snapCategorias && snapCategorias.exists()) categoriasCatalogo = snapCategorias.val() || {};
                 }
@@ -711,25 +738,43 @@
                     );
                 }
 
+                let navegandoCategoriasCompraRapida = false;
+                if (modoCompraRapida && !buscaInicial) {
+                    const categoriaAtiva = Object.entries(categoriasCatalogo).find(([id, categoria]) =>
+                        String(id).toLowerCase() === categoriaSlug.toLowerCase()
+                        || String(categoria?.slug || '').toLowerCase() === categoriaSlug.toLowerCase()
+                    )?.[1];
+                    const subcategoriasAtivas = Object.values(categoriaAtiva?.subcategories || categoriaAtiva?.subcategorias || {})
+                        .filter(sub => sub && sub.ativo !== false && sub.active !== false && sub.paused !== true);
+                    navegandoCategoriasCompraRapida = !categoriaSlug
+                        || (!subcategoriaSlug && !verTodosCategoria && subcategoriasAtivas.length > 0);
+                    if (navegandoCategoriasCompraRapida) filtrados = [];
+                }
+
                 produtosDaPagina = filtrados;
+                window.produtosDaPagina = produtosDaPagina;
 
                 const tituloCase = (slug) => String(slug || '').replace(/-/g, ' ')
                     .replace(/\b\w/g, c => c.toUpperCase());
 
-                const nomeExibicao = buscaInicial
+                const nomeExibicao = modoCompraRapida && !categoriaSlug && !buscaInicial
+                    ? 'Compra rápida — escolha uma categoria'
+                    : (buscaInicial
                     ? `Resultados para "${buscaInicial}"`
                     : (lancamentos
                         ? (subcategoriaSlug ? `${tituloCase(subcategoriaSlug)} — Lançamentos` : (categoriaSlug ? `${tituloCase(categoriaSlug)} — Lançamentos` : 'Lançamentos'))
-                        : (subcategoriaSlug ? tituloCase(subcategoriaSlug) : (categoriaSlug ? tituloCase(categoriaSlug) : 'Todos os produtos')));
+                        : (subcategoriaSlug ? tituloCase(subcategoriaSlug) : (categoriaSlug ? tituloCase(categoriaSlug) : 'Todos os produtos'))));
 
                 document.getElementById('categoriaNome').innerText = nomeExibicao;
                 const resumo = document.getElementById('categoriaResumo');
                 if (resumo) {
-                    resumo.innerText = lancamentos
+                    resumo.innerText = modoCompraRapida
+                        ? 'Navegue por categorias e subcategorias ou busque pelo nome/SKU. Itens com variações continuam usando a seleção de grade existente.'
+                        : (lancamentos
                         ? 'Confira as novidades do catálogo. Abra qualquer peça para escolher as variações e adicioná-la ao mesmo pedido do restante dos produtos.'
                         : (subcategoriaSlug
                             ? `Veja a vitrine ambientada e os modelos de ${nomeExibicao} disponíveis para compra no atacado. Selecione uma peça para conferir detalhes, variações e adicionar ao pedido.`
-                            : `Explore os modelos de ${nomeExibicao} no catálogo da Abella Joias e avance diretamente para o seu pedido.`);
+                            : `Explore os modelos de ${nomeExibicao} no catálogo da Abella Joias e avance diretamente para o seu pedido.`));
                 }
 
                 const crumbs = [{ label: 'Home', href: 'index.html' }];
@@ -888,13 +933,19 @@
 
                 if (produtosCatalogo.length === 0) {
                     grid.innerHTML = '';
-                    noResult.classList.remove('hidden');
+                    noResult.classList.toggle('hidden', navegandoCategoriasCompraRapida);
                 } else {
                     noResult.classList.add('hidden');
                     grid.innerHTML = produtosCatalogo.map(p => {
                         const html = AuroraRender.productCard(p, 'abrirProduto');
                         return `<div class="col-3" data-produto-id="${p.id}" data-aurora-reveal>${html}</div>`;
                     }).join('');
+                }
+
+                if (window.CompraRapida) {
+                    window.CompraRapida.decorarGrade(grid, produtosCatalogo);
+                    window.CompraRapida.atualizarVisibilidade();
+                    window.CompraRapida.atualizarSacola();
                 }
 
                 if (window.AuroraAnimations) AuroraAnimations.initReveal();
@@ -996,5 +1047,6 @@
             }
         });
     </script>
+    <script src="./js/compra-rapida.js"></script>
 </body>
 </html>

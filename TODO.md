@@ -1,0 +1,8 @@
+# TODO — Compra rápida
+
+- [ ] **Preservar o fluxo completo e suas integrações.** A compra completa existente permanece disponível e como padrão; serviços de Firebase, estoque, descontos, variações, carrinho, checkout, painel, SEO e parâmetros de navegação existentes continuam ativos. A configuração Firebase, domínio e workflows originais não são substituídos.
+- [ ] **Oferecer navegação rápida para catálogo amplo.** O cliente pode alternar entre Compra rápida e Compra completa; em Compra rápida navega por categorias e subcategorias carregadas do catálogo, pode buscar globalmente por nome/SKU e não recebe uma lista inicial com todos os produtos sem filtro/contexto.
+- [ ] **Simplificar adição sem remover regras comerciais.** Produto sem variação pode ser adicionado pelo card rápido, respeitando estoque e regras atuais. Produto com variações permanece no modal de grade já existente.
+- [ ] **Adaptar interação para desktop, tablet e mobile.** Controles de navegação e adição são utilizáveis por toque, o resumo fixo da sacola aparece somente na Compra rápida e exibe contagem/total atuais com ligação à sacola existente.
+- [ ] **Entregar roteiro para teste isolado.** A documentação explica branch/repositório de teste, risco do domínio `CNAME`, proteção de credenciais e uso de Firebase de homologação para evitar gravar pedidos de teste no banco real.
+- [ ] **Permitir continuar comprando na sacola e no checkout.** Exibir “Continuar comprando” acima de “Finalizar Pedido” nas duas páginas, com fundo escuro sólido e finalização em cor primária; levar ao catálogo em Compra rápida sem esvaziar a sacola e oferecer o mesmo caminho quando a sacola estiver vazia.

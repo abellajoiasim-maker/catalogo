@@ -31,6 +31,8 @@
       font-size: 0.875rem;
     }
     .input-dark:focus { outline: none; border-color: #caa85c; }
+    .tag-row-with-quantity { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)) auto; }
+    .tag-row-no-quantity { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto; }
     .tab-btn.active {
       background: #caa85c;
       color: black;
@@ -74,6 +76,8 @@
       #drawerContent .grid > * { min-width: 0; }
       #drawerContent .flex { flex-wrap: wrap; }
       #drawerContent .input-dark, #drawerContent select, #drawerContent textarea { max-width: 100%; }
+      .tag-row-with-quantity, .tag-row-no-quantity { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; }
+      .tag-row-with-quantity .tag-value-input, .tag-row-no-quantity .tag-value-input { grid-column: span 2; }
     }
   </style>
 
@@ -330,33 +334,38 @@ const DataService = {
   }
 
  // ============================================================
-  // TAGS DE VARIAÇÕES (Dizeres / Iniciais) com Preço e Peso Individuais
+  // TAGS DE VARIAÇÕES com preço, peso e quantidade individual nas medidas.
+  // Quantidade não é aplicada às iniciais, que poderiam exigir estoque por combinação.
   // ============================================================
-  function adicionarTagInput(containerId, valor = '', preco = '', peso = '') {
+  function adicionarTagInput(containerId, valor = '', preco = '', peso = '', quantidade = '') {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Se o valor for um objeto (vindo do carregamento do banco de dados)
     let textoVal = '';
     let precoVal = '';
     let pesoVal = '';
+    let quantidadeVal = '';
 
     if (typeof valor === 'object' && valor !== null) {
       textoVal = valor.texto || '';
       precoVal = valor.preco !== undefined && valor.preco !== '' ? valor.preco : '';
       pesoVal = valor.peso !== undefined && valor.peso !== '' ? valor.peso : '';
+      quantidadeVal = valor.quantidade !== undefined && valor.quantidade !== '' ? valor.quantidade : '';
     } else {
       textoVal = String(valor).trim();
       precoVal = preco !== '' ? preco : '';
       pesoVal = peso !== '' ? peso : '';
+      quantidadeVal = quantidade !== '' ? quantidade : '';
     }
 
+    const permiteQuantidade = !containerId.toLowerCase().includes('iniciais');
     const wrapper = document.createElement('div');
-    wrapper.className = 'flex gap-2 mb-2 items-center tag-item-row';
+    wrapper.className = `tag-item-row ${permiteQuantidade ? 'tag-row-with-quantity' : 'tag-row-no-quantity'} gap-2 mb-2 items-center`;
     wrapper.innerHTML = `
-      <input type="text" class="input-dark !mb-0 flex-2 tag-value-input" value="${escapeHtml(textoVal)}" placeholder="Medida (ex: 45cm)" style="flex: 2;">
-      <input type="number" step="0.01" class="input-dark !mb-0 flex-1 tag-price-input" value="${precoVal}" placeholder="Preço R$" style="flex: 1;">
-      <input type="number" step="0.01" class="input-dark !mb-0 flex-1 tag-weight-input" value="${pesoVal}" placeholder="Peso g" style="flex: 1;">
+      <input type="text" class="input-dark !mb-0 tag-value-input" value="${escapeHtml(textoVal)}" placeholder="Medida (ex: 45cm)" aria-label="Medida ou variação">
+      <input type="number" min="0" step="0.01" class="input-dark !mb-0 tag-price-input" value="${escapeHtml(precoVal)}" placeholder="Preço R$" aria-label="Preço da variação">
+      <input type="number" min="0" step="0.01" class="input-dark !mb-0 tag-weight-input" value="${escapeHtml(pesoVal)}" placeholder="Peso g" aria-label="Peso da variação">
+      ${permiteQuantidade ? `<input type="number" min="0" step="1" class="input-dark !mb-0 tag-quantity-input" value="${escapeHtml(quantidadeVal)}" placeholder="Qtd." title="Quantidade em estoque desta medida" aria-label="Quantidade em estoque desta medida">` : ''}
       <button type="button" onclick="this.parentNode.remove()"
               class="shrink-0 bg-zinc-900 border border-zinc-800 text-red-400 px-3 py-2 rounded-lg hover:bg-zinc-800 text-xs font-bold">✕</button>
     `;
@@ -394,9 +403,16 @@ const DataService = {
       const texto = row.querySelector('.tag-value-input')?.value.trim() || '';
       const preco = parseFloat(row.querySelector('.tag-price-input')?.value) || 0;
       const peso = parseFloat(row.querySelector('.tag-weight-input')?.value) || 0;
+      const quantidadeRaw = row.querySelector('.tag-quantity-input')?.value.trim();
 
       if (texto) {
-        lista.push({ texto, preco, peso });
+        const item = { texto, preco, peso };
+        if (quantidadeRaw !== undefined && quantidadeRaw !== '') {
+          item.quantidade = Math.max(0, Math.floor(Number(quantidadeRaw) || 0));
+          item.estoqueEsgotado = item.quantidade === 0;
+          item.statusEstoque = item.estoqueEsgotado ? 'Esgotado' : 'Disponível';
+        }
+        lista.push(item);
       }
     });
 
@@ -411,7 +427,7 @@ const DataService = {
     return `
       <div class="mb-3 border border-zinc-800 bg-zinc-900/20 p-3 rounded-xl">
         <div class="flex justify-between items-center mb-2">
-          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">✍️ Variações / Medidas (Preço Individual)</label>
+          <label class="text-xs text-[#caa85c] font-bold uppercase tracking-wider">✍️ Variações / Medidas</label>
           <div class="flex gap-1">
             <button type="button" onclick="importarVariacoes('${idDiz}')"
                     class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-1 rounded text-[10px] hover:bg-zinc-700 font-bold">📋 Importar</button>
@@ -435,6 +451,7 @@ const DataService = {
       </div>
       <div class="mb-3 border border-[#caa85c]/40 bg-[#caa85c]/5 p-3 rounded-xl">
         <p class="text-[10px] text-zinc-400 mb-2">As linhas acima serão usadas pelo catálogo como medidas/tamanhos quando o produto possuir variações.</p>
+        <p class="text-[10px] text-zinc-400 mb-2">Nas medidas, preencha <b>Qtd.</b> para controlar o estoque de cada opção. Deixe todas vazias para usar o estoque total do produto. Para estoque por medida, ative também o estoque limitado abaixo.</p>
         <div class="grid grid-cols-2 gap-2">
           <label class="text-[10px] text-zinc-400">Política de preço<select id="${idPrecoModo}" class="input-dark !mb-0 mt-1"><option value="individual">Preço individual</option><option value="unico">Preço único (base)</option></select></label>
           <label class="text-[10px] text-zinc-400">Política de peso<select id="${idPesoModo}" class="input-dark !mb-0 mt-1"><option value="individual">Peso individual</option><option value="unico">Peso único (base)</option></select></label>
@@ -803,6 +820,16 @@ const DataService = {
       const legendaVitrine = document.getElementById('newLegendaVitrine')?.value.trim() || '';
       const lancamento = !vitrine && (document.getElementById('newLancamento')?.checked === true);
       const estoqueControlado = document.getElementById('newEstoqueControlado')?.checked === true;
+      const temEstoquePorVariacao = medidas.some(item => Object.prototype.hasOwnProperty.call(item, 'quantidade'));
+      if (temEstoquePorVariacao && !estoqueControlado) {
+        alert('Para usar quantidade por medida, ative "Estoque limitado / Saldão".');
+        return;
+      }
+      if (temEstoquePorVariacao && medidas.some(item => !Object.prototype.hasOwnProperty.call(item, 'quantidade'))) {
+        alert('Preencha a quantidade de todas as medidas (use 0 para uma medida sem estoque) ou deixe todas vazias para usar o estoque total do produto.');
+        return;
+      }
+      const variacoesEstoqueModo = temEstoquePorVariacao ? 'individual' : 'unico';
       const estoqueQuantidade = Math.max(0, parseInt(document.getElementById('newEstoqueQuantidade')?.value, 10) || 0);
       const mostrarEstoqueGrid = document.getElementById('newMostrarEstoqueGrid')?.checked !== false;
       const venderSemEstoque = document.getElementById('newVenderSemEstoque')?.checked === true;
@@ -818,7 +845,7 @@ const DataService = {
         dizeres:  listaDizeres,  sayings:  listaDizeres,
         iniciais: listaIniciais, initials: listaIniciais,
         medidas,
-        variacoesPrecoModo, variacoesPesoModo,
+        variacoesPrecoModo, variacoesPesoModo, variacoesEstoqueModo,
         vitrine, legendaVitrine,
         estoqueControlado, estoqueLimitadoAtivo: estoqueControlado, controleEstoque: estoqueControlado,
         estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,
@@ -1080,6 +1107,16 @@ const DataService = {
       // mantém a data original se já era lançamento — editar o produto não "rejuvenesce" o lançamento
       const lancamentoEm = lancamento ? ((produtoAtual?.lancamento && produtoAtual?.lancamentoEm) || Date.now()) : null;
       const estoqueControlado = document.getElementById('editEstoqueControlado')?.checked === true;
+      const temEstoquePorVariacao = medidas.some(item => Object.prototype.hasOwnProperty.call(item, 'quantidade'));
+      if (temEstoquePorVariacao && !estoqueControlado) {
+        alert('Para usar quantidade por medida, ative "Estoque limitado / Saldão".');
+        return;
+      }
+      if (temEstoquePorVariacao && medidas.some(item => !Object.prototype.hasOwnProperty.call(item, 'quantidade'))) {
+        alert('Preencha a quantidade de todas as medidas (use 0 para uma medida sem estoque) ou deixe todas vazias para usar o estoque total do produto.');
+        return;
+      }
+      const variacoesEstoqueModo = temEstoquePorVariacao ? 'individual' : 'unico';
       const estoqueQuantidade = Math.max(0, parseInt(document.getElementById('editEstoqueQuantidade')?.value, 10) || 0);
       const mostrarEstoqueGrid = document.getElementById('editMostrarEstoqueGrid')?.checked !== false;
       const venderSemEstoque = document.getElementById('editVenderSemEstoque')?.checked === true;
@@ -1098,7 +1135,7 @@ const DataService = {
         dizeres:  listaDizeres,  sayings:  listaDizeres,
         iniciais: listaIniciais, initials: listaIniciais,
         medidas,
-        variacoesPrecoModo, variacoesPesoModo,
+        variacoesPrecoModo, variacoesPesoModo, variacoesEstoqueModo,
         vitrine, legendaVitrine,
         estoqueControlado, estoqueLimitadoAtivo: estoqueControlado, controleEstoque: estoqueControlado,
         estoqueQuantidade: estoqueControlado ? estoqueQuantidade : null,

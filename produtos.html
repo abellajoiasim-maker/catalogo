@@ -299,7 +299,7 @@
         : (valorImagem || window.AURORA_FALLBACK_IMAGE || 'images/fallback.jpg');
 
     const ehVitrine = produto.vitrine === true || produto.isVitrine === true || produto.showcase === true || produto.tipo === 'vitrine';
-    const estoqueControlado = produto.estoqueControlado === true || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true;
+    const estoqueGlobalControlado = produto.estoqueControlado === true || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true;
     const estoqueQuantidade = Math.max(0, parseInt(produto.estoqueQuantidade ?? produto.estoque ?? 0, 10) || 0);
     const venderSemEstoque = produto.venderSemEstoque === true;
     if (ehVitrine) {
@@ -329,6 +329,9 @@
         ? produto.dizeres
         : [];
     const medidas = (medidasSalvas.length ? medidasSalvas : medidasLegadas).filter(Boolean);
+    const temEstoqueIndividualVariacao = produto.variacoesEstoqueModo === 'individual'
+        || medidas.some(valor => valor && typeof valor === 'object' && Object.prototype.hasOwnProperty.call(valor, 'quantidade'));
+    const estoqueControlado = estoqueGlobalControlado || temEstoqueIndividualVariacao;
     const temPrecoIndividualLegado = medidas.some(valor => typeof valor === 'object' && valor !== null && Number(valor.preco) > 0);
     const temPesoIndividualLegado = medidas.some(valor => typeof valor === 'object' && valor !== null && Number(valor.peso) > 0);
     const politicaPrecoVariacao = produto.variacoesPrecoModo || produto.politicaPrecoVariacao || (temPrecoIndividualLegado ? 'individual' : 'unico');
@@ -348,7 +351,12 @@
             const pesoIndividual = (typeof m === 'object' && m !== null && m.peso !== undefined && m.peso !== null && m.peso !== '') ? Number(m.peso) : (Number(produto.peso) || 0);
             const precoMedida = politicaPrecoVariacao === 'individual' ? precoIndividual : precoBase;
             const pesoMedida = politicaPesoVariacao === 'individual' ? pesoIndividual : (Number(produto.peso) || 0);
-            return { nome: nomeMedida, preco: precoMedida, peso: pesoMedida };
+            const temQtd = typeof m === 'object' && m !== null && Object.prototype.hasOwnProperty.call(m, 'quantidade');
+            return {
+                nome: nomeMedida, preco: precoMedida, peso: pesoMedida,
+                estoqueVariacaoControlado: temEstoqueIndividualVariacao,
+                estoqueVariacaoQuantidade: temEstoqueIndividualVariacao && temQtd ? Math.max(0, parseInt(m.quantidade, 10) || 0) : 0
+            };
         });
     } else if (dizeres.length > 0 && iniciais.length > 0) {
         dizeres.forEach(d => iniciais.forEach(i => combinacoes.push({ nome: `${d} • Letra ${i}`, preco: precoBase, peso: Number(produto.peso) || 0 })));
@@ -390,21 +398,29 @@
                 <div style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap: var(--space-2);">
                     ${combinacoes.map((item, idx) => {
                         const precoItemFmt = window.MoneyUtils?.format ? window.MoneyUtils.format(item.preco) : `R$ ${item.preco.toFixed(2)}`;
+                        const controlaSaldo = item.estoqueVariacaoControlado === true;
+                        const saldoVariacao = Math.max(0, parseInt(item.estoqueVariacaoQuantidade, 10) || 0);
+                        const esgotada = controlaSaldo && saldoVariacao <= 0 && !venderSemEstoque;
+                        const maxQtd = venderSemEstoque ? null : (controlaSaldo ? saldoVariacao : (estoqueGlobalControlado ? estoqueQuantidade : null));
+                        const textoSaldo = controlaSaldo ? (saldoVariacao > 0 ? `${saldoVariacao} disponível(is)` : (venderSemEstoque ? 'Venda permitida sem estoque' : 'Esgotado')) : '';
                         return `
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm);">
-                                <div style="display:flex; flex-direction:column;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); border:1px solid var(--color-border); border-radius: var(--radius-sm); ${esgotada ? 'opacity:.58;' : ''}">
+                                <div style="display:flex; flex-direction:column; min-width:0;">
                                     <span style="font-size:13px; font-weight:600;">${item.nome}</span>
                                     <span style="font-size:11px; color:var(--color-primary-hover);">${precoItemFmt}${item.peso ? ` · ${item.peso}g` : ''}</span>
+                                    ${textoSaldo ? `<span style="font-size:10px;color:${esgotada ? 'var(--color-danger)' : 'var(--color-secondary)'};">${textoSaldo}</span>` : ''}
                                 </div>
                                 <div style="display:flex; align-items:center; gap: var(--space-2);">
-                                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)">−</button>
-                                    <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0"
+                                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', -1)" ${esgotada ? 'disabled' : ''}>−</button>
+                                    <input type="number" class="input-grade-qtd aurora-input" id="qtd_var_${idx}" value="0" min="0" ${maxQtd !== null ? `max="${maxQtd}"` : ''} ${esgotada ? 'disabled' : ''}
                                            data-variacao-nome="${String(item.nome).replace(/"/g, '&quot;')}"
                                            data-variacao-preco="${item.preco}"
                                            data-variacao-peso="${item.peso || 0}"
-                                           oninput="calcularTotalGrade()"
-                                           style="width:52px; text-align:center; height:36px; padding-inline:0;">
-                                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)">+</button>
+                                           data-variacao-estoque-controlado="${controlaSaldo ? '1' : '0'}"
+                                           data-variacao-estoque="${controlaSaldo ? saldoVariacao : ''}"
+                                           oninput="limitarInputGrade(this); calcularTotalGrade()"
+                                           style="width:58px; text-align:center; height:36px; padding-inline:0;">
+                                    <button type="button" class="qty-btn" onclick="alterarInputGrade('qtd_var_${idx}', 1)" ${esgotada ? 'disabled' : ''}>+</button>
                                 </div>
                             </div>
                         `;
@@ -418,8 +434,15 @@
         `;
     }
 
+    const saldoTotalVariacoes = temEstoqueIndividualVariacao
+        ? combinacoes.reduce((total, item) => total + (Number(item.estoqueVariacaoQuantidade) || 0), 0)
+        : estoqueQuantidade;
     const avisoEstoqueHTML = estoqueControlado
-        ? `<div style="margin-top:var(--space-4);padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:12px;color:var(--color-secondary);">${estoqueQuantidade > 0 ? `Estoque limitado: <strong>${estoqueQuantidade}</strong> unidade(s) disponível(is).` : '<strong>Produto esgotado.</strong>'}</div>`
+        ? `<div style="margin-top:var(--space-4);padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:12px;color:var(--color-secondary);">${temEstoqueIndividualVariacao
+            ? (venderSemEstoque
+                ? `Estoque registrado por medida: <strong>${saldoTotalVariacoes}</strong> unidade(s); venda sem saldo está habilitada.`
+                : (saldoTotalVariacoes > 0 ? `Estoque limitado por medida: <strong>${saldoTotalVariacoes}</strong> unidade(s) no total.` : '<strong>Todas as medidas estão esgotadas.</strong>'))
+            : (estoqueQuantidade > 0 ? `Estoque limitado: <strong>${estoqueQuantidade}</strong> unidade(s) disponível(is).` : '<strong>Produto esgotado.</strong>')}</div>`
         : '';
 
     const bodyHTML = `
@@ -448,11 +471,22 @@
     calcularTotalGrade();
 }
 
+        function limitarInputGrade(input) {
+            if (!input) return;
+            const min = Number.parseInt(input.getAttribute('min'), 10) || 0;
+            const maxAttr = input.getAttribute('max');
+            const max = maxAttr === null ? Infinity : Math.max(min, Number.parseInt(maxAttr, 10) || 0);
+            const valor = Number.parseInt(input.value, 10);
+            input.value = String(Math.min(max, Math.max(min, Number.isFinite(valor) ? valor : min)));
+        }
+
         function alterarInputGrade(id, delta) {
             const input = document.getElementById(id);
-            if (!input) return;
-            const min = parseInt(input.getAttribute('min')) || 0;
-            input.value = Math.max(min, (parseInt(input.value) || 0) + delta);
+            if (!input || input.disabled) return;
+            const min = Number.parseInt(input.getAttribute('min'), 10) || 0;
+            const maxAttr = input.getAttribute('max');
+            const max = maxAttr === null ? Infinity : Math.max(min, Number.parseInt(maxAttr, 10) || 0);
+            input.value = Math.min(max, Math.max(min, (Number.parseInt(input.value, 10) || 0) + delta));
             calcularTotalGrade();
         }
 
@@ -505,7 +539,7 @@
             }
         }
 
-        function confirmarAdicionarCarrinho(produtoId) {
+        async function confirmarAdicionarCarrinho(produtoId) {
             const produto = produtosDaPagina.find(p => p.id === produtoId);
             if (!produto || !window.carrinhoService) return;
 
@@ -527,17 +561,45 @@
         return;
     }
 
-    const estoqueControlado = produto.estoqueControlado === true || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true;
-    const estoqueQuantidade = Math.max(0, parseInt(produto.estoqueQuantidade ?? produto.estoque ?? 0, 10) || 0);
-    const venderSemEstoque = produto.venderSemEstoque === true;
-    if (estoqueControlado && !venderSemEstoque && totalSolicitado > estoqueQuantidade) {
-        alert(`Este produto possui apenas ${estoqueQuantidade} unidade(s) disponível(is).`);
+    let produtoEstoqueAtual = produto;
+    if (window.db) {
+        try {
+            const productsPath = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('products') : 'abella/products';
+            const snapshot = await window.db.ref(productsPath).child(produto.id).once('value');
+            const dadosAtuais = snapshot && snapshot.exists() ? snapshot.val() : null;
+            if (!dadosAtuais || dadosAtuais.paused === true || dadosAtuais.ativo === false) {
+                alert('Este produto não está mais disponível. Atualize o catálogo e tente novamente.');
+                return;
+            }
+            produtoEstoqueAtual = { ...produto, ...dadosAtuais, id: produto.id };
+        } catch (error) {
+            console.warn('[Catálogo] Não foi possível confirmar o estoque atual no Firebase.', error);
+            const controladoNaPagina = produto.estoqueControlado === true
+                || produto.estoqueLimitadoAtivo === true || produto.controleEstoque === true
+                || (Array.isArray(produto.medidas) && produto.medidas.some(m => m && typeof m === 'object' && Object.prototype.hasOwnProperty.call(m, 'quantidade')));
+            if (controladoNaPagina) {
+                alert('Não foi possível confirmar o estoque agora. Verifique sua conexão e tente novamente.');
+                return;
+            }
+        }
+    }
+
+    const estoqueControlado = produtoEstoqueAtual.estoqueControlado === true || produtoEstoqueAtual.estoqueLimitadoAtivo === true || produtoEstoqueAtual.controleEstoque === true;
+    const estoqueQuantidade = Math.max(0, parseInt(produtoEstoqueAtual.estoqueQuantidade ?? produtoEstoqueAtual.estoque ?? 0, 10) || 0);
+    const temEstoqueIndividualVariacao = (Array.isArray(produtoEstoqueAtual.medidas) ? produtoEstoqueAtual.medidas : [])
+        .some(m => m && typeof m === 'object' && Object.prototype.hasOwnProperty.call(m, 'quantidade'))
+        || (Array.isArray(produtoEstoqueAtual.dizeres) && produtoEstoqueAtual.dizeres.some(m => m && typeof m === 'object' && Object.prototype.hasOwnProperty.call(m, 'quantidade')))
+        || produtoEstoqueAtual.variacoesEstoqueModo === 'individual';
+    if (!carrinhoService.validarAdicoes(produtoEstoqueAtual, itensParaAdicionar)) {
+        alert(temEstoqueIndividualVariacao
+            ? 'Uma das medidas não tem saldo suficiente. Confira o estoque por medida e tente novamente.'
+            : `Este produto possui apenas ${estoqueQuantidade} unidade(s) disponível(is).`);
         return;
     }
 
     let adicionouTudo = true;
     itensParaAdicionar.forEach(item => {
-                const produtoComPrecoAjustado = { ...produto, preco: item.preco, peso: item.peso, pesoVariacao: item.peso };
+                const produtoComPrecoAjustado = { ...produtoEstoqueAtual, preco: item.preco, peso: item.peso, pesoVariacao: item.peso };
                 const adicionou = carrinhoService.adicionar(produtoComPrecoAjustado, item.qtd, item.variacao);
                 if (adicionou === false) adicionouTudo = false;
             });

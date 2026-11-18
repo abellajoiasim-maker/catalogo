@@ -280,6 +280,7 @@
         // ==================================================================
 
         let _configCache = null;
+        let _finalizacaoEmAndamento = false;
 
         function fmtMoeda(v) {
             return window.MoneyUtils?.format ? window.MoneyUtils.format(v) : `R$ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
@@ -574,11 +575,345 @@
             ` });
         }
 
+        function normalizarNomeVariacaoEstoque(texto) {
+            return String(texto || '').trim().normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+        }
+
+        function nomeOpcaoEstoque(opcao, indice = 0) {
+            if (typeof opcao === 'string' || typeof opcao === 'number') return String(opcao).trim();
+            if (!opcao || typeof opcao !== 'object') return '';
+            const candidatos = [opcao.texto, opcao.valor, opcao.value, opcao.letra, opcao.nome,
+                opcao.name, opcao.label, opcao.titulo, opcao.medida, opcao.descricao, opcao.id];
+            const encontrado = candidatos.find(v => v !== null && v !== undefined && String(v).trim());
+            return encontrado === undefined ? `Medida ${indice + 1}` : String(encontrado).trim();
+        }
+
+        function linhasColecaoEstoque(colecao) {
+            if (Array.isArray(colecao)) return colecao;
+            if (colecao && typeof colecao === 'object') return Object.values(colecao);
+            return [];
+        }
+
+        function fonteVariacoesEstoque(produto) {
+            const fontes = [produto?.medidas, produto?.dizeres, produto?.sayings].filter(Boolean);
+            return fontes.find(fonte => linhasColecaoEstoque(fonte).some(item => item && typeof item === 'object'
+                && Object.prototype.hasOwnProperty.call(item, 'quantidade')))
+                || fontes.find(fonte => linhasColecaoEstoque(fonte).length)
+                || [];
+        }
+
+        function mapearColecaoComSaldos(colecao, saldos) {
+            const atualizar = (opcao, indice) => {
+                const chave = normalizarNomeVariacaoEstoque(nomeOpcaoEstoque(opcao, indice));
+                const estado = saldos.get(chave);
+                if (!estado) return opcao;
+                const quantidade = Math.max(0, Math.floor(Number(estado.quantidade) || 0));
+                const dados = {
+                    quantidade,
+                    estoqueEsgotado: quantidade === 0,
+                    statusEstoque: quantidade === 0 ? 'Esgotado' : 'Disponível'
+                };
+                return opcao && typeof opcao === 'object'
+                    ? { ...opcao, ...dados }
+                    : { texto: String(opcao), ...dados };
+            };
+            if (Array.isArray(colecao)) return colecao.map(atualizar);
+            if (colecao && typeof colecao === 'object') {
+                return Object.fromEntries(Object.entries(colecao).map(([chave, valor], indice) => [chave, atualizar(valor, indice)]));
+            }
+            return colecao;
+        }
+
+        function mapearColecaoComEstorno(colecao, deltas) {
+            const atualizar = (opcao, indice) => {
+                const chave = normalizarNomeVariacaoEstoque(nomeOpcaoEstoque(opcao, indice));
+                const delta = deltas.get(chave);
+                if (!delta) return opcao;
+                const atual = Math.max(0, Math.floor(Number(opcao && typeof opcao === 'object' ? opcao.quantidade : 0) || 0));
+                const quantidade = atual + delta;
+                const dados = {
+                    quantidade,
+                    estoqueEsgotado: quantidade === 0,
+                    statusEstoque: quantidade === 0 ? 'Esgotado' : 'Disponível'
+                };
+                return opcao && typeof opcao === 'object'
+                    ? { ...opcao, ...dados }
+                    : { texto: String(opcao), ...dados };
+            };
+            if (Array.isArray(colecao)) return colecao.map(atualizar);
+            if (colecao && typeof colecao === 'object') {
+                return Object.fromEntries(Object.entries(colecao).map(([chave, valor], indice) => [chave, atualizar(valor, indice)]));
+            }
+            return colecao;
+        }
+
+        function erroDeEstoque(codigo, mensagem) {
+            const erro = new Error(mensagem);
+            erro.code = codigo;
+            return erro;
+        }
+
+        function agruparItensParaBaixa(itens) {
+            const produtos = new Map();
+            for (const item of itens) {
+                const id = String(item.id || '').trim();
+                const quantidade = Math.floor(Number(item.quantidade) || 0);
+                if (!id || quantidade <= 0) throw erroDeEstoque('ITEM_INVALIDO', 'Produto ou quantidade inválida no pedido.');
+                if (!produtos.has(id)) produtos.set(id, new Map());
+                const variacoes = produtos.get(id);
+                const variacao = String(item.variacao || '').trim();
+                const chave = normalizarNomeVariacaoEstoque(variacao);
+                const linha = variacoes.get(chave) || { variacao, quantidade: 0 };
+                linha.quantidade += quantidade;
+                variacoes.set(chave, linha);
+            }
+            return [...produtos.entries()].map(([id, variacoes]) => ({ id, variacoes: [...variacoes.values()] }));
+        }
+
+        async function baixarEstoqueProdutoDoPedido(produtoId, variacoesPedido, pedidoId) {
+            const baseProdutos = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('products') : 'abella/products';
+            const referencia = window.db.ref(baseProdutos).child(String(produtoId));
+            const snapshotInicial = await referencia.once('value');
+            const produtoInicial = snapshotInicial && snapshotInicial.exists() ? snapshotInicial.val() : null;
+            if (!produtoInicial) throw erroDeEstoque('PRODUTO_INDISPONIVEL', `O produto ${produtoId} não está mais disponível.`);
+            const opcoesIniciais = fonteVariacoesEstoque(produtoInicial);
+            const possuiEstoqueIndividual = produtoInicial.variacoesEstoqueModo === 'individual'
+                || linhasColecaoEstoque(opcoesIniciais).some(opcao => opcao && typeof opcao === 'object'
+                    && Object.prototype.hasOwnProperty.call(opcao, 'quantidade'));
+            const possuiEstoqueGlobal = produtoInicial.estoqueControlado === true
+                || produtoInicial.estoqueLimitadoAtivo === true || produtoInicial.controleEstoque === true;
+            if (!possuiEstoqueIndividual && !possuiEstoqueGlobal) return { baixado: false, semControle: true };
+            let resultado = '';
+            const transacao = await referencia.transaction(produtoAtual => {
+                resultado = '';
+                if (!produtoAtual || typeof produtoAtual !== 'object') {
+                    resultado = 'produto-nao-encontrado';
+                    return;
+                }
+
+                const ledgerAtual = produtoAtual.estoqueBaixasPedidos || {};
+                if (ledgerAtual[pedidoId]) {
+                    resultado = 'ja-baixado';
+                    return produtoAtual;
+                }
+                if (produtoAtual.paused === true || produtoAtual.ativo === false) {
+                    resultado = 'produto-indisponivel';
+                    return;
+                }
+
+                const opcoes = fonteVariacoesEstoque(produtoAtual);
+                const temEstoqueIndividual = produtoAtual.variacoesEstoqueModo === 'individual'
+                    || linhasColecaoEstoque(opcoes).some(opcao => opcao && typeof opcao === 'object'
+                        && Object.prototype.hasOwnProperty.call(opcao, 'quantidade'));
+                const estoqueGlobalControlado = produtoAtual.estoqueControlado === true
+                    || produtoAtual.estoqueLimitadoAtivo === true || produtoAtual.controleEstoque === true;
+                if (!temEstoqueIndividual && !estoqueGlobalControlado) {
+                    resultado = 'sem-controle';
+                    return produtoAtual;
+                }
+
+                const permiteSemEstoque = produtoAtual.venderSemEstoque === true;
+                const totalPedido = variacoesPedido.reduce((soma, item) => soma + item.quantidade, 0);
+                const saldosAtualizados = new Map();
+                const deltasVariacoes = [];
+
+                if (temEstoqueIndividual) {
+                    const linhasDisponiveis = linhasColecaoEstoque(opcoes);
+                    for (const pedido of variacoesPedido) {
+                        const chave = normalizarNomeVariacaoEstoque(pedido.variacao);
+                        const indice = linhasDisponiveis.findIndex((opcao, i) => normalizarNomeVariacaoEstoque(nomeOpcaoEstoque(opcao, i)) === chave);
+                        if (!pedido.variacao || indice < 0) {
+                            resultado = 'variacao-nao-encontrada';
+                            return;
+                        }
+                        const opcao = linhasDisponiveis[indice];
+                        if (!opcao || typeof opcao !== 'object' || !Object.prototype.hasOwnProperty.call(opcao, 'quantidade')) {
+                            resultado = 'variacao-sem-saldo';
+                            return;
+                        }
+                        const saldoAtual = Math.max(0, Math.floor(Number(opcao.quantidade) || 0));
+                        if (!permiteSemEstoque && saldoAtual < pedido.quantidade) {
+                            resultado = 'estoque-insuficiente';
+                            return;
+                        }
+                        const baixaReal = Math.min(saldoAtual, pedido.quantidade);
+                        saldosAtualizados.set(chave, { quantidade: Math.max(0, saldoAtual - pedido.quantidade) });
+                        deltasVariacoes.push({ variacao: pedido.variacao, quantidade: baixaReal });
+                    }
+                } else if (variacoesPedido.some(item => item.variacao)) {
+                    // Estoque global permite variações comerciais, mas não baixa por medida.
+                }
+
+                const estoqueGlobalAtual = Math.max(0, Math.floor(Number(produtoAtual.estoqueQuantidade ?? produtoAtual.estoque ?? 0) || 0));
+                const baixaGlobal = estoqueGlobalControlado && (!temEstoqueIndividual || estoqueGlobalAtual > 0)
+                    ? Math.min(estoqueGlobalAtual, totalPedido)
+                    : 0;
+                if (estoqueGlobalControlado && (!temEstoqueIndividual || estoqueGlobalAtual > 0)
+                    && !permiteSemEstoque && estoqueGlobalAtual < totalPedido) {
+                    resultado = 'estoque-global-insuficiente';
+                    return;
+                }
+
+                const atualizado = { ...produtoAtual };
+                if (temEstoqueIndividual) {
+                    for (const campo of ['medidas', 'dizeres', 'sayings']) {
+                        if (atualizado[campo] && typeof atualizado[campo] === 'object') {
+                            atualizado[campo] = mapearColecaoComSaldos(atualizado[campo], saldosAtualizados);
+                        }
+                    }
+                    atualizado.variacoesEstoqueModo = 'individual';
+                }
+                if (baixaGlobal > 0 || (estoqueGlobalControlado && !temEstoqueIndividual)) {
+                    const saldoGlobalFinal = Math.max(0, estoqueGlobalAtual - baixaGlobal);
+                    atualizado.estoqueQuantidade = saldoGlobalFinal;
+                    atualizado.estoque = saldoGlobalFinal;
+                }
+                const novoLedger = { ...ledgerAtual };
+                novoLedger[pedidoId] = {
+                    status: 'baixado',
+                    data: Date.now(),
+                    variacoes: deltasVariacoes,
+                    estoqueGlobal: baixaGlobal
+                };
+                atualizado.estoqueBaixasPedidos = novoLedger;
+                atualizado.updatedAt = Date.now();
+                resultado = 'baixado';
+                return atualizado;
+            }, null, false);
+
+            if (resultado === 'ja-baixado') return { baixado: false, idempotente: true };
+            if (resultado === 'sem-controle') return { baixado: false, semControle: true };
+            if (resultado === 'estoque-insuficiente' || resultado === 'estoque-global-insuficiente') {
+                throw erroDeEstoque('ESTOQUE_INSUFICIENTE', `Saldo insuficiente para o produto ${produtoId}.`);
+            }
+            if (resultado === 'variacao-nao-encontrada' || resultado === 'variacao-sem-saldo') {
+                throw erroDeEstoque('VARIACAO_SEM_SALDO', `Não encontrei o saldo individual da variação de ${produtoId}.`);
+            }
+            if (resultado === 'produto-nao-encontrado' || resultado === 'produto-indisponivel') {
+                throw erroDeEstoque('PRODUTO_INDISPONIVEL', `O produto ${produtoId} não está mais disponível.`);
+            }
+            if (!transacao.committed || resultado !== 'baixado') {
+                throw erroDeEstoque('FALHA_TRANSACAO_ESTOQUE', `O Firebase não confirmou a baixa do produto ${produtoId}.`);
+            }
+            return { baixado: true, produtoId: String(produtoId) };
+        }
+
+        async function estornarEstoqueProdutoDoPedido(produtoId, pedidoId) {
+            const baseProdutos = typeof window.getAbellaPath === 'function' ? window.getAbellaPath('products') : 'abella/products';
+            const referencia = window.db.ref(baseProdutos).child(String(produtoId));
+            let resultado = '';
+            const transacao = await referencia.transaction(produtoAtual => {
+                resultado = '';
+                if (!produtoAtual || typeof produtoAtual !== 'object') {
+                    resultado = 'produto-nao-encontrado';
+                    return;
+                }
+                const ledgerAtual = produtoAtual.estoqueBaixasPedidos || {};
+                const baixa = ledgerAtual[pedidoId];
+                if (!baixa) { resultado = 'sem-baixa'; return produtoAtual; }
+                if (baixa.status === 'estornada') { resultado = 'ja-estornada'; return produtoAtual; }
+
+                const atualizado = { ...produtoAtual };
+                const deltas = new Map((baixa.variacoes || []).map(item => [
+                    normalizarNomeVariacaoEstoque(item.variacao), Math.max(0, Math.floor(Number(item.quantidade) || 0))
+                ]));
+                if (deltas.size) {
+                    for (const campo of ['medidas', 'dizeres', 'sayings']) {
+                        if (atualizado[campo] && typeof atualizado[campo] === 'object') {
+                            atualizado[campo] = mapearColecaoComEstorno(atualizado[campo], deltas);
+                        }
+                    }
+                }
+                const deltaGlobal = Math.max(0, Math.floor(Number(baixa.estoqueGlobal) || 0));
+                if (deltaGlobal > 0) {
+                    const saldoAtual = Math.max(0, Math.floor(Number(atualizado.estoqueQuantidade ?? atualizado.estoque ?? 0) || 0));
+                    atualizado.estoqueQuantidade = saldoAtual + deltaGlobal;
+                    atualizado.estoque = saldoAtual + deltaGlobal;
+                }
+                const novoLedger = { ...ledgerAtual };
+                novoLedger[pedidoId] = { ...baixa, status: 'estornada', estornadaEm: Date.now() };
+                atualizado.estoqueBaixasPedidos = novoLedger;
+                atualizado.updatedAt = Date.now();
+                resultado = 'estornada';
+                return atualizado;
+            }, null, false);
+
+            if (resultado === 'sem-baixa' || resultado === 'ja-estornada') return;
+            if (!transacao.committed || resultado !== 'estornada') {
+                throw erroDeEstoque('FALHA_ESTORNO_ESTOQUE', `Não foi possível estornar o produto ${produtoId}.`);
+            }
+        }
+
+        async function reverterBaixasEstoque(pedidoId, produtosBaixados) {
+            const falhas = [];
+            for (const produtoId of [...produtosBaixados].reverse()) {
+                try { await estornarEstoqueProdutoDoPedido(produtoId, pedidoId); }
+                catch (erro) { falhas.push(erro); }
+            }
+            if (falhas.length) {
+                const erro = erroDeEstoque('ESTOQUE_ESTORNO_FALHOU', 'Uma ou mais baixas parciais não puderam ser estornadas automaticamente.');
+                erro.falhasEstorno = falhas;
+                throw erro;
+            }
+        }
+
+        async function baixarEstoquePedido(itens, pedidoId) {
+            const grupos = agruparItensParaBaixa(itens);
+            const baixados = [];
+            try {
+                for (const grupo of grupos) {
+                    const resultado = await baixarEstoqueProdutoDoPedido(grupo.id, grupo.variacoes, pedidoId);
+                    if (resultado.baixado) baixados.push(resultado.produtoId);
+                }
+                return baixados;
+            } catch (erro) {
+                if (baixados.length) {
+                    try { await reverterBaixasEstoque(pedidoId, baixados); }
+                    catch (erroEstorno) {
+                        erro.code = 'ESTOQUE_ESTORNO_FALHOU';
+                        erro.erroEstorno = erroEstorno;
+                    }
+                }
+                throw erro;
+            }
+        }
+
         async function finalizarPedidoAurora(event) {
             if (event) event.preventDefault();
+            if (_finalizacaoEmAndamento) return;
+            _finalizacaoEmAndamento = true;
+
+            const btn = document.getElementById('btnFinalizar');
+            if (btn) { btn.disabled = true; btn.innerText = '⏳ Processando...'; }
+            const liberarTentativa = () => {
+                _finalizacaoEmAndamento = false;
+                if (btn) { btn.disabled = false; btn.innerText = '🚀 Finalizar Pedido via WhatsApp'; }
+            };
 
             const itens = itensNormalizados();
-            if (!itens.length) { alert('Seu carrinho está vazio!'); return; }
+            if (!itens.length) {
+                alert('Seu carrinho está vazio!');
+                liberarTentativa();
+                return;
+            }
+            try {
+                if (!window.carrinhoService || typeof carrinhoService.sincronizarEstoqueAtual !== 'function') {
+                    throw erroDeEstoque('VALIDACAO_INDISPONIVEL', 'A validação de estoque não está disponível.');
+                }
+                const validacaoEstoque = await carrinhoService.sincronizarEstoqueAtual();
+                if (!validacaoEstoque.valido) {
+                    alert('Uma ou mais variações ficaram sem saldo suficiente. Revise os itens da sacola antes de finalizar.');
+                    liberarTentativa();
+                    window.location.href = 'carrinho.html';
+                    return;
+                }
+            } catch (erroValidacao) {
+                console.error('[Checkout] Não foi possível validar o estoque:', erroValidacao);
+                alert('Não foi possível confirmar o estoque. Tente novamente antes de finalizar.');
+                liberarTentativa();
+                return;
+            }
 
             const nome = document.getElementById('cli-nome')?.value.trim();
             const whats = document.getElementById('cli-whats')?.value.trim();
@@ -593,11 +928,16 @@
 
             if (!nome || !whats || !cidadeCli || !localEnt || !ruaEnt || !numEnt || !bairroEnt || !cidadeEnt) {
                 alert('Por favor, preencha todos os campos obrigatórios (*).');
+                liberarTentativa();
                 return;
             }
 
-            const btn = document.getElementById('btnFinalizar');
-            if (btn) { btn.disabled = true; btn.innerText = '⏳ Processando...'; }
+            const pedidoId = 'PED-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+            let referenciaPedido = null;
+            let pedidoPendenteSalvo = false;
+            let baixaConcluida = false;
+            let pedidoFinalizado = false;
+            let baixasAplicadas = [];
 
             try {
                 const cfg = await carregarConfigAurora();
@@ -622,7 +962,6 @@
                 const frete = round2(subtotal >= freteGratis ? 0 : freteFixo);
                 const total = round2(Math.max(0, subtotal - desconto - descontoCupom - descontoFaixa + frete));
 
-                const pedidoId = 'PED-' + Date.now();
 
                 // Mesmo payload exato que o checkout.js real grava — todos os campos
                 // duplicados existem de propósito, é o que o pedidos.html espera ler.
@@ -680,13 +1019,28 @@
                         imagem: i.imagem, image: i.imagem
                     })),
 
-                    status: 'Novo',
+                    status: 'Processando estoque',
+                    estoqueBaixaStatus: 'pendente',
                     dataCriacao: new Date().toISOString(),
                     data: new Date().toLocaleDateString('pt-BR')
                 };
 
                 if (!window.db) throw new Error('Instância global do Firebase (window.db) não inicializada.');
-                await db.ref(`abella/orders/${pedidoId}`).set(dadosPedido);
+                referenciaPedido = db.ref(`abella/orders/${pedidoId}`);
+                await referenciaPedido.set(dadosPedido);
+                pedidoPendenteSalvo = true;
+
+                // A baixa ocorre quando o pedido é criado, antes de abrir o WhatsApp.
+                // Cada produto usa transação Firebase e uma chave idempotente por pedido.
+                baixasAplicadas = await baixarEstoquePedido(itens, pedidoId);
+                baixaConcluida = true;
+                await referenciaPedido.update({
+                    status: 'Novo',
+                    estoqueBaixaStatus: baixasAplicadas.length ? 'baixado' : 'nao_aplicavel',
+                    estoqueBaixaEm: Date.now(),
+                    estoqueBaixaProdutos: baixasAplicadas
+                });
+                pedidoFinalizado = true;
 
                 // Se este cliente havia enviado a sacola antes (status "Sacola"), ela virou pedido: remove o registro.
                 try {
@@ -717,10 +1071,45 @@
                 window.location.href = 'index.html';
 
             } catch (err) {
-                console.error('[Aurora Checkout] Erro ao finalizar pedido:', err);
-                alert('Erro técnico ao processar o pedido. Tente novamente.');
-                if (btn) { btn.disabled = false; btn.innerText = '🚀 Finalizar Pedido via WhatsApp'; }
+                console.error('[Aurora Checkout] Erro ao finalizar o pedido:', err);
+                let cancelamentoConfirmado = !pedidoPendenteSalvo;
+                if (pedidoPendenteSalvo && !baixaConcluida && referenciaPedido) {
+                    try {
+                        await referenciaPedido.update({
+                            status: 'Cancelado - estoque não confirmado',
+                            estoqueBaixaStatus: 'falhou',
+                            estoqueBaixaErro: String(err.code || 'falha_na_baixa'),
+                            estoqueBaixaEm: Date.now()
+                        });
+                        cancelamentoConfirmado = true;
+                    } catch (erroStatus) {
+                        console.error('[Checkout] Não foi possível marcar o pedido como cancelado:', erroStatus);
+                    }
+                }
+
+                if (pedidoFinalizado) {
+                    alert('O pedido foi registrado e o estoque controlado foi atualizado, quando aplicável. Houve uma falha ao concluir o fluxo do WhatsApp; não finalize novamente e entre em contato com a loja.');
+                    return;
+                }
+                if (baixaConcluida) {
+                    alert('O pedido foi salvo e o processamento do estoque foi concluído, mas o status final ficou pendente no painel. Não finalize novamente; entre em contato com a loja.');
+                    return;
+                }
+                if (!cancelamentoConfirmado) {
+                    alert('Não consegui confirmar o cancelamento do pedido pendente. Verifique o painel antes de tentar novamente.');
+                    return;
+                }
+
+                if (err.code === 'ESTOQUE_INSUFICIENTE' || err.code === 'VARIACAO_SEM_SALDO' || err.code === 'PRODUTO_INDISPONIVEL') {
+                    alert('O saldo de uma variação mudou durante a finalização. O pedido não foi concluído; revise a sacola e tente novamente.');
+                } else if (err.code === 'ESTOQUE_ESTORNO_FALHOU') {
+                    alert('Houve uma falha ao reverter uma baixa parcial. Não tente finalizar novamente antes de conferir o estoque dos produtos no painel.');
+                } else {
+                    alert('Não foi possível concluir a baixa do estoque no Firebase. O pedido não foi finalizado; tente novamente ou confira as permissões do Firebase.');
+                }
+                liberarTentativa();
             }
+
         }
 
         document.addEventListener('DOMContentLoaded', async () => {

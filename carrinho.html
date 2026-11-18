@@ -200,6 +200,17 @@
                 const precoTotalItem = formatarMoeda(item.precoVendaUnitario * item.quantidade);
                 const badge = item.possuiDesconto && item.badgePromocional
                     ? `<span class="aurora-badge aurora-badge--pix" style="margin-left:var(--space-2);">${item.badgePromocional}</span>` : '';
+                const controlaSaldo = item.estoqueVariacaoControlado === true || item.estoqueControlado === true;
+                const saldoLinha = item.estoqueVariacaoControlado === true
+                    ? Math.max(0, parseInt(item.estoqueVariacaoQuantidade, 10) || 0)
+                    : Math.max(0, parseInt(item.estoqueQuantidade, 10) || 0);
+                const bloqueada = item.estoqueIndisponivel === true && item.venderSemEstoque !== true;
+                const podeAumentar = !controlaSaldo || item.venderSemEstoque === true || item.quantidade < saldoLinha;
+                const avisoSaldo = controlaSaldo
+                    ? (bloqueada
+                        ? `<p style="font-size:11px;color:var(--color-danger);font-weight:700;margin-top:var(--space-1);">${item.estoqueVariacaoControlado && saldoLinha === 0 ? 'Esta variação está esgotada.' : `No momento há ${saldoLinha} unidade(s) desta opção; ajuste a quantidade para continuar.`}</p>`
+                        : `<p style="font-size:10px;color:var(--color-secondary);margin-top:var(--space-1);">${item.estoqueVariacaoControlado ? `${saldoLinha} disponível(is) nesta variação` : `${saldoLinha} disponível(is) no produto`}</p>`)
+                    : '';
 
                 return `
                     <div class="cart-item">
@@ -207,12 +218,13 @@
                         <div>
                             <p style="font-family:var(--font-heading); font-size:17px;">${item.name} ${badge}</p>
                             ${item.variacao ? `<p style="font-size:12px; color:var(--color-secondary); margin-top:var(--space-1);">Variação: ${item.variacao}</p>` : ''}
+                            ${avisoSaldo}
                             <div class="qty-control">
                                 <button class="qty-btn" onclick="alterarQuantidade('${item.id}', '${item.variacao || ''}', ${item.quantidade - 1})">−</button>
-                                <input type="number" class="aurora-input qty-input" min="1" value="${item.quantidade}"
+                                <input type="number" class="aurora-input qty-input" min="1" ${controlaSaldo && item.venderSemEstoque !== true ? `max="${saldoLinha}"` : ''} value="${item.quantidade}"
                                        onchange="alterarQuantidade('${item.id}', '${item.variacao || ''}', parseInt(this.value) || 1)"
                                        onkeydown="if(event.key==='Enter'){this.blur();}">
-                                <button class="qty-btn" onclick="alterarQuantidade('${item.id}', '${item.variacao || ''}', ${item.quantidade + 1})">+</button>
+                                <button class="qty-btn" onclick="alterarQuantidade('${item.id}', '${item.variacao || ''}', ${item.quantidade + 1})" ${podeAumentar ? '' : 'disabled'}>+</button>
                                 <button style="font-size:11px; color:var(--color-danger); background:none; border:none; cursor:pointer; margin-left:var(--space-3);" onclick="removerItem('${item.id}', '${item.variacao || ''}')">Remover</button>
                             </div>
                         </div>
@@ -223,6 +235,14 @@
                     </div>
                 `;
             }).join('');
+
+            const itensComEstoqueInvalido = itens.filter(item => item.estoqueIndisponivel === true && item.venderSemEstoque !== true);
+            const botaoFinalizar = document.getElementById('btnFinalizarSacola');
+            if (botaoFinalizar) {
+                botaoFinalizar.setAttribute('aria-disabled', itensComEstoqueInvalido.length ? 'true' : 'false');
+                botaoFinalizar.style.opacity = itensComEstoqueInvalido.length ? '0.55' : '';
+                botaoFinalizar.title = itensComEstoqueInvalido.length ? 'Ajuste ou remova itens sem estoque antes de finalizar.' : '';
+            }
 
             const subtotal = carrinhoService.obterTotalBruto();
             const total = carrinhoService.obterTotal();
@@ -425,6 +445,13 @@
             if (nome.length < 2) { erro.innerText = 'Informe seu nome.'; return; }
             if (whatsDigitos.length < 10 || whatsDigitos.length > 13) { erro.innerText = 'Informe o WhatsApp com DDD. Ex.: (19) 99999-9999'; return; }
 
+            const validacaoEstoque = await carrinhoService.sincronizarEstoqueAtual();
+            renderizarCarrinho();
+            if (!validacaoEstoque.valido) {
+                erro.innerText = 'Há uma variação sem saldo suficiente. Ajuste ou remova os itens marcados na sacola.';
+                return;
+            }
+
             const btn = document.getElementById('btnContatoEnviar');
             btn.disabled = true; btn.innerText = 'Enviando...';
 
@@ -483,11 +510,17 @@
 
             const btn = document.getElementById('btnFinalizarSacola');
             btn.innerText = 'Usar esta sacola e finalizar';
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const atual = JSON.parse(localStorage.getItem('pma_v8_carrinho_itens') || '[]');
                 if (atual.length && !confirm('Você já tem itens na sua sacola. Substituir pela sacola do link?')) return;
                 carrinhoService.usarSacolaCompartilhada();
+                const validacao = await carrinhoService.sincronizarEstoqueAtual();
+                renderizarCarrinho();
+                if (!validacao.valido) {
+                    alert('Alguma variação da sacola compartilhada ficou sem saldo suficiente. Revise a sacola antes de finalizar.');
+                    return;
+                }
                 window.location.href = 'checkout.html';
             });
         }
@@ -508,12 +541,14 @@
             aplicarModoVisualizacao(info);
         }
 
-        function alterarQuantidade(id, variacao, novaQtd) {
+        async function alterarQuantidade(id, variacao, novaQtd) {
             if (novaQtd < 1) {
                 removerItem(id, variacao);
                 return;
             }
-            carrinhoService.atualizarQuantidade(id, novaQtd, variacao);
+            await carrinhoService.sincronizarEstoqueAtual();
+            const atualizou = carrinhoService.atualizarQuantidade(id, novaQtd, variacao);
+            if (!atualizou) alert('A quantidade pedida ultrapassa o saldo disponível para esta variação.');
             renderizarCarrinho();
         }
 
@@ -592,7 +627,22 @@
             }
 
             await iniciarSacolaCompartilhada();
+            await carrinhoService.sincronizarEstoqueAtual();
             renderizarCarrinho();
+
+            const botaoFinalizar = document.getElementById('btnFinalizarSacola');
+            if (botaoFinalizar && !carrinhoService.emModoVisualizacao()) {
+                botaoFinalizar.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    const validacao = await carrinhoService.sincronizarEstoqueAtual();
+                    renderizarCarrinho();
+                    if (!validacao.valido) {
+                        alert('Há uma variação sem saldo suficiente. Ajuste ou remova as linhas marcadas antes de finalizar.');
+                        return;
+                    }
+                    window.location.href = 'checkout.html';
+                });
+            }
 
             document.getElementById('btnWhatsSacola').addEventListener('click', abrirModalContato);
             document.getElementById('btnContatoCancelar').addEventListener('click', fecharModalContato);

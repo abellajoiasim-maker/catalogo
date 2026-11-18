@@ -3,7 +3,6 @@
 <head>
 <style id="auth-guard-hide">html{visibility:hidden !important;}</style>
 <meta charset="UTF-8">
-    <meta name="robots" content="noindex, nofollow">
 <title>Migrador de Imagens • Abella Joias</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -11,7 +10,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
 <style>
@@ -47,20 +45,12 @@
             <div class="space-y-3 flex-1">
                 <div class="flex items-start justify-between gap-4">
                     <h1 class="text-4xl font-black uppercase tracking-[0.25em] gold">Migrador de Imagens</h1>
-                    <div class="flex gap-2 shrink-0">
-                        <button onclick="abrirModalCorrigirLinks()" id="btnCorrigirLinks" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-[#caa85c] hover:border-[#caa85c] transition-colors whitespace-nowrap">
-                            🔗 Corrigir Links Antigos
-                        </button>
-                        <button onclick="abrirModalConfigGithub()" id="btnConfigGithub" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-[#caa85c] hover:border-[#caa85c] transition-colors whitespace-nowrap">
-                            ⚙️ GitHub
-                        </button>
-                        <button onclick="AuthGuard.logout()" class="h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors whitespace-nowrap">
-                            Sair
-                        </button>
-                    </div>
+                    <button onclick="AuthGuard.logout()" class="shrink-0 h-10 px-4 rounded-xl border border-zinc-800 flex items-center justify-center text-xs uppercase font-bold tracking-wider text-zinc-400 hover:text-rose-400 hover:border-rose-900 transition-colors whitespace-nowrap">
+                        Sair
+                    </button>
                 </div>
                 <p class="text-zinc-400 text-sm leading-relaxed max-w-3xl">
-                    Veja quais produtos já têm foto e quais estão faltando, e envie imagens novas de qualquer lugar (pasta do computador ou Google Drive) — elas são convertidas para WebP e enviadas direto para o seu repositório GitHub (CDN via jsDelivr), já vinculadas ao produto certo.
+                    Veja quais produtos já têm foto e quais estão faltando, e envie imagens novas de qualquer lugar (pasta do computador ou Google Drive) direto para o GitHub (CDN jsDelivr) — já vinculadas ao produto certo.
                 </p>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -92,6 +82,12 @@
                 <p class="text-zinc-500 text-sm mt-2">
                     O nome do arquivo precisa ser o <b class="gold">código/SKU ou ID</b> do produto (ex: <code class="text-zinc-300">ABC123.jpg</code>). Várias fotos do mesmo produto podem usar sufixo: <code class="text-zinc-300">ABC123-1.jpg</code>, <code class="text-zinc-300">ABC123-2.jpg</code>.
                 </p>
+            </div>
+            <div class="flex flex-col items-stretch gap-2">
+            <button onclick="configurarTokenGithub()" class="bg-zinc-900 border border-zinc-800 rounded-2xl h-14 px-6 font-black uppercase tracking-[0.15em] text-xs hover:border-[#caa85c] transition-all whitespace-nowrap">
+                🔑 Token do GitHub
+            </button>
+            <span id="statusToken" class="text-[11px] text-center text-zinc-500"></span>
             </div>
             <button onclick="abrirGoogleDrivePicker()" class="bg-zinc-900 border border-zinc-800 rounded-2xl h-14 px-6 font-black uppercase tracking-[0.15em] text-xs hover:border-[#caa85c] transition-all whitespace-nowrap">
                 🗂️ Importar do Google Drive
@@ -198,77 +194,6 @@
     </div>
 </div>
 
-<!-- MODAL CONFIGURAÇÃO GITHUB -->
-<div id="modalConfigGithub" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
-    <div class="glass rounded-[2rem] p-8 max-w-lg w-full space-y-5">
-        <div class="flex items-center justify-between">
-            <h3 class="text-xl font-black">⚙️ Configuração do GitHub</h3>
-            <button onclick="fecharModalConfigGithub()" class="text-zinc-500 hover:text-white text-2xl leading-none">&times;</button>
-        </div>
-        <p class="text-zinc-500 text-xs leading-relaxed">
-            Essas imagens são enviadas direto para o repositório GitHub que serve seu CDN via jsDelivr.
-            O token fica salvo <b class="gold">só neste navegador</b> (localStorage) — nunca é enviado a lugar nenhum além do GitHub. Não compartilhe este token com ninguém.
-        </p>
-        <div class="space-y-3">
-            <div>
-                <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Usuário / Organização</label>
-                <input id="cfgGhOwner" class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c] mt-1" placeholder="ex: abellajoiasim-maker">
-            </div>
-            <div>
-                <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Repositório</label>
-                <input id="cfgGhRepo" class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c] mt-1" placeholder="ex: abella-joias-cdn">
-            </div>
-            <div>
-                <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Branch</label>
-                <input id="cfgGhBranch" class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c] mt-1" placeholder="main" value="main">
-            </div>
-            <div>
-                <label class="text-xs uppercase text-zinc-500 font-black tracking-[0.15em]">Personal Access Token (fine-grained)</label>
-                <input id="cfgGhToken" type="password" class="glass rounded-xl h-11 px-4 text-sm w-full outline-none focus:border-[#caa85c] mt-1" placeholder="github_pat_...">
-                <p class="text-zinc-600 text-[11px] mt-2 leading-relaxed">
-                    Crie em <b>github.com → Settings → Developer settings → Fine-grained tokens</b>.
-                    Selecione <b>apenas este repositório</b> e dê permissão <b>Contents: Read and write</b>. Nada além disso é necessário.
-                </p>
-            </div>
-        </div>
-        <button onclick="salvarConfigGithub()" class="btn-gold rounded-2xl h-12 w-full uppercase tracking-[0.2em] text-sm">💾 Salvar Configuração</button>
-    </div>
-</div>
-
-<!-- MODAL CORRIGIR LINKS ANTIGOS -->
-<div id="modalCorrigirLinks" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
-    <div class="glass rounded-[2rem] p-8 max-w-4xl w-full max-h-[85vh] flex flex-col space-y-4">
-        <div class="flex items-center justify-between shrink-0">
-            <h3 class="text-xl font-black">🔗 Corrigir Links Antigos</h3>
-            <button onclick="fecharModalCorrigirLinks()" class="text-zinc-500 hover:text-white text-2xl leading-none">&times;</button>
-        </div>
-        <p class="text-zinc-500 text-xs leading-relaxed shrink-0">
-            Procura produtos cujo link de imagem ainda aponta pro Firebase Storage (ou é só o nome do arquivo antigo, ex: <code>PRG-71.png</code>) e verifica se já existe uma imagem correspondente no GitHub (<code>products/SKU.webp</code>). Não faz upload de nada — só corrige o link salvo no produto, para os que já foram migrados.
-        </p>
-        <div class="flex gap-3 shrink-0">
-            <button onclick="escanearLinksAntigos()" id="btnEscanear" class="btn-gold rounded-xl h-11 px-5 text-xs uppercase tracking-[0.15em] font-bold">🔍 Escanear Produtos</button>
-            <button onclick="aplicarCorrecoesLinks()" id="btnAplicarCorrecoes" disabled class="rounded-xl h-11 px-5 text-xs uppercase tracking-[0.15em] font-bold border border-zinc-800 text-zinc-500 disabled:opacity-40 enabled:text-emerald-400 enabled:border-emerald-800 enabled:hover:bg-emerald-950/30 transition-colors">✅ Aplicar Correções Selecionadas</button>
-            <span id="resumoEscaneio" class="text-xs text-zinc-500 self-center"></span>
-        </div>
-        <div class="overflow-y-auto flex-1 border border-zinc-800 rounded-xl">
-            <table class="w-full text-xs">
-                <thead class="sticky top-0 bg-zinc-950">
-                    <tr class="text-left text-zinc-500 uppercase tracking-wider">
-                        <th class="p-3 w-8"><input type="checkbox" id="checkTodosLinks" onclick="toggleTodosLinks(this.checked)"></th>
-                        <th class="p-3">Produto</th>
-                        <th class="p-3">Link Atual (salvo no banco)</th>
-                        <th class="p-3">Novo Link (GitHub/jsDelivr)</th>
-                        <th class="p-3">Status</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelaCorrecaoLinksBody">
-                    <tr><td colspan="5" class="p-6 text-center text-zinc-600">Clique em "Escanear Produtos" para começar.</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
 <script src="../js/firebase/firebase-config.js"></script>
 <script src="js/auth-guard.js"></script>
 
@@ -292,88 +217,13 @@ const GOOGLE_DRIVE_CONFIG = {
 };
 
 // =========================================================================
-// CONFIGURAÇÃO DO GITHUB / CDN (jsDelivr)
-// Preenchida pelo botão "⚙️ GitHub" no topo da página — fica salva no
-// localStorage deste navegador. Substitui o antigo upload para o
-// Firebase Storage (indisponível).
-// =========================================================================
-const GH_STORAGE_KEYS = {
-    owner: 'abella_gh_owner',
-    repo: 'abella_gh_repo',
-    branch: 'abella_gh_branch',
-    token: 'abella_gh_token'
-};
-
-function getGithubConfig() {
-    return {
-        owner: localStorage.getItem(GH_STORAGE_KEYS.owner) || '',
-        repo: localStorage.getItem(GH_STORAGE_KEYS.repo) || '',
-        branch: localStorage.getItem(GH_STORAGE_KEYS.branch) || 'main',
-        token: localStorage.getItem(GH_STORAGE_KEYS.token) || ''
-    };
-}
-
-function githubConfigured() {
-    const c = getGithubConfig();
-    return Boolean(c.owner && c.repo && c.token);
-}
-
-function cdnBaseAtual() {
-    const c = getGithubConfig();
-    return `https://cdn.jsdelivr.net/gh/${c.owner}/${c.repo}@${c.branch}`;
-}
-
-function abrirModalConfigGithub() {
-    const c = getGithubConfig();
-    document.getElementById('cfgGhOwner').value = c.owner;
-    document.getElementById('cfgGhRepo').value = c.repo;
-    document.getElementById('cfgGhBranch').value = c.branch || 'main';
-    document.getElementById('cfgGhToken').value = c.token;
-    document.getElementById('modalConfigGithub').classList.remove('hidden');
-}
-
-function fecharModalConfigGithub() {
-    document.getElementById('modalConfigGithub').classList.add('hidden');
-}
-
-function salvarConfigGithub() {
-    const owner = document.getElementById('cfgGhOwner').value.trim();
-    const repo = document.getElementById('cfgGhRepo').value.trim();
-    const branch = document.getElementById('cfgGhBranch').value.trim() || 'main';
-    const token = document.getElementById('cfgGhToken').value.trim();
-
-    if (!owner || !repo || !token) {
-        alert('Preencha usuário, repositório e token antes de salvar.');
-        return;
-    }
-
-    localStorage.setItem(GH_STORAGE_KEYS.owner, owner);
-    localStorage.setItem(GH_STORAGE_KEYS.repo, repo);
-    localStorage.setItem(GH_STORAGE_KEYS.branch, branch);
-    localStorage.setItem(GH_STORAGE_KEYS.token, token);
-
-    atualizarIndicadorGithub();
-    fecharModalConfigGithub();
-    log('Configuração do GitHub salva neste navegador.', 'success');
-}
-
-function atualizarIndicadorGithub() {
-    const btn = document.getElementById('btnConfigGithub');
-    if (!btn) return;
-    if (githubConfigured()) {
-        const c = getGithubConfig();
-        btn.innerHTML = `✅ ${c.owner}/${c.repo}`;
-        btn.classList.add('text-emerald-400');
-    } else {
-        btn.innerHTML = '⚙️ Configurar GitHub';
-        btn.classList.add('text-amber-400');
-    }
-}
-
-// =========================================================================
 // ESTADO GERAL
 // =========================================================================
 const PRODUCTS_PATH = (typeof window.getAbellaPath === 'function') ? window.getAbellaPath('products') : 'abella/products';
+// Destino das imagens: repositório do GitHub servido pelo jsDelivr (sem Firebase Storage)
+const GITHUB_CFG = { owner: 'abellajoiasim-maker', repo: 'abella-joias-cdn', branch: 'main', pasta: 'products' };
+const CDN_BASE = `https://cdn.jsdelivr.net/gh/${GITHUB_CFG.owner}/${GITHUB_CFG.repo}@${GITHUB_CFG.branch}`;
+const TOKEN_KEY = 'abella_github_token';
 
 let produtosCache = {};      // id -> produto normalizado
 let listaProdutos = [];      // array dos mesmos produtos, pra iterar fácil
@@ -492,18 +342,9 @@ function extrairChaveArquivo(nomeArquivo) {
     const pontoIdx = semPasta.lastIndexOf('.');
     const ext = pontoIdx !== -1 ? semPasta.slice(pontoIdx).toLowerCase() : '';
     const base = pontoIdx !== -1 ? semPasta.slice(0, pontoIdx) : semPasta;
-
-    // Chave principal: o nome do arquivo inteiro, sem extensão (ex.: "BE-2884").
-    // NUNCA corta números aqui — o SKU normalmente termina em números.
-    const chave = normalizarTexto(base);
-
-    // Chave alternativa: só usada como plano B, pra casos de "foto extra" do
-    // tipo "BE-2884 (2).jpg" ou "BE-2884_2.jpg" — repare que o separador exigido
-    // é espaço/underscore/parênteses, NUNCA hífen, pra não confundir com o SKU.
-    const baseSemSufixo = base.replace(/\s*\(\d+\)$/, '').replace(/_\d+$/, '');
-    const chaveAlternativa = baseSemSufixo !== base ? normalizarTexto(baseSemSufixo) : null;
-
-    return { chave, chaveAlternativa, ext };
+    // 1) nome completo (ex.: BRC-0003)  2) sem sufixo de múltiplas fotos (-1, _2, (3))
+    const baseSemSufixo = base.replace(/[\s_-]?\(?\d+\)?$/, '');
+    return { chave: normalizarTexto(base), chaveAlt: normalizarTexto(baseSemSufixo), ext };
 }
 
 function encontrarProdutoPorChave(chave) {
@@ -538,8 +379,8 @@ function lidarComArquivosSelecionados(fileList) {
 // =========================================================================
 function montarPreview(itens) {
     pendentesPreview = itens.map(item => {
-        const { chave, chaveAlternativa, ext } = extrairChaveArquivo(item.nome);
-        const produto = encontrarProdutoPorChave(chave) || (chaveAlternativa ? encontrarProdutoPorChave(chaveAlternativa) : null);
+        const { chave, chaveAlt, ext } = extrairChaveArquivo(item.nome);
+        const produto = encontrarProdutoPorChave(chave) || encontrarProdutoPorChave(chaveAlt);
         return {
             nome: item.nome,
             blob: item.blob,
@@ -605,14 +446,26 @@ async function aplicarPreview() {
         return;
     }
 
+    if (!obterTokenGithub()) {
+        log('Envio cancelado: informe o token do GitHub (botão "🔑 Token do GitHub").', 'warning');
+        return;
+    }
+
     const btn = document.getElementById('btnAplicarPreview');
     btn.disabled = true;
     btn.innerText = '⏳ Enviando...';
 
     let sucesso = 0, falhas = 0;
+    const jaEnviados = new Set();
     for (const item of selecionados) {
+        if (jaEnviados.has(item.produto.id)) {
+            log(`[IGNORADO] ${item.nome}: o produto "${item.produto.nome}" já recebeu outra imagem neste envio.`, 'warning');
+            continue;
+        }
         try {
             await enviarImagemParaProduto(item.produto.id, item.blob, item.ext);
+            jaEnviados.add(item.produto.id);
+            await esperar(400); // os commits no GitHub precisam ser sequenciais
             log(`[OK] ${item.nome} → ${item.produto.nome}`, 'success');
             sucesso++;
         } catch (err) {
@@ -629,123 +482,157 @@ async function aplicarPreview() {
 }
 
 // =========================================================================
-// CONVERSÃO PARA WEBP (direto no navegador, via canvas)
+// UPLOAD PARA O GITHUB (jsDelivr) + GRAVAÇÃO NO PRODUTO (RTDB)
 // =========================================================================
-function converterBlobParaWebp(blob, qualidade = 0.82) {
-    return new Promise((resolve, reject) => {
-        const imgEl = new Image();
-        const urlTemp = URL.createObjectURL(blob);
-        imgEl.onload = () => {
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = imgEl.naturalWidth;
-                canvas.height = imgEl.naturalHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(imgEl, 0, 0);
-                canvas.toBlob((webpBlob) => {
-                    URL.revokeObjectURL(urlTemp);
-                    if (!webpBlob) { reject(new Error('Falha ao converter para WebP (navegador sem suporte).')); return; }
-                    resolve(webpBlob);
-                }, 'image/webp', qualidade);
-            } catch (err) {
-                URL.revokeObjectURL(urlTemp);
-                reject(err);
-            }
-        };
-        imgEl.onerror = () => { URL.revokeObjectURL(urlTemp); reject(new Error('Não foi possível ler a imagem selecionada.')); };
-        imgEl.src = urlTemp;
-    });
+const esperar = (ms) => new Promise(r => setTimeout(r, ms));
+
+function lerToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
+}
+function gravarToken(t) {
+    try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+}
+function atualizarStatusToken() {
+    const el = document.getElementById('statusToken');
+    if (!el) return;
+    const t = lerToken();
+    el.textContent = t ? '✅ token salvo neste navegador' : '⚠️ token não informado';
+    el.style.color = t ? '#34d399' : '#fbbf24';
+}
+
+function obterTokenGithub() {
+    let t = lerToken();
+    if (!t) {
+        t = (prompt('Cole o token do GitHub (permissão "Contents: Read and write" no repositório ' + GITHUB_CFG.repo + '):') || '').trim();
+        if (t) { gravarToken(t); atualizarStatusToken(); }
+    }
+    return t;
+}
+
+async function configurarTokenGithub() {
+    const atual = lerToken();
+    const novo = prompt(
+        'Cole o token do GitHub.\n\nComo criar: GitHub > Settings > Developer settings > Personal access tokens > Fine-grained tokens.\n' +
+        'Repositório: ' + GITHUB_CFG.repo + ' | Permissão: Contents = Read and write.\n\n' +
+        'Deixe em branco e confirme para REMOVER o token salvo.',
+        atual
+    );
+    if (novo === null) return;
+    gravarToken(novo.trim());
+    atualizarStatusToken();
+    if (novo.trim()) await verificarTokenGithub();
+    else log('Token removido deste navegador.', 'info');
+}
+
+async function verificarTokenGithub() {
+    try {
+        const r = await fetch(`https://api.github.com/repos/${GITHUB_CFG.owner}/${GITHUB_CFG.repo}`, { headers: cabecalhosGithub(lerToken()), cache: 'no-store' });
+        if (!r.ok) throw await criarErroGithub(r);
+        const d = await r.json();
+        if (d.permissions && d.permissions.push === false) {
+            log('Token aceito, mas SEM permissão de escrita no repositório. Refaça com "Contents: Read and write".', 'error');
+        } else {
+            log(`Token OK: acesso ao repositório ${d.full_name}.`, 'success');
+        }
+    } catch (err) {
+        log(`Token com problema: ${err.message}`, 'error');
+    }
+}
+
+function cabecalhosGithub(token) {
+    return {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    };
+}
+
+async function criarErroGithub(resp) {
+    let det = '';
+    try { det = (await resp.json()).message || ''; } catch (e) {}
+    if (resp.status === 401) return new Error('Token inválido ou expirado. Use "🔑 Token do GitHub" e cole um novo.');
+    if (resp.status === 403) {
+        if (resp.headers.get('x-ratelimit-remaining') === '0') return new Error('Limite de requisições do GitHub atingido. Aguarde alguns minutos.');
+        return new Error('Sem permissão. O token precisa de "Contents: Read and write" no repositório ' + GITHUB_CFG.repo + '. ' + det);
+    }
+    if (resp.status === 404) return new Error('Repositório não encontrado ou o token não tem acesso a ' + GITHUB_CFG.owner + '/' + GITHUB_CFG.repo + '.');
+    if (resp.status === 409) return new Error('Conflito de commit no GitHub. Tente novamente.');
+    if (resp.status === 422) return new Error('O GitHub recusou os dados: ' + det);
+    return new Error(`GitHub ${resp.status}: ${det || resp.statusText}`);
+}
+
+// Nome do arquivo = SKU em MAIÚSCULAS (padrão que a loja espera: products/SKU.webp)
+function nomeArquivoDoProduto(produto) {
+    const base = String(produto.sku || produto.codigo || produto.id).trim().toUpperCase();
+    return base.replace(/[^A-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// Converte para WebP (máx. 1600px) para manter o repositório leve
+async function converterParaWebp(blob, maxLado = 1600, qualidade = 0.85) {
+    if (blob.type === 'image/webp' && blob.size < 900 * 1024) return blob;
+    const bmp = await createImageBitmap(blob);
+    const esc = Math.min(1, maxLado / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * esc));
+    const h = Math.max(1, Math.round(bmp.height * esc));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';            // PNG transparente vira fundo branco
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const out = await new Promise(res => canvas.toBlob(res, 'image/webp', qualidade));
+    if (!out || out.type !== 'image/webp') throw new Error('Este navegador não conseguiu converter a imagem para WebP.');
+    return out;
 }
 
 function blobParaBase64(blob) {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result).split(',')[1]);
+        r.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
+        r.readAsDataURL(blob);
     });
 }
 
-// =========================================================================
-// UPLOAD PARA O GITHUB (API Contents) + GRAVAÇÃO NO PRODUTO (RTDB)
-// Substitui o antigo upload para o Firebase Storage (indisponível).
-// =========================================================================
-async function githubBuscarShaExistente(cfg, caminho) {
-    const resp = await fetch(
-        `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${caminho.split('/').map(encodeURIComponent).join('/')}?ref=${cfg.branch}`,
-        { headers: { Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json' } }
-    );
-    if (resp.status === 404) return null;
-    if (!resp.ok) throw new Error(`Falha ao consultar arquivo existente (HTTP ${resp.status}).`);
-    const dados = await resp.json();
-    return dados.sha || null;
-}
+// Cria ou substitui o arquivo no repositório (API de Contents do GitHub)
+async function enviarArquivoGithub(nomeArquivo, blob, token) {
+    const caminho = `${GITHUB_CFG.pasta}/${nomeArquivo}`;
+    const url = `https://api.github.com/repos/${GITHUB_CFG.owner}/${GITHUB_CFG.repo}/contents/` +
+                caminho.split('/').map(encodeURIComponent).join('/');
+    const headers = cabecalhosGithub(token);
+    const content = await blobParaBase64(blob);
 
-async function githubEnviarArquivo(cfg, caminho, base64Conteudo, mensagem) {
-    const shaExistente = await githubBuscarShaExistente(cfg, caminho);
+    for (let tentativa = 1; tentativa <= 2; tentativa++) {
+        let sha;
+        const g = await fetch(`${url}?ref=${GITHUB_CFG.branch}`, { headers, cache: 'no-store' });
+        if (g.status === 200) sha = (await g.json()).sha;
+        else if (g.status !== 404) throw await criarErroGithub(g);
 
-    const corpo = {
-        message: mensagem,
-        content: base64Conteudo,
-        branch: cfg.branch
-    };
-    if (shaExistente) corpo.sha = shaExistente;
+        const corpo = { message: `feat: imagem do produto ${nomeArquivo} via migrador`, content, branch: GITHUB_CFG.branch };
+        if (sha) corpo.sha = sha;
 
-    const resp = await fetch(
-        `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${caminho.split('/').map(encodeURIComponent).join('/')}`,
-        {
-            method: 'PUT',
-            headers: {
-                Authorization: `Bearer ${cfg.token}`,
-                Accept: 'application/vnd.github+json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(corpo)
-        }
-    );
-
-    if (!resp.ok) {
-        const detalhe = await resp.json().catch(() => ({}));
-        if (resp.status === 401) throw new Error('Token do GitHub inválido ou expirado. Reconfigure em "⚙️ GitHub".');
-        if (resp.status === 403) throw new Error('Sem permissão (verifique o escopo "Contents: Read and write" do token).');
-        throw new Error(detalhe.message || `Falha no upload (HTTP ${resp.status}).`);
+        const p = await fetch(url, { method: 'PUT', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+        if (p.ok) return;
+        if ((p.status === 409 || p.status === 422) && tentativa === 1) { await esperar(800); continue; }
+        throw await criarErroGithub(p);
     }
-
-    return resp.json();
-}
-
-function purgarCacheJsdelivr(cfg, caminho) {
-    // Best-effort: dispara a purga do cache do jsDelivr pra esse arquivo
-    // específico. Não bloqueia o fluxo caso falhe (CORS/timeout).
-    const url = `https://purge.jsdelivr.net/gh/${cfg.owner}/${cfg.repo}@${cfg.branch}/${caminho.split("/").map(encodeURIComponent).join("/")}`;
-    fetch(url, { mode: 'no-cors' }).catch(() => {});
 }
 
 async function enviarImagemParaProduto(produtoId, blob, ext) {
-    if (!githubConfigured()) {
-        throw new Error('Configure o GitHub primeiro (botão "⚙️ GitHub" no topo da página).');
-    }
-
-    const cfg = getGithubConfig();
     const produto = produtosCache[produtoId];
     if (!produto) throw new Error('Produto não encontrado.');
 
-    // Nome do arquivo = SKU/código do produto (padrão do CDN), nunca o ID interno.
-    // "/", "\\", "#", "?" e "%" quebram o caminho/URL do arquivo no GitHub/jsDelivr.
-    const identificador = normalizarTexto(produto.codigo || produto.sku || produto.id)
-        .toUpperCase()
-        .replace(/[\/\\#?%]+/g, '-');
-    if (!identificador) throw new Error('Produto sem código/SKU definido — não é possível nomear o arquivo.');
+    const token = obterTokenGithub();
+    if (!token) throw new Error('Token do GitHub não informado.');
 
-    const webpBlob = await converterBlobParaWebp(blob, 0.82);
-    const base64 = await blobParaBase64(webpBlob);
+    const webp = await converterParaWebp(blob);
+    const nome = nomeArquivoDoProduto(produto) + '.webp';
+    await enviarArquivoGithub(nome, webp, token);
 
-    const caminho = `products/${identificador}.webp`;
-    await githubEnviarArquivo(cfg, caminho, base64, `feat: imagem do produto ${identificador} via migrador`);
-    purgarCacheJsdelivr(cfg, caminho);
+    const url = `${CDN_BASE}/${GITHUB_CFG.pasta}/${encodeURIComponent(nome)}`;
 
-    // encodeURIComponent: espaço, "#", acento etc. no nome não podem quebrar a URL salva no banco.
-    const url = `${cdnBaseAtual()}/products/${encodeURIComponent(identificador)}.webp`;
+    // limpa o cache do jsDelivr (evita ficar preso num 404 antigo); falha aqui não impede o envio
+    try { fetch(`https://purge.jsdelivr.net/gh/${GITHUB_CFG.owner}/${GITHUB_CFG.repo}@${GITHUB_CFG.branch}/${GITHUB_CFG.pasta}/${encodeURIComponent(nome)}`, { mode: 'no-cors' }).catch(() => {}); } catch (e) {}
 
     await db.ref(PRODUCTS_PATH).child(produtoId).update({
         imagem: url,
@@ -756,166 +643,12 @@ async function enviarImagemParaProduto(produtoId, blob, ext) {
     return url;
 }
 
-// =========================================================================
-// CORRIGIR LINKS ANTIGOS
-// Produtos cujo campo "imagem" ainda é o nome cru do arquivo (ex.: "PRG-71.png")
-// ou uma URL antiga do Firebase Storage. Verifica se já existe o arquivo
-// correspondente no GitHub e, se sim, corrige o link salvo — sem subir
-// nenhuma imagem nova.
-// =========================================================================
-let resultadosEscaneio = []; // { produtoId, nome, linkAntigo, linkNovo, caminho, existe }
-
-function jaEhLinkCdnAtual(valor) {
-    return typeof valor === 'string' && valor.startsWith(cdnBaseAtual());
-}
-
-function extrairIdentificadorDeLinkAntigo(valorAntigo) {
-    if (!valorAntigo || typeof valorAntigo !== 'string') return null;
-    const valor = valorAntigo.trim();
-    if (!valor) return null;
-    if (jaEhLinkCdnAtual(valor)) return null; // já está migrado
-
-    let nomeArquivo = valor;
-
-    // URL do Firebase Storage: .../o/images%2Fprodutos%2FCJI-3010.png?alt=media
-    if (valor.includes('firebasestorage.googleapis.com')) {
-        try {
-            const urlObj = new URL(valor);
-            const partesPath = decodeURIComponent(urlObj.pathname).split('/');
-            nomeArquivo = partesPath[partesPath.length - 1] || '';
-        } catch (e) {
-            const match = valor.match(/%2F([^%2F?]+)\?/) || valor.match(/\/([^/?]+)\?/);
-            nomeArquivo = match ? decodeURIComponent(match[1]) : '';
-        }
-    }
-    // gs://bucket/images/produtos/CJI-3010.png
-    else if (valor.startsWith('gs://')) {
-        const partes = valor.split('/');
-        nomeArquivo = partes[partes.length - 1] || '';
-    }
-    // Já é outra URL http(s) que não é do nosso CDN — não mexe.
-    else if (valor.startsWith('http://') || valor.startsWith('https://')) {
-        return null;
-    }
-    // Nome de arquivo cru, ex.: "PRG-71.png"
-    // (nomeArquivo já é o próprio valor nesse caso)
-
-    if (!nomeArquivo) return null;
-    // remove só extensão de imagem conhecida (um código como "BF-01.0001" não pode ser cortado)
-    return nomeArquivo.replace(/\.(png|jpe?g|webp|gif|avif|bmp|svg|tiff?|heic)$/i, ''); // -> SKU
-}
-
-async function escanearLinksAntigos() {
-    if (!githubConfigured()) {
-        alert('Configure o GitHub primeiro (botão "⚙️ GitHub" no topo da página).');
-        return;
-    }
-
-    const btn = document.getElementById('btnEscanear');
-    const tbody = document.getElementById('tabelaCorrecaoLinksBody');
-    const resumo = document.getElementById('resumoEscaneio');
-    btn.disabled = true;
-    btn.innerText = '🔍 Escaneando...';
-    tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-zinc-600">Escaneando produtos...</td></tr>`;
-    resultadosEscaneio = [];
-
-    const cfg = getGithubConfig();
-    const candidatos = Object.values(produtosCache).filter(p => p.imagem && !jaEhLinkCdnAtual(p.imagem));
-
-    let verificados = 0;
-    for (const produto of candidatos) {
-        const identificador = extrairIdentificadorDeLinkAntigo(produto.imagem);
-        verificados++;
-        resumo.innerText = `Verificando ${verificados}/${candidatos.length}...`;
-
-        if (!identificador) continue; // formato desconhecido, ignora
-
-        const caminho = `products/${identificador}.webp`;
-        let existe = false;
-        try {
-            const sha = await githubBuscarShaExistente(cfg, caminho);
-            existe = Boolean(sha);
-        } catch (err) {
-            existe = false;
-        }
-
-        resultadosEscaneio.push({
-            produtoId: produto.id,
-            nome: produto.nome,
-            linkAntigo: produto.imagem,
-            linkNovo: `${cdnBaseAtual()}/${caminho.split('/').map(encodeURIComponent).join('/')}`,
-            caminho,
-            existe
-        });
-    }
-
-    renderizarTabelaCorrecaoLinks();
-    const corrigiveis = resultadosEscaneio.filter(r => r.existe).length;
-    resumo.innerText = `${corrigiveis} de ${candidatos.length} já têm imagem no GitHub e podem ser corrigidos.`;
-    btn.disabled = false;
-    btn.innerText = '🔍 Escanear Produtos';
-    document.getElementById('btnAplicarCorrecoes').disabled = corrigiveis === 0;
-}
-
-function renderizarTabelaCorrecaoLinks() {
-    const tbody = document.getElementById('tabelaCorrecaoLinksBody');
-    if (resultadosEscaneio.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-zinc-600">Nenhum link antigo reconhecível encontrado (ou tudo já migrado).</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = resultadosEscaneio.map((r, i) => `
-        <tr class="border-t border-zinc-900 ${r.existe ? '' : 'opacity-40'}">
-            <td class="p-3"><input type="checkbox" ${r.existe ? 'checked' : 'disabled'} data-idx="${i}" class="check-link-item"></td>
-            <td class="p-3">${r.nome}</td>
-            <td class="p-3 text-zinc-500 break-all">${r.linkAntigo}</td>
-            <td class="p-3 text-emerald-400 break-all">${r.existe ? r.linkNovo : '—'}</td>
-            <td class="p-3">${r.existe ? '<span class="text-emerald-400">✅ encontrado no GitHub</span>' : '<span class="text-zinc-600">⚠️ ainda não migrado</span>'}</td>
-        </tr>
-    `).join('');
-}
-
-function toggleTodosLinks(marcado) {
-    document.querySelectorAll('.check-link-item:not(:disabled)').forEach(cb => cb.checked = marcado);
-}
-
-async function aplicarCorrecoesLinks() {
-    const checks = document.querySelectorAll('.check-link-item:checked');
-    if (checks.length === 0) { alert('Nenhum item selecionado.'); return; }
-    if (!confirm(`Corrigir o link de ${checks.length} produto(s)? Isso atualiza o banco de dados, sem subir nenhuma imagem nova.`)) return;
-
-    const btn = document.getElementById('btnAplicarCorrecoes');
-    btn.disabled = true;
-    let sucesso = 0, falhas = 0;
-
-    for (const check of checks) {
-        const item = resultadosEscaneio[Number(check.dataset.idx)];
-        try {
-            await db.ref(PRODUCTS_PATH).child(item.produtoId).update({
-                imagem: item.linkNovo,
-                image: item.linkNovo,
-                updatedAt: Date.now()
-            });
-            if (produtosCache[item.produtoId]) produtosCache[item.produtoId].imagem = item.linkNovo;
-            sucesso++;
-            log(`Link corrigido: ${item.nome} → ${item.caminho}`, 'success');
-        } catch (err) {
-            falhas++;
-            log(`Falha ao corrigir ${item.nome}: ${err.message}`, 'error');
-        }
-    }
-
-    log(`Correção concluída: ${sucesso} atualizados, ${falhas} falharam.`, sucesso > 0 ? 'success' : 'error');
-    atualizarStats();
-    renderizarGrid();
-    fecharModalCorrigirLinks();
-}
-
-function abrirModalCorrigirLinks() {
-    document.getElementById('modalCorrigirLinks').classList.remove('hidden');
-}
-function fecharModalCorrigirLinks() {
-    document.getElementById('modalCorrigirLinks').classList.add('hidden');
+// Converte links do GitHub (página "blob" ou raw) para o endereço do jsDelivr
+function normalizarUrlImagem(u) {
+    u = String(u || '').trim();
+    const m = u.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.+?)(?:\?.*)?$/i);
+    if (m) return `https://cdn.jsdelivr.net/gh/${m[1]}/${m[2]}@${m[3]}/${m[4]}`;
+    return u;
 }
 
 // =========================================================================
@@ -938,7 +671,7 @@ function fecharModal() {
 async function salvarImagemModal() {
     if (!produtoModalAtual) return;
     const arquivo = document.getElementById('modalInputArquivo').files[0];
-    const urlColada = document.getElementById('modalInputUrl').value.trim();
+    const urlColada = normalizarUrlImagem(document.getElementById('modalInputUrl').value);
 
     try {
         if (arquivo) {
@@ -1078,12 +811,9 @@ async function callbackPickerDrive(data, accessToken) {
 // INÍCIO
 // =========================================================================
 window.addEventListener('load', () => {
-    atualizarIndicadorGithub();
-    if (!githubConfigured()) {
-        log('⚙️ Configure o GitHub (botão no topo) antes de enviar imagens.', 'warning');
-    }
     // pequena espera para garantir que firebase-config.js já rodou
     setTimeout(carregarProdutos, 300);
+    atualizarStatusToken();
 });
 </script>
 </body>

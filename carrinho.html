@@ -128,12 +128,21 @@
     </main>
 
 
-    <div id="modalContatoSacola" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:9999; display:none; align-items:center; justify-content:center; padding:var(--space-5);">
-        <div style="background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-6); width:100%; max-width:380px;">
+    <div id="modalContatoSacola" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:9999; display:none; align-items:center; justify-content:center; padding:var(--space-5); overflow-y:auto;">
+        <div style="background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-6); width:100%; max-width:420px; max-height:90vh; overflow-y:auto;">
             <h2 style="font-family:var(--font-heading); font-size:20px; margin-bottom:var(--space-2);">Enviar minha sacola</h2>
-            <p style="font-size:12px; color:var(--color-secondary); margin-bottom:var(--space-4);">Informe seu contato para a Abella retornar com sua sacola.</p>
-            <input type="text" id="contatoNome" class="aurora-input" placeholder="Seu nome" autocomplete="name" style="margin-bottom:var(--space-3);">
-            <input type="tel" id="contatoWhats" class="aurora-input" placeholder="Seu WhatsApp com DDD (19) 99999-9999" autocomplete="tel">
+            <p style="font-size:12px; color:var(--color-secondary); margin-bottom:var(--space-4);">Informe seus dados para identificarmos a sacola. A forma de pagamento ainda pode ser combinada antes da finalização.</p>
+            <label for="contatoNome" style="display:block;font-size:12px;margin-bottom:4px;">Nome</label>
+            <input type="text" id="contatoNome" class="aurora-input" placeholder="Seu nome" autocomplete="name" required style="margin-bottom:var(--space-3);">
+            <label for="contatoWhats" style="display:block;font-size:12px;margin-bottom:4px;">Telefone / WhatsApp</label>
+            <input type="tel" id="contatoWhats" class="aurora-input" placeholder="Com DDD (19) 99999-9999" autocomplete="tel" required style="margin-bottom:var(--space-3);">
+            <label for="contatoCidade" style="display:block;font-size:12px;margin-bottom:4px;">Cidade</label>
+            <input type="text" id="contatoCidade" class="aurora-input" placeholder="Sua cidade" autocomplete="address-level2" required style="margin-bottom:var(--space-3);">
+            <label for="contatoFormaPagamento" style="display:block;font-size:12px;margin-bottom:4px;">Forma de pagamento pretendida</label>
+            <select id="contatoFormaPagamento" class="aurora-input" required style="margin-bottom:var(--space-2);">
+                <option value="PIX" selected>PIX</option>
+                <option value="Cartão">Cartão</option>
+            </select>
             <p id="contatoErro" style="font-size:11px; color:var(--color-danger); min-height:14px; margin-top:var(--space-2);"></p>
             <div style="display:flex; gap:var(--space-2); margin-top:var(--space-3);">
                 <button type="button" id="btnContatoCancelar" class="aurora-btn aurora-btn--ghost" style="flex:1;">Cancelar</button>
@@ -375,6 +384,8 @@
                 const salvo = JSON.parse(localStorage.getItem(CHAVE_CONTATO) || '{}');
                 if (salvo.nome) document.getElementById('contatoNome').value = salvo.nome;
                 if (salvo.whats) document.getElementById('contatoWhats').value = salvo.whats;
+                if (salvo.cidade) document.getElementById('contatoCidade').value = salvo.cidade;
+                if (salvo.formaPagamento) document.getElementById('contatoFormaPagamento').value = salvo.formaPagamento;
             } catch (e) {}
             document.getElementById('contatoErro').innerText = '';
             const m = document.getElementById('modalContatoSacola');
@@ -391,7 +402,7 @@
 
         // Grava a sacola em abella/orders com status "Sacola". O id é fixo por
         // WhatsApp (SAC-<numero>): se o cliente reenviar, atualiza em vez de duplicar.
-        async function salvarSacolaNoPainel(nome, whatsDigitos, itens) {
+        async function salvarSacolaNoPainel(nome, whatsDigitos, itens, cidade, formaPagamento, linkSacola) {
             if (!window.db) throw new Error('Firebase indisponível');
             const id = 'SAC-' + whatsComDDI(whatsDigitos);
             const agora = new Date();
@@ -407,8 +418,8 @@
                 origem: 'sacola',
                 cliente: nome, nome,
                 whats: whatsComDDI(whatsDigitos), whatsapp: whatsComDDI(whatsDigitos), contato: whatsComDDI(whatsDigitos),
-                cidade: '', cidadeCliente: '',
-                pagamento: '', formaPagamento: '',
+                cidade, cidadeCliente: cidade,
+                pagamento: formaPagamento, formaPagamento,
                 subtotalBruto,
                 subtotal: Math.round(subtotal * 100) / 100,
                 descontoOfertas: Math.max(0, Math.round((subtotalBruto - subtotal) * 100) / 100),
@@ -418,7 +429,7 @@
                 totalPecas: qtd, qtd,
                 cupomAplicado: cupom ? cupom.code : null,
                 observacoes: 'Sacola enviada pelo cliente (pedido ainda não finalizado).',
-                linkSacola: carrinhoService.gerarLinkCompartilhavel(),
+                linkSacola: linkSacola || carrinhoService.gerarLinkCompartilhavel(),
                 itens: itens.map(i => ({
                     id: i.id, sku: i.sku, codigo: i.sku, nome: i.name, name: i.name, variacao: i.variacao || '',
                     precoOriginal: parseFloat(i.preco) || 0,
@@ -440,10 +451,15 @@
         async function confirmarEnvioSacola() {
             const nome = document.getElementById('contatoNome').value.trim();
             const whatsDigitos = somenteDigitos(document.getElementById('contatoWhats').value);
+            const telefone = document.getElementById('contatoWhats').value.trim();
+            const cidade = document.getElementById('contatoCidade').value.trim();
+            const formaPagamento = document.getElementById('contatoFormaPagamento').value;
             const erro = document.getElementById('contatoErro');
 
             if (nome.length < 2) { erro.innerText = 'Informe seu nome.'; return; }
             if (whatsDigitos.length < 10 || whatsDigitos.length > 13) { erro.innerText = 'Informe o WhatsApp com DDD. Ex.: (19) 99999-9999'; return; }
+            if (cidade.length < 2) { erro.innerText = 'Informe sua cidade.'; return; }
+            if (!formaPagamento) { erro.innerText = 'Selecione uma forma de pagamento.'; return; }
 
             const validacaoEstoque = await carrinhoService.sincronizarEstoqueAtual();
             renderizarCarrinho();
@@ -458,17 +474,17 @@
             // Abre a aba já no clique (evita bloqueio de pop-up no celular) e preenche depois.
             const aba = window.open('', '_blank');
 
-            try { localStorage.setItem(CHAVE_CONTATO, JSON.stringify({ nome, whats: document.getElementById('contatoWhats').value.trim() })); } catch (e) {}
+            try { localStorage.setItem(CHAVE_CONTATO, JSON.stringify({ nome, whats: telefone, cidade, formaPagamento })); } catch (e) {}
 
             const itens = carrinhoService.listar();
             const cfg = await obterConfigLoja();
             const lojaWhats = somenteDigitos(cfg.whatsapp || cfg.whatsEmpresa || '5519988207658');
-            const nomeLoja = cfg.name || cfg.nomeEmpresa || 'Abella Joias';
+            const linkSacola = carrinhoService.gerarLinkCompartilhavel();
 
             // Salva no painel; se falhar, o WhatsApp ainda abre (o lead não se perde).
             try {
                 await Promise.race([
-                    salvarSacolaNoPainel(nome, whatsDigitos, itens),
+                    salvarSacolaNoPainel(nome, whatsDigitos, itens, cidade, formaPagamento, linkSacola),
                     new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))
                 ]);
             } catch (e) {
@@ -476,14 +492,13 @@
             }
 
             const Q = '\n';
-            let msg = `*Minha sacola — ${nomeLoja}*${Q}${Q}`;
-            msg += `*Nome:* ${nome}${Q}*WhatsApp:* ${document.getElementById('contatoWhats').value.trim()}${Q}${Q}`;
-            itens.forEach(i => {
-                const v = i.variacao ? ` (${i.variacao})` : '';
-                msg += `• ${i.quantidade}x ${i.name}${v} — ${formatarMoeda(i.precoVendaUnitario * i.quantidade)}${Q}`;
-            });
-            msg += `${Q}*Total:* ${formatarMoeda(carrinhoService.obterTotal())}${Q}${Q}`;
-            msg += `Ver sacola: ${carrinhoService.gerarLinkCompartilhavel()}`;
+            let msg = `*Nome:* ${nome}${Q}`;
+            msg += `*Telefone:* ${telefone}${Q}`;
+            msg += `*Cidade:* ${cidade}${Q}`;
+            msg += `*Total:* ${formatarMoeda(carrinhoService.obterTotal())}${Q}`;
+            msg += `*Forma de pagamento:* ${formaPagamento}`;
+            // Só inclui o link quando ele é realmente compacto; a sacola completa fica salva no painel.
+            if (linkSacola && linkSacola.length <= 150) msg += `${Q}Ver sacola: ${linkSacola}`;
 
             const url = `https://api.whatsapp.com/send?phone=${lojaWhats}&text=${encodeURIComponent(msg)}`;
             if (aba) aba.location.href = url; else window.location.href = url;

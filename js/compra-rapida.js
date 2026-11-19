@@ -197,7 +197,7 @@
         if (status) {
             if (busca) status.textContent = `Buscando “${busca}” no catálogo. Os resultados podem incluir qualquer categoria.`;
             else if (precisaEscolherCategoria) status.textContent = 'Escolha uma categoria ou busque um produto pelo nome ou SKU.';
-            else if (precisaEscolherSubcategoria) status.textContent = 'Agora escolha uma subcategoria ou selecione “Ver todos desta categoria”.';
+            else if (precisaEscolherSubcategoria) status.textContent = 'Escolha uma subcategoria ou veja todos os produtos.';
             else if (categoria) status.textContent = `Produtos em ${categoria.nome}.`;
             else status.textContent = '';
         }

@@ -76,6 +76,30 @@
             text-align:center; color:var(--color-secondary); font-size:13px; line-height:1.75;
         }
         .subcat-intent strong{ color:var(--color-text); font-weight:600; }
+        .subcat-search{
+            display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:stretch; gap:10px;
+            width:min(100%,680px); margin:var(--space-4) auto var(--space-5);
+        }
+        .subcat-search-field{position:relative;min-width:0;}
+        .subcat-search-field input{width:100%;min-height:50px;padding-left:46px!important;}
+        .subcat-search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--color-secondary);}
+        .subcat-search-button{
+            min-width:112px; min-height:50px; padding:10px 20px; border:1px solid var(--color-primary);
+            border-radius:var(--radius-md); color:#17130d; background:var(--color-primary,#d7b56d);
+            font:inherit; font-weight:700; cursor:pointer;
+        }
+        .subcat-search-button:focus-visible,.subcat-search-field input:focus-visible{outline:3px solid var(--color-primary);outline-offset:2px;}
+        @media(max-width:900px){
+            .cat-hero-copy{padding-top:var(--space-6);padding-bottom:var(--space-4);}
+            .subcat-intent{margin-bottom:var(--space-5);}
+        }
+        @media(max-width:600px){
+            .subcat-search{width:100%;gap:8px;margin:var(--space-3) auto var(--space-4);}
+            .subcat-search-field input{min-height:48px;padding-left:40px!important;font-size:14px;}
+            .subcat-search-icon{left:12px;}
+            .subcat-search-button{min-width:88px;min-height:48px;padding:9px 12px;font-size:14px;}
+            .subcat-intent{padding:var(--space-4) var(--space-3);font-size:12px;line-height:1.55;}
+        }
     </style>
     <link rel="icon" href="https://cdn.jsdelivr.net/gh/abellajoiasim-maker/abella-joias-cdn@main/home/logo.webp" type="image/webp">
     <meta name="theme-color" content="#111111">
@@ -112,6 +136,14 @@
             <h1 id="categoriaNome" style="font-size:clamp(28px,5vw,48px);">Coleções de Joias no Atacado</h1>
             <p id="categoriaDescricao" style="font-size:13px; color:var(--color-secondary); margin-top:var(--space-3);">Escolha uma categoria para explorar subcategorias e encontrar joias no bruto para revenda.</p>
         </section>
+
+        <form id="subcategoriaBuscaForm" class="subcat-search" role="search" aria-label="Buscar produtos nesta coleção">
+            <div class="subcat-search-field">
+                <input type="search" id="subcategoriaBusca" class="aurora-input" placeholder="Buscar por nome ou SKU..." aria-label="Buscar produto por nome ou SKU" required>
+                <span class="subcat-search-icon" aria-hidden="true">🔎</span>
+            </div>
+            <button type="submit" class="subcat-search-button">Buscar</button>
+        </form>
 
         <div class="subcat-intent" id="subcategoriaIntento" aria-live="polite">
             Escolha uma subcategoria para visualizar a <strong>vitrine ambientada</strong>, conferir os modelos disponíveis e avançar diretamente para o pedido.
@@ -159,6 +191,8 @@
             const grid = document.getElementById('grid-subcategorias');
             const loading = document.getElementById('loading');
             const noResult = document.getElementById('no-result');
+            const buscaForm = document.getElementById('subcategoriaBuscaForm');
+            const buscaInput = document.getElementById('subcategoriaBusca');
 
             const cartEl = document.getElementById('cart-count');
             if (cartEl && window.carrinhoService) cartEl.innerText = carrinhoService.obterContagem();
@@ -184,6 +218,18 @@
 
             const params = new URLSearchParams(window.location.search);
             const categoriaSlug = (params.get('categoria') || params.get('id') || '').toString().trim();
+
+            if (buscaForm && buscaInput) {
+                buscaForm.addEventListener('submit', event => {
+                    event.preventDefault();
+                    const termo = buscaInput.value.trim();
+                    if (!termo || !categoriaSlug) return;
+                    const destino = new URL('produtos.html', window.location.href);
+                    destino.searchParams.set('categoria', categoriaSlug);
+                    destino.searchParams.set('busca', termo);
+                    window.location.href = destino.toString();
+                });
+            }
 
             if (!categoriaSlug) {
                 if (loading) loading.innerHTML = `<p style="color:var(--color-danger);font-size:13px;">⚠️ Categoria não informada na URL.</p>`;

@@ -1,30 +1,31 @@
-# Atualização: estoque individual por variação — Abella Joias
+[LEIA-ME.md](https://github.com/user-attachments/files/35084725/LEIA-ME.md)
+# Ajuste da compra rápida para celular
+
+Este pacote melhora a primeira tela da compra rápida sem alterar regras de estoque, carrinho, checkout ou dados do Firebase.
 
 ## Arquivos incluídos
 
-Extraia este pacote na raiz do projeto, mantendo a estrutura de pastas e substituindo os arquivos correspondentes:
-
-- `modulo/editor.html`
 - `produtos.html`
-- `js/services/carrinhoService.js`
-- `carrinho.html`
-- `checkout.html`
+- `components/compra-rapida.css`
+- `js/compra-rapida.js`
 
-Antes de substituir, faça uma cópia de segurança dos cinco arquivos atuais.
+## Como aplicar
 
-## O que foi alterado
+1. Faça uma cópia de segurança dos três arquivos atuais.
+2. Extraia este ZIP na raiz do projeto do catálogo, mantendo as pastas e permitindo substituir os arquivos existentes.
+3. Publique o site pelo processo habitual do projeto.
 
-- O editor salva a quantidade individual de cada medida e registra o estado `Esgotado` quando o saldo chega a zero.
-- O catálogo mostra `Esgotado` na variação sem saldo e impede selecioná-la, salvo quando a opção explícita `vender sem estoque` estiver ativa.
-- Carrinho e checkout revalidam os saldos antes de concluir o fluxo.
-- Ao gravar um pedido no checkout, o sistema baixa o saldo individual da variação no Firebase por transação; se também houver estoque global controlado, respeita e atualiza os dois saldos.
-- A transação evita saldo negativo em compras simultâneas. Um identificador por pedido evita uma segunda baixa do mesmo pedido. Se uma baixa parcial falhar antes da conclusão, o sistema tenta estornar as baixas já feitas e marca o pedido como não confirmado.
-- O fluxo de envio de sacola pelo WhatsApp não baixa estoque: a baixa ocorre no checkout, quando o registro do pedido é criado. O pedido é inicialmente salvo como `Processando estoque` e passa para `Novo` após a atualização do saldo.
+## O que muda
 
-## Atenção: permissões e segurança do Firebase
+- Busca e botão **Buscar** ficam na mesma linha, economizando uma faixa vertical.
+- O texto da busca fica mais curto e direto.
+- No modo rápido em celulares, o breadcrumb repetido e o espaçamento excessivo do topo são reduzidos.
+- Subcategorias passam a ocupar uma grade de duas colunas, quebrando linhas automaticamente em vez de exigir rolagem horizontal.
+- A orientação para selecionar uma subcategoria foi encurtada.
+- O layout do modo completo e o comportamento da sacola continuam preservados.
 
-Para produtos com estoque controlado, o checkout precisa conseguir ler e gravar o nó correspondente em `abella/products/{id}` para executar a transação. Este projeto não inclui regras do Realtime Database nem Cloud Functions; por isso, confirme as regras atuais antes de publicar. **Não** resolva uma falha de permissão liberando escrita pública para todos os produtos.
+## Verificação realizada
 
-A transação protege contra concorrência acidental, mas a baixa roda no navegador. Para uma garantia de segurança contra clientes modificados, o próximo passo recomendado é mover a operação para uma Cloud Function/backend confiável e restringir as regras do Firebase. Se a gravação da transação for negada, o checkout cancela a tentativa em vez de concluir o pedido sem confirmar o estoque.
+A sintaxe do HTML e do JavaScript foi verificada; a busca foi testada; e o layout foi conferido em larguras de 320, 360, 390 e 430 px, sem rolagem horizontal.
 
-A baixa acontece quando o pedido é criado no sistema e antes da abertura do WhatsApp; não significa confirmação de pagamento. Cancelar posteriormente um pedido já criado não devolve estoque automaticamente — essa rotina deve ser adicionada separadamente se fizer parte do processo da loja.
+Este pacote contém apenas a atualização dos arquivos; ele não altera nem publica o site automaticamente.

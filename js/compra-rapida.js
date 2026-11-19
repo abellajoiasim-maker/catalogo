@@ -203,6 +203,110 @@
         }
     }
 
+    /* ---- Navegação por toque (celular): categorias e subcategorias sempre visíveis, sem carrossel ---- */
+    function contextoAtual() {
+        const url = new URL(window.location.href);
+        const busca = (url.searchParams.get('busca') || '').trim();
+        const catSlug = url.searchParams.get('categoria') || url.searchParams.get('id') || '';
+        const subSlug = url.searchParams.get('subcategoria') || url.searchParams.get('sub') || '';
+        const todos = url.searchParams.get('todos') === '1';
+        const categoria = categoriaPorId(catSlug);
+        let etapa = 'produtos';
+        if (busca) etapa = 'busca';
+        else if (!catSlug) etapa = 'categorias';
+        else if (categoria && categoria.subcategorias.length > 0 && !subSlug && !todos) etapa = 'subcategorias';
+        const subcategoria = categoria && subSlug
+            ? categoria.subcategorias.find(sub => normalizar(sub.id) === normalizar(subSlug)
+                || normalizar(sub.chave) === normalizar(subSlug)) || null
+            : null;
+        return { busca, catSlug, subSlug, todos, categoria, subcategoria, etapa };
+    }
+
+    function criarBotao(classe, texto, aoClicar, rotuloAria) {
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.className = classe;
+        botao.textContent = texto;
+        if (rotuloAria) botao.setAttribute('aria-label', rotuloAria);
+        botao.addEventListener('click', aoClicar);
+        return botao;
+    }
+
+    function criarTile(titulo, detalhe, aoClicar) {
+        const tile = document.createElement('button');
+        tile.type = 'button';
+        tile.className = 'qb-tile';
+        const nome = document.createElement('span');
+        nome.className = 'qb-tile-nome';
+        nome.textContent = titulo;
+        tile.appendChild(nome);
+        if (detalhe) {
+            const info = document.createElement('span');
+            info.className = 'qb-tile-info';
+            info.textContent = detalhe;
+            tile.appendChild(info);
+        }
+        tile.addEventListener('click', aoClicar);
+        return tile;
+    }
+
+    function renderizarNavegacaoMobile() {
+        const area = document.getElementById('quick-buy-mobile');
+        if (!area || !estado.ativo) return;
+        const ctx = contextoAtual();
+        document.documentElement.setAttribute('data-qb-etapa', ctx.etapa);
+        area.replaceChildren();
+
+        if (ctx.etapa === 'categorias') {
+            const grade = document.createElement('div');
+            grade.className = 'qb-grid';
+            estado.categorias.forEach(cat => {
+                const n = cat.subcategorias.length;
+                grade.appendChild(criarTile(cat.nome, n ? `${n} ${n === 1 ? 'opção' : 'opções'}` : 'Ver produtos', () => navegar({
+                    categoria: cat.id, subcategoria: '', todos: n === 0, removerBusca: true
+                })));
+            });
+            area.appendChild(grade);
+            return;
+        }
+
+        if (ctx.etapa === 'subcategorias' && ctx.categoria) {
+            const cat = ctx.categoria;
+            area.appendChild(criarBotao('qb-voltar', '‹ Todas as categorias',
+                () => navegar({ limparContexto: true, removerBusca: true })));
+            const grade = document.createElement('div');
+            grade.className = 'qb-grid';
+            const todas = criarTile(`Ver todos de ${cat.nome}`, 'Mostrar todos os produtos', () => navegar({
+                categoria: cat.id, subcategoria: '', todos: true, removerBusca: true
+            }));
+            todas.classList.add('qb-tile--destaque');
+            grade.appendChild(todas);
+            cat.subcategorias.forEach(sub => grade.appendChild(criarTile(sub.nome, '', () => navegar({
+                categoria: cat.id, subcategoria: sub.chave, todos: false, removerBusca: true
+            }))));
+            area.appendChild(grade);
+            return;
+        }
+
+        if (ctx.etapa === 'busca') {
+            area.appendChild(criarBotao('qb-voltar', '‹ Limpar busca',
+                () => navegar({ limparContexto: true, removerBusca: true })));
+            return;
+        }
+
+        if (ctx.categoria) {
+            const cat = ctx.categoria;
+            const temSubs = cat.subcategorias.length > 0;
+            const trilha = ctx.subcategoria ? `${cat.nome} › ${ctx.subcategoria.nome}` : cat.nome;
+            area.appendChild(criarBotao('qb-voltar',
+                temSubs ? `‹ ${trilha} · trocar` : '‹ Todas as categorias',
+                () => temSubs
+                    ? navegar({ categoria: cat.id, subcategoria: '', todos: false, removerBusca: true })
+                    : navegar({ limparContexto: true, removerBusca: true }),
+                temSubs ? 'Voltar e escolher outra subcategoria' : 'Voltar para todas as categorias'));
+        }
+    }
+
     function preencherNavegacaoCategorias() {
         const seletor = document.getElementById('quick-buy-category');
         const listaSubcategorias = document.getElementById('quick-buy-subcategories');
@@ -219,6 +323,7 @@
             seletor.add(new Option(categoria.nome, categoria.id));
         });
         seletor.value = categoriaSelecionada ? categoriaSelecionada.id : '';
+        renderizarNavegacaoMobile();
 
         listaSubcategorias.replaceChildren();
         if (!categoriaSelecionada) {
@@ -268,6 +373,7 @@
             console.warn('[CompraRapida] Não foi possível carregar categorias para a navegação rápida.', error);
             const status = document.getElementById('quick-buy-status');
             if (status && estado.ativo) status.textContent = 'Não foi possível carregar as categorias. Você ainda pode buscar por nome ou SKU.';
+            renderizarNavegacaoMobile();
             atualizarVisibilidade();
         }
     }
